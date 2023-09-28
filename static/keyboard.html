@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+    
+
+<script type="text/javascript" src="/static/common.js"></script>
+<table>
+	<tbody>
+		<tr>
+			<td>Nombre Bluetooth</td>
+			<td id="name"></td>
+		</tr>
+		<tr>
+			<td>Aviso Bluetooth</td>
+			<td id="advertising"></td>
+		</tr>
+		<tr>
+			<td>Conectado</td>
+			<td id="connected"></td>
+		</tr>
+		<tr>
+			<td>Notas tocadas</td>
+			<td id="notesPlayed"></td>
+		</tr>
+		<tr>
+			<td>Notas omitidas</td>
+			<td id="notesOmitted"></td>
+		</tr>
+	</tbody>
+	</tbody>
+</table>
+<div style="width:100%; height:20px; background-color:#B29700"></div>
+<br>
+<div class="footerdiv"></div>
+</body>
+
+<script>
+
+
+async function keyboardStatus() {
+	while( true ){
+		setAllTextById(  await fetch_json( "/keyboard_status" ) ) ;
+		await sleep_ms( 1_000 ) ;
+	}
+}
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/index.html" ;
+}
+
+keyboardStatus() ;
+</script>
+

@@ -1,0 +1,30 @@
+{
+	"description": "Your ESP32-S3 device",
+	"name": "esp32s3",
+
+	"webserver_cache": false, 
+	"max_age" : 0,
+    
+	"access_point1": "first-SSID",
+	"password1": "first_password",
+
+	"access_point2": "second-SSID",
+	"password2": "second_password",
+
+	"ap_password": "drehorgel",
+	"ap_ip": "192.168.144.1",
+	"ap_max_idle": 120,
+
+	"idle_deepsleep_minutes" : 15,
+	"battery_watt_hours": 24,
+    "solenoid_resistance": 90,
+
+    "mic_test_mode": false,
+    "touchpad_big_change": 10000,
+    
+    "time_zone_offset": 0.0,
+    "modes":["play", "tuner", "config"]
+}
+
+
+

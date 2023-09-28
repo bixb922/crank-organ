@@ -1,0 +1,133 @@
+# Format:
+# *filename is a file to be translated
+# Without * the line is a rule of the form from_string|to_string
+# i.e. original text and translated text separated by | (pipe) character. 
+# There may be surrounding characters in
+# the from_string and to_string to ensure uniqueness of the from_string.
+*common.js
+"No conectado|"Not connected
+"no conectado|"Not connected
+"fin"|"end"
+esperando"|waiting"
+status_text = "cancelado"|status_text = "cancelled"
+= "sí" ;|= "yes" ;
+= "no" ;|= "no" ;
+
+*index.html
+>Drehorgel|>Crank organ
+<td>Uso</td>|<td>Used</td>
+>Capacidad|>Capacity
+>Bater&iacute;a|>Battery
+>Tiempo operaci&oacute;n|>Time powered on
+>Tiempo remanente|>Remaining time
+Poner contadores en cero|Set battery counters to zero
+# In the javascript code:
+"Cambiar a afinador"|"To tuner mode"
+"Cambiar a teclado"|"To keyboard mode"
+"Cambiar a Organillo"|"To crank organ mode"
+"Cambiar a configuración"|"To configuration mode"
+Diagnóstico|System info
+"Organillo"|"Crank organ"
+"Afinador"|"Tuner"
+"Teclado bluetooth"|"Bluetooth keyboard"
+"Contadores batería en cero"|"Battery counters set to zero"
+
+*tunelist.html
+Lista de melodías|Tune list
+B&uacute;squeda|Search
+>Actuación|>Performance
+# In the javascript code:
+"T&iacute;tulo"|"Title"
+"A&ntilde;o"|"Year"
+"Autor"|"Author"
+"G&eacute;nero"|"Genre"
+"actualizando setlist"|"updating setlist"
+
+*keyboard.html
+Nombre Bluetooth|Bluetooth name
+Aviso Bluetooth|Advertising
+Conectado|Connected
+Notas tocadas|Notes played
+Notas omitidas|Notes omitted
+# In the javascript code:
+
+*note.html
+Afinar|Tune
+Sonar nota|Note test
+Repetición|Repetition test
+>Programa-nota<|>Program-note<
+>Amplitud|>Amplitude
+# In the javascript code.
+# The next one does not have closing quote - it's part of a larger string
+"Afinaci&oacute;n|"Tuning
+"Amplitud|"Amplitude
+
+*notelist.html
+Afinar todos|Tune all
+Escala de prueba|Play scale
+# In the javascript code:
+"Programa-nota"|"Program-note"
+"Afinaci&oacute;n|"Tuning
+"Amplitud|"Amplitude
+
+
+*play.html
+Melodía actual|Current tune
+>Partir|>Start
+>Al comienzo|>To beginning
+>Próximo|>Next
+>Guardar lista<|>Save setlist<
+>Cargar lista<|>Load setlist<
+>Borrar setlist<|>Clear setlist<
+>Desordenar lista<|>Shuffle setlist<
+>Desordenar todos<|>Shuffle all tunes<
+Control tempo|Tempo control
+Ajuste velocidad|Set playback speed
+>Girando|>Turning
+"Girando"|"Turning"
+"No gira"|"Not turning"
+rev/seg|rev/sec
+# In the javascript code:
+"T&iacute;tulo"|"Title"
+"G&eacute;nero"|"Genre"
+"Autor"|"Author"
+"Duraci&oacute;n"|"Duration"
+"A&ntilde;o"|"Year"
+"Guardado"|"Saved"
+"No guardado, error"|"Not saved, error"
+
+*diag.html
+>Descripción<|>Description<
+Diagn&oacute;stico|System information
+>Microcontrolador|>Microcontroller
+Ver log|Show log
+errores)|errors)
+>Versión Micropython<|>Micropython version<
+>Imagen Micropython<|>Micropyton image<
+>Fecha/hora|>Date/Time
+>Tiempo desde reboot<|>Time since reboot<
+>minutos<|>minutes<
+>Flash libre|>Free flash
+>Flash usada|>Used flash
+>RAM libre|>Free RAM
+>RAM usada|>Used RAM
+>Configuración solenoides|>Solenoid configuration
+>Modo|>Mode
+>Archivos MIDI|>MIDI files
+>Carpeta música|>Music folder
+Configuración WIFI|WIFI configuration
+>IP de clientes activos (60 segundos)<|>IP of clients active in last 60 sec<
+>Como WiFi station<|>As WiFi station<
+>Se conecta a SSID<|>Connects to SSID<
+>Activa<|>Active<
+>Conectado a un SSID<|>Connected to a SSID<
+>Como WiFi access point<|>As WiFi access point<
+>Alguien conectado<|>Someone connected<
+
+*ftp.html
+FTP está ahora activo. Usa Windows Explorer o Filezilla para conectarse y transferir archivos. Finder en MAC no funciona bien.|FTP is now active. Use Windows Exporer or Filezilla to connect and transfer files. Finder on MAC does not work well with this FTP server.
+
+*config.html
+"Configuración guardada en flash"|"Configuration saved to flash"
+
+

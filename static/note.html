@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+
+<script type="text/javascript" src="/static/common.js"></script>
+<button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
+<button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
+<button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetición</button>
+    
+<div class="buttondiv"></div>
+<table>
+	<tbody id="notebody">
+	</tbody>
+</table>
+
+<div class="middlediv"></div>
+<table style="width:100%">
+	<caption id="tuningcaption"></caption>
+	<tbody id="tuningbody">
+	</tbody>
+</table>
+<div class="middlediv2"></div>
+<table style="width:100%">
+	<caption id="ampcaption"></caption>
+	<tbody id="amplitudebody">
+	</tbody>
+</table>
+
+<div class="footerdiv"></div>
+
+<br id="last">
+</body>
+
+<script>
+
+// Refresh note info every second
+async function getNoteInfo() {
+	while( true ) {
+		updateNoteInfo( await fetch_json( "/data/organtuner.json" ) ) ;
+		await sleep_ms( 5_000 );
+	}
+}
+
+    
+function updateNoteInfo( notelist ) {
+	var midi = getResourceNumberFromURL() ;
+	var note = notelist[midi] ;
+	var s = "" ;
+	
+	s += "<tr><td>Programa-nota</td><td>" + note["name"] + "</td></tr>" ;
+	s += "<tr><td>Cents</td><td>" + Math.round(note["cents"]) + "</td></tr>" ;
+	s += "<tr><td>Amplitud</td><td>" + amplitude_to_db(note["amp"]) + "</td></tr>" ;
+    s += "<tr><td>Pin</td><td>" + note["pinname"] + "</td></tr>" ;
+	htmlById("notebody", s) ;
+
+
+	htmlById("tuningcaption", "Afinaci&oacute;n (-" + max_cents + " a " + max_cents + " cents)") ;
+	var st = "" ;
+	centslist = note["centslist"] ;
+	for( var j = 0 ; j < centslist.length ; j++ ){
+		st += `<tr>
+			   <td id="tuning${j}">
+			   </tr>`;
+		/*st += "<tr>" ;
+		st += '<td id="tuning' + j + '">' ;
+		st += "</td>" ;
+		st += "</tr>" ;*/
+	}
+	htmlById("tuningbody", st) ;
+	
+	var amplist = note["amplist"] ;
+	textById("ampcaption", "Amplitud (" + min_db + " a "+ max_db +" dB)" );
+	sa = "" ;
+	for( var j = 0 ; j < amplist.length ; j++ ){
+		sa += `<tr>
+				<td id="amp${j}"></td>
+			   </tr>`;
+		/*sa += "<tr>" ;
+		sa += '<td id="amp'+ j + '">' ;
+		sa += "</td>" ;
+		sa += "</tr>" ;*/
+	}	
+	htmlById("amplitudebody", sa) ;
+	
+	for( var j = 0 ; j < centslist.length ; j++  ){
+		var c = scale_cents( centslist[j] ) ;
+		lrBarGraph( "tuning" + j, c, oxford_blue, scale_divisions_cents, 100 ) ;
+	}
+	for( var j = 0 ; j < amplist.length ; j++ ){
+		var db = amplitude_to_db( amplist[j] ) ;
+		barGraph( "amp" + j, scale_db( db ), sap_green, scale_divisions_db, "right", 100 );
+	}
+}
+
+
+
+// Functions to start tuning of one note
+async function startTuning() {
+    await fetch_json( "/start_tuning/" + getResourceNumberFromURL() ) ;
+	// getNoteInfo will show progress
+}
+
+async function soundNote() {
+	 await fetch_json( "/sound_note/" + getResourceNumberFromURL() ) ;
+}
+
+async function soundRepetition() {
+	await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
+}
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/notelist.html" ;
+}
+
+getNoteInfo() ;
+
+</script>
