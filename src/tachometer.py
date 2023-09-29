@@ -1,5 +1,5 @@
 
-import uasyncio as asyncio
+import asyncio
 import json
 import gc
 from array import array

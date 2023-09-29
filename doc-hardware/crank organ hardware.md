@@ -1,9 +1,6 @@
 # Controller hardware for a crank organ
 This document describes a controller architecture for crank organs.
 
-I see this note, so these pins are not available. 
-
-"In module variants that have embedded OSPI PSRAM, i.e., that embed ESP32-S3R8, pins IO35, IO36, and IO37 connect to the OSPI PSRAM and are not available for other uses."
 
 # Controller for a  20 note crank organ. 
 20 voice organs are very common, so here is a simple design for these:
@@ -42,7 +39,7 @@ Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V p
 # The ESP32-S3
 I have tested this with some ESP32-S3 boards similar a  ESP32-DEVKITC-1 V1.1 board, although schematics differ. Specifications: quad Flash (QD flash) and Octal SPIRAM (OT PSRAM). The boards have 44 pins.
 
-On Octal Flash boards such as N16R8V, less than 20 pins are available.
+On Octal Flash boards such as N16R8V, less than 20 pins are available. From the Espressif documents: "In module variants that have embedded OSPI PSRAM, i.e., that embed ESP32-S3R8, pins IO35, IO36, and IO37 connect to the OSPI PSRAM and are not available for other uses."
 
 MicroPython images for N8R8 boards can be downloaded directly from the MicroPython site. At the time of this writing (2023), N16R8 still need custom generated images. This is an additional step to consider.
 
@@ -53,25 +50,21 @@ This is the circuit diagram:
 
 ![20 pipe organ controller](kicad_20.png)
 
->>>ADD DC TO DC COVNERTER. ADD SCREW TERMINALS. ADD DIODE
-
-
-
 # Board assembly
 ## Materials needed
 For main bosrad
 * ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
-* 3x ULN2803A  TBD62003APG 
+* Optional: two 22 pin contacts to be able to interchange ESP32-S3.
+* 3x ULN2803A  or TBD62003APG solenoid drivers
 * 1N4001 diode
 * 100nF capacitor
 * 12V to 5V 2A DC-DC buck converter (can be >2A)
 * 7x9 cm solderable bread board
 * 11 2x Screw terminals
-* 22AWG color wire 
-* Inline holder fuse
-* 4-40 HEX 
+* 22AWG color wire  (24AWG will also do)
+* 4-40 hex separators and corresponding screws to fix circuit to board
 
-????
+Optional:
 Heat shrinkable tubes, assortment 2mm to 10mm
 
 
@@ -90,17 +83,22 @@ For battery case
 * Small crocodile clip
 
 ## Assembly
-position and solder 1 or 2 pins
-wires
-solder
+Search internet for video on soldering.
+
+* Position all circuits and solder 1 pin only. Verify.
+* Insert all wires, verify
+* Use color wires, for example: red for 12V, orange for 5V, black or blue for ground, white for GPIO ports, yellow for solenoid ports. Cut, strip insulation, insert bend points.
+* Verify
+* Solder all wires
+* Verify again (see testing)
 
 
 ## Testing
-bip test any with any
-test short circuit and supply/gnd
-power on
-test solenoids
+* Use multitester with continuity test to test all pins and contacts against all other. 
+* Test solenoids with software provided
 
+# Circuit for more than 20 pins
+Update pending
 
 # Copyright and license
 (c) 2023 Hermann Paul von Borries. Available under MIT license.

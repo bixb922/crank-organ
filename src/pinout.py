@@ -1,9 +1,10 @@
-
+import asyncio
 import json
 import os
 import machine
 import sys
 import time
+from mcp23017 import MCP23017
 
 if __name__ == "__main__":
     sys.path.append("/software/mpy")
@@ -38,6 +39,11 @@ def define_microphone( x ):
 def define_touchpad( x ):
     global touchpad_pin
     touchpad_pin = x
+def append_valid_midis( instrument, midi_num ):
+    if midi_num :
+        n = midi.Note( instrument, midi_num )
+        if n:
+            all_valid_midis.append( midi.Note( instrument, midi_num ) )
 
 pinout_actions = {
     "description": lambda x: define_description(x),
@@ -45,8 +51,8 @@ pinout_actions = {
     "tachometer": lambda x : define_tachometer(x),
     "microphone": lambda x : define_microphone(x),
     "touchpad": lambda x : define_touchpad(x),
-    "gpio.midi": lambda pin, instrument, midi_num, rank: all_valid_midis.append( midi.Note( instrument, midi_num )), 
-    "mcp.midi": lambda pin, instrument,  midi_num, rank: all_valid_midis.append( midi.Note( instrument, midi_num ) ) 
+    "gpio.midi": lambda pin, instrument, midi_num, rank: append_valid_midis( instrument, midi_num ), 
+    "mcp.midi": lambda pin, instrument,  midi_num, rank: append_valid_midis( instrument, midi_num )
     
 }
 
@@ -195,27 +201,28 @@ def testI2Cconnected( sda, scl ):
     sclok = testGPIO( scl ) == "I2C"
     return ( sdaok, sclok )
 
-# Used by web page to test one pin
+# Used by web page to test one pin - physical chip level
 async def web_test_gpio( gpio_pin ):
     gpio=machine.Pin( gpio_pin, machine.Pin.OUT )
-    for _ in range(4):
+    for _ in range(8):
         gpio.value(1)
-        await asyncio.sleep_ms( 100 )
+        await asyncio.sleep_ms( 500 )
         gpio.value(0)
-        await asyncio.sleep_ms( 100 )
+        await asyncio.sleep_ms( 500 )
         
-# Used by web page to test one pin        
+# Used by web page to test one pin of MCP23017 physical chip level       
 async def web_test_mcp( sda, scl, mcpaddr, mcp_pin ):
     i2c = machine.SoftI2C(
         scl=machine.Pin(scl), 
         sda=machine.Pin(sda) )
     mcp = MCP23017( i2c, mcpaddr )
-    for _ in range(4):
-        mcp.pin( mcp_pin, value=1 )
-        await asyncio.sleep_ms( 100 )
-        mcp.pin( mcp_pin, value=0 )
-        await asyncio.sleep_ms( 100 )
-
+    mcp[mcp_pin].output()
+    for _ in range(8): 
+        mcp[mcp_pin].output(1)
+        await asyncio.sleep_ms( 500 )
+        mcp[mcp_pin].output(0)
+        await asyncio.sleep_ms( 500 )
+    
 
 load_pin_info()
 

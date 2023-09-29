@@ -172,9 +172,15 @@ class Note:
         else:
             self.instrument = instrument
             self.midi_note = midi_note
-            if self.instrument == "":
+            blank = ("", " ", "  ", "\xa0" )
+
+            if self.instrument in blank:
                 self.instrument = 0
-            self.hash = self.instrument*256 + midi_note
+            if self.midi_note in blank:
+                self.midi_note = 0
+            # Note(0,0) or Note("","") does not exist
+            # and evaluates as False
+            self.hash = self.instrument*256 + self.midi_note
      
 
         

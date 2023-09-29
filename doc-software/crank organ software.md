@@ -27,7 +27,8 @@ The lazy mode: don't use your cell phone. Don't define a setlist. Turn the micro
 * Shows remaining battery capacity on browser
 * Very low power consumption: consumes 0.3W in addition to the power needed for the solenoids
 * Preconfigured for common scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different instruments.
-* This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit."
+* This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
+* Standard type 0 and 1 MIDI files are supported. Solenoids can be mapped to MIDI note number only (only one instrument), or MIDI note number and program number (several instruments). Percussion channel mapping is also supported (drums and percussion).
 
 # Main menu and navigation
 The home page has the main menu and shows detailed battery use information.
@@ -56,6 +57,8 @@ These pages can be used even during playback.
 The software operates either in crank organ mode (to play music), as tuner (no tune playback, only notes) or in configuration mode (after entering the configuration password, no tune playback).
 
 When entering a mode (crank organ, tuner, configuration) it is possible that you'll have to press the button twice, first to enter mode and then, once the mode has changed, to go to the selected page.
+
+It's best to navigate the applicatino using the buttons and the back button on the top of the page.
 
 ## The page header
 ![page header](page_header.jpg)
@@ -162,7 +165,7 @@ If a crank sensor installed, the crank turning speed will influence playback spe
 # Operation on power on
 It's best to have the home page, tunelist page or performance page open in the browser of the cell phone when starting. The home page, tune list page and performance page poll the microcontroller every few seconds, and will update the information as soon as the microcontroller is up. Put a favorite marker on the page to have it at hand. However, having the page open is not mandatory, you can operate without cell phone or turn in on later if needed. 
 
-If a RGB (neopixel) LED is on the board and configured, it will show blue on start and turn green when ready. If it turns red, an error has occurred, see error log in system configuration. Please report errors as an issue, however an error also may mean for example that a MCP23017 connected via I2C is not available.
+If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see error log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
 
 Startup takes about 15 seconds until the system is ready. Some valves will move as a signal when ready. 
 
@@ -279,13 +282,13 @@ If you need a MIDI configuration that is not available, post an issue.
 
 Post an issue if you have questions about this software. 
 
-## Installation
+# Installation
 The description of the installation process is pending.
 
 I'll probably make a MicroPython .bin image for a ESP32-S3 N16R8 available, with all the software in it. If that's the case, you need to:
 * Install Python from www.python.org/downloads
 * Install the esptool.py from the Espressif, the link is on ```https://micropython.org/download/ESP32_GENERIC_S3/```
-* Plug the ESP32-S3 board via USB cable to the PC
+* Plug the ESP32-S3 board via USB cable to the PC. The board usually has two USB-C ports labelled USB and COM. It's preferable to use the port labelled USB.f
 * Instructions for the esptool comand are at ```https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/index.html```
 * Run the esptool command from the command line (cmd or terminal) as shown in the official instructions for ESP-32 at ```https://micropython.org/download/ESP32_GENERIC_S3/```but with the supplied image instead of the standard image
 * Reboot the microcontroller
@@ -386,7 +389,7 @@ The index page with the main menu should come up.
 
 ![home page](homepage.jpg)
 
-## Configuration
+# Configuration
 
 Click the configuration button on the home page. The initial password is _drehorgel_.
 
@@ -394,14 +397,14 @@ Click the configuration button on the home page. The initial password is _drehor
 
 The configuration parameters explained on the configuration page.
 
-### Configurations you should change
+## Configurations you should change
 A initial configuration file is supplied. This is what you should modify:
 
 * The configuration password (as noted above). The configuration password is also the password for connecting to the microcontroller in AP mode.
 * The network name and description. This name is important, it will be both the WiFi name in AP mode and also to navigate in the browser to the microcontroller, you enter this host name: either http://hostname or http://hostname.local i
 * The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone.
 
-### Pinout
+## Pinout
 ### Select scale
 Use the "Go to pinout page" to select the scale of the organ:
 
@@ -435,7 +438,9 @@ If present, it's best to have microphone on pin 4, either touchpad or crank sens
 
 Many boards have a neopixel RGB led either on pin 38 or 48. See the vendor's description or schematic, or try with both values.
 
-### Power management settings
+*After saving configuration, please reboot.*
+
+## Power management settings
 
 Configure the battery capacity, in watts-hour. You get the watts-hour by multiplying the battery voltage by the milliampere-hours figure (mAh) figure of the battery. Some manufacturers will publish the watts-hour figure.
 
@@ -445,7 +450,7 @@ Another example: a USB battery pack is rated at 10000mAh = 10 Ah. Although the b
 
 Configure the solenoid resistance (default: 90 Ohms).
 
-### Other parameters (less likely to need change)
+## Other parameters (less likely to need change)
 
 Go through the rest and change what you may need, use save button to save to the microcontroller. The sections are:
 * Crank settings. Necessary to change when a crank speed sensor is installed (still under development).
@@ -455,6 +460,8 @@ The rest of the sections is even less likely to require change:
 * Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the error log.
 
 The configuration gets stored to /config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
+
+*After saving configuration, please reboot.*
 
 ## FTP: drag and drop to update files with WiFi
 Press the "FTP access" button on the configuration page.,
@@ -482,14 +489,18 @@ The tunelib folder will then be at /sd/tunelib
 With the SD card, only about 500kb of free flash memory is necessary. The /tunelib folder on flash will serve as fallback should the SD card fail or come loose.
 
 
-## Customization crank organ image
-You can replace the crank organ image of the home screen by replacing the file /static/crank.jpg. A size of 100x75 pixels may be a good size to start with.
+## Customization crank organ photo
+You can replace the crank organ ohite of the home screen by replacing the file /static/crank.jpg. A size of 100x75 pixels may be a good size to start with. 
 
 
 # Programming language
 The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are programmed in HTML and JavaScript.
 
+Credits to mcauser (MCP23017 library, no modifications), belialov (Tinyweb web server, modified to enhance asyncio response). Both modules are available on github MIT license.
+
 # Under development/testing
+Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes.
+
 The following features need more testing or development:
 * Microphone for tuning. Measures frequency of notes and shows if in tune. Pending to do more tests.
 * Sensor for crank speed to influence playback speed. Pending to test and for several adjustments.

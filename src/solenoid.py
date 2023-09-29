@@ -1,4 +1,4 @@
-import uasyncio as asyncio
+import asyncio
 import time
 import array
 import json
@@ -13,6 +13,7 @@ import config
 import midi
 
 from mcp23017 import MCP23017
+
 class simulated_MCP23017:
     def __init__( self, i2c, address ):
         pass
@@ -81,7 +82,7 @@ class SolenoidDef:
         if not midi_note:
             return
 
-        self.pin_functions[midi_note] = lambda v, m=self._current_mcp23017, p=mcp_pin : m.pin( p, value=v )
+        self.pin_functions[midi_note] = lambda v, m=self._current_mcp23017, p=mcp_pin : m[mcp_pin].output(v)
 
         # Assign pin description
         self.pin_names[midi_note] = f"{rank} mcp.{self._current_i2c_number}.{self._current_mcp_number}.{mcp_pin}"        
@@ -120,8 +121,11 @@ async def clap( n, clap_interval_msec=50 ):
         await asyncio.sleep_ms(clap_interval_msec)
 
 def note_on( midi_note ):
+    
     if midi_note not in solenoid_def.pin_functions:
+        print(">>>    solenoid.note_on not in pin_functions", midi_note )
         return
+    print(">>>   solenoid.note_on", midi_note, "pin_name", solenoid_def.pin_names[midi_note] )
     solenoid_def.pin_functions[midi_note]( 1 )
     # Record time of note on, note_off will compute time this solenoid was "on"
     if solenoid_on_msec[midi_note] == 0:

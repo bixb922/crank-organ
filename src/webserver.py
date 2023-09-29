@@ -2,7 +2,7 @@
 import os
 import sys
 import gc
-import uasyncio as asyncio
+import asyncio
 import json
 import time
 

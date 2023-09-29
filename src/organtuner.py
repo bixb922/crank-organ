@@ -297,6 +297,7 @@ async def repeat_note( midi_note ):
 
 async def scale_test( ):
     notelist = [ midi_note for midi_note in pinout.all_valid_midis ]
+    notelist.sort( key=lambda m: m.hash )
     print("scale test notelist", notelist )
     for duration in [240, 120, 60, 30]: # In milliseconds
         for i in range(2):
