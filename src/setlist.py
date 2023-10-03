@@ -14,8 +14,6 @@ import pinout
 import touchpad
 import solenoid
 
-_SECONDS_PAUSE_AFTER_TUNE = 2
-
 web_button_event = asyncio.Event()
 
 def start_tune():
@@ -31,18 +29,16 @@ def wait_for_tune( max_msec=None ):
     wait_for_tune_flag = True
     t0 = time.ticks_ms()
     while True:
-        if ( tachometer.is_really_turning() or 
+        if ( tachometer.is_turning() or 
             touch_button.release_event.is_set() or
             web_button_event.is_set()
            ):
             wait_for_tune_flag = False
-            if web_button_event.is_set():
-                await asyncio.sleep(2)
             return True
         # Process timeout if specified
         if max_msec and time.ticks_diff( time.ticks_ms(), t0 ) > max_msec:
             return False
-        await asyncio.sleep_ms( 100 )
+        await asyncio.sleep_ms( 10 )
 
 def is_waiting():
     return wait_for_tune_flag
@@ -58,12 +54,15 @@ def _init( ):
     # Tell the player how to get the top tuneid. Player can't import setlist,
     logger.debug("init ok")
     
+    
 async def _setlist_process():
     global current_setlist, stop_player_event
     # When powered on, always load setlist
     load()
     skip_wait_for_tune = False
     while True:
+        # Ensure loop will always yield
+        await asyncio.sleep_ms(10)
         await modes.wait_for_play_mode()
         if len( current_setlist ) > 0:
             if not skip_wait_for_tune:
@@ -75,13 +74,17 @@ async def _setlist_process():
             logger.info(f"play tune will start {tune=}")
             await player.play_tune( tune, stop_player_event )
             logger.info(f"play_tune ended {player.get_progress()}" )
-            await asyncio.sleep(_SECONDS_PAUSE_AFTER_TUNE)
-        else:
-            # Ensure loop will yield to async
-            await asyncio.sleep_ms( 100 )
-            
+            # Wait for turning the crank to cease 
+            # after a tune has played
+            if tachometer.is_installed():
+                while tachometer.is_turning():
+                    await asyncio.sleep_ms( 100 )
+                    
+        else:   
             # Wait for max 1 second. If there is an attempt to start a tune
-            # and no setlist then shuffle all.
+            # and no setlist then shuffle all. If wait for tune
+            # gives timeout, try again later.
+            # >>> REVISAR WAIT FOR TUNE, HACE LO QUE SE REQUIERE?
             if await wait_for_tune( 1000 ):
                 # Id we want to start tune and there is no tune, shuffle all.
                 logger.info(f"Automatic play, shuffle all tunes {len(current_setlist)}, clap 3")
@@ -112,7 +115,10 @@ def queue_tune( tune ):
 def stop_tune():
     # Stop current tune
     global stop_player_event
-    if player.get_progress()["tune"] == current_setlist[0]:
+
+    if (len(current_setlist) > 0 
+        and player.get_progress()["tune"] == current_setlist[0]
+       ):
         del current_setlist[0]
     stop_player_event.set()
     

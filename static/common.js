@@ -1,6 +1,6 @@
 scale_divisions_db = 4 ;
-max_db = -40 ;
-min_db = -20 ;
+max_db = -20 ;
+min_db = -0 ;
 
 scale_divisions_cents = 10 ;
 max_cents = 50 ;
@@ -19,21 +19,57 @@ midnight_green = "#0C435E";
 cream = "#FDFDD3";
 gargoyle_gas = "#F7E13E";
 
-function amplitude_to_db( amp ) {
+
+function list_average( list ){
+    let total = 0 ;
+    let elements = 0 ;
+    for( let i in list ){
+        let e = list[i] ;
+        // Discard null, 
+        if( !isNaN(e) && e != 1 && e != -9999 & e != -99 ){
+            total += list[i] ;
+            elements += 1 ;
+        }
+    }
+    if( elements == 0 ) {
+        return null ;
+    }
+    return total / elements ;
+}
+
+function get_max_amplitude( notelist ){
+    let max_amplitude = 0 ;
+    for( let m in notelist ){
+        let note = notelist[m] ;
+        amplist = note["amplist"] ;
+        for( let i in amplist ){
+            let amp = amplist[i] ;
+            // discard null, -99, -9999, negative, cero, 1
+            if( !isNaN(amp) && amp > 1 ){
+                if( amp > max_amplitude ){
+                    max_amplitude = amp ;
+                }
+            }
+        }
+    }
+    return max_amplitude ;
+}
+
+function amplitude_to_db( amp, max_amplitude ) {
 	// amp goes from 0 to a maximum of 32767
-    var db ;
-	if( amp > 0 ) {
-		db = 20 * Math.log10( amp/32767 ) ;
-		db = Math.round( db ) ;
+    let dbval = "-" ;
+	if( amp > 0 && amp != null  && max_amplitude > 0 ) {
+		dbval = 20 * Math.log10( amp/max_amplitude ) ;
+		dbval = Math.round( dbval ) ;
 	}
 	else {
-		db = -99
+		dbval = "-" ;
 	}
-	return db;
+	return dbval;
 }
 	
 function scale_db( db ) {
-	var scaled = (db - min_db)/(max_db - min_db) ;
+	let scaled = (db - min_db)/(max_db - min_db) ;
 	return scaled ;
 }
 
@@ -42,7 +78,7 @@ function scale_cents( cents ) {
 }
 
 function format02i( n ) {
-	var ss = "" + Math.round( n );
+	let ss = "" + Math.round( n );
 	if( ss.length == 1 ) {
 			ss = "0" + ss ;
 	} 
@@ -50,20 +86,20 @@ function format02i( n ) {
 }
 	
 function formatMilliMMSS( msec ){
-	var t = msec/1_000 ;
-	var ss = format02i( t%60 ) ;
+	let t = msec / 1_000 ;
+	let ss = format02i( t%60 ) ;
 	return "" + Math.floor(t/60) + ":" + ss ;
 }
 
 function format_secHHMM( sec ) {
-	var t = sec/60 ;
-	var mm = format02i( t%60 );
+	let t = sec/60 ;
+	let mm = format02i( t%60 );
 	return "" + Math.floor(t/60) + ":" + mm ;
 }
 
 function getResourceNumberFromURL(){
-	var page_url = new URL(window.location.href) ;
-	var path = page_url.pathname.split("/") ;
+	let page_url = new URL(window.location.href) ;
+	let path = page_url.pathname.split("/") ;
 	if( path.length <= 2 ) {
 		return "" ;
 	}
@@ -75,25 +111,26 @@ function getResourceNumberFromURL(){
 
 function barGraph( container_name, value, color, scale_divisions, alignment, width_percent ) {
 	// barGraph on container, must create canvas
-	var canvas_name = container_name + "canvas" ;
-	var canvas = document.getElementById(canvas_name) ;
+	let canvas_name = container_name + "canvas" ;
+	let canvas = document.getElementById(canvas_name) ;
 	if( canvas === null ) {
-		cd = document.getElementById( container_name )
-		w = Math.round( window.innerWidth * width_percent/100 *0.98);
-		h = 15 ;
-		s = '<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name + '</canvas>' ;
+		let cd = document.getElementById( container_name )
+		let w = Math.round( window.innerWidth * width_percent/100 *0.98);
+		let h = 15 ;
+		let s = '<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name + '</canvas>' ;
 		cd.innerHTML = s ;
 		canvas = document.getElementById(canvas_name) ;
 	}
 	canvasBarGraph( canvas, value, color, scale_divisions, alignment ) ;
 }
 
+
 function canvasBarGraph(canvas, value, color, scale_divisions, 
 	alignment ) {
 	// low level bar graph, on canvas
-	var ctx = canvas.getContext("2d") ;
-	var cw = canvas.width ;
-	var ch = canvas.height ;
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	let ch = canvas.height ;
 	ctx.beginPath();
 	ctx.lineWidth = 0;
 	// Erase rectangle (fill with white)
@@ -101,7 +138,7 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 	ctx.fillRect(0,0,cw,ch) ;
 	// Paint bar
 	ctx.fillStyle = color ;
-	var c = value ;
+	let c = value ;
 	if( c > 1 ){
 		c = 1 ;
 	}
@@ -117,7 +154,7 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 
 	ctx.strokeStyle = "#ffffff" ;
 	ctx.lineWidth = 4 ;
-	for( var i = 0 ; i < scale_divisions ; i++ ){
+	for( let i = 0 ; i < scale_divisions ; i++ ){
 		w = cw*i/scale_divisions ;
 		ctx.moveTo( w, ch ) ;
 		ctx.lineTo( w, ch*0.75) ;
@@ -134,21 +171,21 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 
 function lrBarGraph( container_name, value, color, scale_divisions, width_percent ) {
 	// lrBarGraph on container, must create 2 canvasses
-	var canvas_name = container_name + "LRcanvas" ;
+	let canvas_name = container_name + "LRcanvas" ;
 	if( document.getElementById(canvas_name) === null ) {
-		var cd = document.getElementById( container_name )
-		var w = Math.round( window.innerWidth*width_percent/100*0.98 ) ;
-		var h = 15 ;
-		var s = 
+		let cd = document.getElementById( container_name )
+		let w = Math.round( window.innerWidth*width_percent/100*0.98 ) ;
+		let h = 15 ;
+		let s = 
 		'<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name +'</canvas>';
 		cd.innerHTML = s ;
 	}
 	
-	var canvas = document.getElementById( canvas_name ) ;
-	var c = value;
-	var ctx = canvas.getContext("2d") ;
-	var cw = canvas.width ;
-	var ch = canvas.height ;
+	let canvas = document.getElementById( canvas_name ) ;
+	let c = value;
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	let ch = canvas.height ;
 	ctx.beginPath();
 	ctx.lineWidth = 0;
 	// Erase rectangle (fill with white)
@@ -156,15 +193,15 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 	ctx.fillRect(0,0,cw,ch) ;
 	// Paint bar graph
 	ctx.fillStyle = color ;
-	var c = value ;
+	c = value ;
 	if( c > 1 ){
 		c = 1 ;
 	}
 	if( c < -1 ) {
 		c = -1 ;
 	}
-    var desde ;
-    var hasta ;
+    let desde ;
+    let hasta ;
 	if( c < 0 ) {
         desde = cw/2 + c*cw/2;
 		hasta = cw/2 - desde ;
@@ -177,7 +214,7 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 	}
 	ctx.strokeStyle = "#ffffff" ;
 	ctx.lineWidth = 4 ;
-	for( var i = 0 ; i < scale_divisions ; i++ ){
+	for( let i = 0 ; i < scale_divisions ; i++ ){
 		w = cw*i/scale_divisions ;
 		ctx.moveTo( w, ch ) ;
 		ctx.lineTo( w, ch*0.75) ;
@@ -196,11 +233,11 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 // Function to fetch a json from server.
 // Retries communication until successful.
 async function fetch_json( url, post_data ){	
-    var t0 ;
-    var t ;
-    var response ;
-    var json_result ;
-	var post_arg = make_fetch_post( post_data ) ;
+    let t0 ;
+    let t ;
+    let response ;
+    let json_result ;
+	let post_arg = make_fetch_post( post_data ) ;
 	while( true ) {
 		try {
             console.log("fetch json try", url, "post=", post_arg ) ;
@@ -275,7 +312,7 @@ async function sleep_ms( t ){
 // fetch_json also updates header_time element when
 // connection to server fails.
 async function updateHeader() {
-	var d = document.getElementById( "header_time" ) ;
+	let d = document.getElementById( "header_time" ) ;
 	if( d === null ) {
 		// A page might have no battery time element in the header
 		return ;
@@ -284,8 +321,8 @@ async function updateHeader() {
     // info on a freshly loaded page.
 	await sleep_ms( 1_000 );
 	while( true ) {
-		var battery = await fetch_json( "/battery" ) ;
-        var batteryText ;
+		let battery = await fetch_json( "/battery" ) ;
+        let batteryText ;
 		if( battery["low"] ) {
 			// Low battery emoji on BlanchedAlmond background
 			batteryText = "<span style='background-color:#FFEBCD'>&#x1faab;</span>" ;
@@ -309,7 +346,7 @@ updateHeader() ;
 
 function make_status_text( progress_status, percentage ) {
 	// Transform player status to language
-    var status_text ;
+    let status_text ;
 	if (progress_status === "ended") {
 		status_text = "fin" ;
 	}
@@ -329,17 +366,17 @@ function make_status_text( progress_status, percentage ) {
 }
 
 // Formatting of numbers with locale information
-var locale ;
+let locale ;
 if( navigator.languages.length > 0 ) {
 	locale = navigator.languages[0] ;
 }
 else {
 	locale = "en-US" ;
 }
-var numberFormatter = Intl.NumberFormat(locale, useGrouping="auto") ;
+let numberFormatter = Intl.NumberFormat(locale, useGrouping="auto") ;
 
 function formatIfNumber( newText ) {
-	var formatText = newText ;
+	let formatText = newText ;
 	// Format if number. If not: leave unchanged.
 	if( /^\-?[0-9]+\.?[0-9]*$/.test(formatText) )  {
 	   formatText = " " + numberFormatter.format(+formatText) ;
@@ -350,7 +387,7 @@ function formatIfNumber( newText ) {
 // Functions to change innerText and innerHTML of DOM element by id
 function textById( id, newText ) {
 	// Format if number or boolean
-    var formattedNewText ;
+    let formattedNewText ;
 	if( newText === true ){
 		formattedNewText = "sí" ;
 	}
@@ -381,7 +418,6 @@ function htmlByIdIgnoreErrors( id, htmlText ){
 function setAllTextById( json_result ) {
     // Set DOM elements by ID with matching key in json_result.
 	for( const [key, value] of Object.entries(json_result)) {
-		console.log("shoAllTextById", key, value ) ;
 		textById( key, value );
 	}
 }
@@ -411,13 +447,13 @@ async function showPopup(id_where, show_text) {
     }
 	// needs <span id="popup" class="popuptext"></span>
 	// in some place of the <body>
-	var popup = document.getElementById("popup") ;
+	let popup = document.getElementById("popup") ;
 	popup.innerText = show_text;
-	var saveWidth = popup.style.width ;
-	var saveHeight = popup.style.height; 
+	let saveWidth = popup.style.width ;
+	let saveHeight = popup.style.height; 
 	popup.style.height = "70px" ;
 	popup.style.width = "200px" ;
-    var boundingRect ;
+    let boundingRect ;
 	if( id_where.length > 0 ){
 		docElement = document.getElementById(id_where) ;
 		boundingRect = docElement.getBoundingClientRect() ;

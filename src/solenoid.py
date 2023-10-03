@@ -19,6 +19,11 @@ class simulated_MCP23017:
         pass
     def pin( self, p, value=None ):
         pass
+    def __getitem__( self, p ):
+        return self
+    def output(self, val=None):
+        return val
+ 
 
 # This is a singleton class to contain the definition for solenoid MIDI
 class SolenoidDef:
@@ -123,9 +128,7 @@ async def clap( n, clap_interval_msec=50 ):
 def note_on( midi_note ):
     
     if midi_note not in solenoid_def.pin_functions:
-        print(">>>    solenoid.note_on not in pin_functions", midi_note )
         return
-    print(">>>   solenoid.note_on", midi_note, "pin_name", solenoid_def.pin_names[midi_note] )
     solenoid_def.pin_functions[midi_note]( 1 )
     # Record time of note on, note_off will compute time this solenoid was "on"
     if solenoid_on_msec[midi_note] == 0:

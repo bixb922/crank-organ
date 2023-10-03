@@ -32,6 +32,7 @@ def _init( ):
     _progress = { "tune": None, "playtime": 0, "status": "" }
     _logger.debug("init ok")
     
+    
 async def play_tune( tune, stop_event ):
     global _time_played_us
     try:
@@ -43,6 +44,7 @@ async def play_tune( tune, stop_event ):
         _progress["status"] = PLAYING
         _logger.info(f"Starting tune {tune} {midi_file}")
         _reset_channelmap()
+      
         await _play_with_tachometer( midi_file, stop_event )
         _progress["status"] = ENDED
         
@@ -154,11 +156,15 @@ async def _play_with_tachometer(  midi_file, stop_event ):
             _progress["status"] = CANCELLED
             _progress["tune"] = None
             _progress["playtime"] = 0
+            _time_played_us = 0
             break
 
          
 async def _calculate_tachometer_dt( midi_event_delta_us, stop_event ):
-    
+    if not tachometer.tachometer_pin:
+        return 0
+    # Calculate dt, difference of time due to
+    # crank turning speed
     tmeter_vel = tachometer.get_normalized_rpsec() 
     if tachometer.is_turning() and tmeter_vel != 0:
         # Calculate dt = difference of midi_event.delta_us and the

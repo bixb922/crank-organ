@@ -18,6 +18,7 @@ import modes
 from tinytz import ttz
 
 # Allowed pages for each mode
+#>>>put this in config??
 _ALLOWED_PAGES = {
 "play": ("index.html","diag.html", "play.html", "tunelist.html", "config.html"),
 "tuner": ("index.html", "diag.html", "note.html", "notelist.html", "config.html" ),
@@ -191,22 +192,29 @@ async def get_progress( request, response ):
 @app.route("/queue_tune/<tune>")
 async def queue_tune( request, response, tune ):
     # Queue tune to setlist
-    _logger.debug(f"/start_play {request.path.decode()=}" )
     setlist.queue_tune( tune )
+    await asyncio.sleep_ms( 300 )
+    await get_progress( request, response )
+
+
+@app.route("/start_tune")
+async def go_tempo( request, response ):
+    setlist.start_tune()
+    asyncio.sleep_ms( 500 )
     await get_progress( request, response )
 
  
 @app.route("/stop_tune_setlist" )
 async def stop_tune_setlist( request, response ):
     setlist.stop_tune()
-    await response.start_html()
-    await response.send( "{}" )
+    asyncio.sleep_ms( 500 )
+    await get_progress( request, response )
     
 @app.route("/back_setlist" )
 async def back_setlist( request, response ):
     setlist.to_beginning_of_tune()
-    await response.start_html()
-    await response.send( "{}" )
+    asyncio.sleep_ms( 500 )
+    await get_progress( request, response )
 
 @app.route("/save_setlist")
 async def save_setlist( request,response ):
@@ -241,11 +249,6 @@ async def shuffle_set_list( request, response ):
 @app.route("/shuffle_all_tunes")
 async def shuffle_all_tunes( request, response ):
     setlist.shuffle_all_tunes()
-    await get_progress( request, response )
-
-@app.route("/start_tune")
-async def go_tempo( request, response ):
-    setlist.start_tune()
     await get_progress( request, response )
 
 # Organ tuner web requests

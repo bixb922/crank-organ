@@ -1,3 +1,5 @@
+# >>> ERROR DISCONNECTS FROM AP_IF WHEN ACTIVATING STA_IF
+#
 # 2 modes:
 #   STA_IF mode
 #       with home router
@@ -29,6 +31,7 @@ async def async_init():
     # Connect in background to both interfaces
     _ap_if = network.WLAN( network.AP_IF )
     _sta_if = network.WLAN( network.STA_IF )
+
     _sta_if_ap = ""
     
     # If there was a soft reset, get rid of previous connect

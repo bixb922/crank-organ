@@ -1,3 +1,7 @@
+# >>> boton reset stored tuning - borra organtuner.json
+# >>> max para db se calcula, no es fijo.
+# >>> esconder valores en la UI que no son medidos: -9999, null
+# >>> measure "no signal" ???
 import sys
 import os
 import array
@@ -206,6 +210,7 @@ def _get_stored_tuning( ):
         for midi_note in pinout.all_valid_midis:
             d = {}
             d["name"] = str( midi_note )
+            # >>> pending: eliminate cents, amp, keep centslist, amplist
             d["cents"] = -9999
             d["amp"] = 1
             d["centslist"] = [-9999]

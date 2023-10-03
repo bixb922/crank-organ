@@ -101,20 +101,24 @@ async def _calculate_rpsec():
         
 def get_rpsec():
     global rpsec
+    # Only used in webserver for information 
     return rpsec
 
 def is_turning():
     global rpsec
-    return rpsec > _MINIMUM_RPSEC
+    return is_installed() and rpsec > _MINIMUM_RPSEC
 
-def is_really_turning():
-    return tachometer_pin and is_turning()
+def is_installed():
+    return bool( tachometer_pin )
 
 def clear():
+    # Clear "turning start" event - we don't need that here...
     pass
 
 def get_normalized_rpsec():
     global rpsec, _velocity_multiplier
+    # Used in player.py to delay/hasten music
+    # depending on crank speed
     return rpsec * _velocity_multiplier
     
 def set_velocity( ui_vel ):
@@ -129,6 +133,7 @@ def set_velocity( ui_vel ):
     _velocity_multiplier = (ui_vel*ui_vel/10000 + ui_vel/200 + 0.5)/_NORMAL_RPSEC
 
 def get_velocity():
+    # Used by webserver to tell UI
     return _ui_velocity
 
 

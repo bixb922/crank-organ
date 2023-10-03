@@ -83,7 +83,7 @@ async function getProgress() {
 		  await sleep_ms( 10000 ) ;
         }
         else{
-            await sleep_ms( 1000 ) ;
+            await sleep_ms( 2000 ) ;
         }
 	}
 }
@@ -199,14 +199,12 @@ function updateProgress( progress ) {
 
 async function stopTuneSetList() {
 	progress = await fetch_json("/stop_tune_setlist" ) ;
-	await sleep_ms( 1000 ) ; // this may take some time to take effect 
-	updateProgress( await fetch_json( "/get_progress" ) ) ;
+	updateProgress( progress ) ;
 }
 
 async function backSetList() {
-	await fetch_json("/back_setlist" ) ;
-	await sleep_ms( 500 ) ; // "back" may take some time to take effect
-	updateProgress( await fetch_json( "/get_progress" ) ) ;
+	progress = await fetch_json("/back_setlist" ) ;
+	updateProgress( progress ) ;
 }
 
 

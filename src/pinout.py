@@ -99,6 +99,9 @@ def load_pin_info( ):
     pinout_json = read_current_pinout_json()
 
     do_actions( pinout_json, pinout_actions )
+    
+    # Sort valid midis
+    all_valid_midis.sort( key=lambda m: m.hash )
         
 
 def define_solenoids( solenoid_def ):

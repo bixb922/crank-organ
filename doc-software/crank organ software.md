@@ -22,7 +22,7 @@ The lazy mode: don't use your cell phone. Don't define a setlist. Turn the micro
 * Browser as user interface. No internal display, no buttons. Control is done with WiFi with a browser on a cell phone, tablet or PC.
 * Can define a setlist or select tune by tune.
 * It's fast to establish a setlist. The setlist can be ordered, shuffled and stored. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
-* Music is uploaded into the microcontroller via Wifi with drag and drop or via USB connnection. You can add description, author, title, year to each tune.
+* Music is uploaded into the microcontroller via WiFi with drag and drop or via USB connnection. You can add description, author, title, year to each tune.
 * To aid tuning, playing scales and individual notes is supported.
 * Shows remaining battery capacity on browser
 * Very low power consumption: consumes 0.3W in addition to the power needed for the solenoids
@@ -288,7 +288,7 @@ The description of the installation process is pending.
 I'll probably make a MicroPython .bin image for a ESP32-S3 N16R8 available, with all the software in it. If that's the case, you need to:
 * Install Python from www.python.org/downloads
 * Install the esptool.py from the Espressif, the link is on ```https://micropython.org/download/ESP32_GENERIC_S3/```
-* Plug the ESP32-S3 board via USB cable to the PC. The board usually has two USB-C ports labelled USB and COM. It's preferable to use the port labelled USB.f
+* Plug the ESP32-S3 board via USB cable to the PC. The board usually has two USB-C ports labelled USB and COM. It's preferable to use the port labelled USB.
 * Instructions for the esptool comand are at ```https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/index.html```
 * Run the esptool command from the command line (cmd or terminal) as shown in the official instructions for ESP-32 at ```https://micropython.org/download/ESP32_GENERIC_S3/```but with the supplied image instead of the standard image
 * Reboot the microcontroller
