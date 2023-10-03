@@ -175,7 +175,6 @@ The microphone/tuning capacity is still in testing phase. However, there is a sc
 Without a microphone, the tuning and amplitude graphs just show random values with no meaning. 
 
 ## All notes page
->>>>>> PENDING 
 
 ![tuning all notes page](tuning.jpg)
 
@@ -227,9 +226,7 @@ There is no functionality to transpose a MIDI file. Use any MIDI file editor to 
 
 ## Preparing the tunelib on your PC
 
-* Create a "music" folder on your PC
-* Copy the tunelib_gui.py, tunelib.py, scales.py and update_tunelib_mc.py files from this GITHUB repository to the music folder.
-* Create a tunelib subfolder in the music folder.
+* Copy the music folder of the GITHUB repository to your PC.
 * Copy your crank organ MIDI files to the tunelib folder. 
 * Run ```tunelib_gui.py``` on your PC to edit the tunelib information: title, author, genre and year.
 * Connect the microcontroller to the USB port of the PC. See if it is available with mpremote.
@@ -237,6 +234,10 @@ There is no functionality to transpose a MIDI file. Use any MIDI file editor to 
 This is the screenshot of the tunelib editor:
 
 ![tunelib gui](tunelib_pc.png)
+
+To add files, copy them to the tunelib folder, then update the info with the tunelib editor.
+
+To remove files, rmove them from the tunelib folder, then update the info with the tunelib editor.
 
 ## Update tune library through USB
 * Run ```update_tunelib_mc.py```to copy all changes of the tunelib to the microcontroller. Only changed files are copied.
