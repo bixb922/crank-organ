@@ -2,7 +2,7 @@
 
 
 # Purpose
-The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music on a crank organ.
+The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ
 
 
 # Features
@@ -13,10 +13,11 @@ The purpose of this software is to power a microcontroller (see schematic in thi
 * Music is uploaded into the microcontroller via WiFi with drag and drop or via USB connnection. You can add description, author, title, year to each tune.
 * To aid tuning, playing scales and individual notes is supported.
 * Shows remaining battery capacity on browser
-* Very low power consumption: consumes 0.3W in addition to the power needed for the solenoids
 * Preconfigured for common scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different instruments.
 * This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Solenoids can be mapped to MIDI note number only (only one instrument), or MIDI note number and program number (several instruments). Percussion channel mapping is also supported (drums and percussion).
+
+The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # Main menu and navigation
 The home page has the main menu and shows detailed battery use information.

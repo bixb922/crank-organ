@@ -20,8 +20,9 @@ The goals for the design are:
 * Controllable from any smartphone, tablet or PC
 * But: the controller must be able to work without smartphone, tablet or PC
 * Able to control solenoid based 90 Ohm valves
+* Low power consumption: consumes 0.3W in addition to the power needed for the solenoids
 
-See also the software section for a MicroPython based solution.
+See also the software section for a description of the program that maatches the hardware.
 
 # Description
 The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 150 to 200 kb).
@@ -38,7 +39,6 @@ The solenoids are driven by 12V, so this circuit needs a 12V power supply. Some 
 
 I'll show the circuit with 10 AA rechargeable batteries.
 
-Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed. 
 
 Although MIDI file and software update can be done via WiFi using the software provided, on some occasions, at least initially, it may be of interest to connect a PC or MAC via USB to the USB input of the ESP32-S3. There are several ways to do that safely:
 * Remove the ESP32-S3 from the sockets and then plug in
@@ -93,7 +93,10 @@ Here is an example:
 
 Make sure it is a N8R8 or N16R8 board. N8R8V (with a V in the designator) have less pins available.
 
-It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. It might also help to solve the question whether the ESP32-S3 can be connected to 12V. Check the vendor's specs or ask the vendor (see section on DC-DC regulator below).
+It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. I
+
+Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed.  See the data sheet or ask the vendor to verify if the ESP32-S3 allows to be connected to 12V, in that case the 12V to 5V regulator is not necessary.
+
 
 ### Two 22 pin contacts for ESP32-S3
 These are useful to be able to remove or replace the ESP32-S3. I don't believe the ESP32-S3 fails a lot, I haven't seen it fail, but it is nice to know that it's easy to change.
