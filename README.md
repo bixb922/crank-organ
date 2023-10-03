@@ -3,7 +3,7 @@ MIDI based crank organ software and hardware
 
  Overview
 
-This software and hardware works in this context:
+This is a little context diagram:
 
 ![diagram](diagram.png)
 
@@ -11,7 +11,7 @@ A crank organ consists of windchests with pipes. A bellows pumps air into the wi
 
 This hardware and software is the MIDI controller for this setup. It is controlled with a browser in a cell phone (or tablet or PC), and in turn controls the solenoid valves to open according to MIDI files stored in the microcontroller.
 
-How is this used?
+How is this solution used?
 
 You select tunes to play by tapping on them on the tunelist page on the cell phone.
 
