@@ -16,6 +16,19 @@ Time permitting, I'll complete this repository:
 * Description of I2C based controller cards for more than 20 pipes
 * Easy installation process, providing a complete flash image for ESP32-S3 N16R8
 
+# Folders
++---------------------------------------------------+
+|doc-hardware|Description of the controller hardware|
+|doc-software|Description of the controller software|
++---------------------------------------------------+
+|Software folders                                   |
+|src| Source code (MicroPython)                     |
+|static| Web pages for the microcontroller (html)   |
+|pinout| Pinout templates for 20, 26 and 31 note organs |
+|data| Sample configuration file                    |
+|music| The tune library (pending to upload)        |
++-----+---------------------------------------------+
+
 # License
 Copyright (c) 2023 Hermann Paul von Borries
 
