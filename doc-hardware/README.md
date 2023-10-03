@@ -11,6 +11,7 @@ Contents:
 20 voice organs are very common, so here is a design for these:
 
 The goals for the design are:
+* Handle standard 90 Ohm organ valve solenoids
 * Very simple electronics, easy to build
 * Readily available components
 * Few but high level components for good reliability
@@ -78,6 +79,7 @@ For main board
 * Total: seven 3x screw terminals and two 2x screw terminals. These are the green screw terminals on the photos below.
 * 22AWG color wire  (24AWG will also do)
 * 4-40 hex separators and corresponding screws to fix circuit to board
+* Pin 1x40 Single Row Male 2.54mm Breakable Pin Header
 * Metallic drawer knob as touch pad
 
 Batteries see section below.
@@ -87,9 +89,11 @@ Batteries see section below.
 ### ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
 Here is an example:
 
-![ESP32-S3 board](esp32-s3-board.png)
+![esp32s3](esp32-s3-upper-side.jpg) ![esp32s3 underside](esp32-s3-underside.jpg)
 
 Make sure it is a N8R8 or N16R8 board. N8R8V (with a V in the designator) have less pins available.
+
+It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. It might also help to solve the question whether the ESP32-S3 can be connected to 12V. Check the vendor's specs or ask the vendor (see section on DC-DC regulator below).
 
 ### Two 22 pin contacts for ESP32-S3
 These are useful to be able to remove or replace the ESP32-S3. I don't believe the ESP32-S3 fails a lot, I haven't seen it fail, but it is nice to know that it's easy to change.
@@ -98,22 +102,23 @@ A better description is "2.54mm single row Female 2~40P PCB socket pin header"
 
 ![22 pin socket header](22-pin-socket.png)
 
-It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. It might also help to solve the question whether the ESP32-S3 can be connected to 12V, but it's better to check the vendor's specs or ask the vendor (see section on DC-DC regulator below).
 
 ### ULN2003A or TBD62003A
 
-Both are plug compatible. The TBD leaves more voltage available for the solenoids. When on, the TBD takes away about 0.3V while the ULN2003A may take away up to 1V from the 12V. That means a bit more power consumption for the TBD compared to the ULN, but  better behaviour if battery level is low. Solenoids will have a bit more of force to move too.
+This is a standard current amplifier, that takes the signal from the GPIO ports and sources enough current to move solenoids at 12V.
 
-ULN2003A and TBD62003A have flyback diodes included (also called kickback diodes). No need to worry about these.
+ULN and TBD are plug compatible. The TBD leaves more voltage available for the solenoids. When on, the TBD takes away about 0.3V while the ULN2003A may take away up to 1V from the 12V. That means a bit more power consumption for the TBD compared to the ULN, but  better behaviour if battery level is low. Solenoids will have a bit more of force to move too.
+
+ULN2003A and TBD62003A have flyback diodes included (also called kickback diodes). No need to worry about these. 
 
 Both IC can handle 90 Ohm 12V solenoids well. If the resistance is lower, you'd have to check the data sheets for the individual and combined current limit.
 
-### !N4007 or 1N5822 diode
+### 1N4007 or 1N5822 diode
 When connecting a PC to the USB port of the ESP32-S3, this diode will prevent the current flowing back into the 12V to 5V DC-DC regulator.
 
 Almost any diode rated 1A average current and 20V minimum will do. Schottky diodes such as the 1N5822 are slightly more appropriate for this function. Zener diodes must not be used here.  The average current is at most 150mA, the suggested diodes work well with 1A average.
 
-### Important note on the diode
+*Important note on the diode*
 
 Some ESP32-S3 boards have this diode on the board. If that is the case, *don't* add this diode, since this may lower input voltage too much.
 
@@ -142,7 +147,7 @@ This is probably the smallest size where these components will fit. If you use a
 ### Screw terminals
 Can be any size, but 3x and 2x are convenient to combine.
 
-![3x and 2x screw terminals](screw-terminal.jpg)
+![3x and 2x screw terminals](screw-terminal.png)
 
 The 12V-GND terminal should be 3x, one for 12V input, one for 12V to solenoids, one for ground.
 
@@ -156,7 +161,7 @@ It's useful to have different color wire. To wire the board, 22AWG is nice, 24AW
 
 To connect to 12V it's better to have cable (with many strands) since cable resists some bending and moving. Red for positive, black or blue for negative.ç
 
-![wire](wire-22awg.jpg)
+![color wire](wire-22awg.jpg)
 
 ### 4-40 screws 
 
@@ -164,13 +169,21 @@ These are standoff screws to screw the board to a wooden base. Drill small holes
 
 ![4-40 screws](4-40-screws.png)
 
+
+### Pin 1x40 Single Row Male 2.54mm Breakable Pin Header
+
+These are useful to make connectors. In our case, breaking off 4 connectors of 2 pins each makes a good separator and connector for the 5V DC-DC converter. The converter can also be soldered, but must be isolated on its underside to avoid contacts.
+
+![40 pin header](Screenshot%202023-10-03%20at%2016.08.25.png)
+
+
+
 ### Metallic drawer knob as touch pad
 The ESP32-S3 has the capability to sense hand touch. The connection is extremely simple. The touch pad itself is any metal disk or object, for example a metallic drawer knob:
 
-![touch pad](touchapd.jpg)
+![touch pad](touchpad.jpg)
 
-Connect with one single wire to the GPIO input port of the ESP32-S3, for example at GPIO 5. There are two screw terminals for this.
-
+Connect with one single wire to the GPIO input port of the ESP32-S3, for example at GPIO 5.
 
 ## Tools
 
@@ -201,17 +214,28 @@ The general sequence is as follows
 
 ### Position connectors 
 
-![board with connectors](Mcboard-connectors.jpg)
+![board with connectors](mcboard-connectors.jpg)
+
+![connectors with description](mcboard-description.jpg)
 
 Mark 12V (red) and ground (black) on power input. This is empty insulator stuck with a bit of epoxy glue.
 
 ![12V connector, marked](12V-connector.jpg)
 
+Mark the position how the ESP32-S3 and the 5V DC-DC converter have to be inserted.  I used blue tape.
+
+Mark the screw terminal for the touchpad to distinguish from solenoid screw terminals. I used a black marker for CDs.
+
 ### Insert IC (integrated circuits) and components
 
-![board with IC](Mcboard-ic-side-view-2.jpg)
+Insert diode, if necessary. The side without the ring mark goes to the (+) output of the DC-DC converter. The side with the ring mark goes to the 5V pin of the ESP32-S3.
 
-### Fix the ICs
+![board with diode](mcboard-components-diode.jpg)
+
+![board with components](mcboard-components.jpg)
+
+
+### Solder pins for the ICs
 
 Fix the 22 pin connectors: First plug in the ESP32-S3 to keep the connectors straight and at the correct distance, then solder one pin first, check position, then solder the rest.
 
@@ -232,6 +256,9 @@ It's useful to use colors:
 * Insert wires for GPIO to ULN2803 input (white)
 * Insert wires for ULN2803 output to screw terminals (yellow)
 
+Here is an example of how to insert the wires, seen from above and from underside
+
+![inserting wires above](solder-wire-above.jpg) ![solder wires below](solder-wire-underside.jpg)
 
 The wires for GPIO pins of the opposite side of the ESP32-S3 are best put below the board. However, soldering should be still from below, use a U-bend like this for these wires:
 
@@ -247,21 +274,22 @@ Connect that to:
 * Pin 8 "GND" of the three ULN2803A
 * To two pins market GND of the ESP32-S3 (any two)
 
-### Wires for 12V
+![wire for ground](mcboard-ground.jpg)
+
+### Wires for 12V and 5V
 Join both 12V screw terminals, one of the 100nF capacitor wires with the (+) IN terminal of the DC-DC converter.
 
 Connect that to the three ULN2803A at pin 9 (COMMON).
-
-### Wire for 5V
 
 If using a diode: Connect the side of the diode without the ring to the (+) OUT pin of the DC-DC converter. Connect the side with the ring of the diode to the 5V terminal of the ESP32-S3.
 
 If not using a diode: Connect the (+) OUT pin of the DC-DC converter to the 5V terminal of the ESP32-S3.
 
-### Wires from GPIO to touchpad screw terminal
-Wire GPIO 4 and 5 with two separate wires to the screw terminal for the touchpad.
+![wires for 12V and 5V](mcboard-5V-12V.jpg)
 
-The GPIO 4 and 5 are the pins that have a 4 or 5 printed on the ESP32-S3 board.
+### Wire from GPIO to touchpad screw terminal
+
+![touchpad wiring](mcboard-touchpad.jpg)
 
 ### Wires from GPIO to ULN2803 input
 
@@ -277,12 +305,24 @@ The input ports of the ULN2803A are the pins 1 to 7. One pin is left without con
 
 It may be easier to wire the pins of the left side of the ESP32-S3 from the underside.
 
-The order is not particularly important since the MIDI to solenoid assignment can be set later with the software configuration.
+The order is not particularly important since the MIDI to solenoid assignment can be set later with the software configuration. However, it is important that the designated GPIO pins are used, and wired to pins 1 to 7 of the ULN2803A.
+
+White are the contacts that have to be connected for GPIO to ULN2803A connection. Yellow are the output wires from the ULN2803A to the screw terminals.
+
+![gpio wiring](mcboard-gpio-uln.jpg)
+
+In the picture above, I did not draw the complete wires, only the endpoints.
+
+The wires on the right side of the ESP32-S3 are connected to GPIO 5, 6, 7, 15, 16, 17, 18, 8, 9, 10, 11, 12, 13, 14.
+
+The wires from the left side of the ESP32-S3 to the ULN2803A, namely GPIO ports 1, 39, 40, 41, 42, 47 and 21 are best connected from the underside.
 
 
 ### Wires for ULN2803 output to solenoid screw terminals
 
 Wire each output port (except the one unused output) to a screw terminal. The output ports are pins 10 to 16 of the ULN2803A.
+
+![wires ULN to screw](mcboard-uln-screw.jpg)
 
 ### Solder the wires
 
@@ -326,7 +366,7 @@ It's rarely necessary to access the USB port. However, it may be better to conne
 
 For this configuration, it's advisable to have some sort of voltage indicator connected to the battery pack, to see load status. There are small and cheap three wire voltmeters available such as this one:
 
-![voltmeter](small-voltmeter.jpg)
+![voltmeter](small-voltmeter.png)
 
 ## Battery assembly
 
@@ -407,7 +447,7 @@ The board again is very simple, only the ESP32-S3 and connectors. Here the first
 
 Once wired I found it too cramped but it works well:
 
-![old microcontroller board](old-microcontroller-board.jpg)
+![crowded microcontroller board](mcboard-crowded.jpg)
 
 The 12V to 5V DC-DC converter is not on board, this is not very convenient.
 

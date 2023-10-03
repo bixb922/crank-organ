@@ -4,21 +4,9 @@
 # Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music on a crank organ.
 
-# Overview
-You select tunes to play by tapping on them on the tunelist page. 
-There are several ways to select tunes to be played:
-
-The creative mode: Tap on a tune on the tunelist, and turn the crank (or touch and release the touchpad) and the tune plays. Then select the next tune, etc. You stay on the tunelist page.
-
-The very creative mode: You can tap several tunes and queue them to play one after the other.
-
-The diligent mode: You can tap several tunes and organize them into a setlist on the performance page. You save the setlist on flash to be ready for the next performance. Once the setlist is stored, you power on the microcontroller, turn the crank (or touch and release the touchpad) and the setlist plays.
-
-The diligent and flexible mode: You can modify the setlist on the fly with the performance page. You can delete or skip a tune, reorder tunes, or select a new tune and move to the top of the list.
-
-The lazy mode: don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
 # Features
+
 * Browser as user interface. No internal display, no buttons. Control is done with WiFi with a browser on a cell phone, tablet or PC.
 * Can define a setlist or select tune by tune.
 * It's fast to establish a setlist. The setlist can be ordered, shuffled and stored. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.

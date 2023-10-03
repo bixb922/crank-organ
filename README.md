@@ -1,20 +1,48 @@
 # crank-organ
 MIDI based crank organ software and hardware
 
+ Overview
+
+This software and hardware works in this context:
+
+![diagram](diagram.png)
+
+A crank organ consists of windchests with pipes. A bellows pumps air into the windchests. One solenoid valve for each pipe controls the air flow, when open, the pipe sounds.
+
+This hardware and software is the MIDI controller for this setup. It is controlled with a browser in a cell phone (or tablet or PC), and in turn controls the solenoid valves to open according to MIDI files stored in the microcontroller.
+
+How is this used?
+
+You select tunes to play by tapping on them on the tunelist page on the cell phone.
+
+There are several ways to select tunes to be played:
+
+The creative mode: Tap on a tune on the tunelist, and turn the crank (or touch and release the touchpad) and the tune plays. Then select the next tune, etc. You stay on the tunelist page.
+
+The very creative mode: You can tap several tunes and queue them to play one after the other.
+
+The diligent mode: Before a performance, you can tap several tunes and organize them into a setlist on the performance page. You save the setlist on flash to be ready for the next performance. When the performance begins, you power on the microcontroller, turn the crank (or touch and release the touchpad) and the setlist plays.
+
+The diligent and flexible mode: You can modify the setlist on the fly with the performance page. You can delete or skip a tune, reorder tunes, or select a new tune and move to the top of the list, according to the audience and your desire.
+
+The lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
+
 # Description
 
-This is the complete software for automating a MIDI and solenoid valve based crank organ.
+This is the complete software for automating a MIDI and solenoid valve based crank organ. A description on how to build the electronic hardware is included.
 
-See the doc-software folder for a description of the software.
+Please the doc-software folder, file README.md a description of the software.
 
-See the doc-hardware folder for schematics of the hardware and a description.
+See the doc-hardware folder, file README.md for schematics of the hardware and instructions on how to build the hardware.
 
 This is work in progress. Please post an issue for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 Time permitting, I'll complete this repository:
 * Better description of hardware and building the hardware
-* Description of I2C based controller cards for more than 20 pipes
+* Better description of I2C based controller cards for more than 20 pipes
 * Easy installation process, providing a complete flash image for ESP32-S3 N16R8
+* Crank rotation sensor (tachometer)
+* Any enhancements to the software that I can come up with
 
 # Folders
 
@@ -22,8 +50,8 @@ Time permitting, I'll complete this repository:
 | Folder     | Contents                             |
 |------------|--------------------------------------|
 |Documentation                                      |
-|doc-software|Description of the controller software|
-|doc-hardware|Description of the controller hardware|
+|doc-software|Description of the controller software. Open README.md|
+|doc-hardware|Description of the controller hardware. Open README.md|
 |Software folders                                   |
 |src| Source code (MicroPython)                     |
 |static| Web pages for the microcontroller (html)   |
