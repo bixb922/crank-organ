@@ -174,8 +174,7 @@ These are standoff screws to screw the board to a wooden base. Drill small holes
 
 These are useful to make connectors. In our case, breaking off 4 connectors of 2 pins each makes a good separator and connector for the 5V DC-DC converter. The converter can also be soldered, but must be isolated on its underside to avoid contacts.
 
-![40 pin header](Screenshot%202023-10-03%20at%2016.08.25.png)
-
+![40 pin header](40-pin-header.png)
 
 
 ### Metallic drawer knob as touch pad
@@ -184,6 +183,14 @@ The ESP32-S3 has the capability to sense hand touch. The connection is extremely
 ![touch pad](touchpad.jpg)
 
 Connect with one single wire to the GPIO input port of the ESP32-S3, for example at GPIO 5.
+
+The touchpad is the simplest way to order the microcontroller to start a tune. Tunes are queued, either in previously prepared setlist, or by tapping the tune on the tunelist page. They are left waiting until any of these event happen:
+
+* You touch and release the touchpad
+* If a crank rotation sensor is installed, the crank starts
+* The "start" button on the performance page is pressed (needs cell phone)
+
+When the crank rotation sensor is installed, that's certainly the best option of all.
 
 ## Tools
 

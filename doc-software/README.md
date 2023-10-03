@@ -125,6 +125,16 @@ Once started, the top tune is removed from the setlist. "To beginning" puts the 
 
 The setlist stored on flash gets changed only with the “save serlist“ button. 
 
+### How to start a queued tune that is waiting
+
+Option 1: If a crank rotation sensor is installed, start turning the crank. This will start the tune.
+
+Option 2: If the touchpad is installed, start cranking, then touch and release the touchpad. This is very simple from the hardware point of view, since a touchpad is just any metallic knob or disc (see hardware), and easy to do: one hand turns the crank while holding the touchpad. When ready, release the touchpad.
+
+Option 3: Press the start button on the performance page.
+
+
+
 ### Setlist control
 
 ![setlist control](performance_setlist.jpg)
