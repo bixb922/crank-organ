@@ -3,13 +3,13 @@ MIDI based crank organ software and hardware
 
 # Description
 
-This is the complete software for a MIDI and solenoid valve based crank organ.
+This is the complete software for automating a MIDI and solenoid valve based crank organ.
 
-See the software folder for a description of the software.
+See the doc-software folder for a description of the software.
 
-See the hardware folder for schematics of the hardware and a description.
+See the doc-hardware folder for schematics of the hardware and a description.
 
-This is work in progress. Please post an issue for questions or observations. 
+This is work in progress. Please post an issue for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 Time permitting, I'll complete this repository:
 * Better description of hardware and building the hardware
