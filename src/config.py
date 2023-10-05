@@ -103,7 +103,10 @@ def _init():
         
     # Load a fallback configuration, populate cfg with missing values if any
     # If that value is saved, information gets complemented.
-   
+    # Also, the save() function relies on all keys be present. Only
+    # keys present in cfg can be updated, no new keys added.
+    # Also: initially there does not need to be a config.json.
+    # After the first change, config.json is complete.
     fallback = {
         "description" : "Your ESP32-S3 device",
         "name": "esp32s3",
@@ -128,8 +131,9 @@ def _init():
         "modes":["play", "tuner", "config"],
 		
         "webserver_cache": True,
-		# Firefox caps max_age at 86400, Chromium at 10 minutes.
+		# Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds
         "max_age": 7200,
+		
         "mic_test_mode": False,
     }
     for k,v in fallback.items():
@@ -255,33 +259,38 @@ def save( newconfig ):
     global cfg
     
     # Validate data received from config.html
-    for k in newconfig:
+    for k,v in newconfig.items:
         if k in ["max_age", "ap_max_idle",
-                "idle_deepsleep_minutes", "battery_watt_hours", "mic_gpio",
-                "neopixel_gpio", "tachometer_gpio"]:
+                "idle_deepsleep_minutes", "battery_watt_hours",
+                "solenoid_resistance", "touchpad_big_change"]:
             try:
-                newconfig[k] = int(newconfig[k])
+                newconfig[k] = int(v)
             except:
                 return f"Error: {k} is not an integer"
-        if k == "time_zone_offset":
+        
+        elif k == "time_zone_offset":
             try:
-                newconfig[k] = float( newconfig[k] )
+                newconfig[k] = float( v )
             except:
                 return f"Error: {k} is not float"
-            
-    if "name" in newconfig:
-        name = newconfig[k]
-        if len(name)>15:
-            return "Error: Host name exceeds 15 characters"
-        u = name.upper()
-        for s in u:
-            if not( "A"<=s<="Z" and "0"<=s<="9"):
-                return "Host name is not A-Z, a-z, 0-9"
-        if not( "A"<=u[0:1]<="Z"):
-            return "Error: Host name does not start with letter"
- 
-    if not verify_password( newconfig["password"]):
-        return "Password incorrect"
+		
+        elif k == "initial_page":
+            if v not in ( "index", "tunelist", "performance" ):
+            return f"Error: unknown initial_page"
+			
+        elif k == "name":
+            name = newconfig[k]
+            if len(name) > 15:
+                return "Error: Host name exceeds 15 characters"
+            u = name.upper()
+            for s in u:
+                if not( "A" <= s <="Z" and "0" <=s <= "9"):
+                    return "Host name is not A-Z, a-z, 0-9"
+            if not( "A" <= u[0:1] <="Z"):
+                return "Error: Host name does not start with letter"
+        elif k == "password":
+            if not verify_password( v ):
+                return "Password incorrect"
     
     # Password ok, copy newconfig into configuration
 
