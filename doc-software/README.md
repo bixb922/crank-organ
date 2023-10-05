@@ -502,9 +502,13 @@ You can replace the crank organ ohite of the home screen by replacing the file /
 
 
 # Programming language
-The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are programmed in HTML and JavaScript.
+The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript with web requests done with fetch/async.
 
-Credits to mcauser (MCP23017 library, no modifications), belialov (Tinyweb web server, modified to enhance asyncio response). Both modules are available on github MIT license.
+Frequency detection is done with the zero crossing algorithm (See zcr.py). This is quite appropriate for organs, since the fundamental is strong. The algorithm also is fast.
+
+MicroPython version 1.21 (or 1.20 later than sept 2023) is required. Since MicroPython is continually enhanced, best use the latest version.
+
+Credits to mcauser (MCP23017 library, no modifications), belialov (Tinyweb web server, modified to enhance asyncio response). Both library modules are available on github under MIT license.
 
 # Under development/testing
 Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes.

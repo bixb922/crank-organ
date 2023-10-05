@@ -27,7 +27,7 @@
 <span id="configuration_form" style="display:none">
 <div class="middlediv2">Change configuration
 password</div>
-	This password is used to connect to the microcontroller as access point, for example, when you select the microcontroller's WiFi AP name <span id="copy_hostname4"></span>. This same password is used to allow modification the present configuration.
+	This password is used to change the configuration. This same password is used connect to the microcontroller acting as access point (AP), this is, you select the microcontroller's SSID which is currently <b><span id="copy_hostname4"></span></b> and will be prompted for this password. 
 	<br>
 	<label for="ap_password">New password:</label>
 	<input id="ap_password" name="ap_password" type="password"/ size="15" oninput="validateNewPasswords()">
@@ -51,7 +51,7 @@ password</div>
 	<button type="button" onclick="save('description','name')">Save description and host name</button>
 
 <div class="middlediv">WiFi Router or hotspot (station mode)</div>
-	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one of these responds. Once connected, you can reach this microcontroller from a PC or the cell phone entering <b>http://<span id="copy_hostname3"></span>.local</b> in your browser. This form of connection is the preferred way to connect to the microcontroller. Only WiFi 2.4Ghz, no 5Ghz.
+	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one of these responds. Once connected, you can reach the microcontroller from a PC or the cell phone entering <b>http://<span id="copy_hostname3"></span>.local</b> in your browser. This form of connection is the preferred way to connect to the microcontroller. Only WiFi 2.4Ghz, no 5Ghz.
 	<br>
 	<label for="access_point1" >SSID of primary router/hotspot the microcontroller should connect to (Example: a hotspot/access point on your cell phone):</label>
 	<input id="access_point1" name="access_point1" type="text"/>
@@ -130,13 +130,8 @@ password</div>
 	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily:</label>
 	
 	<br>
-	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. A value larger than 60000 (10 minutes) is appropriate.  No decimals, integer only:</label>	<input id="max_age" name="max_age" type="text" size="6"/>
+	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. A value of 7200 (2 hours) is appropriate.  No decimals, integer only:</label>	<input id="max_age" name="max_age" type="text" size="6"/>
 
-
-	<br>
-	
-    <input id="log_level_debug" name="log_level_debug" type="checkbox"/>
-    <label for="log_level_debug">Include debugging messages in data/error<i>nnn</i>.log files. If not checked, only informational and error messages are recorded in the log files</label>
 
 
     <br>
@@ -144,7 +139,7 @@ password</div>
     <label for="mic_test_mode">Debug mode for microphone. Generates random signals to test tuning mode. If a microphone is present, it is ignored:</label>
     
     <br>
-	<button type="button" onclick="save( 'webserver_cache', 'max_age', 'log_level_debug', 'mic_test_mode' )">Save debug settings</button>
+	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode' )">Save debug settings</button>
 
 	
     

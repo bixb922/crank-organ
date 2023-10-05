@@ -107,23 +107,30 @@ def _init():
     fallback = {
         "description" : "Your ESP32-S3 device",
         "name": "esp32s3",
-        "webserver_cache": True,
-        "max_age": 86400,
+		
         "access_point1": "wifi_SSID_1",
         "password1": "password1",
         "access_point2": "wifi_SSID_2",
         "password2": "password2",
         "ap_password": "drehorgel",
+		
         "ap_ip": "192.168.144.1",
+		
         "ap_max_idle": 120,
         "idle_deepsleep_minutes": 15,
         "battery_watt_hours": 24,
         "solenoid_resistance": 90,
-        "mic_test_mode": False,
+		
         "touchpad_big_change": 10000,
         "time_zone_offset": 0.0,
+		
         "initial_page": "index",
         "modes":["play", "tuner", "config"],
+		
+        "webserver_cache": True,
+		# Firefox caps max_age at 86400, Chromium at 10 minutes.
+        "max_age": 7200,
+        "mic_test_mode": False,
     }
     for k,v in fallback.items():
         if k not in cfg:

@@ -69,21 +69,24 @@ For main board
 * ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
 * Two 22 pin contacts to be able to interchange ESP32-S3.
 * Three ULN2003A (7 channel darlington transistor array) or three TBD62003APG (7 channel DMOS transistor array) (see note below)
-* 1N4007 or 1N5819 diode (see note below)
-* 100nF capacitor
-* 12V to 5V 2A DC-DC buck converter
-* 7x9 cm solderable bread board
+* One 1N4007 or 1N5819 diode (see note below)
+* One 100nF capacitor
+* One 12V to 5V 2A DC-DC buck converter
+* One 7x9 cm solderable bread board
 * Six 3xScrew terminals plus one 2x screw terminal for the solenoids
 * One 3x screw terminal for 12V and ground
 * One 2x screw terminal for touch pad and one available port
-* Total: seven 3x screw terminals and two 2x screw terminals. These are the green screw terminals on the photos below.
+* Eight 3x screw terminals 
 * 22AWG color wire  (24AWG will also do)
-* 4-40 hex separators and corresponding screws to fix circuit to board
-* Pin 1x40 Single Row Male 2.54mm Breakable Pin Header
-* Metallic drawer knob as touch pad
+* Four 4-40 hex separators and corresponding screws to fix circuit to board
+* One Pin 1x40 Single Row Male 2.54mm Breakable Pin Header
+* One Metallic drawer knob as touch pad
 
 Batteries see section below.
 
+Of course, you will need solenoid valves. These are used in big organs (church organs).
+
+![solenoid valves](solenoid-close-up.jpg)
 
 
 ### ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
@@ -223,6 +226,7 @@ The general sequence is as follows
 
 
 ### Position connectors 
+Insert connectors. Mark position of the ESP32-S3 and the direction (12V to 5V) of the DC-DC voltage regulator. Mark the screw terminal where the touchpad goes (black on the photo). I used blue tape.
 
 ![board with connectors](mcboard-connectors.jpg)
 
@@ -232,9 +236,7 @@ Mark 12V (red) and ground (black) on power input. This is empty insulator stuck 
 
 ![12V connector, marked](12V-connector.jpg)
 
-Mark the position how the ESP32-S3 and the 5V DC-DC converter have to be inserted.  I used blue tape.
 
-Mark the screw terminal for the touchpad to distinguish from solenoid screw terminals. I used a black marker for CDs.
 
 ### Insert IC (integrated circuits) and components
 
@@ -336,7 +338,7 @@ Wire each output port (except the one unused output) to a screw terminal. The ou
 
 ### Solder the wires
 
-Check the wires again.
+Check the wires again before soldering.
 
 It's easiest if all soldering is done from the underside as noted above. Leave the wires short but sufficient to have good solder flow that covers underside pin and wire. 
 
@@ -357,7 +359,11 @@ See if there are excess bits of solder. Check if there are unwanted bridges. Che
 ## Testing
 Use multitester with continuity test to test all pins and contacts against all other. For example: Put one probe of the multitester on the 12V connector screw and check with all screw connectors and with visible all IC contacts (ULN2003A, ESP32-S3, capacitor, diode, 12V to solenoids) to see that only the wanted contacts are connected. Now proceed to the ground screw terminal and proceed the same way, etc.
 
-Connect the solenoids. Check all contacts of solenoids as described above. One pole of each solenoid go to the screw terminal and the other pole of the solenoid goes to the 12V screw terminal. 
+## Connect the solenoids
+
+Connect the solenoids. One pole of each solenoid go to the screw terminal (the colored wires on the photo below) the other pole of the solenoid goes to the 12V screw terminal (the red wire on the photo below). It does not matter which side goes to 12V.
+
+![solenoid wiring](solenoid-wiring.png)
 
 Plug the USB connector of the ESP32-S3 to a PC. The ESP32-S3 should have some leds that turn on or flash.
 
@@ -488,9 +494,9 @@ This is not tested. Once tested, I'll describe that later.
 
 # Copyright and license
 
-Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/3.0/
+Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 
-Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures. T
+Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures. 
 
 Software license:
 
