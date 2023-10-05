@@ -49,6 +49,8 @@ When entering a mode (crank organ, tuner, configuration) it is possible that you
 
 It's best to navigate the applicatino using the buttons and the back button on the top of the page.
 
+The home page is by default the menu page, but the configuration allows to define the tune list or the performance page as "home" page.
+
 ## The page header
 ![page header](page_header.jpg)
 
@@ -62,7 +64,7 @@ Battery information is refreshed about every minute.
 
 Keep in mind that battery capacity is usually lower than what the battery manufacturer informs. For example a 5V battery pack impelemented internally with 3.3V lithium batteries shown as 10000 mAh might have 3.3*10 Wh and not 5*10 Wh. To have meaningful output with the battery indicator, you will have to calibrate the battery capacity configuration.
 
-If the browser looses the connection to the server, the symbol &#x1f494; will come up. This usually happens if the microcontroller is down or out of range of the cell phone.
+If the browser looses the connection to the server, the broken heart symbol &#x1f494; will come up. This usually happens if the microcontroller is turned off or out of range of the cell phone.
 
 ![page header - not connected](page_header_not_connected.jpg)
 
@@ -81,7 +83,8 @@ The correct calculation of power remaining depends on the "battery_watts_hour" p
 ## The tune list page
 ![tune list page](tunelist.jpg)
 
-Contract the page a bit to see all columns:
+Contract the page a bit to see all columns. Scroll up and down to see the complete page.
+
 
 ![tune list page wide](tunelist_wide.jpg)
 
@@ -91,13 +94,15 @@ Entering text into the search box filters all tunes with that text. For example,
 
 Tapping on a tune adds that tune to the bottom of the current setlist, i.e. queues the tune for playing. Tapping again, removes the tune from the setlist. The queued tunes are marked with a golden star &#127775; and the position in the setlist:
 
-![queued tune](tunelist_queued.jpg)
+![queued tune](tunelist_waiting.jpg)
 
 If a tune is playing, progress is shown with a progress bar next to the tune name. "Waiting" means that the tune is waiting for the crank to turn in order to start.
 
 ![playing tune on tune list page](tunelist_1_playing.jpg)
 
-Once some tunes that you want to perform are selected, you can control performance pressing the "Performance" button. The queued tunes can be treated as a setlist.  Or if there is a request for a certain tune, you go back to the tune list page, tap the tune to add to setlist, go to the performance control page, move it to top with the little top button and play it.
+Once some tunes that you want to perform are selected, you turn the start turning the crank. If there is a crank sensor, the first tune starts playing. If not, touch the touchpad and the first starts playing. Once played, it pops off the pending list, and the next tune waits for start.
+
+Or else, you can control performance pressing the "Performance" button. The queued tunes can be treated as a setlist.  Or if there is a request for a certain tune, you go back to the tune list page, tap the tune to add to setlist, go to the performance control page, move it to top with the little top button and play it.
 
 You always can navigate back from the performance page to the tune page without disrupting the play list.
 
@@ -105,6 +110,8 @@ You always can navigate back from the performance page to the tune page without 
 With this page you can:
 
 * Start the top tune with the start button. However, it's easier to use the touchpad button for this, or just turn the crank if the crank sensor is installed.
+* Stop the currently played tune.
+* Go back to the beginning of the current tune (restart it).
 * See information about current tune 
 * Control the sequence of tunes in the setlist
 * Control reproduction speed
@@ -122,7 +129,7 @@ This section shows current tune, title, author, year, genre, duration and a bar 
 * To begining: rewinds the tune to the beginning
 * Next: Skips the rest of the tune
 
-Once started, the top tune is removed from the setlist. "To beginning" puts the tune back. 
+Once started, the top tune is removed from the setlist. s
 
 The setlist stored on flash gets changed only with the “save serlist“ button. 
 
@@ -149,20 +156,20 @@ The actual colors of the icons depend on the device.
 
 The large buttons are:
 
-* Save setlist: save the current setlist to flash. The current setlist will be lost with power off, the setlist on flash will remain.
+* Save setlist: save the current setlist to flash. The current setlist will be lost with power off, the setlist on flash will remain. This is the only action that affects the saved setlist, all other actions are on the current (transient) setlist.
 * Load setlist: load the setlist from flash, replacing the current setlist
 * Clear setlist: clear the current setlist. Then you can get back to the tune list page and select new tunes. The setlist in flash is not affected.
 * Shuffle setlist: shuffle tunes in the current setlist randomly. 
-* Shuffle all: Shuffle all tunes in the tunelib randomly.
+* Shuffle all: Get all tunes in the tune library and shuffle all randomly.
 
 ### Crank and speed control
 ![tempo control](performance_tempo_control.jpg)
 
-If a crank sensor installed, the crank turning speed will influence playback speed. The buttons here allow to regulate the relationship this is, set what crank speed is normal. 
+If a crank sensor installed, the crank turning speed will influence playback speed. The buttons here allow to regulate the relationship, this is, set what crank speed is the normal speed. 
 
 
 # Operation on power on
-It's best to have the home page, tunelist page or performance page open in the browser of the cell phone when starting. The home page, tune list page and performance page poll the microcontroller every few seconds, and will update the information as soon as the microcontroller is up. Put a favorite marker on the page to have it at hand. However, having the page open is not mandatory, you can operate without cell phone or turn in on later if needed. 
+It's best to have the main menu page, tunelist page or performance page open in the browser of the cell phone when starting. The main menu page, tune list page and performance page poll the microcontroller every few seconds, and will update the information as soon as the microcontroller is up. Put a favorite marker on the page to have it at hand. However, having the page open is not mandatory, you can operate without cell phone or turn in on later if needed. Also: there is an configuration option to select the tune list or performance page as alternate home page.)
 
 If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see error log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
 
@@ -170,10 +177,11 @@ Startup takes about 15 seconds until the system is ready. Some valves will move 
 
 The software will automatically load the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
-
 If there is no setlist stored (empty setlist). turning the crank or releasing the touchpad will shuffle all tunes randomly and start playing the first tune.
 
 So for all cases: turn on, and turn the crank or touch the touchpad and music starts.
+
+If you have the tune list or performance page open in your cell phone, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. No need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
 
 
 # Tuner mode
