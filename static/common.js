@@ -268,7 +268,7 @@ async function fetch_json( url, post_data ){
         // This happens normally if the page does not
         // match the mode of the microcontroller.
         // Navigate back to index page to make current mode visible.
-        window.location.href = "/" ;
+        window.location.href = "/static/index.html" ;
         return ;
 	}
 

@@ -18,7 +18,6 @@ import modes
 from tinytz import ttz
 
 # Allowed pages for each mode
-#>>>put this in config??
 _ALLOWED_PAGES = {
 "play": ("index.html","diag.html", "play.html", "tunelist.html", "config.html"),
 "tuner": ("index.html", "diag.html", "note.html", "notelist.html", "config.html" ),
@@ -109,10 +108,12 @@ async def simple_response( message, response ):
     else:
         resp = {"alert": message }
     await response.send( json.dumps( resp ))
- 
+
+# Index page
 @app.route("/", save_headers=["User-Agent"] )
 async def index_page( request, response ) :
-    await response.redirect( "/static/index.html" )
+    ipg = "/static/" + config.cfg.get( "initial_page", "index") + ".html"
+    await response.redirect( ipg )
 
 # File related web requests
 @app.route("/static/<filepath>", save_headers=["User-Agent"])
@@ -173,47 +174,40 @@ async def get_progress( request, response ):
     # When playing music, /get_progress is good indicator of activity
     register_activity( request )
 
-    progress = player.get_progress()
-    # Add more info to the progress
-    progress["setlist"] =  setlist.get_current_setlist()
-    progress["velocity"] = tachometer.get_velocity()
-    progress["rpsec"] = tachometer.get_rpsec()
-    progress["is_turning"] = tachometer.is_turning() 
-
-    if setlist.is_waiting():
-        # If setlist is waiting, the player does not
-        # know the current tune yet
-        progress["tune"] = setlist.get_top_tuneid()
-        progress["status"] = "waiting"
-        progress["playtime"] = 0
-
+    progress = setlist.get_progress()
+        
     await response.send( json.dumps( progress ))
 
 @app.route("/queue_tune/<tune>")
 async def queue_tune( request, response, tune ):
     # Queue tune to setlist
     setlist.queue_tune( tune )
-    await asyncio.sleep_ms( 300 )
+    # Wait for setlist process to catch up
+    await asyncio.sleep_ms( 500 )
     await get_progress( request, response )
 
 
+            
 @app.route("/start_tune")
 async def go_tempo( request, response ):
     setlist.start_tune()
-    asyncio.sleep_ms( 500 )
+    # Wait for setlist process to catch up
+    await asyncio.sleep_ms( 400 )
     await get_progress( request, response )
 
- 
+
 @app.route("/stop_tune_setlist" )
 async def stop_tune_setlist( request, response ):
     setlist.stop_tune()
-    asyncio.sleep_ms( 500 )
+    # Wait for setlist process to catch up
+    await asyncio.sleep_ms( 400 )
     await get_progress( request, response )
     
+
 @app.route("/back_setlist" )
 async def back_setlist( request, response ):
     setlist.to_beginning_of_tune()
-    asyncio.sleep_ms( 500 )
+    await asyncio.sleep_ms( 400 )
     await get_progress( request, response )
 
 @app.route("/save_setlist")
@@ -284,6 +278,13 @@ async def sound_repetition( request, response, midi_note ):
 @app.route("/scale_test")
 async def scale_test( request, response ):
     organtuner.queue_tuning( ("scale_test", 0 ) ) 
+    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+
+
+    
+@app.route("/clear_tuning")
+async def scale_test( request, response ):
+    organtuner.clear_tuning() 
     await send_json( response, config.ORGANTUNER_JSON, cache=False )
 
 

@@ -23,6 +23,9 @@
 <button type="button" onclick="tuneAll()" id="tuneAllButton">Afinar todos</button>
 
 <button type="button" onclick="scaleTest()" id="scaleTestButton">Escala de prueba</button>
+    
+<button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
+
 
 <table id="notelist" style="width:100%">
 </table>
@@ -113,6 +116,10 @@ async function tuneAll() {
 	updateNoteList( await fetch_json( "/tune_all" )  );
 	textById("tuneAllButton", textoOriginal ) ;
 
+}
+    
+async function clearTuning() {
+    updateNoteList( await fetch_json( "/clear_tuning") ) ;
 }
 
 async function scaleTest() {

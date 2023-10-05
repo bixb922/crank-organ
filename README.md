@@ -56,12 +56,13 @@ Time permitting, I'll complete this repository:
 |src| Source code (MicroPython)                     |
 |static| Web pages for the microcontroller (html)   |
 |pinout| Pinout templates for 20, 26 and 31 note organs |
-|data| Sample configuration file                    |
 |music| The tune library (pending to upload)        |
 
 
 
 # License
+This license and disclaimer also covers the hardware design. The hardware design is part of the software published here.
+
 Copyright (c) 2023 Hermann Paul von Borries
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -81,3 +82,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+

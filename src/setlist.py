@@ -14,92 +14,97 @@ import pinout
 import touchpad
 import solenoid
 
-web_button_event = asyncio.Event()
 
-def start_tune():
-    # Called if start button on performance page is pressed
-    web_button_event.set()
 
-wait_for_tune_flag = False
-def wait_for_tune( max_msec=None ):
-    global wait_for_tune_flag
-    web_button_event.clear()
-    touch_button.release_event.clear()
-    tachometer.clear()
-    wait_for_tune_flag = True
-    t0 = time.ticks_ms()
-    while True:
-        if ( tachometer.is_turning() or 
-            touch_button.release_event.is_set() or
-            web_button_event.is_set()
-           ):
-            wait_for_tune_flag = False
-            return True
-        # Process timeout if specified
-        if max_msec and time.ticks_diff( time.ticks_ms(), t0 ) > max_msec:
-            return False
-        await asyncio.sleep_ms( 10 )
-
-def is_waiting():
-    return wait_for_tune_flag
-                               
 def _init( ):
-    global logger, current_setlist, stop_player_event, setlist_task, touch_button
+    global logger, current_setlist,  setlist_task, touch_button
+    global player_task, start_event, waiting_for_start_tune_event
     logger = getLogger( __name__ )
     touch_button = touchpad.TouchButton( pinout.touchpad_pin )
     
     current_setlist = []
-    stop_player_event = asyncio.Event()
+    waiting_for_start_tune_event  = False
+    
     setlist_task = asyncio.create_task( _setlist_process() )
+    player_task = None
+
+    # Register start event for tachometer and touch button
+    # Webserver calls start_tune, instead of registering event
+    # but all "start tune" methods converge on setting start_event
+    start_event = asyncio.Event()
+    tachometer.set_start_turning_event( start_event )
+    touch_button.set_release_event( start_event )
+    
+    
     # Tell the player how to get the top tuneid. Player can't import setlist,
     logger.debug("init ok")
     
-    
+
+# Functions related to the different ways to start a tune   
+def start_tune():
+    # Called if start button on performance page is pressed
+    start_event.set()
+        
+def wait_for_start():
+    global waiting_for_start_tune_event
+    start_event.clear()
+    waiting_for_start_tune_event = True
+    await start_event.wait()
+    waiting_for_start_tune_event = False
+        
+def is_waiting():
+    global waiting_for_start_tune_event
+    return waiting_for_start_tune_event
+                               
+# The background setlist process - wait for start and play next tune              
 async def _setlist_process():
-    global current_setlist, stop_player_event
+    global current_setlist, player_task
     # When powered on, always load setlist
     load()
-    skip_wait_for_tune = False
+
     while True:
         # Ensure loop will always yield
         await asyncio.sleep_ms(10)
+       
+        # Stall if in tuner or config mode
         await modes.wait_for_play_mode()
-        if len( current_setlist ) > 0:
-            if not skip_wait_for_tune:
-                await wait_for_tune()
-            skip_wait_for_tune = False
-            # Get top tune and play
-            tune = current_setlist.pop(0)
-            stop_player_event.clear()
-            logger.info(f"play tune will start {tune=}")
-            await player.play_tune( tune, stop_player_event )
-            logger.info(f"play_tune ended {player.get_progress()}" )
-            # Wait for turning the crank to cease 
-            # after a tune has played
-            if tachometer.is_installed():
-                while tachometer.is_turning():
-                    await asyncio.sleep_ms( 100 )
-                    
-        else:   
-            # Wait for max 1 second. If there is an attempt to start a tune
-            # and no setlist then shuffle all. If wait for tune
-            # gives timeout, try again later.
-            # >>> REVISAR WAIT FOR TUNE, HACE LO QUE SE REQUIERE?
-            if await wait_for_tune( 1000 ):
-                # Id we want to start tune and there is no tune, shuffle all.
-                logger.info(f"Automatic play, shuffle all tunes {len(current_setlist)}, clap 3")
-                # Shuffle all tunes to make setlist.
-                # Check again if empty, changes may have occurred during
-                # await wait_for_tune()
-                if len( current_setlist ) == 0:
-                    shuffle_all_tunes()
-                    # We already got "start", don't wait again
-                    skip_wait_for_tune = True
-
-                                   
-def get_current_setlist():
-    return current_setlist
         
+        # Wait for user to start tune
+        
+        await wait_for_start()
+        
+        # User signalled start of tune
+        # Do we have a setlist?
+        if len( current_setlist ) == 0:
+            # No setlist: make a new setlist
+            shuffle_all_tunes()
+            logger.info(f"Automatic play, shuffle all tunes {len(current_setlist)}")
+            # If tunelist is empty, there will be an exception below
+
+        # Get top tune and play
+        tune = current_setlist.pop(0)
+        
+        # Play tune in separate task
+        logger.info(f"play tune will start {tune=}")
+        player_task = asyncio.create_task( player.play_tune( tune ) )
+        try:
+            await player_task
+        except:
+            # Don't let player exceptions stop the setlist task.
+            pass
+        player_task = None
+        
+            
+        logger.info(f"play_tune ended {player.get_progress()}" )
+
+        # Wait for the crank to cease turning
+        # after a tune has played
+        if tachometer.is_installed():
+            while tachometer.is_turning():
+                await asyncio.sleep_ms( 100 )
+        
+
+# Setlist managment functinos: add/queue tune, start, stop, top, up, down,...        
 def queue_tune( tune ):
     # If not in setlist: add
     # If in setlist: delete
@@ -114,13 +119,15 @@ def queue_tune( tune ):
     
 def stop_tune():
     # Stop current tune
-    global stop_player_event
+    global player_task
 
     if (len(current_setlist) > 0 
         and player.get_progress()["tune"] == current_setlist[0]
        ):
         del current_setlist[0]
-    stop_player_event.set()
+    
+    if player_task:
+        player_task.cancel()
     
 def save():
     # Save curent setlist to flash
@@ -163,6 +170,7 @@ def down( pos ):
 
     
 def top( pos ):
+    global current_setlist
     # Move this tune to top of setlist
     # Move to top
     s = current_setlist[pos]
@@ -170,10 +178,12 @@ def top( pos ):
     current_setlist.insert(0,s)
     
 def drop( pos ):
+    global current_setlist
     del current_setlist[pos]
 
     
 def to_beginning_of_tune():
+    global current_setlist
     # Restart current tune
     tune = player.get_progress()["tune"]
     if tune:
@@ -200,12 +210,23 @@ def shuffle_all_tunes():
     current_setlist = list( tunelist.get_autoplay() )
     shuffle()
 
-def get_top_tuneid():
-    global current_setlist
-    if current_setlist:
-        return current_setlist[0] 
-    else:
-        return None 
+# The webserver get_progress() calls this function. 
+# Integrate all the progress in one response.
+def get_progress(  ):
+    progress = player.get_progress()
+    
+    tachometer.complement_progress( progress )
 
+    progress["setlist"] =  current_setlist
+    if is_waiting():
+        # If setlist is waiting for start, the player does not
+        # know the current tune yet
+        try:
+            progress["tune"] = current_setlist[0]
+        except IndexError:
+            progress["tune"] = None
+        progress["status"] = "waiting"
+        progress["playtime"] = 0  
+    return progress
 
 _init()

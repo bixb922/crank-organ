@@ -1,7 +1,3 @@
-# >>> boton reset stored tuning - borra organtuner.json
-# >>> max para db se calcula, no es fijo.
-# >>> esconder valores en la UI que no son medidos: -9999, null
-# >>> measure "no signal" ???
 import sys
 import os
 import array
@@ -210,11 +206,8 @@ def _get_stored_tuning( ):
         for midi_note in pinout.all_valid_midis:
             d = {}
             d["name"] = str( midi_note )
-            # >>> pending: eliminate cents, amp, keep centslist, amplist
-            d["cents"] = -9999
-            d["amp"] = 1
-            d["centslist"] = [-9999]
-            d["amplist"] = [1]
+            d["centslist"] = []
+            d["amplist"] = []
             d["pinname"] = solenoid.get_pin_name( midi_note )
             stored_tuning[hash(midi_note)] = d
         with open( config.ORGANTUNER_JSON, "w" ) as file:
@@ -232,8 +225,7 @@ async def _update_tuning( midi_note ):
     freq, amp, freqlist, amplist = await get_note_pitch( midi_note )
     stored_tuning = _get_stored_tuning()
     h = hash( midi_note )
-    stored_tuning[h]["cents"] = midi_note.cents( freq )
-    stored_tuning[h]["amp"] = amp
+ 
     stored_tuning[h]["centslist"] = [ midi_note.cents( f )
                     for f in freqlist ] 
     stored_tuning[h]["amplist"] = amplist
@@ -247,6 +239,7 @@ async def _update_tuning( midi_note ):
 def _store_signal( midi_note ):
     duration, signal = _sample_adc( midi_note )
     filename = "signal" +  str(midi_note) + ".tsv"
+    filename = filename.replace("-", "_" )
     with open(filename, "w") as file:
         s = str(duration).replace(".",",")
         file.write("\t\tduration\t" + s)
@@ -315,7 +308,16 @@ async def scale_test( ):
             # alternate ascending and descending
             notelist.reverse()
         await asyncio.sleep_ms( 500 )    
-  
+
+def clear_tuning():
+    try:
+        os.remove( config.ORGANTUNER_JSON )
+    except:
+        pass
+    for filename in os.listdir("/"):
+        if filename.startswith("signal") and filename.endswith(".tsv"):
+            os.remove( "/" + filename )
+    _logger.info("Stored tuning removed")
 
 async def _organtuner_processs( ):
     while True:
@@ -347,9 +349,6 @@ async def _organtuner_processs( ):
             pass
 
 def pinout_changed():
-    try:
-        os.remove( config.ORGANTUNER_JSON )
-    except:
-        pass
+    clear_tuning()
     
 _init()

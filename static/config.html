@@ -19,7 +19,7 @@
 <div class="middlediv">Enter password</div>
 	
 	<br>
-	<label for="description">Enter password</label>
+	<label for="description">Enter password:</label>
 	<input id="password" name="password" type="password" style="width:auto" size="20"/>
 	<button onclick="verifyPassword()">Verify password</button>
 	<br>
@@ -40,11 +40,11 @@ password</div>
 	<span id="change_response"></span>
 	
 <div class="middlediv">Network name and description</div>
-	<label for="name">Host name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9, start with a letter).</label>
+	<label for="name">Host name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9, start with a letter):</label>
 	<input id="name" name="name" type="text" size="15" maxlength="15" oninput="hostnameChanged()"/>
 	<br>
 	
-	<label for="description">Your description of this device  (free text). This description appears on some of the web pages, but serves no other function.</label>
+	<label for="description">Your description of this device  (free text). This description appears on some of the web pages, but serves no other function:</label>
 	<input id="description" name="description" type="text" style="width:auto" size="50"/>
 	<br>
 
@@ -53,16 +53,16 @@ password</div>
 <div class="middlediv">WiFi Router or hotspot (station mode)</div>
 	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one of these responds. Once connected, you can reach this microcontroller from a PC or the cell phone entering <b>http://<span id="copy_hostname3"></span>.local</b> in your browser. This form of connection is the preferred way to connect to the microcontroller. Only WiFi 2.4Ghz, no 5Ghz.
 	<br>
-	<label for="access_point1" >SSID of primary router/hotspot the microcontroller should connect to (Example: a hotspot/access point on your cell phone)</label>
+	<label for="access_point1" >SSID of primary router/hotspot the microcontroller should connect to (Example: a hotspot/access point on your cell phone):</label>
 	<input id="access_point1" name="access_point1" type="text"/>
 	<br>
-	<label for="password1">Password of the primary router/hotspot</label>
+	<label for="password1">Password of the primary router/hotspot:</label>
 	<input id="password1" name="password1" type="password" size="16"/>
 	<br>
-	<label for="access_point2" >SSID of secondary router/hotspot the microcontroller should connect to, if the primary is not available (Example: your home router)</label>
+	<label for="access_point2" >SSID of secondary router/hotspot the microcontroller should connect to, if the primary is not available (Example: your home router):</label>
 	<input id="access_point2" name="access_point2" type="text"/>
 	<br>
-	<label for="password2">Password of the secondary router/hotspot</label>
+	<label for="password2">Password of the secondary router/hotspot:</label>
 	<input id="password2" name="password2" type="password" size="16"/>
 	<br>
 	<button type="button" onclick="save('access_point1','password1','access_point2','password2')">Save WiFi info and passwords</button>
@@ -71,47 +71,29 @@ password</div>
 	<button type="button" onclick="window.location.href='pinout.html'">Go to pinout page</button>
     
 <div class="middlediv">Power management</div>
-	<label for="battery_watt_hours">Watt-hours (Wh) capacity of the battery (Wh = mAh * volts / 1000). Typical values may range from 30 to 100 Wh). No decimals, integer only.</label>
+	<label for="battery_watt_hours">Watt-hours (Wh) capacity of the battery (Wh = mAh * volts / 1000). Typical values may range from 30 to 100 Wh). No decimals, integer only:</label>
 	<input id="battery_watt_hours" name="battery_watt_hours" type="text" size="4"/>
 	<br>
     
-	<label for="solenoid_resistance">Solenoid resistance in Ohms, for example: 90. This is used to calculate battery usage at 12V. No decimals, integer only.</label>
+	<label for="solenoid_resistance">Solenoid resistance in Ohms, for example: 90. This is used to calculate battery usage at 12V. No decimals, integer only:</label>
 	<input id="solenoid_resistance" name="solenoid_resistance" type="text" size="4"/>&nbsp;Ohms.
 	<br>
 
 	
-	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, for example: not playing music, no web activity, no FTP. Turn power off then on to restore function.  No decimals, integer only.</label>
+	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, for example: not playing music, no web activity, no FTP. Turn power off then on to restore function.  No decimals, integer only:</label>
 	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3"/>&nbsp;minutes.
 	<br>
 
 	
-	<label for="ap_max_idle">Time the AP WiFi radio will be active  without no one connecting. After this time, if idle, the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes fail.  No decimals, integer only</label>
+	<label for="ap_max_idle">Time the AP WiFi radio will be active  without no one connecting. After this time, if idle, the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes fail.  No decimals, integer only:</label>
 	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4"/>
 	<br>
 	<button type="button" onclick="save('battery_watt_hours','idle_deepsleep_minutes','ap_max_idle', 'solenoid_watts' )">Save power settings</button>
 
 
     
-<div class="middlediv2">Debug/test settings</div>
-   
-	<input id="webserver_cache" name="webserver_cache" type="checkbox"/>
-	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily.</label>
-	
-	<br>
-	<input id="max_age" name="max_age" type="text" size="6"/>
-	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. A value larger than 60000 (10 minutes) is appropriate.  No decimals, integer only</label>
 
-	<br>
-	<input id="log_level_debug" name="log_level_debug" type="checkbox"/>
-	<label for="log_level_debug">Include debugging messages in data/error<i>nnn</i>.log files. If not checked, only informational and error messages are recorded in the log files.</label>
-
-    <input type="checkbox" name="microphone" id="mic_test_mode" value="mic_test_mode">
-    <label for="mic_test_mode">Debug mode for microphone. Generates random signals to test tuning mode. If a microphone is present, it is ignored.</label>
-    
-    <br>
-	<button type="button" onclick="save( 'webserver_cache', 'max_age', 'log_level_debug', 'mic_test_mode' )">Save debug settings</button>
-
-<div class="middlediv">FTP access</div>
+<div class="middlediv">Enable FTP access</div>
 	With this option you can use Windows Explorer or FileZilla to access all files in the microcontroller with the FTP standard (File Transfer Protocol). This enables to copy or replace files with drag and drop operations. One good use is to prepare a new tunelib on the PC and copy all midifiles and tunelib.json to the microcontroller just with dreag and drop. The FTP server will stop with the next power down.
 	<br>
 	<button type="button" onclick="startFTP()">Start FTP on the microcontroller</button>
@@ -122,15 +104,47 @@ password</div>
     <br>
 	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. After connecting, you can reach the microcontroller entering <b>http://<span id="copy_hostname2"></span>.local</b> in your browser. However, the microcontroller is not a router, so you will not be connected to internet. Only WiFi 2.4Ghz, no 5Ghz. If you can't connect with the host name, you can connect with this IP address at http://192.168.xxx.xxx/
 	<br>
-	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255</label>
+	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text"/>
 	<br>
-    <label for="touchpad_big_change">Touchpad responsiveness (higher=less responsive, lower=more responsive). Start with 10000.  No decimals, integer only.</label>
+    
+    <label for="touchpad_big_change">Touchpad responsiveness (higher=less responsive, lower=more responsive). Start with 10000.  No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6"/>
+	<br>&nbsp;
+    <br>
+    
+    <label for="initial_page">Initial page (home page):</label>
+    <br>
+    <input type="radio" name="initial_page" id="index" value="index"/>Main menu page
+    <br>
+    <input type="radio" name="initial_page" id="tunelist" value="tunelist"/>Tune list page
+    <br>
+    <input type="radio" name="initial_page" id="play" value="play"/>Performance page
 	<br>
 	
-	<button type="button" onclick="save( 'ap_ip', 'time_zone_offset', 'touchpad_big_change' )">Save other parameters</button>
+	<button type="button" onclick="save( 'ap_ip', 'time_zone_offset', 'touchpad_big_change', 'initial_page' )">Save other parameters</button>
     
+<div class="middlediv2">Debug/test settings</div>
+   
+	<input id="webserver_cache" name="webserver_cache" type="checkbox"/>
+	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily:</label>
+	
+	<br>
+	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. A value larger than 60000 (10 minutes) is appropriate.  No decimals, integer only:</label>	<input id="max_age" name="max_age" type="text" size="6"/>
+
+
+	<br>
+	
+    <input id="log_level_debug" name="log_level_debug" type="checkbox"/>
+    <label for="log_level_debug">Include debugging messages in data/error<i>nnn</i>.log files. If not checked, only informational and error messages are recorded in the log files</label>
+
+
+    <br>
+    <input type="checkbox" name="microphone" id="mic_test_mode" value="mic_test_mode">
+    <label for="mic_test_mode">Debug mode for microphone. Generates random signals to test tuning mode. If a microphone is present, it is ignored:</label>
+    
+    <br>
+	<button type="button" onclick="save( 'webserver_cache', 'max_age', 'log_level_debug', 'mic_test_mode' )">Save debug settings</button>
 
 	
     
@@ -150,10 +164,17 @@ function hostnameChanged(){
 	
 async function getCurrentConfig(){
 	let json_result = await fetch_json( "/get_config" ) ;
-	for( const [key, value] of Object.entries(json_result)) {
+	for( let [key, value] of Object.entries(json_result)) {
+        if( key  == "initial_page" ) {
+            // this is a radiobutton, "initial_page" is the name of the
+            // group. the ids are "index", "tunelist", "performance"
+            key = value ;
+            
+            value = true ;
+        }
         d = document.getElementById( key );
         if( d != null ){
-            if( d.type == "checkbox") {
+            if( d.type == "checkbox" || d.type == "radio" ) {
                 d.checked = value ;
             }
             else {
@@ -208,7 +229,6 @@ async function changePassword() {
 	if( validateNewPasswords() ){
 		save( "ap_password" ) ;
 	}
-	
 }
 	
 async function save( /* argument list */) {
@@ -218,12 +238,16 @@ async function save( /* argument list */) {
     // only allowed with password.
 	post_data["password"] = getValue( "password" ) ;
     // Add al arguments of save to list
+    let value = "" ;
 	for( var i=0; i<arguments.length; i++){
-		let a = document.getElementById( arguments[i] ) ;
-		let value = getValue( arguments[i] )
-
-		
-		post_data[ arguments[i] ] = value ;
+        if( arguments[i] != "initial_page" ){
+            let a = document.getElementById( arguments[i] ) ;
+            value = getValue( arguments[i] )
+        }
+        else{
+            value = getRadioButtonValue( arguments[i] );
+        }
+        post_data[ arguments[i] ] = value ;
 	}	
 	const resp = await fetch_json( "/save_config", post_data ) ;
 	if( resp["result"] == "ok") {

@@ -487,6 +487,8 @@ It's probably easiest to solder the microphone pins on the board, since the micr
 This is not tested. Once tested, I'll describe that later.
 
 # Copyright and license
+This license and disclaimer also covers the hardware design. The hardware design is part of the software published here.
+
 (c) 2023 Hermann Paul von Borries. 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

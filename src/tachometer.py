@@ -57,16 +57,21 @@ def _timer_irq(t):
 rpsec = 0
 
 def _init():
-    global _logger, rpsec, _calculate_task
+    global _logger, rpsec, _calculate_task, _start_turning_event
 
     _logger = getLogger( __name__ )
     
     # Set UI reference to 50, halfway from 0 to 100.
     set_velocity( 50 )
-    
+    _start_turning_event = asyncio.Event()
     _calculate_task = asyncio.create_task( _calculate_rpsec() )
+    
     _logger.debug( "init ok" )
-        
+ 
+def set_start_turning_event( ev ):
+    global _start_turning_event
+    _start_turning_event = ev
+    
 async def _calculate_rpsec():
     global irq_array, rpsec
     
@@ -79,6 +84,7 @@ async def _calculate_rpsec():
     
     prev_t = ticks_ms()
     history = []
+    last_rpsec = 0
     while True:
         await asyncio.sleep_ms( CALCULATE_EVERY_MS )
         if mode == MODE_PAUSED:
@@ -97,12 +103,11 @@ async def _calculate_rpsec():
         while len(history) > COUNTER_HISTORY_STORED:
             history.pop(0)
         rpsec = sum( history )/len( history )
-        prev_t = t
         
-def get_rpsec():
-    global rpsec
-    # Only used in webserver for information 
-    return rpsec
+        if last_rpsec < _MINIMUM_RPSEC and rpsec > _MINIMUM_RPSEC:
+            _start_turning_event.set()
+            
+        prev_t = t
 
 def is_turning():
     global rpsec
@@ -132,9 +137,11 @@ def set_velocity( ui_vel ):
     # Calculate the multiplier needed by get_normalized_rpsec
     _velocity_multiplier = (ui_vel*ui_vel/10000 + ui_vel/200 + 0.5)/_NORMAL_RPSEC
 
-def get_velocity():
-    # Used by webserver to tell UI
-    return _ui_velocity
-
-
+def complement_progress( progress ):
+    global _ui_velocity,  rpsec
+    progress["velocity"] = _ui_velocity
+    progress["rpsec"] = rpsec
+    progress["is_turning"] = is_turning()
+    
+    
 _init()   

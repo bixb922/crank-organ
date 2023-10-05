@@ -24,7 +24,7 @@ def find( all_valid_midis, midi_note_number ):
 DRUM_PROGRAM = 129
     
 GM_PROGRAM=[
-"any",
+"",
 "Acoustic Grand Piano",
 "Bright Acoustic Piano",
 "Electric Grand Piano",
@@ -188,14 +188,13 @@ class Note:
         return self.hash
     
     def __str__( self ):
-        nn = f"{self.note_name()}({self.midi_note})"
-        try:
-            instr = GM_PROGRAM[self.instrument]
-        except:
-            instr = "instr." + str(self.instrument)
-        if self.instrument != 0:
-            instr += f"(self.instrument)"
-        return f"{instr}-{nn}"
+        if self.instrument == 0:
+            instr = ""
+        else:
+            instr = f"{GM_PROGRAM[self.instrument]}({instr})-"
+            
+        note_name = f"{self.note_name()}({self.midi_note})"
+        return f"{instr}{note_name}"
     
     def __repr__( self ):
         return str( self )
@@ -205,7 +204,7 @@ class Note:
 
     def cents( self, freq ):
         if freq <= 0:
-            return -9999
+            return None
         return 1200*log(freq/self.frequency())/log(2) 
 
     def note_name( self ):

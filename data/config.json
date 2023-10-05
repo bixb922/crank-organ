@@ -23,7 +23,8 @@
     "touchpad_big_change": 10000,
     
     "time_zone_offset": 0.0,
-    "modes":["play", "tuner", "config"]
+    "modes":["play", "tuner", "config"],
+    "initial_page": "index"
 }
 
 

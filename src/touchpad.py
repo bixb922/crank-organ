@@ -19,7 +19,9 @@ class TouchButton:
         # If no gpio_pin, don't assign button, don't create task.
         # Event will never get set.
       
-
+    def set_release_event( self, ev ):
+        self.release_event = ev
+        
     async def tp_process( self ): 
         tpval_ant = self.tp.read()
         while True:

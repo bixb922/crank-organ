@@ -33,7 +33,7 @@ def _init( ):
     _logger.debug("init ok")
     
     
-async def play_tune( tune, stop_event ):
+async def play_tune( tune ):
     global _time_played_us
     try:
         _time_played_us = 0
@@ -45,9 +45,15 @@ async def play_tune( tune, stop_event ):
         _logger.info(f"Starting tune {tune} {midi_file}")
         _reset_channelmap()
       
-        await _play_with_tachometer( midi_file, stop_event )
+        await _play_with_tachometer( midi_file )
         _progress["status"] = ENDED
-        
+    except asyncio.CancelledError:
+        _logger.debug("Player cancelled")
+        solenoid.all_notes_off()
+        _progress["status"] = CANCELLED
+        _progress["tune"] = None
+        _progress["playtime"] = 0
+        _time_played_us = 0
     except OSError as e:
         if e.errno == errno.ENOENT:
             _logger.error(f"File {midi_file=} {tune=} file not found") 
@@ -106,7 +112,7 @@ def _process_midi( midi_event ):
             channelmap[midi_event.channel] = midi_event.program
         
             
-async def _play_with_tachometer(  midi_file, stop_event ):
+async def _play_with_tachometer(  midi_file ):
     global _time_played_us
     
     # Open MIDI file takes about 50 millisec on a ESP32-S3 at 240 Mhz, do it before
@@ -124,7 +130,7 @@ async def _play_with_tachometer(  midi_file, stop_event ):
         
         # Calculate dt = time difference in event time due to tachometer
         # being faster or slower than normal
-        dt = await _calculate_tachometer_dt( midi_event.delta_us, stop_event )
+        dt = await _calculate_tachometer_dt( midi_event.delta_us )
         # midi_time is the calculated MIDI time since the start of the MIDI file
         midi_time += (midi_event.delta_us + dt)
         # playing_time is the clock time since playing started
@@ -147,20 +153,9 @@ async def _play_with_tachometer(  midi_file, stop_event ):
         # Turn one note on or off.
         _process_midi( midi_event )
 
-            
-        # Stop playing signaled? This happens if the user hits "next" button
-        if stop_event.is_set():
-            stop_event.clear()
-            solenoid.all_notes_off()
-            _logger.info(f"current tune {midi_file} cancelled")
-            _progress["status"] = CANCELLED
-            _progress["tune"] = None
-            _progress["playtime"] = 0
-            _time_played_us = 0
-            break
-
+    
          
-async def _calculate_tachometer_dt( midi_event_delta_us, stop_event ):
+async def _calculate_tachometer_dt( midi_event_delta_us ):
     if not tachometer.tachometer_pin:
         return 0
     # Calculate dt, difference of time due to
@@ -172,12 +167,11 @@ async def _calculate_tachometer_dt( midi_event_delta_us, stop_event ):
         dt = int( midi_event_delta_us / tmeter_vel ) - midi_event_delta_us
     else:
         # Turning too slow or stopped, wait until crank turning
-        # but also exit if stop_event signals that tune should be stopped.
         start_wait = time.ticks_us()
         _logger.debug("waiting for crank to turn")
         solenoid.all_notes_off()
         while True:
-            if tachometer.is_turning() or stop_event.is_set():
+            if tachometer.is_turning():
                 break
             await scheduler.wait_and_yield_ms( 300 )
         # Add all time waited to dt
