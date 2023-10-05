@@ -487,7 +487,12 @@ It's probably easiest to solder the microphone pins on the board, since the micr
 This is not tested. Once tested, I'll describe that later.
 
 # Copyright and license
-This license and disclaimer also covers the hardware design. The hardware design is part of the software published here.
+
+Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/3.0/
+
+Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures. T
+
+Software license:
 
 (c) 2023 Hermann Paul von Borries. 
 
