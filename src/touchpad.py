@@ -1,3 +1,5 @@
+# Touchpad asyncio driver, detects button down event in backbround
+# nd triggers event defined by set_release_event.
 import array
 import machine
 import asyncio
@@ -9,8 +11,9 @@ MSEC_SETTLE = const(500)
 
 class TouchButton:
     def __init__( self, gpio_pin ):
-        # Only release event, no touch eventt
-        self.release_event = asyncio.Event()
+        # Only release event, no touch event
+        # self.release_event is redefined later by set_release_event.
+        self.release_event = None
         self.big_change = int(config.get_int("touchpad_big_change", 10000) )
         
         if gpio_pin:
@@ -28,7 +31,8 @@ class TouchButton:
             await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )
             tpval = self.tp.read()
             if tpval - tpval_ant < -self.big_change:
-                self.release_event.set()
+                if self.release_event:
+                    self.release_event.set()
 
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms( MSEC_SETTLE )

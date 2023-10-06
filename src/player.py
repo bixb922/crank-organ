@@ -1,4 +1,4 @@
-
+# Plays MIDI files using the umidiparser module
 import time
 import asyncio
 import json
@@ -37,7 +37,7 @@ async def play_tune( tune ):
     global _time_played_us
     try:
         _time_played_us = 0
-        midi_file = tunelist.get_filename_by_number(tune)
+        midi_file = tunelist.get_filename_by_id(tune)
         solenoid.all_notes_off() 
         _progress["tune"] = tune
         _progress["playtime"] = 0

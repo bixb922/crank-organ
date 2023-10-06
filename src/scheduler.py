@@ -1,3 +1,6 @@
+# Allows the MIDI player to wait letting well behaved asyncio tasks
+# execute during the times between MIDI events.
+
 import time
 import asyncio
 

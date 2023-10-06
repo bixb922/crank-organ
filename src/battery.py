@@ -1,3 +1,4 @@
+# Tallies battery usage
 import asyncio
 from machine import ADC, Pin
 import json

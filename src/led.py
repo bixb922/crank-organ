@@ -1,3 +1,4 @@
+# Blinks RGB (neopixel) LED. ESP32-S3 boards may have one of these.
 import uasyncio as asyncio
 import neopixel
 import machine
@@ -15,9 +16,11 @@ def _init( ):
     if "ESP32S3" not in os.uname().machine:
         neopixel_led = None
         return
+    
     p = pinout.neopixel_pin
     if not p:
         print("No blinking neopixel")
+        # No LED task is needed
         return
     
     neopixel_led = neopixel.NeoPixel( machine.Pin(p), 1)

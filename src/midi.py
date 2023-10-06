@@ -1,3 +1,12 @@
+# MIDI note class and MIDIdict.
+# The MIDI note class and MIDIdict allow MIDI notes with a "any" program number
+# That eases the configuration for simple crank organs, but allows
+# sophisticated configuration of MIDI notes addressable with program numbers
+# and percussion (drums) channel support.
+# MIDIdict is a dictionary that allows search efficiently for a MIDI Note.
+
+# Also included: some functions to get note names, frequency, cents
+
 from collections import OrderedDict
 from math import log
 

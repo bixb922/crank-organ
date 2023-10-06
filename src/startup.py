@@ -58,6 +58,8 @@ def _handle_exception(loop, context):
 # Global background garbage collector. Use scheduler
 # to avoid interfering with the high priority task: the MIDI player
 async def background_garbage_collector():
+    # With MicroPython 1.21 and later, gc.collect() is not critical anymore
+    # But I'll still keep the code.
     while True:
         await asyncio.sleep_ms(3000)
         async with scheduler.RequestSlice("gc.collect", config.max_gc_time, 2500):
@@ -65,21 +67,10 @@ async def background_garbage_collector():
 
 # async def idle():
 # idle() measures asyncio responsiveness.
-    # # Garbage collector consume 50 to 200 msec aprox
-    # # GET /battery consume 128 msec aprox
-    # # CON send_file_buf_size=4096
-    # # durante carga de  maxdelay 462 y tiempo 3000 ciclos en 17 segundos 
-    # # mientras toca canción en pagina detalle:
-    # # max delay 260 msec 3 segundos tiempo ciclo se estabiliza en 130 milisec
-    # # En pagina detalle, con celu apagado resulta max delay 3 msec y cycle
-    # # time 0.44 mientras está reproduciendo.
-    # # send_file_buf_size tiene que ser alto!!
-    # # el webserver interfiere mucho!!!
-    # # 
 ##    import time
 ##    max_iterations = 0
 ##    while True:
-##        max_without_yield = 0
+##        max_async_block = 0
 ##        t0 = time.ticks_ms()
 ##        t1 = t0
 ##        iterations = 0
@@ -89,14 +80,14 @@ async def background_garbage_collector():
 ##            if time.ticks_diff( t, t0 ) > 1000: # Loop for 1 second
 ##                break
 ##            dt = time.ticks_diff( t, t1 )
-##            max_without_yield = max( dt, max_without_yield )
+##            max_async_block = max( dt, max_async_block )
 ##            t1 = t
 ##            iterations += 1
 ##        dt = time.ticks_diff( t, t0 )
 ##        max_iterations = max( iterations, max_iterations )
-##        if max_without_yield > 30:
-##            iter_per_sec = iterations/dt*1000
-##            _logger.timeline(f"delay {max_without_yield} it/sec {iter_per_sec:.0f}")
+##        if max_async_block > 30:
+##            iterations_per_sec = iterations/dt*1000
+##            _logger.timeline(f"delay {max_async_block} it/sec {iterations_per_sec:.0f}")
 
 async def signal_ready():
     # Tell user system ready

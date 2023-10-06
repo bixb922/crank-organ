@@ -1,4 +1,5 @@
-
+# Webserver module, serves all http requests. 
+# Based on tinyweb
 import os
 import sys
 import gc

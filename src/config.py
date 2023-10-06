@@ -1,3 +1,5 @@
+# Handles config.json and other configuration options
+# Also, data file names and folders are defined here.
 
 import time
 import json
@@ -10,6 +12,7 @@ import sys
 from minilog import getLogger, set_time_zone_offset
 _logger = getLogger( __name__ )
 
+# Data file/folder names used in the software
 CONFIG_JSON  = const("config.json")
 FLASH_MUSIC_FOLDER = const("tunelib/")
 SD_MUSIC_FOLDER = const("/sd/tunelib/")
@@ -58,16 +61,17 @@ def _init():
     # 8MB RAM, 240Mhz absolutely worst case (irreal): 536 ms for 8MB and 216.000 small objects. Bad case: 333 ms.
         
     if bytes_RAM > 4_000_000:
-        max_gc_time = 20 # msec with Micropython 1.20 new gc module
-        # YD-ESP32-S3 8MB minimum gc time 59 ms at 240 Mhz, minimum 175 ms at 80Mhz.
+        max_gc_time = 20 # msec with Micropython 1.21 new gc module
+        # Previous to 1.20: YD-ESP32-S3 8MB minimum gc time 59 ms at 240 Mhz, minimum 175 ms at 80Mhz.
         large_memory = True
     elif bytes_RAM > 4_000_000:
-        max_gc_time = 20 # msec. Normal time=70 to 120 for ESP32 with 4MB
+        max_gc_time = 20 # msec with MicroPython 1.21 and later
+        # msec. Normal time=70 to 120 for ESP32 with 4MB
         large_memory = True
     else:
         max_gc_time = 10 # msec for plain ESP32, average 5 msec.
         large_memory = False
-        # Most probably this does not run in 110 kb anymore. Not tested.
+        # Most probably this software does not run in 110 kb anymore. Not tested.
 
     architecture = "ESP32"
     if "ESP32S3" in os.uname().machine:

@@ -1,4 +1,4 @@
-
+# Crank rotation speed sensor. Still in testing phase.
 import asyncio
 import json
 import gc

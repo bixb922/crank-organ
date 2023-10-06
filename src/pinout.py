@@ -1,3 +1,5 @@
+# ESP32-S3 GPIO pin definitions and port expander MCP23017 pin definitios
+
 import asyncio
 import json
 import os

@@ -1,3 +1,5 @@
+# Solenoid note on/note off, hides difference between GPIO and MCP23027
+# Uses MIDIdict to search efficently for the pin function given a MIDI Note
 import asyncio
 import time
 import array

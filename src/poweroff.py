@@ -1,3 +1,5 @@
+# Power off task. Monitors activity and enters deepsleep to save battery
+# if not active.
 import machine
 import asyncio
 import player

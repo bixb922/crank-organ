@@ -1,3 +1,4 @@
+# Handles modes: play, config, keyboard, tuner.
 
 import asyncio
 import time
