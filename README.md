@@ -55,7 +55,7 @@ Time permitting, I'll complete this repository:
 |Software folders                                   |
 |src| Source code (MicroPython)                     |
 |static| Web pages for the microcontroller (html)   |
-|pinout| Pinout templates for 20, 26 and 31 note organs |
+|data| Pinout templates for 20, 26 and 31 note organs |
 |music| The tune library (pending to upload)        |
 
 

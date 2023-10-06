@@ -38,7 +38,7 @@ flowchart LR
     C --> |Go to pinout page| PI[Pinout and MIDI configuration]
     
     H --> |System info button| W[System information page]
-    W --> |Show log button| E[Error log]
+    W --> |Show log button| E[Event log]
     
 ```
 These pages can be used even during playback. 
@@ -171,7 +171,7 @@ If a crank sensor installed, the crank turning speed will influence playback spe
 # Operation on power on
 It's best to have the main menu page, tunelist page or performance page open in the browser of the cell phone when starting. The main menu page, tune list page and performance page poll the microcontroller every few seconds, and will update the information as soon as the microcontroller is up. Put a favorite marker on the page to have it at hand. However, having the page open is not mandatory, you can operate without cell phone or turn in on later if needed. Also: there is an configuration option to select the tune list or performance page as alternate home page.)
 
-If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see error log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
+If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
 
 Startup takes about 15 seconds until the system is ready. Some valves will move as a signal when ready. 
 
@@ -225,7 +225,15 @@ The home page, the WiFi page and the Show log page show diagnostic and technical
 
 These pages are mostly to aid diagnosis of possible problems.
 
-The "Show log" button will show the latest error log.
+## Event log
+
+The "Show log" button will show the latest event log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder, to be rescued with ```mpremote :cp data/errornnn.log errornnn.log```. The time in the log file starts with 00:00:00, but if connected to a router or cell phone hot spot, the microcontroller acquires current time information, and the log time is shown in UTC. The "time zone" parameter on the configuration page can assign another (fixed) time zone, if you really want to look at the log in local time.
+
+If the description is not clear, please post the relevant part of the log, with previous history, and the description of the situation as an issue, I'll try to help.
+
+The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote, putty, Thonny, or other tools will additionally show records of class DEBUG. Due to the overhead, these are not recorded to flash. For some cases, it may be necessary to rescue these events.
+
+
 
 
 
@@ -465,7 +473,7 @@ Go through the rest and change what you may need, use save button to save to the
 
 The rest of the sections is even less likely to require change:
 * Debug/test settings
-* Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the error log.
+* Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the event log.
 
 The configuration gets stored to /config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
 
@@ -511,7 +519,7 @@ MicroPython version 1.21 (or 1.20 later than sept 2023) is required. Since Micro
 Credits to mcauser (MCP23017 library, no modifications), belialov (Tinyweb web server, modified to enhance asyncio response). Both library modules are available on github under MIT license.
 
 # Under development/testing
-Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes.
+Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes. I have tested all options under many circumstances. Also, I have tested the system with large tunelibs and large setlists without problemas.
 
 The following features need more testing or development:
 * Microphone for tuning. Measures frequency of notes and shows if in tune. Pending to do more tests.
@@ -529,7 +537,7 @@ Detection of devices on an I2C bus is tricky or lenghty. At startup, the test if
 
 If a new scale has to be implemented (say: 50 note scale), a new .json template for that scale has to be designed.
 
-Time zone offset is fixed and can be set via configuration. There is no provision for DST (daylight savings time) transitions. The time zone only is relevant for the date/time displayed in the error log. If in doubt, set the offset to 0, and all times will be shown in UTC.
+Time zone offset is fixed and can be set via configuration. There is no provision for DST (daylight savings time) transitions. The time zone only is relevant for the date/time displayed in the event log. If in doubt, set the offset to 0, and all times will be shown in UTC.
 
 In some countries, WiFi devices need certification. Be sure to purchase hardware that conforms to the legal requirements in your country or area.
 

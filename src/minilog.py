@@ -1,3 +1,6 @@
+# Records event log. Limits total event log size, so event logs can't
+# hog flash memory.
+# Default mode is: debug messages to console, info messages to flash.
 import gc
 import sys
 import io
@@ -34,10 +37,10 @@ _MAX_LOGFILE_SIZE = const(20_000)
 def _init( ):
     _glb.tzoffset = 0
     
-    # Count of error logs since reboot
+    # Count of event logs since reboot
     _glb.error_count = 0 
     # Compute new filename for error.log
-    # Find error<nnn>.log file with highest nnn (last error log)
+    # Find error<nnn>.log file with highest nnn (last event log)
     _glb.max_num = -1
     for n, filename in _filenumbers():
         _glb.max_num = max( n, _glb.max_num )

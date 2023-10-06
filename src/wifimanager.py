@@ -161,7 +161,7 @@ async def _get_ntp_time():
         # Time already set
         return
     # Retry only few times. Clock time is only relevant for the
-    # error log file time stamps, no critical use.
+    # event log file time stamps, no critical use.
     for _ in range(2):
         try:
             async with scheduler.RequestSlice("WiFiManager ntp time", 200, 3000 ):
