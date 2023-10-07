@@ -15,7 +15,7 @@ import modes
 import pinout
 import touchpad
 import solenoid
-
+import battery
 
 
 def _init( ):
@@ -63,7 +63,7 @@ async def _setlist_process():
     global current_setlist, player_task
     # When powered on, always load setlist
     load()
-
+    battery.start_battery_heartbeat()
     while True:
         # Ensure loop will always yield
         await asyncio.sleep_ms(10)
@@ -87,6 +87,7 @@ async def _setlist_process():
         tune = current_setlist.pop(0)
         
         # Play tune in separate task
+        battery.end_battery_heartbeat()
         logger.info(f"play tune will start {tune=}")
         player_task = asyncio.create_task( player.play_tune( tune ) )
         try:
@@ -95,7 +96,7 @@ async def _setlist_process():
             # Don't let player exceptions stop the setlist task.
             pass
         player_task = None
-        
+        battery.start_battery_heartbeat()
             
         logger.info(f"play_tune ended {player.get_progress()}" )
 

@@ -1,3 +1,4 @@
+# Manages tunlist.
 import json
 import os
 import gc
@@ -31,7 +32,7 @@ def _init():
     _logger.debug(f"init ok {len(_tunedict)} tunes")
          
             
-def get_filename_by_number( tuneid ):
+def get_filename_by_id( tuneid ):
     return config.MUSIC_FOLDER + _tunedict[tuneid]
 
 def get_tune_count():

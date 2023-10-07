@@ -31,21 +31,21 @@ The lazy mode: Don't use your cell phone. Don't define a setlist. Turn the micro
 
 This is the complete software for automating a MIDI and solenoid valve based crank organ. A description on how to build the electronic hardware is included.
 
-Please the doc-software folder, file README.md a description of the software.
+Please see the doc-software folder, click the file README.md for a detailed description of the software, with screen images.
 
-See the doc-hardware folder, file README.md for schematics of the hardware and instructions on how to build the hardware.
+See the doc-hardware folder, click the file README.md for schematics of the hardware and instructions on how to build the hardware.
 
 This is work in progress. Please post an issue for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 Time permitting, I'll complete this repository:
 * Better description of hardware and building the hardware
 * Better description of I2C based controller cards for more than 20 pipes
-* Easy installation process, providing a complete flash image for ESP32-S3 N16R8
+* Easy installation process, providing a complete flash image for ESP32-S3 N16R8. I think the installation process is quite easy if you download the (free) tools mantioned in doc-software/README.md installation section.
 * Crank rotation sensor (tachometer)
-* Any enhancements to the software that I can come up with
+
 
 # Folders
-
+These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC, you should see the folders at https://github.com/bixb922/crank-organ
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
@@ -56,6 +56,7 @@ Time permitting, I'll complete this repository:
 |src| Source code (MicroPython)                     |
 |static| Web pages for the microcontroller (html)   |
 |data| Pinout templates for 20, 26 and 31 note organs |
+|install|Installation .py file                      |
 |music| The tune library (pending to upload)        |
 
 

@@ -15,6 +15,7 @@ import tachometer
 import scheduler
 import modes
 import midi
+import battery
 
 
 CANCELLED = const("cancelled")
@@ -35,7 +36,10 @@ def _init( ):
     
 async def play_tune( tune ):
     global _time_played_us
+    
     try:
+        battery.start_battery_heartbeat()
+        
         _time_played_us = 0
         midi_file = tunelist.get_filename_by_id(tune)
         solenoid.all_notes_off() 
@@ -67,6 +71,7 @@ async def play_tune( tune ):
     finally:
         solenoid.all_notes_off()
         scheduler.run_always()
+        battery.end_battery_heartbeat()
 
 def get_progress( ):
     global _time_played_us, _progress

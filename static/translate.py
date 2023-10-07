@@ -4,10 +4,10 @@
 import os
 import sys
 
-def read_dictionary(language):
+def read_dictionary(language_file):
     # Read the translation dictionary, one entry for each file
     # Translation file is in the same folder as this .py
-    translation_file = os.path.join( os.path.dirname(__file__), language + ".dictionary")
+    translation_file = os.path.join( os.path.dirname(__file__), language_file )
     dictionary = {}
     with open(translation_file, "r",  encoding="utf-8") as file:
         while True:
@@ -32,15 +32,15 @@ def read_dictionary(language):
                     dictionary[input_filename].append( [pair[0], pair[1], 0 ] )
     return dictionary
 
-def translate_file( language, input_filename, output_filename ):
-    dictionary = read_dictionary(language)
+def translate_file( language_file, input_filename, output_filename ):
+    dictionary = read_dictionary(language_file)
 
     base_name = os.path.basename( input_filename )
     if base_name not in dictionary:
-        print(f"???Input filename {base_name} not in dictionary")
-        sys.exit(1)
-        
-    translate_with = dictionary[base_name]
+        print(f"Input filename {base_name} not in dictionary, no translation.")
+        translate_with = {}
+    else:   
+    	translate_with = dictionary[base_name]
     
     print("Processing file", input_filename, "->", output_filename)
     with open( input_filename, "r",  encoding="utf-8") as file:
@@ -65,21 +65,9 @@ def translate_file( language, input_filename, output_filename ):
 def main():
     args = sys.argv[1:]
     if len(args) != 3:
-        print("???Must have 3 command line arguments: language input-file output-file")
-        sys.exit(1)
-    if args[0] not in ["english", "spanish"]:
-        print("???First argument must be language: english, spanish")
+        print("???Must have 3 command line arguments: language-file input-file output-file")
         sys.exit(1)
         
-    language = args[0]
-    input_file = args[1]
-    output_file = args[2]
-    if language == "spanish":
-            with open( input_file) as file:
-                    s = file.read()
-            with open( output_file, "w") as file:
-                    file.write(s)
-            sys.exit(0);
-    translate_file( language, input_file, output_file )
+    translate_file( args[0], args[1], args[2] )
     
 main()

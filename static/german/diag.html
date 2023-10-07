@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+		&nbsp;Systeminformation
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+
+<script type="text/javascript" src="/static/common.js"></script>
+    
+<table>
+    <tbody>
+		<tr><td>Beschreibung</td><td id="description"></td></tr>
+        <tr><td>Host name</td><td id="name"></td></tr>
+	     <tr>
+			<td>
+				<button type="button" onclick="showLog()" id="showLogButton">
+					Event log anzeigen
+				</button>
+			</td>
+			<td>
+				<span id="logfilename"></span><br>
+				(<span id="errors_since_reboot"></span> errors)
+			</td>
+		</tr>
+        <tr><td>Microcontroller</td><td id="microcontroller"></td></tr>
+		<tr><td>Micropython Version</td><td id="mp_version"></td></tr>
+		<tr><td>Micropyton Image</td><td id="mp_bin"></td></tr>
+		<tr><td>Datum/Zeit</td><td id="last_refresh"></td></tr>
+		<tr><td>Zeit seit Reboott</td><td id="reboot_mins"></td><td>Minuten</td></tr>
+		<tr><td>Freier Flashspeicher</td><td id="free_flash"></td><td>[bytes]</td></tr>
+		<tr><td>Flashspeicher in Benutzung</td><td id="used_flash"></td><td>[bytes]</td></tr>
+		<tr><td>Freie RAM</td><td id="free_ram"></td><td>[bytes]</td></tr>
+		<tr><td>RAM in benuzung</td><td id="used_ram"></td><td>[bytes]</td></tr>
+		<tr><td>Solenoidkonfiguration</td><td id="solenoid_devices"></td></tr>
+		<tr><td>Modus</td><td id="operating_mode"></td></tr>
+		<tr><td>MIDI-Dateien</td><td id="midi_files"></td></tr>
+		<tr><td>MIDI-Ordner</td><td id="music_folder"></td></tr>
+	</tbody>
+</table>
+	
+<div class="middlediv2">WIFI-Konfiguration</div>
+<table>
+	<tbody id="wifiConfig">
+	<tr>	
+		<td>Host name, AP SSID, BLE name:</td><td id="hostname"></td>
+	</tr>
+	<tr>	
+		<td>IP-Addressen aktiver Kunden in den letzten 60 Sekunden</td><td id="client_IPs"></td>
+	</tr>
+	<tr>
+		<td colspan="2"><b>Als WiFi Station</b></td>
+	</tr>
+	<tr>	
+		<td>Wird sich an SSID anschliessen</td><td id="sta_if_ap"></td>
+	</tr>
+	<tr>	
+		<td>IP</td><td id="sta_if_ip"></td>
+	</tr>
+	<tr>	
+		<td>Aktiv</td><td id="sta_if_active"></td>
+	</tr>
+	<tr>	
+		<td>Am SSID angeschlossen</td><td id="sta_if_connected"></td>
+	</tr>
+	<tr>	
+		<td>Connection status</td><td id="sta_if_status"></td>
+	</tr>
+	</tr>
+	<tr>
+		<td colspan="2"><b>Als WiFi Access Point</b></td>
+	</tr>
+	<tr>	
+		<td>SSID</td><td id="ap_if_ssid"></td>
+	<tr>	
+		<td>IP</td><td id="ap_if_ip"></td>
+	</tr>
+	<tr>	
+		<td>Jemand ist angeschlossen</td><td id="ap_if_connected"></td>
+	</tr>
+	<tr>	
+		<td>Aktiv</td><td id="ap_if_active"></td>
+	</tr>
+	</tbody>
+</table>
+
+<!-- <form action="/change_password" method="post"> -->
+<!-- <table> -->
+	<!-- <caption>Cambiar SSID y password para conectar a un access point WIFI como estación</caption> -->
+	<!-- <tbody> -->
+		<!-- <tr><td>SSID</td> -->
+			<!-- <td><input type="text" name="ssid" id="ssid"></td> -->
+		<!-- </tr> -->
+		<!-- <tr><td>Password</td> -->
+			<!-- <td><input type="password" name="password" id="password"></td> -->
+		<!-- </tr> -->
+		<!-- <tr><td><input type="submit" value="submit"></td> -->
+		<!-- </tr> -->
+	<!-- </tbody> -->
+<!-- </table> -->
+<!-- </form> -->
+
+<div class="middlediv">WIFI Scan</div>
+<button type="button" onclick="wifiScan()">
+	WiFi scan
+</button>
+<table>
+	<thead>
+		<tr>
+			<td>SSID</td>
+			<td>dBm</td>
+		</tr>
+	</thead>
+	<tbody id="scanInfo">
+	</tbody>
+</table>
+
+<div class="footerdiv"></div>
+
+</body>
+
+<script>
+
+async function getWifiStatus() {
+	setAllTextById(  await fetch_json( "/get_wifi_status" ) );
+	// Now do the wifi scan
+	await wifiScan() ;
+}
+
+
+async function wifiScan() {
+	wifiData = await fetch_json( "/wifi_scan" );
+
+	var s = "";
+	for( i = 0; i < wifiData.length; i++ ) {
+		w = wifiData[i] ;
+		s += "<tr>" ;
+		s += "<td>" + w[0] + "</td>" ;
+		s += "<td>" + w[3] +  "</td>" ;
+		s += "</tr>" ;
+	}
+	htmlById( "scanInfo", s ) ;
+}
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/index.html" ;
+}
+
+
+
+async function getDiagInfo( ) {
+    // General microcontroller information
+	let diag = await fetch_json( "/diag" );
+	setAllTextById( diag ); 
+	let sole_info = "" ;
+	solenoid_devices = diag["solenoid_devices"] ;
+	for( const [key, value] of Object.entries(solenoid_devices)) {
+		sole_info += key + ": " + value + "<br>" ;
+	}
+	htmlById("solenoid_devices", sole_info);
+    getWifiStatus() ;
+}
+
+function showLog() {
+	window.location.href = "/errorlog" ;
+}
+
+
+getDiagInfo();
+</script>

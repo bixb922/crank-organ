@@ -125,10 +125,4 @@ Configuración WIFI|WIFI configuration
 >Como WiFi access point<|>As WiFi access point<
 >Alguien conectado<|>Someone connected<
 
-*ftp.html
-FTP está ahora activo. Usa Windows Explorer o Filezilla para conectarse y transferir archivos. Finder en MAC no funciona bien.|FTP is now active. Use Windows Exporer or Filezilla to connect and transfer files. Finder on MAC does not work well with this FTP server.
-
-*config.html
-"Configuración guardada en flash"|"Configuration saved to flash"
-
 

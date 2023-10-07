@@ -1,0 +1,128 @@
+# Format:
+# *filename is a file to be translated
+# Without * the line is a rule of the form from_string|to_string
+# i.e. original text and translated text separated by | (pipe) character. 
+# There may be surrounding characters in
+# the from_string and to_string to ensure uniqueness of the from_string.
+*common.js
+"No conectado|"Nicht angeschlossen
+"no conectado|"nicht angeschlossen
+"fin"|"beended"
+esperando"|warte"
+status_text = "cancelado"|status_text = "abgesagt"
+= "sí" ;|= "ja" ;
+= "no" ;|= "nein" ;
+
+*index.html
+>Drehorgel|>Drehorgel
+<td>Uso</td>|<td>Verbraucht</td>
+>Capacidad|>Kapazität
+>Bater&iacute;a|>Batterie
+>Tiempo operaci&oacute;n|>Betriebszeit
+>Tiempo remanente|>Verbleibende Zeit
+Poner contadores en cero|Batteriezähler auf Null setzen
+# In the javascript code:
+"Cambiar a afinador"|"Tuner-Modus"
+"Cambiar a teclado"|"Tastatur-Modus"
+"Cambiar a Organillo"|"Drehorgel-Modus"
+"Cambiar a configuración"|"Einstellungs-Modus"
+Diagnóstico|Systeminformation
+"Organillo"|"Drehorgel"
+"Afinador"|"Tuner"
+"Teclado bluetooth"|"Bluetoothtastatur"
+"Contadores batería en cero"|"Batteriezähler auf Null setzen"
+
+*tunelist.html
+Lista de melodías|Melodieliste
+B&uacute;squeda|Suche
+>Actuación|>Vorführungskontrolle
+# In the javascript code:
+"T&iacute;tulo"|"Name"
+"A&ntilde;o"|"Jahr"
+"Autor"|"Autor"
+"G&eacute;nero"|"Genre"
+"actualizando setlist"|"Setlist wird aktualisiert"
+
+*keyboard.html
+Nombre Bluetooth|Bluetooth-Name
+Aviso Bluetooth|Bluetooth advertising
+Conectado|Angeschlossen
+Notas tocadas|Gespielte Noten
+Notas omitidas|Ignorierte Noten
+# In the javascript code:
+
+*note.html
+Afinar|Stimmen
+Sonar nota|Notentest
+Repetición|Wiederholungstest
+>Programa-nota<|>Programm-Note<
+>Amplitud|>Amplitude
+# In the javascript code.
+# The next one does not have closing quote - it's part of a larger string
+"Afinaci&oacute;n|"Stimmung
+"Amplitud|"Amplitude
+
+*notelist.html
+Afinar todos|Alle stimmen
+Escala de prueba|Notenleiter spielen
+# In the javascript code:
+"Programa-nota"|"Programm-Note"
+"Afinaci&oacute;n|"Stimmung
+"Amplitud|"Amplitude
+Borrar afinación|Gespeicherte Stimmung löschen
+
+
+*play.html
+Melodía actual|Aktuelle Melodie
+>Partir|>Starten
+>Al comienzo|>Zurück zum Anfang
+>Próximo|>Nächste
+>Guardar lista<|>Setlist speichern<
+>Cargar lista<|>Setlist abrufen<
+>Borrar setlist<|>Setlist löschen<
+>Desordenar lista<|>Zufallswiedergabe Setlist<
+>Desordenar todos<|>Zufallswiedergabe alle Melodien<
+Control tempo|Tempokontrolle
+Ajuste velocidad|Wiedergabetempo
+>Girando|>Dreht
+"Girando"|"Dreht"
+"No gira"|"Dreht nicht"
+rev/seg|Umdrehungen/Sekunde
+# In the javascript code:
+"T&iacute;tulo"|"Title"
+"G&eacute;nero"|"Genre"
+"Autor"|"Autor"
+"Duraci&oacute;n"|"Dauer"
+"A&ntilde;o"|"Jahr"
+"Guardado"|"Gespeichert"
+"No guardado, error"|"Nicht gespeichert, Fehler aufgetreten"
+
+*diag.html
+>Descripción<|>Beschreibung<
+Diagn&oacute;stico|Systeminformation
+>Microcontrolador|>Microcontroller
+Ver log|Event log anzeigen
+errores)|errors)
+>Versión Micropython<|>Micropython Version<
+>Imagen Micropython<|>Micropyton Image<
+>Fecha/hora|>Datum/Zeit
+>Tiempo desde reboot<|>Zeit seit Reboott<
+>minutos<|>Minuten<
+>Flash libre|>Freier Flashspeicher
+>Flash usada|>Flashspeicher in Benutzung
+>RAM libre|>Freie RAM
+>RAM usada|>RAM in benuzung
+>Configuración solenoides|>Solenoidkonfiguration
+>Modo|>Modus
+>Archivos MIDI|>MIDI-Dateien
+>Carpeta música|>MIDI-Ordner
+Configuración WIFI|WIFI-Konfiguration
+>IP de clientes activos, ùltimo minuto<|>IP-Addressen aktiver Webclients innerhalb letzter Minute<
+>Como WiFi station<|>Als WiFi Station<
+>Se conecta a SSID<|>Wird sich an SSID anschliessen<
+>Activa<|>Aktiv<
+>Conectado a un SSID<|>Am SSID angeschlossen<
+>Como WiFi access point<|>Als WiFi Access Point<
+>Alguien conectado<|>Webclient ist angeschlossen<
+
+

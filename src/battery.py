@@ -41,6 +41,7 @@ def _init():
     global _volts_adc  # The ADC pin number to monitor 12V battery
     global _battery_task
     global _solenoid_watts
+    global _heartbeat_task, _make_heartbeat
     
     _logger = getLogger(__name__)
     try:
@@ -63,6 +64,11 @@ def _init():
     _solenoid_watts = 12*12/int( config.get_int("solenoid_resistance", 90 ) )
     _info["capacity"] = config.get_int( "battery_watt_hours", 50 )
     _battery_task = asyncio.create_task( _battery_process() )
+    
+    # Start with heartbeat
+    _make_heartbeat = True
+    _heartbeat_task = asyncio.create_task( _heartbeat_process() )
+
 
     _logger.debug("init ok")
     
@@ -117,4 +123,32 @@ def set_to_zero():
 def get_info():
     return _info
 
+async def _heartbeat_process():
+    HEARTBEAT_INTERVAL = 5000
+    HEARTBEAT_DURATION = 50
+    from pinout import all_valid_midis
+    from solenoid import note_on, note_off
+    from random import randint
+    while True:
+        while True:
+            # Leave at least one interval between playing and start
+            await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
+            if not _make_heartbeat:
+                break
+            print(".", end="")
+            midi_note = all_valid_midis[ randint( len(all_valid_midis) ) ]
+            solenoid.note_on( midi_note )
+            await asyncio.sleep_ms( HEARTBEAT_DURATION )
+            solenoid.note_off( midi_note )
+            
+        while not _make_heartbeat:
+            await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
+
+		
+def start_battery_heartbeat():
+    _make_heartbeat = True
+	
+def end_battery_heartbeat():
+    _make_heartbeat = False
+	
 _init()

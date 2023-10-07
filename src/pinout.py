@@ -7,10 +7,7 @@ import machine
 import sys
 import time
 from mcp23017 import MCP23017
-
-if __name__ == "__main__":
-    sys.path.append("/software/mpy")
-
+from random import randint
 import config
 import midi
 
@@ -84,6 +81,10 @@ def load_pin_info( ):
     # Examples: 20_note_Carl_Freil.json, 31_note_Raffin.json)
     pinout_files = []
     for fn in os.listdir(config.DATA_FOLDER):
+        # Pinout files must have the form <nnn>_note_<name>.json
+        # where <nnn> is the number of notes of the scale and
+        # <name> is the name itself, example 20_note_Carl_Frei.json
+        # where 20 is the number of notes and Carl_Frei is the name.
         if (fn.endswith("json") and 
             "_note_" in fn and
             "1" <= fn[0:1] <= "9"):
@@ -228,6 +229,8 @@ async def web_test_mcp( sda, scl, mcpaddr, mcp_pin ):
         mcp[mcp_pin].output(0)
         await asyncio.sleep_ms( 500 )
     
+def get_random_midi_note():
+    return all_valid_midis[ randint( len(all_valid_midis) ) ]
 
 load_pin_info()
 

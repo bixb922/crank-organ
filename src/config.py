@@ -280,7 +280,7 @@ def save( newconfig ):
 		
         elif k == "initial_page":
             if v not in ( "index", "tunelist", "performance" ):
-            return f"Error: unknown initial_page"
+            	return f"Error: unknown initial_page"
 			
         elif k == "name":
             name = newconfig[k]

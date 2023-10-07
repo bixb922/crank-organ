@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<title>Crank organ</title>
+	<link rel="icon" type="image/png" href="favicon.png?a=1"/>	
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft" >
+        <a onclick="pageUp()">&#11013;</a>
+		&nbsp;Home page
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+<div style="clear:both" height=1></div>
+<script type="text/javascript" src="/static/common.js"></script>
+<table>
+	<tbody>
+		<tr id="play">
+			<td>
+				<button type="button" onclick="setMode('play')" id="playModeButton">
+				</button>
+			</td>
+			<td>
+				<img src="/static/crank.jpg" width=100>
+			</td>
+		</tr>
+		<tr id="tuner" style="display:none">
+			<td>
+				<button type="button" onclick="setMode('tuner')" id="tunerModeButton">
+                    <span style="font-size:2px">&#8987;</span>
+				</button>
+			</td>
+			<td>
+				<!-- <img src="/static/tuner.jpg" width=80> -->
+				<!-- Thermometer and musical notes emojis. 127925 and 127926 are notes -->
+				    <span style="font-size:28px">&#127777;&#127925;</span>
+			</td>
+		<tr id="keyboard" style="display:none">
+			<td>
+				<button type="button" onclick="setMode('keyboard')" id="keyboardModeButton">&#8987;
+				</button>
+			</td>
+			<td>
+				<!--Keyboard emoji -->
+				<span style="font-size:36px">&#127929;</span>
+			</td>
+		</tr>
+
+		<tr id="config" style="display:none">
+			<td>
+				<button type="button" onclick="config()" id="configModeButton">
+				</button>
+			</td>
+			<td>
+                <!-- gear emoji -->
+				<span style="font-size:48px">&#9881;</span>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<button type="button" onclick="showDiag()" id="diagButton">
+					System info
+				</button>
+			</td>
+			<td>
+			<!-- Antenna with signal emoji -->
+				<span style="font-size:36px">&#128246;</span>
+			</td>
+		</tr>
+
+	</tbody>
+</table>
+<div class="middlediv2">Battery</div>
+<table>
+	<tbody>
+		<tr>
+			<td>Used</td><td id="use"></td><td>[Wh]</td>
+		</tr>
+		<tr>
+			<td>Used</td><td id="use_percent"></td><td>[%]</td>
+		</tr>
+		<tr>
+			<td>Capacity</td><td id="capacity"></td><td>[Wh]</td>
+		</tr>
+		<tr>
+			<td>Time powered on</td><td id="time"></td><td>[hh:mm]</td>
+		</tr>
+		<tr><td>Remaining time</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
+    </tbody>
+</table>
+<table style="width:100%">
+	<tbody>
+		<tr>
+			<td id="percent_remaining">
+			</td>
+			<td id="batterygraph">
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+<button type="button" onclick="battery_zero()" id="resetBatteryButton">
+	Set battery counters to zero
+</button>
+
+
+
+
+<div class="footerdiv"></div>
+
+
+<script>
+
+var current_mode = "" ;
+
+async function setMode( mode ){
+    // used for play, tuner, and keyboard modes.
+    
+    if( mode != current_mode ){
+        textById( mode + "ModeButton", "\u231B" );
+        await fetch_json( "/change_mode/" + mode ) ;  
+        await getMode() ;
+    }
+
+    
+    // Use the button to navigate to requested page
+    if( current_mode === "play") {
+        window.location.href = "/static/tunelist.html" ;
+    }
+    else if( current_mode === "tuner") {
+        window.location.href = "/static/notelist.html" ;
+    }
+    else if( current_mode === "keyboard") {
+        window.location.href = "/static/keyboard.html" ;
+    }
+
+}
+
+
+async function getMode() {
+    // Show available options only
+    try {
+        let valid_modes = await fetch_json( "/valid_modes");     
+        for( m in valid_modes) {
+            d = document.getElementById(valid_modes[m]) ;
+            d.style.display = "" ;
+        }
+    }
+    catch(e) {
+        console.log("get /valid_modes failed", e ) ;    
+    }
+    // Show current mode, default is play     
+    current_mode = "play " ;
+    try {
+	    let resp = await fetch_json( "/get_mode" ) ;
+        current_mode = resp["mode"] ;
+    }
+    catch(e) {
+        console.log("getmode failed, setting default=play", e );
+    }
+
+    // Set button text according to mode
+	textById("playModeButton", "To crank organ mode") ;
+	textById("tunerModeButton", "To tuner mode" );
+	textById("keyboardModeButton", "To keyboard mode" ) ;
+    textById("configModeButton", "To configuration mode" );
+	if( current_mode === "play") {
+		textById("playModeButton", "Crank organ") ;
+	}
+	else if( current_mode === "tuner") {
+		textById("tunerModeButton", "Tuner" );
+	}
+	else if( current_mode === "keyboard") {
+		textById("keyboardModeButton", "Bluetooth keyboard") ;
+	}
+    else if( current_mode == "config" ){
+        textById( "configModeButton", "Configuración" ) ;
+    }
+	
+	getBatteryInfo() ;
+}
+
+
+async function getBatteryInfo( ) {
+    // This is the detailed battery info in the body
+    // of the page, the battery info in the header
+    // gets updated in common.js
+	while( true ) {
+		updateBatteryInfo( await fetch_json( "/battery" ) ) ;
+		await sleep_ms( 29000 ) ;
+	}
+}
+
+function updateBatteryInfo( battery ) {
+	// Needed for /battery and /battery_zero
+	textById("use", Math.round( battery["use"]*10 )/10) ;
+	var used_proportion = battery["use"] / battery["capacity"] ;
+	textById("use_percent",  
+				Math.round( used_proportion*100 )) ;
+	textById("percent_remaining", "" +  Math.round( 100-used_proportion*100 ) + "%") ;
+	textById("capacity", battery["capacity"]) ;
+	textById("time",  
+				format_secHHMM( battery["time"] )) ;
+	textById("time_remaining", 
+				format_secHHMM( battery["time_remaining"] )) ;
+	
+
+	barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
+}
+
+async function battery_zero() {
+	showPopup( "resetBatteryButton", "Battery counters set to zero");
+	updateBatteryInfo( await fetch_json( "/battery_zero" ) ) ;
+}
+
+
+function showDiag() {
+	window.location.href = "/static/diag.html" ;
+}
+function config(){
+	window.location.href = "/static/config.html" ;
+}
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/index.html" ;
+}
+
+getMode() ;
+// getMode calls getBatteryInfo.
+// This seems better than calling all in parallel.
+    
+</script>
+</body>

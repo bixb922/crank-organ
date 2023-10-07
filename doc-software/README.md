@@ -299,16 +299,18 @@ If you need a MIDI configuration that is not available, post an issue.
 Post an issue if you have questions about this software. 
 
 # Installation
-The description of the installation process is pending.
+Install MicroPython on the ESP32-S3, please see micropython.org.
 
-I'll probably make a MicroPython .bin image for a ESP32-S3 N16R8 available, with all the software in it. If that's the case, you need to:
-* Install Python from www.python.org/downloads
-* Install the esptool.py from the Espressif, the link is on ```https://micropython.org/download/ESP32_GENERIC_S3/```
-* Plug the ESP32-S3 board via USB cable to the PC. The board usually has two USB-C ports labelled USB and COM. It's preferable to use the port labelled USB.
-* Instructions for the esptool comand are at ```https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/index.html```
-* Run the esptool command from the command line (cmd or terminal) as shown in the official instructions for ESP-32 at ```https://micropython.org/download/ESP32_GENERIC_S3/```but with the supplied image instead of the standard image
-* Reboot the microcontroller
 
+Install the mpremote utility (part of MicroPython) with ```pip install mpremote```
+
+You can use the mpremote utility to verify that MicroPython is working.
+
+Install the git utility, to access github.com
+
+Get the complete repository with ```git clone https://github.com/bixb922/crank-organ``` to your hard drive of the PC.
+
+Go to the install folder and run ```mpremote run install.py````
 
 Now enter ```mpremote ls``` and the output should be similar to:
 ```
@@ -368,6 +370,8 @@ etc etc etc
 ```
 
 If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue.
+
+Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to esp32s3. Enter http://esp32s3.local in your browser and wait for the main menu page to show.
 
 # WiFi capabilities
 You connect to the controller with a browser (Chrome or Firefox) via WiFi. 
