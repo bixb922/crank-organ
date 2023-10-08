@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Power off task. Monitors activity and enters deepsleep to save battery
 # if not active.
 import machine

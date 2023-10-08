@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Handles modes: play, config, keyboard, tuner.
 
 import asyncio

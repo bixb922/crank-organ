@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Tallies battery usage
 import asyncio
 from machine import ADC, Pin

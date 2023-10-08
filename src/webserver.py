@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Webserver module, serves all http requests. 
 # Based on tinyweb
 import os

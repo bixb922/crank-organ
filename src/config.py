@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Handles config.json and other configuration options
 # Also, data file names and folders are defined here.
 

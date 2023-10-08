@@ -1,3 +1,6 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+# Time zone support for zones with month/week rules
 import time
 import sys
     

@@ -1,5 +1,7 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Touchpad asyncio driver, detects button down event in backbround
-# nd triggers event defined by set_release_event.
+# and triggers event defined by set_release_event.
 import array
 import machine
 import asyncio

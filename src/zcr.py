@@ -1,4 +1,8 @@
-# ONly one generator to yield list of zero crossings
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+# zero crossing frequency measurement
+
+# Only one generator to yield list of zero crossings
 # compute_frequency gets first and last
 # zcr_list generates list
 from math import sqrt

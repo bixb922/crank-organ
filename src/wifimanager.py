@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # WiFi connection manager. Connects to station mode SSIDs and
 # publishes the AP mode SSID
 # >>> Problem? DISCONNECTS FROM AP_IF WHEN ACTIVATING STA_IF

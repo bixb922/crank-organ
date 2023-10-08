@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Crank rotation speed sensor. Still in testing phase.
 import asyncio
 import json

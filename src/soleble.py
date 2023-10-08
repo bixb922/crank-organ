@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # To allow mpremote mip install aioble on MAC:
 # Go to Macintosh HD > Applications > Python3.11 folder
 # (or whatever version of python you're using)

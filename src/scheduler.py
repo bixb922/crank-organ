@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Allows the MIDI player to wait letting well behaved asyncio tasks
 # execute during the times between MIDI events.
 

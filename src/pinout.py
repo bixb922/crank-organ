@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # ESP32-S3 GPIO pin definitions and port expander MCP23017 pin definitios
 
 import asyncio

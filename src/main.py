@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 print("Go!")
 
 # only main,py and config,json go to the root.

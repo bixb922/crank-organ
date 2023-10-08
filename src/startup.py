@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # First thing: show we are starting with the led, if installed
   
 import machine

@@ -1,4 +1,6 @@
-# Manages tunlist.
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+# Manages tunelist.
 import json
 import os
 import gc

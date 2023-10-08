@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Records event log. Limits total event log size, so event logs can't
 # hog flash memory.
 # Default mode is: debug messages to console, info messages to flash.

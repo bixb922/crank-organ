@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # Plays MIDI files using the umidiparser module
 import time
 import asyncio

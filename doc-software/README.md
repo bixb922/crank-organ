@@ -520,7 +520,10 @@ Frequency detection is done with the zero crossing algorithm (See zcr.py). This 
 
 MicroPython version 1.21 (or 1.20 later than sept 2023) is required. Since MicroPython is continually enhanced, best use the latest version.
 
-Credits to mcauser (MCP23017 library, no modifications), belialov (Tinyweb web server, modified to enhance asyncio response). Both library modules are available on github under MIT license.
+Credits to mcauser (MCP23017 library, no modifications), belyalov (Tinyweb web server, modified to enhance asyncio response), and uftpd from various authors. All these library modules are available on github under MIT license:
+* https://github.com/mcauser/micropython-mcp23017
+* https://github.com/belyalov/tinyweb/releases
+* https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
 
 # Under development/testing
 Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes. I have tested all options under many circumstances. Also, I have tested the system with large tunelibs and large setlists without problemas.

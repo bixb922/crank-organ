@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 # MIDI note class and MIDIdict.
 # The MIDI note class and MIDIdict allow MIDI notes with a "any" program number
 # That eases the configuration for simple crank organs, but allows
