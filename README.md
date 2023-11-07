@@ -13,7 +13,9 @@ This hardware and software is the MIDI controller for this setup. It is controll
 
 How is this solution used?
 
-You select tunes to play by tapping on them on the tunelist page on the cell phone.
+Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and put your MIDI files in the tunelib folder of the PC. You can add more information such as title to the music.
+
+You control the order of the tunes with the cell phone. You select tunes to play by tapping on them on the tunelist page on the cell phone.
 
 There are several ways to select tunes to be played:
 
@@ -21,15 +23,15 @@ The creative mode: Tap on a tune on the tunelist, and turn the crank (or touch a
 
 The very creative mode: You can tap several tunes and queue them to play one after the other.
 
-The diligent mode: Before a performance, you can tap several tunes and organize them into a setlist on the performance page. You save the setlist on flash to be ready for the next performance. When the performance begins, you power on the microcontroller, turn the crank (or touch and release the touchpad) and the setlist plays.
+The diligent mode: Before a performance, you can tap several tunes and organize them into a setlist on the performance page. You save the setlist on flash to be ready for the next performance. When the performance begins, you power on the microcontroller, turn the crank (or touch and release the touchpad) and the setlist plays. No need to pull out the cell phone or to push buttons.
 
-The diligent and flexible mode: You can modify the setlist on the fly with the performance page. You can delete or skip a tune, reorder tunes, or select a new tune and move to the top of the list, according to the audience and your desire.
+The diligent and flexible mode: You can modify the setlist on the fly with the performance page. You can delete or skip a tune, reorder tunes, or select a new tune and move to the top of the list, according to the audience and your wishes.
 
-The lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
+The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
 # Description
 
-This is the complete software for automating a MIDI and solenoid valve based crank organ. A description on how to build the electronic hardware is included.
+This is the complete software for automating a MIDI and solenoid valve based crank organ. A description on how to build the electronic hardware is included in the doc-hardware folder.
 
 Please see the doc-software folder, click the file README.md for a detailed description of the software, with screen images.
 
@@ -40,7 +42,6 @@ This is work in progress. Please post an issue for questions or observations.  I
 Time permitting, I'll complete this repository:
 * Better description of hardware and building the hardware
 * Better description of I2C based controller cards for more than 20 pipes
-* Easy installation process, providing a complete flash image for ESP32-S3 N16R8. I think the installation process is quite easy if you download the (free) tools mantioned in doc-software/README.md installation section.
 * Crank rotation sensor (tachometer)
 
 
@@ -53,11 +54,11 @@ These are the folders in this GITHUB repository. On a cell phone, select "Browse
 |doc-software|Description of the controller software. Open README.md|
 |doc-hardware|Description of the controller hardware. Open README.md|
 |Software folders                                   |
-|src| Source code (MicroPython)                     |
+|src| Source code (MicroPython) |
+|data| Pin assignment (pinout) configuration files |
 |static| Web pages for the microcontroller (html)   |
 |data| Pinout templates for 20, 26 and 31 note organs |
-|install|Installation .py file                      |
-|music| The tune library (pending to upload)        |
+|install|Installation files                      |
 
 
 

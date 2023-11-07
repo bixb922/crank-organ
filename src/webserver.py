@@ -9,7 +9,7 @@ import asyncio
 import json
 import time
 import ubinascii
-import random
+
 
 from microdot_asyncio import Microdot, send_file, redirect
 

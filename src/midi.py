@@ -166,7 +166,7 @@ class Note:
     def __init__( self, instrument=None, midi_note=None, byhash=None ):
         # Instrument can be:
         #   program number 1-128 (not 0-127!!!!)
-        #   129 for drum channel 10/11
+        #   129 for drum channel 10
         #   0 or "" = wildcard to match any MIDI program number but not DRUM_PROGRAM, since the
         # percussion channel has to make exact match.
         # If created byhash=, then byhash is the hash of a midi.Note

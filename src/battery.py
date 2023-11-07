@@ -142,7 +142,6 @@ class Battery():
         HEARTBEAT_DURATION = 100
         await asyncio.sleep( HEARTBEAT_INTERVAL )
         
-        from pinout import midinotes
         from solenoid import solenoid
 
         while True:
@@ -154,16 +153,15 @@ class Battery():
                     break
                 # >>> debug?
                 print(".", end="")
-                midi_note = midinotes.get_random_midi_note()
-                solenoid.note_on( midi_note )
-                await asyncio.sleep_ms( HEARTBEAT_DURATION )
-                solenoid.note_off( midi_note )
+                solenoid.play_random_note(
+                    HEARTBEAT_DURATION )
+
 
             while not self.make_heartbeat:
                 await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
 
 
-    def start_battery_heartbeat( self ):      
+    def start_battery_heartbeat( self ):
         self.make_heartbeat = True
 
     def end_battery_heartbeat( self ):

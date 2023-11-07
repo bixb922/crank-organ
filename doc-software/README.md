@@ -1,12 +1,4 @@
 # Software for crank organs
-# Recent changes
-history
-integrated tunelib editor 
-Sticky table headers
-More description fields: rating, date added, number of times played
-Time zones
-Basic authentication
-
 
 # Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ
@@ -14,22 +6,26 @@ The purpose of this software is to power a microcontroller (see schematic in thi
 
 # Features
 
-* Browser as user interface. No internal display, no buttons. Control is done with WiFi with a browser on a cell phone, tablet or PC.
+* Browser as user interface. Control is done with WiFi with a browser on a cell phone, tablet or PC.
 * Can define a setlist or select tune by tune.
 * It's fast to establish a setlist. The setlist can be ordered, shuffled and stored. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
 * Music is uploaded into the microcontroller via WiFi with drag and drop or via USB connnection. You can add description, author, title, year to each tune.
-* To aid tuning, playing scales and individual notes is supported.
+* To aid tuning, playing scales and individual notes is supported. A tuner (test version) is included.
 * Shows remaining battery capacity on browser
-* Preconfigured for common scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different instruments.
+* Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments.
 * This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Solenoids can be mapped to MIDI note number only (only one instrument), or MIDI note number and program number (several instruments). Percussion channel mapping is also supported (drums and percussion).
+* Added button on MIDI configuration to test the solenoid when installing the wiring.
+* Added some emoji images (fast images) to web pages.
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # Main menu and navigation
 The home page has the main menu and shows detailed battery use information.
 
-![home page](homepage.jpg)
+![home page](homepage1.jpg) 
+
+![home page](homepage2.jpg)
 
 This diagram shows page navigation.
 The page top has a left arrow to navigate up one level.
@@ -37,24 +33,20 @@ The page top has a left arrow to navigate up one level.
 ```mmd
 flowchart LR
     H[main menu]
-    H -->|Crank organ mode button| T[tune list page]
+    H --> |Crank organ button| T[tune list page]
     T --> |Performance button| P[Performance control page]
-    H --> |Tuner mode button| NL[Note list page]
-    NL --> |Click on MIDI number| NN[Note page]
-    H --> |Configuration mode button| C[Configuration page]
-    C --> |Go to pinout page| PI[Pinout and MIDI configuration]
-    
+    P --> | #11013; back button, top left corner | T
+    H --> |Tuner button| NL[Note list page]
+    NL --> |Click on note name/MIDI number| NN[Note page]
+    H --> |History button| HI[History page]
+    H --> |Edit Tunelib button | TE[Tunelib Editor]
+    H --> |General Configuration button| GC[Configuration page]
+    H --> |Click on MIDI Configuration| MC[MIDI and pin configuration page]
     H --> |System info button| W[System information page]
     W --> |Show log button| E[Event log]
-    
 ```
-These pages can be used even during playback. 
-    
-The software operates either in crank organ mode (to play music), as tuner (no tune playback, only notes) or in configuration mode (after entering the configuration password, no tune playback).
 
-When entering a mode (crank organ, tuner, configuration) it is possible that you'll have to press the button twice, first to enter mode and then, once the mode has changed, to go to the selected page.
-
-It's best to navigate the applicatino using the buttons and the back button on the top of the page.
+It's best to navigate the application using the buttons and the back button on the top of the page. Since pages are cached for fast response, sometimes reloading pages will update/clear information.
 
 The home page is by default the menu page, but the configuration allows to define the tune list or the performance page as "home" page.
 
@@ -63,9 +55,11 @@ The home page is by default the menu page, but the configuration allows to defin
 
 The &#11013; symbol will go up one level in the previous diagram.
 
-When the battery symbol &#x1f50b; turns to &#x1faab;, then the computed battery level is low. 100% means battery full, 0% means battery empty. The level is reset to 100% when pressing the "Battery counters set to zero" on the home page. The time is the estimated operating time remaining in hours:minutes, based on the use history.
+Next to the battery is the % remaining (100%=battery full, 0%=battery empty) and the remaining estimated operating time in hours:minutes (21 hours 29 minutes on the example).
 
-Battery use is calculated based on the "battery watts-hour" value and the solenoid resistance set in the configuration. The average power consumption of the microcontroller is about 0.3W) and the power consumed by each note played in when in crank organ mode is calculated using 90 Ohms as resistance of the solenoids and adding the time each note is on.
+When the battery symbol &#x1f50b; turns to &#x1faab;, then the computed battery level is low. The counters are reset  when pressing the "Battery counters set to zero" on the home page. The time is the estimated operating time remaining in hours:minutes, based on the use history.
+
+Battery use is calculated based on the power consumption parameters of the General Configuration: battery capacity, solenoid consumption, microcontroller consumption, all in Watts or Watt-hours. The solenoid consumption is then computed during the time each solenoid is on during playback.
 
 Battery information is refreshed about every minute.
 
@@ -92,12 +86,13 @@ The correct calculation of power remaining depends on the "battery_watts_hour" p
 
 Contract the page a bit to see all columns. Scroll up and down to see the complete page.
 
+You change these texts with the Tunelib Editor.
 
-![tune list page wide](tunelist_wide.jpg)
-
-Entering text into the search box filters all tunes with that text. For example, entring polka will show all tunes with polka in the genre, title or author. The search is case insensitive and uses all information fields shown.
+Entering text into the search box filters all tunes with that text. For example, entring polka will show all tunes with polka in the genre, title, author or any other field. The search is case and diacritic mark insensitive (for example a will match a, A, á, â or ä) and uses all information fields shown.
 
 ![search tune](tunelist_search.jpg)
+
+Tapping on the header of a column will sort up (and then down) by the contents of the column.
 
 Tapping on a tune adds that tune to the bottom of the current setlist, i.e. queues the tune for playing. Tapping again, removes the tune from the setlist. The queued tunes are marked with a golden star &#127775; and the position in the setlist:
 
@@ -107,7 +102,7 @@ If a tune is playing, progress is shown with a progress bar next to the tune nam
 
 ![playing tune on tune list page](tunelist_1_playing.jpg)
 
-Once some tunes that you want to perform are selected, you turn the start turning the crank. If there is a crank sensor, the first tune starts playing. If not, touch the touchpad and the first starts playing. Once played, it pops off the pending list, and the next tune waits for start.
+Once some tunes that you want to perform are selected, you turn the start turning the crank. If there is a crank sensor, the first tune starts playing. If not, touch the touchpad and the first tune starts playing. Or as a last resort, use the "Start" button on the performance page to start the tune. Once played, it pops off the pending list, and the next tune waits for start.
 
 Or else, you can control performance pressing the "Performance" button. The queued tunes can be treated as a setlist.  Or if there is a request for a certain tune, you go back to the tune list page, tap the tune to add to setlist, go to the performance control page, move it to top with the little top button and play it.
 
@@ -121,12 +116,12 @@ With this page you can:
 * Go back to the beginning of the current tune (restart it).
 * See information about current tune 
 * Control the sequence of tunes in the setlist
-* Control reproduction speed
+* Control the tempo of the tune (make the tunes play faster or slower)
 
 
 ### Current tune
 
-This section shows current tune, title, author, year, genre, duration and a bar with % played.
+This section shows current tune, title, author, year, genre, duration and other information, and a bar with % played.
 
 ![Performance page, top](performance_waiting.jpg)
 
@@ -172,19 +167,17 @@ The large buttons are:
 ### Crank and speed control
 ![tempo control](performance_tempo_control.jpg)
 
-If a crank sensor installed, the crank turning speed will influence playback speed. The buttons here allow to regulate the relationship, this is, set what crank speed is the normal speed. 
+These controls regulate playback speed. This is mainly for future use with the crank rotation speed sensor. 
 
 
 # Operation on power on
-It's best to have the main menu page, tunelist page or performance page open in the browser of the cell phone when starting. The main menu page, tune list page and performance page poll the microcontroller every few seconds, and will update the information as soon as the microcontroller is up. Put a favorite marker on the page to have it at hand. However, having the page open is not mandatory, you can operate without cell phone or turn in on later if needed. Also: there is an configuration option to select the tune list or performance page as alternate home page.)
+It takes about 10 or 12 seconds from power on until the system is ready. Some valves will move when ready, normally that sound can be heard.
 
-If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
-
-Startup takes about 6 seconds until the system is ready. You will hear some valves  move as a signal when ready. 
+If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green on start. It will flash white several times when WiFi has connected. It will flash green several times when ready to play music. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.  The led will flash white when touching and releasing the touchpad. 
 
 The software will automatically load the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
-If there is no setlist stored (empty setlist). turning the crank or releasing the touchpad will shuffle all tunes randomly and start playing the first tune.
+If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad twice will shuffle all tunes randomly and start playing the first tune.
 
 So for all cases: turn on, and turn the crank or touch the touchpad and music starts.
 
@@ -198,9 +191,7 @@ Tuning mode aids tuning and intonation of pipes.
 
 When entering tuning mode,  MIDI playback is disabled.
 
-The microphone/tuning capacity is still in testing phase. However, there is a scale and repetition test to aid intonation and tuning.
-
-Without a microphone, the tuning and amplitude graphs just show random values with no meaning. 
+Even without a microphone installed, these pages are useful to make individual notes sound, to play scales and do repetition tests.
 
 ## All notes page
 
@@ -208,11 +199,11 @@ Without a microphone, the tuning and amplitude graphs just show random values wi
 
 This page shows all defined MIDI notes. Frequency and amplitude bar graph only have a meaning if there is a working microphone connected.
 
-"any-C3(60)" means MIDI program = any, note=MIDI 60=C4. If a specific program had been configured, this would show as "Piano(1)-C3(60)". 
+"C3(60)" means the central C on the piano, MIDI number 60, note name C, 4th octave. If a specific program had been configured, this would show as "Piano(1)-C3(60)". 
 
 The "Play scale" button will play a scale up and down activating all solenoids in order.
 
-"Tune all" will make each pipe sound in order. If a microphone is installed, tuning and amplitude is updated and stored. Tuning is shown in cents. Zero cents is a perfect tuning. 100 cents means one semitone away. 5 cents or less is probably a reasonably well tuned note.
+"Tune all" will make each pipe sound in order. If a microphone is installed, tuning and amplitude is updated and stored. Tuning is shown in cents. Zero cents is a perfect tuning. 100 cents means one semitone away. 5 cents or less is probably good enough.
 
 Amplitude is shown in relative scale in dB (decibel). 0 dB is the loudest possible measurement, -10 dB is less loud, etc. dB scales are logarithmic, just as the human perception is. The purpose of this measurement is to aid comparison of loudness of the pipes. The final judgement should be your ear.
 
@@ -227,6 +218,34 @@ The "Note test" button will sound that note.
 
 The "Repetition test" button will make a repetition test increasing speed until reaching a 30ms on/30ms off cycle.
 
+# History page
+The history page will show all dates a tune has been played, and a list of all tunes played that date.
+
+# Edit Tunelib
+The tunelib editor allows to edit information about the tunes.
+
+Activating this page will take some time, since the software checks for added and deleted files, and gathers information about the files.
+
+Editing then tunelib is best done on PC, since the page is rather wide.
+
+![Tunelib Editor](tunelib_editor.png)
+
+Press the "save" button at the bottom of the page to save all changes.
+
+Columns:
+* Title
+* Genre
+* Author
+* Year
+* Autoplay: if marked, this tune is included in the "shuffle all" function.
+* Rating
+* Info
+* Duration in minutes:seconds, calculated automatically
+* Date added, registered automatically
+* File name
+* Size: file size in bytes
++ Clean row: click here to clear all fields of this row on save. This does not delete the file.
+
 
 
 # System information
@@ -238,49 +257,50 @@ These pages are mostly to aid diagnosis of possible problems.
 
 The "Show log" button will show the latest event log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder, to be rescued with ```mpremote :cp data/errornnn.log errornnn.log```. The time in the log file starts with 00:00:00, but if connected to a router or cell phone hot spot, the microcontroller acquires current time information, and the log time is shown in UTC. The "time zone" parameter on the configuration page can assign another (fixed) time zone, if you really want to look at the log in local time.
 
-If the description is not clear, please post the relevant part of the log, with previous history, and the description of the situation as an issue, I'll try to help.
+If there is some problem, please post the relevant part of the log, with previous history, and the description of the situation as an issue, I'll try to help.
 
-The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote, putty, Thonny, or other tools will additionally show records of class DEBUG. Due to the overhead, these are not recorded to flash. For some cases, it may be necessary to rescue these events.
-
-
-
+The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote, putty, Thonny, or other tools will additionally show records of class DEBUG. Due to the overhead, these are not recorded to flash. It may be of interest to look at these detailed event logs too.
 
 
 # The tune library
 All MIDI files to be played reside in the tunelib folder in the microcontroller.
 
-This folder also contains tunelib.json, a text file with additional information about the tune such as title, genre, year, author and playback time. There is a program available for the PC to edit this file,. 
+The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating,
 
 ## MIDI files
 Both MIDI file type 0 (single track) and MIDI file type 1 (multitrack) files are supported. 
 
-Only note on, note off and set tempo events are needed for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers and a MIDI notes for percussion channels 10 and 11. If specified, program change events are also interpreted. All other messages such as after touch, Meta messages such as lyrics or text and sysex messages are may be present but are ignored.
+Note on, note off and set tempo events are interpreted for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers for certain or all MIDI notes or to specify MIDI notes for percussion channel 10. All other messages such as after touch, Meta messages such as lyrics or text and sysex messages are may be present but are ignored.
 
-Be sure to play the MIDI file at least once on your PC to see if it has a correct format.
+Be sure to play any MIDI file at least once on your PC to see if it has a correct format.
 
 There is no functionality to transpose a MIDI file. Use any MIDI file editor to do that, if you need.
 
-## Preparing the tunelib on your PC
+## Adding and deleting MIDI tunes
 
-* Copy the music folder of the GITHUB repository to your PC.
-* Copy your crank organ MIDI files to the tunelib folder. 
-* Run ```tunelib_gui.py``` on your PC to edit the tunelib information: title, author, genre and year.
-* Connect the microcontroller to the USB port of the PC. See if it is available with mpremote.
+To add files, copy them from the PC to the tunelib folder on the microcontroller, then update the info with the Tunelib Editor option.
 
-This is the screenshot of the tunelib editor:
+To remove files, rmove them from the tunelib folder on the microcontroller, then update the info with the tunelib editor.
 
-![tunelib gui](tunelib_pc.png)
-
-To add files, copy them to the tunelib folder, then update the info with the tunelib editor.
-
-To remove files, rmove them from the tunelib folder, then update the info with the tunelib editor.
-
-## Update tune library through USB
-* Run ```update_tunelib_mc.py```to copy all changes of the tunelib to the microcontroller. Only changed files are copied.
-
-## Update tune library with WiFi
+## Update MIDI files with WiFi
 * On a Mac, install Filezilla. Enter the host name, for example ```organillo.local``` in FileZilla.  You now can drag and drop files to the tunelib folder.
-* On Windows, search internet for "How to connect to FTP servers in Windows".
+* On Windows, search internet for "How to connect to FTP servers in Windows" with Windows Explorer.
+
+## Update MIDI files with USB and mpremote
+
+mpremote is the standard tool to update files on the microcontroller, see https://docs.micropython.org/en/latest/reference/mpremote.html
+
+Connect the microcontroller to the USB of the PC. Use ```mpremote cp my_midi_file.mid :/tunelib/my_midi_file.mid```to copy files from the PC to the microcontroller.
+
+## Process MIDI file updates
+New files will be visible only once you enter the Tunelib Editor option. This will take some time, since the microcontroller scans each MIDI file entirely.
+
+Then you can edit the additional information, using this screen. Since the form is rather wide, this is best done on a tablet or PC:
+
+!(tunelib editor screenshot)[tunelib_editor.jpg]
+
+What you put into the fields is up to you. The tunelist page allows to search and order for these field contents.
+
 
 
 # Installation and configuration
@@ -289,43 +309,37 @@ This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 mea
 
 For a 20 pipe organ, see the hardware section for a schematic. It's best to connect a touchpad, which really is any metal knob such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology.
 
-Optionally a crank sensor and microphone can be installed (still being tested).
+Optionally a crank sensor and microphone can be installed. Crank sensor is still being developed.
 
 If more than 20 pipes/solenoids are needed, see hardware section of this repository.
 
 Use Chrome or Firefox on a cell phone, PC, MAC or tablet to control the microcontroller. Safari is not supported.
 
-## Prerequisite skills for installing and configuring the software
+## Prerequisites installing and configuring the software
 
-Basic command line commands, i.e. cmd on windows, terminal on Mac. Commands such as dir or ls and cd. 
+Installation is easiest done with command line commandss, i.e. cmd on windows, terminal on Mac. You should be familiar with commands such as dir or ls and cd. 
 
-Install standard free software, namely Python and Filezilla. 
+No programming required. Configuration is done via web pages and forms with a browser.
 
-No programming required. Configuration is done via web pages and forms. 
+Install Python from python.org. You don't need to program with python, but the programs to manage the microcontroller need the Python runtime.
 
-If you need a MIDI configuration that is not available, post an issue. 
+Python includes the pip "pip installs Python" utility. Install esptool and mpremote using: ```pip install esptool```and ```pip install mpremote```
 
-Post an issue if you have questions about this software. 
+Install the git utility, to access github.com easily.
+
 
 # Installation
-Install MicroPython on the ESP32-S3, please see micropython.org.
+Install MicroPython on the ESP32-S3, please see micropython.org. You will have to download the "ESP32-S3 generic" .bin file and install that as per instructions on the download page with the esptool utility.
 
+You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html
 
-Install the mpremote utility (part of MicroPython) with ```pip install mpremote```
+Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to your hard drive of the PC.
 
-You can use the mpremote utility to verify that MicroPython is working.
-
-Install the git utility, to access github.com
-
-Get the complete repository with ```git clone https://github.com/bixb922/crank-organ``` to your hard drive of the PC.
-
-Go to the install folder and run ```mpremote run install.py````
+Go to the install folder and run ```mpremote run install_software.py``` and then ```mpremote run install_data.py```
 
 Now enter ```mpremote ls``` and the output should be similar to:
 ```
 ls :
-          19 .frozen_date
-         539 config.json
            0 data/
          520 main.py
            0 software/
@@ -333,10 +347,9 @@ ls :
 ```
 The application is now installed.
 
-To start the application with console :
+To start the application with the MicroPython console use:
 ```
-mpremote soft-reset
->>>(now press control-D)
+mpremote exec "import main"
 ```
 You should see a startup log similar to this, with no error or exception messages:
 ```
@@ -378,9 +391,11 @@ frozen_tunelib.extract /tunelib not empty, no action.
 etc etc etc
 ```
 
-If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue.
+If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is.
 
-Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to esp32s3. Enter http://esp32s3.local in your browser and wait for the main menu page to show.
+Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser and wait for the main menu page to show.
+
+Then configure the WiFi capabilities using the General Configuration button on the index page.
 
 # WiFi capabilities
 You connect to the controller with a browser (Chrome or Firefox) via WiFi. 
@@ -410,21 +425,14 @@ flowchart LR
    S[cell phone]-->|WiFi| AP[Microcontroller as access point]
 ```
 When configuring the microcontroller (see below) you assign a host name, say "organillo".
-Once connected, you start the Chrome or Firefox and enter ```organillo.local```. This will navigate to the microcontroller. In other words, the microcontroller is always at http://organillo.local (or whatever name you assign).
+Once connected, you start the Chrome or Firefox and enter ```organillo.local```. This will navigate to the microcontroller. In other words, the microcontroller is always at ```http://organillo.local``` (or whatever name you assign).
 
-Sometimes, the browser changes the http:// prefix to https://, verify that the prefix is http since https does not work currrently.
+Sometimes, the browser changes the http:// prefix to https://, verify that the prefix is http since https does not work currrently. (I plan to upgrade to https support once the Microdot web server supports https. https support in Micropython is fairly recent, 2023).
 
-The index page with the main menu should come up.
-
-![home page](homepage.jpg)
 
 # Configuration
 
-Click the configuration button on the home page. The initial password is _drehorgel_.
-
-![configuration enter password page](config_enter_password.jpg)
-
-The configuration parameters explained on the configuration page.
+The configuration parameters explained in detail on the configuration page.
 
 ## Configurations you should change
 A initial configuration file is supplied. This is what you should modify:
@@ -433,16 +441,25 @@ A initial configuration file is supplied. This is what you should modify:
 * The network name and description. This name is important, it will be both the WiFi name in AP mode and also to navigate in the browser to the microcontroller, you enter this host name: either http://hostname or http://hostname.local i
 * The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone.
 
+You should check the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. I make no claim about the security of this software, but the password will aid to prevent unauthorized or accidental changes.
+
+If this option is checked, the a dialog like the following one will appear when you save General Configuration, MIDI configuration and Tunelib Editor (in your cell phone's language):
+
+![enter password](enter_password.jpg)
+
+Leave the username blank. Enter the configuration password and press accept.
+
+
 ## Pinout
 ### Select scale
-Use the "Go to pinout page" to select the scale of the organ:
+Go to "MIDI configuration" to select the scale of the organ:
 
 * 20 note Carl Frei scale (the default)
 * 26 note Alderman/Melvin Wright scale
 * 31 note Raffin scale
-* If you need another scale, post a issue.
+* If you need another scale, post an issue or look at the configuration files to figure out how they work. 
 
-The pinout assignment consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
+The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
 ### Transpose scale if necessary
 If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes. Use the transpose buttons to adjust the scale until the loweest note fits. The transpose buttons shift the complete scale up and down one semitone.
@@ -455,7 +472,7 @@ There are three ways to define a MIDI note here:
 
 * Program number and MIDI note number. The output port will activate only if the specified program nubmer and MIDI number is encountered. This is necesary to implement, for example, a glockenspiel.
 
-* Program number 129 and MIDI note number. The output port will activate if the MIDI note number is encountered on the percussion channels 10 and 11. The program number 129 is not part of the MIDI standard and is only used here to define drum or percussion sounds. However, if you like it better, you can assign drum notes to regular MMIDI notes, if your MIDI files are setup that way.
+* Program number 129 and MIDI note number. The output port will activate if the MIDI note number is encountered on the percussion channel 10  The program number 129 is not part of the MIDI standard and is only used here to define drum or percussion sounds. However, if you like it better, you can assign drum notes to regular MMIDI notes, if your MIDI files are setup that way.
 
 ### Microphone, crank sensor, touchpad and neopixel sensor (important)
 
@@ -463,9 +480,13 @@ This configuration is necessary to review, depending on what sensors you install
 
 On this page you also select if you will have a microphone, crank sensor, neopixel led or touchpad button installed, and which GPIO ports will be assigned to them. 
 
-If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. 
+If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. Only some pins of the ESP32 support touchpad and analog-digital conversion. 
 
-Many boards have a neopixel RGB led either on pin 38 or 48. See the vendor's description or schematic, or try with both values.
+Many ESP32-S3 boards have a neopixel RGB led either on pin 38 or 48. See the vendor's description or schematic, or try with both values.
+
+If you don't have, say, a microphone, leave the pin definition blank to tell the software to ignore the microphone.
+
+It's best if you have at least the touchpad button, which essentially is a single wire from the microcontroller to a metallic knob or disc.
 
 *After saving configuration, please reboot.*
 
@@ -481,14 +502,17 @@ Configure the solenoid resistance (default: 90 Ohms).
 
 ## Other parameters (less likely to need change)
 
-Go through the rest and change what you may need, use save button to save to the microcontroller. The sections are:
+Go through the rest and change what you may need, use save button to save to the microcontroller. Most parameters are there just to explain how the software works.
+
+The sections are:
 * Crank settings. Necessary to change when a crank speed sensor is installed (still under development).
 
 The rest of the sections is even less likely to require change:
 * Debug/test settings
 * Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the event log.
 
-The configuration gets stored to /config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
+The configuration gets stored to /data/config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
+
 
 *After saving configuration, please reboot.*
 
@@ -521,6 +545,49 @@ With the SD card, only about 500kb of free flash memory is necessary. The /tunel
 ## Customization crank organ photo
 You can replace the crank organ ohite of the home screen by replacing the file /static/crank.jpg. A size of 100x75 pixels may be a good size to start with. 
 
+## Backup
+Microcontroller flash storage is fairly robust. However, 
+once you configure your microcontroller, you should backup relevant files:
+* /data/tunelib.json (the additional information about each tune)
+* /data/config.json (cyphered password, WiFi and general configuration). 
+* /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information). This is necessary only if you change the standard configuration.
+* /data/pinout.txt (although this file is very easy to restore using the MIDI configuration page)
+* /data/history.db (if you are interested in conserving the history of when tunes have played)
+
+Copy with FileZilla or mpremote to your PC. You also can print the configuration forms with the browser, to have backup on paper, but that will need to reenter the data if the files get lost.
+
+Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder after changes.
+
+# Recent changes
+
+* Record history of tunes played. Show times a tune has played. New history page to show past performances with dates and times.
+* More fields for tunelib: date added, rating, info, number of times played, and more.
+* Integrated tunelib editor
+* Sticky table headers
+* Allow ordering of tune list
+* Time zone support. Time zone and current DST is read from worldtimeapi.org once a day.
+* Web authentication if password is required to change configuration
+* Heartbeat to keep USB battery pack alive 
+* Microcontroller enters deepsleep after a time to conserve energy
+* Keep backup of json files when changed
+* Make tune play speed changable even without crank sensor
+* RGB Led colors on startup
+* Changed web server from tinyweb to Microdot, preparing for https support.
+* Improved MIDI and pin configuration support
+* Improved blocking of MIDI playback when using tuner or pin test functions
+* Tested for interference of web server functions with MIDI music playback. Perfected a guard to minimize interference of essential functions during playback.
+* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes.
+* Changed fields on forms change background color until saved.
+* Tuner now locks in on signals where harmonics are much stronger than the fundamental.
+* Refactored many modules to be based on classes instead of plain modules.
+* Added better support for instruments/program change commands. This allows, for example, to support glockenspiel and drum as MIDI instruments and enables channel 10 drum support.
+* Updated documentation
+* Updated license information. The software is available under the permissive free software "MIT license". The hardware design diagrams are available under the permissive and free "Creative Commons" license.
+* Restructured language support. Complete software is available in english language. Playing music is available with spanish translation.
+* Standarized parameters for battery usage to watts and watt-hours.
+* Initial page can now be set by configuration
+ 
+
 
 # Programming language
 The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript with web requests done with fetch/async.
@@ -529,36 +596,41 @@ Frequency detection is done with the zero crossing algorithm (See zcr.py). This 
 
 MicroPython version 1.21 (or 1.20 later than sept 2023) is required. Since MicroPython is continually enhanced, best use the latest version.
 
-Credits to mcauser (MCP23017 library, no modifications), belyalov (Tinyweb web server, modified to enhance asyncio response), and uftpd from various authors. All these library modules are available on github under MIT license:
+Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microdot server, temporarily added some logging to debug my software), and Robert-hh and several others for uftpd. All these library modules are available on github under MIT license:
 * https://github.com/mcauser/micropython-mcp23017
-* https://github.com/belyalov/tinyweb/releases
+* https://github.com/miguelgrinberg/microdot
 * https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
+
+To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
 # Under development/testing
 Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes. I have tested all options under many circumstances. Also, I have tested the system with large tunelibs and large setlists without problemas.
 
 The following features need more testing or development:
-* Microphone for tuning. Measures frequency of notes and shows if in tune. Pending to do more tests.
+* Microphone for tuning. I have not included a way to aid setting the sensitivity of the microphone. Automatic volume control microphones are best to measure tuning, but will not measure volume.
 * Sensor for crank speed to influence playback speed. Pending to test and for several adjustments.
-* Keyboard mode: you can connect a Bluetooth (BLE) keyboard to the microcontroller. I haven't been able to test this thoroughly.
+
+
 
 # Restrictions
 Safari as a browser is not supported.
 
-The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. The webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB, all elements including passwords can be retrieved, although it's not trivial to do that.
+The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. The webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved. 
 
-Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time.
+Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time, since more than one client may delay notes when playing back music.
 
-Detection of devices on an I2C bus is tricky or lenghty. At startup, the test if a MCP23017 is present is done in a simple way, so sometimes that detection may report device absent when the MCP23017 is present. However, if it is reported as absent, there is certainly a problem.
+If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed.
 
-If a new scale has to be implemented (say: 50 note scale), a new .json template for that scale has to be designed.
+Current time zone offset is updated only once a day. When playing deep in the night during a DST transition, local time will be off one hour until the next power on. 
 
-Time zone offset is fixed and can be set via configuration. There is no provision for DST (daylight savings time) transitions. The time zone only is relevant for the date/time displayed in the event log. If in doubt, set the offset to 0, and all times will be shown in UTC.
+If no internet is accessible, current time will be of January 2000 until internet gets accessible at next reboot. This will not affect playing music, but history and error log timestamps will be of the year 2000 indicating that no time was available. For example: when connecting in AP mode to the microcontroller, no internet is available.
 
 In some countries, WiFi devices need certification. Be sure to purchase hardware that conforms to the legal requirements in your country or area.
 
+The touchpad sensor will probably not work with gloves, I never tested that.
+
 # Licensing
-Copyright (c) 2023 Hermann Pau von Borries
+Copyright (c) 2023 Hermann Paul von Borries
 
 This software and design is licensed under the MIT License:
 

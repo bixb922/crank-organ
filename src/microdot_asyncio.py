@@ -336,7 +336,10 @@ class Microdot(BaseMicrodot):
         except Exception as exc:  # pragma: no cover
             print_exception(exc)
         res = await self.dispatch_request(req)
-        logger.debug(f"{req.method} {req.url} {time.ticks_diff(time.ticks_ms(), t0)}") # HVB
+        try: # HVB
+            logger.debug(f"{req.method} {req.url} {time.ticks_diff(time.ticks_ms(), t0)}") # HVB
+        except: # HVB
+            pass # HVB
         if res != Response.already_handled:  # pragma: no branch
             await res.write(writer)
         try:

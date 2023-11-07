@@ -117,14 +117,17 @@ class Solenoid:
         for midi_note in pinout.midinotes.get_all_valid_midis():
             self.note_off( midi_note )
 
+    async def play_random_note( midi_note, duration_msec ):
+        midi_note = pinout.midinotes.get_random_midi_note()
+        self.note_on( midi_note )
+        await asyncio.sleep_ms(duration_msec)
+        self.note_off( midi_note )
+        await asyncio.sleep_ms(duration_msec)  
+        
     async def clap( self, n, clap_interval_msec=50 ):
         _logger.debug(f"clap {n}" )
         for _ in range(n):
-            midi_note = pinout.midinotes.get_random_midi_note()
-            self.note_on( midi_note )
-            await asyncio.sleep_ms(clap_interval_msec)
-            self.note_off( midi_note )
-            await asyncio.sleep_ms(clap_interval_msec)
+            self.play_random_note( clap_interval_msec )
 
     def note_on( self, midi_note ):
 

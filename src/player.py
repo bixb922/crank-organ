@@ -105,11 +105,10 @@ class MIDIPlayer:
         # Percussion channels use the fixed "virtual" DRUM_PROGRAM number
         # Channel map uses program numbers 0 to 127.
         # The Note class needs program numbers 1 to 128, 
-        # and DRUM_PROGRAM==129 for the special program used in channels 10
-        # and 11.
+        # and DRUM_PROGRAM==129 for the special program used in channel 10
         # +1 gets added in midi_event_to_note
         self.channelmap[10] = midi.DRUM_PROGRAM-1
-        self.channelmap[11] = midi.DRUM_PROGRAM-1
+
         
     def _midi_event_to_note( self, midi_event ):
         # The Note class needs program numbers in the range 1-128
@@ -173,7 +172,7 @@ class MIDIPlayer:
             solenoid.note_on( self._midi_event_to_note( midi_event )  )
         # Process program change
         elif midi_event.status == umidiparser.PROGRAM_CHANGE:
-            if not( 10 <= midi_event.channel <= 11):
+            if not( midi_event.channel == 10):
                 # Allow program change only for non-percussion channels
                 self.channelmap[midi_event.channel] = midi_event.program
         # umidiparser handles set tempo meta event.
