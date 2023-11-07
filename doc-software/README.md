@@ -586,6 +586,8 @@ Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder aft
 * Restructured language support. Complete software is available in english language. Playing music is available with spanish translation.
 * Standarized parameters for battery usage to watts and watt-hours.
 * Initial page can now be set by configuration
+* Corrected errors in the detailed hardware documentation, schematics and images
+* Corrected errors in the software documentation, corrected some screenshots
  
 
 
