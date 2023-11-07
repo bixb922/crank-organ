@@ -125,7 +125,7 @@ class Battery():
                            keep_backup=False )
 
     def set_to_zero( self ):
-        self.logger.info(f"info {self.battery_info} now setting to zero")
+        self.logger.info(f"{self.battery_info}, now setting to zero")
         self.battery_info["use"] = 0
         self.battery_info["time"] = 0
         self.battery_info["time_remaining"] = 0
