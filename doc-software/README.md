@@ -14,9 +14,8 @@ The purpose of this software is to power a microcontroller (see schematic in thi
 * Shows remaining battery capacity on browser
 * Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments.
 * This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
-* Standard type 0 and 1 MIDI files are supported. Solenoids can be mapped to MIDI note number only (only one instrument), or MIDI note number and program number (several instruments). Percussion channel mapping is also supported (drums and percussion).
-* Added button on MIDI configuration to test the solenoid when installing the wiring.
-* Added some emoji images (fast images) to web pages.
+* Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
+
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
@@ -403,9 +402,10 @@ If there is an entry marked ERROR or EXCEPTION, there is some problem to be solv
 
 Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser and wait for the main menu page to show.
 
-Then configure the WiFi capabilities using the General Configuration button on the index page.
+Then configure the WiFi parameters using the General Configuration button on the index page.
 
 # WiFi capabilities
+
 You connect to the controller with a browser (Chrome or Firefox) via WiFi. 
 
 The microcontroller can connect to a WiFi Access Point, for example your home WiFi Router. It can simultaneously be be an Access Point so that a cell phone or PC can connect to it as if it were a home router.
@@ -459,28 +459,30 @@ Leave the username blank. Enter the configuration password and press accept.
 
 
 ## Pinout
+
 ### Select scale
+
 Go to "MIDI configuration" to select the scale of the organ:
 
 * 20 note Carl Frei scale (the default)
 * 26 note Alderman/Melvin Wright scale
 * 31 note Raffin scale
-* If you need another scale, post an issue or look at the configuration files to figure out how they work. 
+* If you need another scale, post an issue or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus.
 
 The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
 ### Transpose scale if necessary
-If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes. Use the transpose buttons to adjust the scale until the loweest note fits. The transpose buttons shift the complete scale up and down one semitone.
+If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes. Use the transpose buttons to adjust the scale until the loweest note fits. The transpose buttons shift the complete scale up or down one semitone.
 
 ### Redefine MIDI notes (only if necessary)
-This is advanced configuration, should be necessary only for custom scales, or crank organs with drums and glockenspiel.
+This is advanced configuration, should be necessary only for custom scales, or crank organs with drums or glockenspiel, where the glockenpiel have their own program number and the drums are on the percussion channel number 10.
 
 There are three ways to define a MIDI note here:
-* Only the MIDI note number, leaving program number blank or zero. This will match any MIDI program number in the MIDI file. This is the most common way to define notes, since for simple organs there is only one voice or instrument, and the program number in the MIDI file does not matter. 
+* Only the MIDI note number, leaving program number blank or zero. This will match any MIDI program number in the MIDI file. This is the most common way to define notes, since for simple organs there is only one voice or instrument, and the program number in the MIDI file does not matter.
 
 * Program number and MIDI note number. The output port will activate only if the specified program nubmer and MIDI number is encountered. This is necesary to implement, for example, a glockenspiel.
 
-* Program number 129 and MIDI note number. The output port will activate if the MIDI note number is encountered on the percussion channel 10  The program number 129 is not part of the MIDI standard and is only used here to define drum or percussion sounds. However, if you like it better, you can assign drum notes to regular MMIDI notes, if your MIDI files are setup that way.
+* Program number 129 and MIDI note number. The output port will activate if the MIDI note number is encountered on the percussion channel 10  The program number 129 is not part of the MIDI standard and is only used here to define drum or percussion sounds.
 
 ### Microphone, crank sensor, touchpad and neopixel sensor (important)
 
@@ -600,11 +602,13 @@ Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder aft
 * Added better support for instruments/program change commands. This allows, for example, to support glockenspiel and drum as MIDI instruments and enables channel 10 drum support.
 * Updated documentation
 * Updated license information. The software is available under the permissive free software "MIT license". The hardware design diagrams are available under the permissive and free "Creative Commons" license.
-* Restructured language support. Complete software is available in english language. Playing music is available with spanish translation.
+* Restructured language support. Complete software is available in english language. Web pages related to music performance are available in spanish translation.
 * Standarized parameters for battery usage to watts and watt-hours.
 * Initial page can now be set by configuration
 * Corrected errors in the detailed hardware documentation, schematics and images
 * Corrected errors in the software documentation, corrected some screenshots
+* Added button on the MIDI configuration page to test the solenoid when installing the wiring.
+
  
 
 
@@ -623,7 +627,7 @@ Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microd
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
 # Under development/testing
-Most code, especially the MIDI file parser, have been tested extensively, although I keep making small changes. I have tested all options under many circumstances. Also, I have tested the system with large tunelibs and large setlists without problemas.
+Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes. I have tried tested all options under many circumstances. Please report problems as github issue.
 
 The following features need more testing or development:
 * Microphone for tuning. I have not included a way to aid setting the sensitivity of the microphone. Automatic volume control microphones are best to measure tuning, but will not measure volume.
