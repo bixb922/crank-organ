@@ -255,7 +255,7 @@ These pages are mostly to aid diagnosis of possible problems.
 
 ## Event log
 
-The "Show log" button will show the latest event log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder, to be rescued with ```mpremote :cp data/errornnn.log errornnn.log```. The time in the log file starts with 00:00:00, but if connected to a router or cell phone hot spot, the microcontroller acquires current time information, and the log time is shown in UTC. The "time zone" parameter on the configuration page can assign another (fixed) time zone, if you really want to look at the log in local time.
+The "Show log" button will show the latest event log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder, to be rescued with, for example, ```mpremote :cp data/error12.log error12.log```. The time in the log file starts with 00:00:00, but if connected to a router or cell phone hot spot with internet access, the microcontroller acquires current time information, and the log time is shown in UTC. The "time zone" parameter on the configuration page can assign another (fixed) time zone, if you really want to look at the log in local time.
 
 If there is some problem, please post the relevant part of the log, with previous history, and the description of the situation as an issue, I'll try to help.
 
@@ -281,6 +281,8 @@ There is no functionality to transpose a MIDI file. Use any MIDI file editor to 
 To add files, copy them from the PC to the tunelib folder on the microcontroller, then update the info with the Tunelib Editor option.
 
 To remove files, rmove them from the tunelib folder on the microcontroller, then update the info with the tunelib editor.
+
+Before copying tunes to the microcontroller, it is best to have the time set by ```mpremote rtc --set```. Another option is to let the microcontroller acquire date and time from the internet. Wait about 20 seconds after reboot and check date/time on the microcontroller with the System Information button.
 
 ## Update MIDI files with WiFi
 * On a Mac, install Filezilla. Enter the host name, for example ```organillo.local``` in FileZilla.  You now can drag and drop files to the tunelib folder.
@@ -499,6 +501,15 @@ Example: a AA battery is rated at 2000mAh, that is 2 Ah (ampere-hours. The batte
 Another example: a USB battery pack is rated at 10000mAh = 10 Ah. Although the battery pack delivers 5V, lithium batteries are 3.3V, so the capacity is 3.3V*10Ah = 33 watt-hours.
 
 Configure the solenoid resistance (default: 90 Ohms).
+
+## Time zone
+When connected to a router or cell phone hot spot, the software uses ntptime (network time protocol) to acquire the UTC time, and then it queries worldtimeapi.org once a day for the time zone offset and DST offset. Once that is done, the time zone offset is stored in flash for the next refresh, that takes place at most once a day.
+
+Enter your local time zone in the "other parameters" section. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of official names of time zones. The time zone name has to match one recognized by worldtimeapi.org. 
+
+If no internet access is available, time starts on Jan 1st, 2000. This does not impair operation. The history page will show the tunes as played on 2000-01-01, and the error log will show time only.
+
+Before copying tunes to the microcontroller, it is best to have the time set by ```mpremote rtc --set'''.
 
 ## Other parameters (less likely to need change)
 
