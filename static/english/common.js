@@ -237,38 +237,37 @@ async function fetch_json( url, post_data ){
     let t ;
     let response ;
     let json_result ;
-	let post_arg = make_fetch_post( post_data ) ;
+	let post_arg = make_fetch_args( post_data ) ;
 	while( true ) {
 		try {
             console.log("fetch json try", url, "post=", post_arg ) ;
             t0 = Date.now() ;  // Reports response time
+            response = {} ;
 			response = await fetch( url, post_arg ) ;
 			break ;
 		}
 		catch( err ) {
-			console.log("fetch json failed", err, url ) ;
+			console.log("fetch json failed", err, url, "ok", response.ok, "status", response.status ) ;
             // In the header battery time, replace battery
-            // icon and time remaining with "not connected"
+            // icon and time remaining with message
             // symbols.
+			msg = "Not connected" ;
             htmlByIdIgnoreErrors( "header_time",
-                                  "Not connected &#x1f494;")
-			showPopup( "", "Not connected " + err );
+                                 msg + " &#x1f494;") ;
+			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
+			showPopup( "", popupmsg );
 			await sleep_ms( 5_000 ) ;
 		}
 	}
 
 	if( !response.ok ){
 		// Response not ok will abort and notify error to user.
-        console.log("Network response not ok status " + response.status, "url", url, "check mode") ;
+        console.log("Network response not ok " + response.status, "url", url, "check mode") ;
 
         if( response.status == 500 ) {
             // Show alert (not popup)
 			alert("Server error 500 url " + url  ) ;
 		}
-        // This happens normally if the page does not
-        // match the mode of the microcontroller.
-        // Navigate back to index page to make current mode visible.
-        window.location.href = "/static/index.html" ;
         return ;
 	}
 
@@ -285,7 +284,7 @@ async function fetch_json( url, post_data ){
 	
 }
 
-function make_fetch_post( data ){
+function make_fetch_args( data ){
 	if( data == undefined ){
 		return undefined ;
 	}
@@ -423,22 +422,20 @@ function setAllTextById( json_result ) {
 }
 
 // Tunelib.json columns, function to verify if correct.
-TLCOL_ID = 0
-TLCOL_TITLE = 1
-TLCOL_GENRE = 2
-TLCOL_AUTHOR = 3
-TLCOL_YEAR = 4
-TLCOL_TIME = 5
-function verify_tunelib_header( header ) {
-	if( header[TLCOL_ID] != "id" || 
-		header[TLCOL_TITLE] != "title" || 
-		header[TLCOL_GENRE] != "genre" ||
-        header[TLCOL_AUTHOR] != "author" ||
-		header[TLCOL_YEAR] != "year" ||
-		header[TLCOL_TIME] != "time" ) {
-		alert( "wrong tunelist.json format, incorrect header")
-	}
-}
+TLCOL_ID = 0 ;
+TLCOL_TITLE = 1 ;
+TLCOL_GENRE = 2 ;
+TLCOL_AUTHOR = 3 ;
+TLCOL_YEAR = 4 ;
+TLCOL_TIME = 5 ;
+TLCOL_FILENAME = 6 ;
+TLCOL_AUTOPLAY = 7 ;
+TLCOL_INFO = 8 ;
+TLCOL_DATEADDED = 9 ;
+TLCOL_RATING = 10 ;
+TLCOL_SIZE = 11 ;
+TLCOL_HISTORY = 12 ;
+TLCOL_COLUMNS = 13 ;
 
 
 async function showPopup(id_where, show_text) {
@@ -473,5 +470,35 @@ async function showPopup(id_where, show_text) {
 }
 
 
+
+async function revoke_credentials(){
+    try {
+        await fetch( "/revoke_credentials" );
+        // Expected: must return 401 not authorized
+    }   
+    catch(e) {
+        console.log("Credentials revoked: ", e ) ;
+    }
+}
+
+function escapeHtml(text) {
+  var map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+function removeSpecialHtml( text ){
+    return text.replace(/[&<>"']/g, "");
+}
+function currentPage(){
+    let path = window.location.pathname;
+    return path.split("/").pop();
+}
 
 

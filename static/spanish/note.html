@@ -15,9 +15,9 @@
 </div>
 
 <script type="text/javascript" src="/static/common.js"></script>
-<button type="button" onclick="startTuning()" id="startTuningButton">Tune</button>
-<button type="button" onclick="soundNote()" id="soundNoteButton">Note test</button>
-<button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetition test</button>
+<button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
+<button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
+<button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetición</button>
     
 <div class="buttondiv"></div>
 <table>
@@ -61,7 +61,7 @@ function updateNoteInfo( notelist ) {
 	let note = notelist[midi] ;
 	let s = "" ;
 	
-	s += "<tr><td>Program-note</td><td>" + note["name"] + "</td></tr>" ;
+	s += "<tr><td>Programa-nota</td><td>" + note["name"] + "</td></tr>" ;
     cents = list_average( note["centslist"] ) ;
     if( cents != null ){
 	   s += "<tr><td>Cents</td><td>" + Math.round(cents) + "</td></tr>" ;
@@ -71,7 +71,7 @@ function updateNoteInfo( notelist ) {
     }    
     amp = list_average( note["amplist"] ) ;
     if( amp != null && amp > 0 ) {
-	   s += "<tr><td>Amplitude</td><td>" + amplitude_to_db(amp, max_amplitude ) + "</td></tr>" ;
+	   s += "<tr><td>Amplitud</td><td>" + amplitude_to_db(amp, max_amplitude ) + "</td></tr>" ;
     }
     else {
         s += "<tr><td>-</td><td>-</td></tr>" ;
@@ -81,7 +81,7 @@ function updateNoteInfo( notelist ) {
 	htmlById("notebody", s) ;
 
 
-	htmlById("tuningcaption", "Tuning (-" + max_cents + " a " + max_cents + " cents)") ;
+	htmlById("tuningcaption", "Afinaci&oacute;n (-" + max_cents + " a " + max_cents + " cents)") ;
 	let st = "" ;
 	centslist = note["centslist"] ;
 	for( let j = 0 ; j < centslist.length ; j++ ){
@@ -96,7 +96,7 @@ function updateNoteInfo( notelist ) {
 	htmlById("tuningbody", st) ;
 	
 	let amplist = note["amplist"] ;
-	textById("ampcaption", "Amplitude (" + min_db + " a "+ max_db +" dB)" );
+	textById("ampcaption", "Amplitud (" + min_db + " a "+ max_db +" dB)" );
 	sa = "" ;
 	for( let j = 0 ; j < amplist.length ; j++ ){
 		sa += `<tr>

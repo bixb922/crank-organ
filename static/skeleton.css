@@ -312,7 +312,12 @@ label > .label-body {
   margin-left: .5rem;
   font-weight: normal; }
 
-
+/* changed fields */
+input[type="text"].changed,
+input[type="checkbox"].changed,
+input[type="radio"].changed {
+    background-color: "#FDFDD3" ;
+} 
 /* Lists
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 ul {
@@ -351,20 +356,25 @@ pre > code {
 /* Tables
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 th {
-  padding: 12px 15px;
+  padding: 2px, 2px;
   text-align: left;
   border-bottom: 1px solid #E1E1E1;
   color: #FFFFFF; }
 th.tunetable {
-  padding: 12px 15px;
+  padding: 2px 2px;
   text-align: left;
   border-bottom: 1px solid #E1E1E1;
   color: #FFFFFF;
-  background-color: #438029 }   
-}
+  background-color: #438029;
+}  
+
+/* .tableFixHead          { overflow: auto; height: 100px; width: 240px; }*/
+.tableFixHead          { overflow: auto; height: 100vh; width: 100vw; }
+.tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
+.tableFixHead tbody th { position: sticky; left: 0; }
+
 td {
-  /*>>>padding: 12px 15px;*/
-  padding: 8px 10px;
+  padding: 2px 2px;
   text-align: left;
   border-bottom: 1px solid #E1E1E1; }
 th:first-child,

@@ -1,3 +1,6 @@
+
+
+
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # zero crossing frequency measurement
@@ -16,115 +19,68 @@ def gen_zeros( signal, duration ):
         if prev_sample < 0 and sample >= 0:
             # Negative to positive zero crossing detected
             if position >= 1:
+                # Use linear interpolation to get approximation to real crossing
+                # Linear or second order seem best.
                 t = position - 1 + interpolate1(
-                signal[position-1],
-                signal[position] )
+                    signal[position-1],
+                    signal[position]
+                    )
+                if not( position-1 <= t <= position ):
+                    assert False
+                
                 if last_t is not None:
                     yield (t - last_t)*time_units 
                 last_t = t
         prev_sample = sample
     return
 
-# def compute_frequency( signal, duration ) :
 
-    #Find first and last negative to positive zero crossing
-    # first_crossing = None
-    # last_crossing = None
-    
-    #First step of iteration does never detect zero crossing
-    # prev_sample = signal[0]
-    
-    # crossing_count = 0
-    
-    # for position, sample in enumerate(signal):
-        # if prev_sample < 0 and sample >= 0:
-            #Negative to positive zero crossing detected
-            # crossing_count += 1
-            # if first_crossing is None:
-                #First zero crossing detected
-                # first_crossing = position 
-            # else:
-                #Update position of the last zero crossing
-                # last_crossing = position 
-        # prev_sample = sample
-        
-    # if crossing_count < 2:
-        #Must find at least 2 crossings = 1 cycle, can't compute frequency
-        # raise ValueError
-
-    # Interpolate, the zero crossing is somewhere between position-1 and position    
-
-    # order = 2
-    # Best results with order 2
-    # if order == 1:
-        # first_crossing = first_crossing - 1 + \
-            # interpolate1( signal[first_crossing-1], \
-                        # signal[first_crossing] )
-        # last_crossing = last_crossing - 1  + \
-            # interpolate1( \
-                        # signal[last_crossing-1], \
-                        # signal[last_crossing] )
-    # elif order == 2:
-        # first_crossing = first_crossing - 2 + interpolate2(
-            # signal[first_crossing-2],
-            # signal[first_crossing-1],
-            # signal[first_crossing] )
-        # last_crossing = last_crossing - 2  + interpolate2(
-            # signal[last_crossing-2],
-            # signal[last_crossing-1],
-            # signal[last_crossing] )
-    # elif order == 3:
-        # first_crossing = first_crossing - 2 + interpolate3(
-            # signal[first_crossing-3],
-            # signal[first_crossing-2],
-            # signal[first_crossing-1],
-            # signal[first_crossing] )
-        # last_crossing = last_crossing - 2  + interpolate3(
-            # signal[last_crossing-3],
-            # signal[last_crossing-2],
-            # signal[last_crossing-1],
-            # signal[last_crossing] )
-    #Else: no interpolation (order 0)
-
-
-    # duration_of_begin_to_end = (last_crossing - first_crossing) / len(signal) * duration
-
-    # if duration_of_begin_to_end == 0:
-        # with crossing_count>2 a complete cycle should have been found
-        # raise ValueError
-
-    # return (crossing_count - 1)/duration_of_begin_to_end
 
 def zcr_list( signal, duration ):
     return [ x for  x  in gen_zeros( signal, duration ) ]
 
+def average( signal ):
+    return sum( signal ) / len( signal )
 
-def compute_frequency( signal, duration ):
+def compute_frequency( signal, duration, estimated_freq ):
+
     # Get list of zeros, test if error is large
     zeros = zcr_list( signal, duration )
     n = len(zeros)
     if n == 0:
-        raise ValueError
-    sumx = 0
-    for x in zeros:
-        sumx += x
-    avg = sumx/n
-    diff = 0
-    for x in zeros:
-        diff += (x - avg)**2
-    stddev = sqrt( diff/n )
-    if stddev/avg > 0.03:
-        raise ValueError
+        return None
+    
+    # Validate the information received
+    # Get average and standard deviation
+    if False:
+        avg = average( zeros )
+        diff = 0
+        for x in zeros:
+            diff += (x - avg)**2
+        stddev = sqrt( diff/n )
+        # If deviation is too big, bad measurement
+        if stddev/avg > 0.03:
+            return None
 
     if len(zeros) <= 4:
-        return sum(zeros)/len(zeros)
+        # If few, average all
+        freq =  1/average( zeros )
     else:
+        # If many zeros, take only first part, since the first part
+        # of the autocorrelated signal is the best.
         n = (len(zeros)*2)//3
-        return 1/sum( zeros[0:n] ) * n
+        freq =  1/average( zeros[0:n] )
+	# See if a harmonic fits
+	for h in [1,1.5,2,2.5]:
+		if estimated_freq/1.25 < freq/h < estimated_freq*1.25:
+			print(f">>>harmonic {h=} detected {freq=} {estimated_freq=} {freq/estimated_freq=}")
+			return freq/h
+	print(f">>>NO harmonic detected {freq=} {estimated_freq=} {freq/estimated_freq=}")
+    return freq    
         
 
 def interpolate1( y1, y2 ):
-    # Order 1 interpolation
+    # Order 1 interpolation/linear interpolation
     return  -y1/( y2 - y1 )
 
 import math
@@ -143,8 +99,8 @@ def interpolate2( y1, y2, y3 ):
         return r1
     if 0<=r2<=2:
         return r2
-    print(f"interpolacion2 mala {r1=} {r2=}")
-    exit()
+    assert False, "zcr.interpolate2 error"
+    
 
 def interpolate3( y1, y2, y3, y4 ):
     # Odd cubic function
@@ -182,3 +138,14 @@ def interpolate3( y1, y2, y3, y4 ):
 ##    if a < 3 or a > 4:
 ##        print(f"fuera rango {x=} {y=} {z=} {t=} {a=}")
 ##
+
+#Traceback (most recent call last):
+#File "crank-organ/src/tinyweb/server.py", line 569, in _handler
+#File "crank-organ/src/webserver.py", line 319, in change_mode
+#File "crank-organ/src/webserver.py", line 54, in set_mode
+#File "crank-organ/src/organtuner.py", line 357, in
+#File "crank-organ/src/organtuner.py", line 54, in _init
+#File "crank-organ/src/organtuner.py", line 71, in _test_performance
+#File "crank-organ/src/organtuner.py", line 164, in _sample_normalize_filter_zcr
+#File "crank-organ/src/zcr.py", line 117, in compute_frequency
+#ValueError:

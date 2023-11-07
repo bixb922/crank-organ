@@ -5,8 +5,6 @@
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
-<script type="text/javascript" src="common.js">
-</script>
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
@@ -15,6 +13,9 @@
 	&nbsp;Pinout and MIDI configuration
 	<span class="headerright" id="header_time"></span>
 </div>
+<script type="text/javascript" src="common.js"></script>
+    
+When pressing save, you will be asked for the password of the microcontroller. You can leave the username blank.
 
 <div class="middlediv">Select template</div>
     This configuration should be needed only once, when setting up the system.
@@ -73,7 +74,8 @@
 
     <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()">Save pinout definitions</button>
     <br>
-    After saving pinout definitions or using the test button, reboot microcontroller.
+<b>  After saving pinout definitions or using the test button, reboot microcontroller.
+</b>
 		
 <div class="footerdiv"></div>
 <script>
@@ -82,8 +84,9 @@ async function getPinoutList(){
     let pinout_list = await fetch_json("/pinout_list" ) ;
     let s = "";
     for( pl in pinout_list ){
-        desc = pinout_list[pl][0];
-        filename =  pinout_list[pl][1];
+        // List elements are [ filename, description ]
+        desc = pinout_list[pl][1];
+        filename =  pinout_list[pl][0];
         s += `
         <tr>
         <td>
@@ -133,6 +136,7 @@ async function getPinoutDetail( ) {
             Description</td>
              <td colspan="4">
                <input type='text' size='20' id="description.${f}" 
+               oninput="markField('description.${f}')"
                value='${pd[1]}' />
              </td>
             </tr>`;
@@ -141,7 +145,7 @@ async function getPinoutDetail( ) {
             s += `<tr><td>
             Neopixel pin</td>
             <td>
-            <input type='text' size='2' id="neopixel.${f}" 
+            <input type='text' size='2' id="neopixel.${f}" oninput="markField('neopixel.${f}')" 
             value='${pd[1]}' />
             </td></tr>`;
         }
@@ -151,17 +155,18 @@ async function getPinoutDetail( ) {
                 Tachometer pin
             </td>
             <td>
-                <input type='text' size='3' id='tachometer.${f}'  value='${pd[1]}' />
+                <input type='text' size='3' id='tachometer.${f}' oninput="markField('tachometer.${f}')"   value='${pd[1]}' />
             </td>
             </tr>`;
         }
         else if( pdtype == "microphone"){
+            console.log("pinout microphone pin", pd ) ;
             s += `<tr>
             <td>
                 Microphone pin
             </td>
             <td>
-                <input type='text' size='3' id='microphone.${f}'  value='${pd[1]}' />
+                <input type='text' size='3' id='microphone.${f}'  oninput="markField('microphone.${f}')" value='${pd[1]}' />
             </td></tr>`;
         }
         else if( pdtype == "touchpad"){
@@ -170,7 +175,7 @@ async function getPinoutDetail( ) {
                 Touchpad pin
             </td>
             <td>
-                <input type='text' size='3' id='touchpad.${f}'  value='${pd[1]}'/>
+                <input type='text' size='3' id='touchpad.${f}' oninput="markField('touchpad.${f}')" value='${pd[1]}'/>
             </td>
             </tr>`;
         }
@@ -194,17 +199,17 @@ async function getPinoutDetail( ) {
             }
             s += `<tr>
             <td>
-                <input type='text' size='3' id='${pdtype}.pin.${f}' value='${pin}'/>
+                <input type='text' size='3' id='${pdtype}.pin.${f}' oninput="markField('${pdtype}.pin.${f}')" value='${pin}'/>
             </td>
             <td>
-                <input type='text' size='4' id='${pdtype}.instrument.${f}' value='${instrument}'/>
+                <input type='text' size='4' id='${pdtype}.instrument.${f}' oninput="markField('${pdtype}.instrument.${f}' )" value='${instrument}'/>
             </td>
             <td>
-                <input type='text' size='3'  id='${pdtype}.midi.${f}' onchange='showNoteName( ${f} )' value='${midi}'/>  
+                <input type='text' size='3'  id='${pdtype}.midi.${f}' oninput="markField('${pdtype}.midi.${f}')" onchange='showNoteName( ${f} )' value='${midi}'/>  
                 &nbsp;<span id='nn.${f}'></span>&nbsp;
             </td>
             <td>
-                <input type='text' size='10' id='${pdtype}.rank.${f}' value='${rank}'/>
+                <input type='text' size='10' id='${pdtype}.rank.${f}' oninput="markField('${pdtype}.rank.${f}')" value='${rank}'/>
             </td>`;
             if( pdtype == "gpio.midi"){
                 s += `<td>
@@ -231,10 +236,10 @@ async function getPinoutDetail( ) {
             s += `<tr>
             <td>I2C bus ${i2ccount}</td>
             <td>
-                <input type='text' size='2' id='i2c.sda.${f}' value='${sda}'/>
+                <input type='text' size='2' id='i2c.sda.${f}' oninput="markField('i2c.sda.${f}')" value='${sda}'/>
             </td>
             <td>
-                <input type='text' size='2' id='i2c.scl.${f}' value='${scl}'/>
+                <input type='text' size='2' id='i2c.scl.${f}' oninput="markField('i2c.scl.${f}')" value='${scl}'/>
             </td>
             </tr>`;
         }
@@ -250,7 +255,7 @@ async function getPinoutDetail( ) {
             <td>I2C bus ${i2ccount}</td>
             <td>MCP ${mcpcount}</td>
             <td> 
-                <input type='text' size='2' id='mcp23017.address.${f}' value='${mcpaddr}'/>
+                <input type='text' size='2' id='mcp23017.address.${f}'  oninput="markField('mcp23017.address.${f}')" value='${mcpaddr}'/>
             </td>
             <td colspan="3">(32 to 39, decimal)</td>
             </tr>`;
@@ -278,6 +283,7 @@ async function savePinoutFilename(){
         showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
     }
     getPinoutDetail();
+    await revoke_credentials();
 }
     
 async function savePinoutDetail(){
@@ -285,36 +291,34 @@ async function savePinoutDetail(){
     for( let f=0; f < pinoutDetailElements; f++ ){
         pdtype = pinout_detail[f][0] ;
         
-        if( ["tachometer", "microphone",
-             "neopixel", "description",
-             "touchpad"].includes( pdtype )  ){
+        if( pdtype == "description" ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
-            newpd.push( [pdtype, v ] );
+            newpd.push( [pdtype, escapeHtml(v)  ] );
+        }
+        else if( ["tachometer", "microphone",
+             "neopixel", "touchpad"].includes( pdtype )  ){
+            let v = document.getElementById( `${pdtype}.${f}`).value ;
+            newpd.push( [pdtype, valnum( v )  ] );
         }
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" ) {
             pin = document.getElementById( `${pdtype}.pin.${f}`) .value  ;
             instrument = document.getElementById( `${pdtype}.instrument.${f}` ).value ;
             midi = document.getElementById( `${pdtype}.midi.${f}` ).value ;
             rank = document.getElementById( `${pdtype}.rank.${f}` ).value ;
-            valnum( midi );
-            valnum( pin ) ;
-            valnum( instrument ) ;
-            newpd.push( [pdtype, pin, instrument,  midi, rank] ) ;
+            newpd.push( [pdtype, valnum( pin ), valnum( instrument ),  valnum( midi ), escapeHtml(rank)] ) ;
         }
         else if( pdtype == "i2c" ) {
             sda = document.getElementById( `i2c.sda.${f}` ).value ;
             scl = document.getElementById( `i2c.scl.${f}` ).value ;   
-            valnum( sda );
-            valnum( scl );
-            newpd.push( ["i2c", sda, scl ] ) ;     
+            newpd.push( ["i2c", valnum( sda ), valnum( scl ) ] ) ;     
         }
         else if( pdtype ==  "mcp23017"  ) {
-            addr = document.getElementById( `mcp23017.address.${f}` ).value ;           valnum( addr );
+            addr = document.getElementById( `mcp23017.address.${f}` ).value ;           
             if( (addr < 32 || addr > 39) && addr != "" ){
                 alert("MCP23017 address must be 32 to 39");
                 return ;
             }
-            newpd.push( ["mcp23017", addr ] ) ;     
+            newpd.push( ["mcp23017", valnum( addr ) ] ) ;     
         }
     }
     
@@ -322,6 +326,8 @@ async function savePinoutDetail(){
     if( resp["result"] == "ok"){
         showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
     }   
+    await revoke_credentials();
+    clearMarks() ;
 }
     
     
@@ -347,7 +353,10 @@ function valnum( s ){
         alert("Value is <= 0: " + s ); 
         throw new Error("Value less than zero") ;
     }
-    return ;
+    if( s == ""){
+        return "";
+    }
+    return parseInt( s );
 }
     
 async function testGPIO( pin ){
@@ -418,6 +427,7 @@ function transpose( semitones ){
                 let v = e.value.trim();
                 if( !isNaN(v) && v != "" ){
                     e.value = parseInt(v)+semitones ;
+                    markField( e.id );
                     break ;
                 }
                 
@@ -425,6 +435,22 @@ function transpose( semitones ){
         }
     }
     updateAllNoteNames();
+}
+ 
+let changed_fields = [];
+function markField( id ){
+    if( !changed_fields.includes(id) ){
+        changed_fields.push( id );
+    }
+    const d = document.getElementById( id ) ;
+    d.style.backgroundColor = cream ;
+}
+function clearMarks() {
+    for( let i in changed_fields ){
+        let id = changed_fields[i] ;
+        document.getElementById( id ).style.backgroundColor = "#ffffff" ;
+    }
+    changed_fields = [] ;
 }
 </script>
 </body>

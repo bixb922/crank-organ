@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
-	<title>Crank organ</title>
+	<title>Drehorgel</title>
 	<link rel="icon" type="image/png" href="favicon.png?a=1"/>	
 </head>
 <body>
@@ -20,29 +19,32 @@
 <script type="text/javascript" src="/static/common.js"></script>
 <table>
 	<tbody>
-		<tr id="play">
+		<tr>
 			<td>
-				<button type="button" onclick="setMode('play')" id="playModeButton">
+				<button type="button" onclick="navigate('tunelist')">
+                    Organillo
 				</button>
 			</td>
 			<td>
 				<img src="/static/crank.jpg" width=100>
 			</td>
 		</tr>
-		<tr id="tuner" style="display:none">
+		<tr>
 			<td>
-				<button type="button" onclick="setMode('tuner')" id="tunerModeButton">
-                    <span style="font-size:2px">&#8987;</span>
+				<button type="button" onclick="navigate('notelist')">
+                    Afinador
 				</button>
 			</td>
 			<td>
 				<!-- <img src="/static/tuner.jpg" width=80> -->
-				<!-- Thermometer and musical notes emojis. 127925 and 127926 are notes -->
-				    <span style="font-size:28px">&#127777;&#127925;</span>
+				<!-- wrench emoji -->
+				    <span style="font-size:36px">&#x1F527;</span>
 			</td>
+        </tr>
 		<tr id="keyboard" style="display:none">
 			<td>
-				<button type="button" onclick="setMode('keyboard')" id="keyboardModeButton">&#8987;
+				<button type="button" onclick="navigate('keyboard')" id="keyboardModeButton">
+                    Teclado bluetooth
 				</button>
 			</td>
 			<td>
@@ -50,62 +52,97 @@
 				<span style="font-size:36px">&#127929;</span>
 			</td>
 		</tr>
-
-		<tr id="config" style="display:none">
+        <tr>
 			<td>
-				<button type="button" onclick="config()" id="configModeButton">
+				<button type="button" onclick="navigate('history')">
+                    Historia
 				</button>
 			</td>
 			<td>
-                <!-- gear emoji -->
-				<span style="font-size:48px">&#9881;</span>
+                <!-- tear off calendar emoji -->
+				<span style="font-size:36px">&#x1F4C6;</span>
+			</td>
+		</tr>
+
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('tunelibedit')">
+                    Editar tunelib
+				</button>
+			</td>
+			<td>
+                <!-- palette emoji -->
+				<span style="font-size:36px">&#x1F3A8;</span>
+			</td>
+		</tr>
+
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('config')">
+                    Configuración general
+				</button>
+			</td>
+			<td>
+                <!-- gear emoji &#9881; -->
+                <!-- control knob emoji +1F39B U+FE0F-->
+				<span style="font-size:36px">&#x1F39B;</span>
+			</td>
+		</tr>
+        <tr>
+			<td>
+				<button type="button" onclick="navigate('pinout')">
+                    Configuración MIDI
+				</button>
+			</td>
+            <!-- emoji ladder -->
+			<td id="pinout_description">
 			</td>
 		</tr>
 		<tr>
 			<td>
-				<button type="button" onclick="showDiag()" id="diagButton">
-					System info
+				<button type="button" onclick="navigate('diag')">
+					Diagnóstico
 				</button>
 			</td>
 			<td>
-			<!-- Antenna with signal emoji -->
-				<span style="font-size:36px">&#128246;</span>
+			<!-- Antenna with signal emoji &#128246;-->
+            <!-- magnifying glass 1F50D -->
+				<span style="font-size:36px">&#x1f50d;</span>
 			</td>
 		</tr>
 
 	</tbody>
 </table>
-<div class="middlediv2">Battery</div>
+<div class="middlediv2">Bater&iacute;a</div>
 <table>
 	<tbody>
 		<tr>
-			<td>Used</td><td id="use"></td><td>[Wh]</td>
+			<td>Uso</td><td id="use"></td><td>[Wh]</td>
 		</tr>
 		<tr>
-			<td>Used</td><td id="use_percent"></td><td>[%]</td>
+			<td>Capacidad</td><td id="capacity"></td><td>[Wh]</td>
 		</tr>
 		<tr>
-			<td>Capacity</td><td id="capacity"></td><td>[Wh]</td>
+			<td>Tiempo operaci&oacute;n</td><td id="time"></td><td>[hh:mm]</td>
 		</tr>
-		<tr>
-			<td>Time powered on</td><td id="time"></td><td>[hh:mm]</td>
-		</tr>
-		<tr><td>Remaining time</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
+		<tr><td>Tiempo remanente</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
     </tbody>
 </table>
 <table style="width:100%">
 	<tbody>
+        <tr>
+            <td>Remanente</td>
+            <td id="percent_remaining"></td>
+        </tr>
 		<tr>
-			<td id="percent_remaining">
-			</td>
-			<td id="batterygraph">
+			<td id="batterygraph" colspan="2">
 			</td>
 		</tr>
 	</tbody>
 </table>
 
 <button type="button" onclick="battery_zero()" id="resetBatteryButton">
-	Set battery counters to zero
+	Poner contadores en cero
 </button>
 
 
@@ -116,75 +153,17 @@
 
 <script>
 
-var current_mode = "" ;
-
-async function setMode( mode ){
-    // used for play, tuner, and keyboard modes.
+async function getPageData(){
+    resp = await fetch_json( "/get_pinout_filename" ) ;
+    textById( "pinout_description", resp.pinout_description ) ;
+    getBatteryInfo();
     
-    if( mode != current_mode ){
-        textById( mode + "ModeButton", "\u231B" );
-        await fetch_json( "/change_mode/" + mode ) ;  
-        await getMode() ;
-    }
+}    
+   
 
-    
-    // Use the button to navigate to requested page
-    if( current_mode === "play") {
-        window.location.href = "/static/tunelist.html" ;
-    }
-    else if( current_mode === "tuner") {
-        window.location.href = "/static/notelist.html" ;
-    }
-    else if( current_mode === "keyboard") {
-        window.location.href = "/static/keyboard.html" ;
-    }
-
+function navigate( newpage ){
+    window.location.href = "/static/" + newpage + ".html" ;
 }
-
-
-async function getMode() {
-    // Show available options only
-    try {
-        let valid_modes = await fetch_json( "/valid_modes");     
-        for( m in valid_modes) {
-            d = document.getElementById(valid_modes[m]) ;
-            d.style.display = "" ;
-        }
-    }
-    catch(e) {
-        console.log("get /valid_modes failed", e ) ;    
-    }
-    // Show current mode, default is play     
-    current_mode = "play " ;
-    try {
-	    let resp = await fetch_json( "/get_mode" ) ;
-        current_mode = resp["mode"] ;
-    }
-    catch(e) {
-        console.log("getmode failed, setting default=play", e );
-    }
-
-    // Set button text according to mode
-	textById("playModeButton", "To crank organ mode") ;
-	textById("tunerModeButton", "To tuner mode" );
-	textById("keyboardModeButton", "To keyboard mode" ) ;
-    textById("configModeButton", "To configuration mode" );
-	if( current_mode === "play") {
-		textById("playModeButton", "Crank organ") ;
-	}
-	else if( current_mode === "tuner") {
-		textById("tunerModeButton", "Tuner" );
-	}
-	else if( current_mode === "keyboard") {
-		textById("keyboardModeButton", "Bluetooth keyboard") ;
-	}
-    else if( current_mode == "config" ){
-        textById( "configModeButton", "Configuración" ) ;
-    }
-	
-	getBatteryInfo() ;
-}
-
 
 async function getBatteryInfo( ) {
     // This is the detailed battery info in the body
@@ -200,8 +179,6 @@ function updateBatteryInfo( battery ) {
 	// Needed for /battery and /battery_zero
 	textById("use", Math.round( battery["use"]*10 )/10) ;
 	var used_proportion = battery["use"] / battery["capacity"] ;
-	textById("use_percent",  
-				Math.round( used_proportion*100 )) ;
 	textById("percent_remaining", "" +  Math.round( 100-used_proportion*100 ) + "%") ;
 	textById("capacity", battery["capacity"]) ;
 	textById("time",  
@@ -214,26 +191,13 @@ function updateBatteryInfo( battery ) {
 }
 
 async function battery_zero() {
-	showPopup( "resetBatteryButton", "Battery counters set to zero");
+	showPopup( "resetBatteryButton", "Contadores batería en cero");
 	updateBatteryInfo( await fetch_json( "/battery_zero" ) ) ;
 }
 
+getPageData() ; 
 
-function showDiag() {
-	window.location.href = "/static/diag.html" ;
-}
-function config(){
-	window.location.href = "/static/config.html" ;
-}
 
-function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/index.html" ;
-}
-
-getMode() ;
-// getMode calls getBatteryInfo.
-// This seems better than calling all in parallel.
-    
+   
 </script>
 </body>

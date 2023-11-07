@@ -7,7 +7,7 @@ import sys
 def read_dictionary(language_file):
     # Read the translation dictionary, one entry for each file
     # Translation file is in the same folder as this .py
-    translation_file = os.path.join( os.path.dirname(__file__), language_file )
+    translation_file = language_file
     dictionary = {}
     with open(translation_file, "r",  encoding="utf-8") as file:
         while True:

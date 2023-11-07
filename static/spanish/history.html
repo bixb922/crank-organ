@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+		&nbsp;Historia
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+
+<!-- html continues below javascript -->
+<script type="text/javascript" src="/static/common.js"></script>
+<div class="tableFixHead">
+
+    <table>
+        <thead>
+          <tr>
+            <th class='tunetable'>Fecha</th>
+            <th class='tunetable'>Melodía</th>
+            <th class='tunetable'>Avance %&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody id="history">
+        </tbody>
+    </table>
+</div>
+<div class="footerdiv"></div>
+</body>
+
+<script>
+
+function compare( a, b ){
+    // a and b are tuples, element [1] is date of format "yyyy-mm-hh hh:mm"
+    // order descending on date and ascending on time
+    asplit = a[1].split(" ") ;
+    bsplit = b[1].split(" ") ;
+    if( asplit[0] < bsplit[0] ) {
+        return 1 ;
+    }
+    else if( asplit[0] == bsplit[0] ){
+        if( asplit[1] > bsplit[1] ){
+            return 1 ;
+           }
+        else {
+            return -1 ;
+        }
+    }
+    else{
+        return -1 ; 
+    }
+}
+
+async function getHistory( ) {
+	
+	let histlist = await fetch_json( "/get_history" ) ;
+    histlist.sort( compareFn=compare ) ;
+	let s = "" ;
+    previous_date = "";
+	for( i in histlist ) {
+        let hist_element = histlist[i]; 
+        tsplit = hist_element[1].split(" ");
+        date = tsplit[0] ;
+        time = tsplit[1] ;
+        // Make row with date when date changes
+        if( date != previous_date) {
+            s += `<tr>
+            <td colspan="3"><b>${date}</b></td>
+            <tr>` ;
+        };
+        previous_date = date ;
+		s += `<tr> 
+			   <td>${time}</td>
+			   <td>${hist_element[0]}</td>
+		       <td align="right">${hist_element[2]}%</td>
+		      </tr>`;
+	}
+	htmlById("history", s) ;
+}
+
+
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/index.html" ;
+}
+
+getHistory() ;
+</script>

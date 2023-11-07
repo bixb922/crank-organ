@@ -5,13 +5,13 @@
 # There may be surrounding characters in
 # the from_string and to_string to ensure uniqueness of the from_string.
 *common.js
-"No conectado|"Not connected
 "no conectado|"Not connected
 "fin"|"end"
 esperando"|waiting"
 status_text = "cancelado"|status_text = "cancelled"
 = "sí" ;|= "yes" ;
 = "no" ;|= "no" ;
+"Respuesta via red no ok|"Network response not ok 
 
 *index.html
 >Drehorgel|>Crank organ
@@ -20,27 +20,32 @@ status_text = "cancelado"|status_text = "cancelled"
 >Bater&iacute;a|>Battery
 >Tiempo operaci&oacute;n|>Time powered on
 >Tiempo remanente|>Remaining time
+<td>Remanente</td>|<td>Remaining</td>
 Poner contadores en cero|Set battery counters to zero
-# In the javascript code:
-"Cambiar a afinador"|"To tuner mode"
-"Cambiar a teclado"|"To keyboard mode"
-"Cambiar a Organillo"|"To crank organ mode"
-"Cambiar a configuración"|"To configuration mode"
+Editar tunelib|Edit tunelib
 Diagnóstico|System info
-"Organillo"|"Crank organ"
-"Afinador"|"Tuner"
-"Teclado bluetooth"|"Bluetooth keyboard"
+Organillo|Crank organ
+Historia|History
+Configuración general|General configuration
+Configuración MIDI|MIDI configuration
+Afinador|Tuner
+Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Battery counters set to zero"
 
 *tunelist.html
+Deshabilitado por afinador, pinout|Disabled by tuner, pinout test
 Lista de melodías|Tune list
 B&uacute;squeda|Search
 >Actuación|>Performance
 # In the javascript code:
-"T&iacute;tulo"|"Title"
-"A&ntilde;o"|"Year"
+"Título"|"Title"
+"Género"|"Genre"
 "Autor"|"Author"
-"G&eacute;nero"|"Genre"
+"Año"|"Year"
+"Hist"|"Hist"
+"Info"|"Info"
+"Fecha"|"date"
+"Pts"|"Rtng"
 "actualizando setlist"|"updating setlist"
 
 *keyboard.html
@@ -73,6 +78,7 @@ Borrar afinación|Clear stored tuning
 
 
 *play.html
+Deshabilitado por afinador, pinout|Disabled by tuner, pinout test
 Melodía actual|Current tune
 >Partir|>Start
 >Al comienzo|>To beginning
@@ -94,26 +100,28 @@ rev/seg|rev/sec
 "Autor"|"Author"
 "Duraci&oacute;n"|"Duration"
 "A&ntilde;o"|"Year"
+"Info"|"Info"
 "Guardado"|"Saved"
 "No guardado, error"|"Not saved, error"
 
 *diag.html
 >Descripción<|>Description<
 Diagn&oacute;stico|System information
->Microcontrolador|>Microcontroller
 Ver log|Show log
 errores)|errors)
 >Versión Micropython<|>Micropython version<
 >Imagen Micropython<|>Micropyton image<
->Fecha/hora|>Date/Time
+>Fecha/hora<|>Date/Time<
 >Tiempo desde reboot<|>Time since reboot<
 >minutos<|>minutes<
 >Flash libre|>Free flash
 >Flash usada|>Used flash
+>Tiempo para gc<|>gc time<
+[mseg]|[msec]
 >RAM libre|>Free RAM
 >RAM usada|>Used RAM
+>Fecha/hora compilación<|>Compilation date/time<
 >Configuración solenoides|>Solenoid configuration
->Modo|>Mode
 >Archivos MIDI|>MIDI files
 >Carpeta música|>Music folder
 Configuración WIFI|WIFI configuration
@@ -124,5 +132,9 @@ Configuración WIFI|WIFI configuration
 >Conectado a un SSID<|>Connected to a SSID<
 >Como WiFi access point<|>As WiFi access point<
 >Alguien conectado<|>Someone connected<
+*history.html
+Fecha|Date
+Melodía|Tune
+Avance %|% completed
 
 

@@ -20,15 +20,18 @@
 </div>
 
 <script type="text/javascript" src="/static/common.js"></script>
-<button type="button" onclick="tuneAll()" id="tuneAllButton">Tune all</button>
+<button type="button" onclick="tuneAll()" id="tuneAllButton">Afinar todos</button>
 
-<button type="button" onclick="scaleTest()" id="scaleTestButton">Play scale</button>
+<button type="button" onclick="scaleTest()" id="scaleTestButton">Escala de prueba</button>
     
-<button type="button" onclick="clearTuning()" id="clearTuningButton">Clear stored tuning</button>
+<button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
 
+<button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
 
-<table id="notelist" style="width:100%">
-</table>
+<div class="tableFixHead">
+    <table id="notelist" style="width:100%">
+    </table>
+</div>
 <div class="footerdiv"></div>
 
 </body>
@@ -43,9 +46,9 @@ async function getNoteList() {
 }
 
 function updateNoteList( notelist ) {
-	const header = ["Program-note", "cents", "dB", 
-		"Tuning (-"+max_cents+" a +"+max_cents+" cents)", 
-		"Amplitude (" + min_db + " a " + max_db + " dB)",
+	const header = ["Programa-nota", "cents", "dB", 
+		"Afinaci&oacute;n (-"+max_cents+" a +"+max_cents+" cents)", 
+		"Amplitud (" + min_db + " a " + max_db + " dB)",
         "Pin"] ;
 	let s = "<thead><tr>" ;
 	for (let i = 0; i < header.length; i++) {
@@ -121,6 +124,11 @@ async function tuneAll() {
 async function clearTuning() {
     updateNoteList( await fetch_json( "/clear_tuning") ) ;
 }
+    
+async function stopTuning() {
+    await fetch_json( "/stop_tuning" ) ;
+}
+
 
 async function scaleTest() {
     await fetch_json( "/scale_test" ) ;   

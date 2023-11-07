@@ -26,9 +26,12 @@
     
 <button type="button" onclick="clearTuning()" id="clearTuningButton">Clear stored tuning</button>
 
+<button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
 
-<table id="notelist" style="width:100%">
-</table>
+<div class="tableFixHead">
+    <table id="notelist" style="width:100%">
+    </table>
+</div>
 <div class="footerdiv"></div>
 
 </body>
@@ -121,6 +124,11 @@ async function tuneAll() {
 async function clearTuning() {
     updateNoteList( await fetch_json( "/clear_tuning") ) ;
 }
+    
+async function stopTuning() {
+    await fetch_json( "/stop_tuning" ) ;
+}
+
 
 async function scaleTest() {
     await fetch_json( "/scale_test" ) ;   

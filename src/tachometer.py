@@ -1,6 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Crank rotation speed sensor. Still in testing phase.
+# >>> REFACTOR
 import asyncio
 import json
 import gc
@@ -9,8 +10,8 @@ from time import ticks_ms, ticks_diff
 from machine import Timer, Pin
 
 from minilog import getLogger
-import config
-from pinout import tachometer_pin
+from config import config
+from pinout import gpio
 
 # Number of stripes on wheel
 STRIPES = const(16) 
@@ -49,8 +50,6 @@ def _timer_irq(t):
         irq_array[1] += 1
         irq_array[TEST_TOGGLE] = 0
     
-    # RPSEC is the actual revolutions per second measured
-    # When in test mode, this is emulated with timer
     # Velocity is a superimposed manual control to alter the "normal"
     # playback speed. _ui_velocity is the velocity as set by the ui
     # (50=normal, 0=lowest, 100=highest). 
@@ -75,8 +74,9 @@ def set_start_turning_event( ev ):
     _start_turning_event = ev
     
 async def _calculate_rpsec():
-    global irq_array, rpsec
+    global irq_array, rpsec, tachometer_pin
     
+    tachometer_pin = gpio.tachometer_pin
     if not tachometer_pin:
         rpsec = _NORMAL_RPSEC
         return
@@ -89,9 +89,6 @@ async def _calculate_rpsec():
     last_rpsec = 0
     while True:
         await asyncio.sleep_ms( CALCULATE_EVERY_MS )
-        if mode == MODE_PAUSED:
-            rpsec = 0
-            continue
         t = ticks_ms()
         dt = ticks_diff( t, prev_t )/1000
         # >>> DESIGN LOGIC TO SUPRESS FLUTTER AND OTHER ERRORS

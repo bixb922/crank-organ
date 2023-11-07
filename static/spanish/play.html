@@ -12,13 +12,13 @@
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
 	</span>
-    <b>&nbsp;&nbsp;&nbsp;Current tune</b>
+    <b>&nbsp;&nbsp;&nbsp;Melodía actual</b>
 	<span class="headerright" id="header_time"></span>
 </div>
 
 
 <script type="text/javascript" src="/static/common.js"></script>
-
+<h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <table>
 	<tbody id="tuneinfo">
 	</tbody>
@@ -29,25 +29,25 @@
 	<tbody id="setlist">
 	</tbody>
 </table>
-<button type="button" onclick="saveSetList()">Save setlist</button><span id="saved"></span>
-<button type="button" onclick="loadSetList()">Load setlist</button>
-<button type="button" onclick="clearSetList()">Clear setlist</button>
-<button type="button" onclick="shuffleSetList()">Shuffle setlist</button>
-<button type="button" onclick="shuffleAllTunes()">Shuffle all tunes</button>
+<button type="button" onclick="saveSetList()">Guardar lista</button><span id="saved"></span>
+<button type="button" onclick="loadSetList()">Cargar lista</button>
+<button type="button" onclick="clearSetList()">Borrar setlist</button>
+<button type="button" onclick="shuffleSetList()">Desordenar lista</button>
+<button type="button" onclick="shuffleAllTunes()">Desordenar todos</button>
 
-<div class="middlediv2">Tempo control</div>
+<div class="middlediv2">Control tempo</div>
 
 
     <p>        
-    Set playback speed:
+    Ajuste velocidad:
     <br>
     <a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
     <span id="velocityGraph"></span>
     <a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
 
     <p>    
-        <span id="turning">Turning</span>
-        <span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
+        <span id="turning">Girando</span>
+        <span id="rpsecText">nnn</span>&nbsp;rev/seg&nbsp;
         <span id="rpsecGraph"></span>
 
     </p>
@@ -67,20 +67,19 @@
 //		"/static/m" + (Date.now() % numberOfImages) + ".jpg" ;
 
 // Tune list with titles and attributes gets loaded in memory
-var tunelib = [] ;
-last_progress_seen = {} ;
-
+let tunelib = [] ;
+let last_progress_seen = {} ;
 
 async function getProgress() {
-	tunelib = await fetch_json( "/tunelib_json" ) ;
-	verify_tunelib_header( tunelib.header ) ;
+    // Load into global variable to avoid reloading
+	tunelib = await fetch_json( "/data/tunelib.json" ) ;
 	
 	// Now that we have the tunelib, show progress
 	while( true ) {
         progress = await fetch_json ( "/get_progress" ) ;
         updateProgress( progress );
         if( progress["status"] == "playing"){
-		  await sleep_ms( 10000 ) ;
+		  await sleep_ms( 10_000 ) ;
         }
         else{
             await sleep_ms( 2000 ) ;
@@ -90,10 +89,16 @@ async function getProgress() {
 
 function updateProgress( progress ) {
 	last_progress_seen = progress ;
+
+    let pm = "";
+    if( progress["play_mode"] == true ){
+        pm = "none" ;
+    }
+    document.getElementById("play_mode").style.display = pm ;
 	// Update tune info only if tune is playing
-	var current_tune = progress["tune"] ;
-    var s = "" ;
-	if( current_tune === null ) {
+	let current_tuneid = progress["tune"] ;
+    let s = "" ;
+	if( current_tuneid === null ) {
 		// No tune playing
         s = ""
         s += "<tr><td id='progress'></td>";
@@ -104,34 +109,37 @@ function updateProgress( progress ) {
 		barGraph( "timebar", 0, midnight_green, 10, "left", 60 ) ;
 	}
 	else {
-		var tune = tunelib["i" + current_tune] ;
-		var header = ["Title", "Genre","Author", "Duration","Year" ] ;
-		s = ""
-		s += "<tr><td>" + header[0] + "</td>" ;
+		let tune = tunelib[current_tuneid] ;
+        console.log("current tuneid=", current_tuneid, "current tune=", tune ) ;
+		let header = ["T&iacute;tulo", "G&eacute;nero","Autor", "Duraci&oacute;n","A&ntilde;o", "Info" ] ;
 		// Unicode 9198 = media control skip backward
 		// Unicode 23F9 = media control "stop"
-		s += "<td>" + tune[TLCOL_TITLE] + "</td></tr>" ;
-
-        s += "<tr><td colspan='2'>"; 
-        s += "<button onclick = 'startTune()'>Start</button>";
-        s += "<button onclick = 'backSetList()'>To beginning </button>";
-        s += "<button onclick = 'stopTuneSetList()'>Next </button>";
-        s += "</td></tr>" ; // start button
-        
-		s += "<tr><td>" + header[1] + "</td>" ;
-		s += "<td>" + tune[TLCOL_GENRE] + "</td></tr>" ; // genre
-		
-		s += "<tr><td>" + header[2] + "</td>" ;
-		s += "<td>" + tune[TLCOL_AUTHOR] + "</td></tr>" ; // author
-		
-		s += "<tr><td>" + header[3] + "</td>";
-		s += "<td>" + formatMilliMMSS( tune[TLCOL_TIME] ) + "</td></tr>" ; // time
-		
-		s += "<tr><td>" + header[4] + "</td>" ;
-		s += "<td>" + tune[TLCOL_YEAR] + "</td></tr>" ; // year
-
-		s += "<tr><td id='progress'></td>";
-		s += "<td id='timebar'></td></tr>" ;
+        s = `<tr><td><b>${header[0]}</b></td>
+                <td><b>${tune[TLCOL_TITLE]}</b></td>
+             </tr>
+             <tr><td colspan='2'> 
+                <button onclick = 'startTune()'>Partir</button>
+                <button onclick = 'backSetList()'>Al comienzo </button>
+                <button onclick = 'stopTuneSetList()'>Próximo </button></td>
+            </tr>
+            <tr><td>${header[1]}</td>
+                <td>${tune[TLCOL_GENRE]}</td>
+            </tr>
+            <tr><td>${header[2]}</td>
+		        <td>${tune[TLCOL_AUTHOR]}</td>
+            </tr>
+            <tr><td>${header[3]}</td>
+		        <td>${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
+            </tr> 
+            <tr><td>${header[4]}</td>
+		        <td>${tune[TLCOL_YEAR]}</td>
+            </tr>
+            <tr><td>${header[5]}</td>
+		        <td>${tune[TLCOL_INFO]}</td>
+            </tr>
+            <tr><td id='progress'></td>
+		         <td id='timebar'></td>
+            </tr>`;
 				
 		htmlById("tuneinfo", s) ;
 		
@@ -146,7 +154,10 @@ function updateProgress( progress ) {
 	var setlist = progress["setlist"] ;
 	s = "";
 	for( var i = 0; i < setlist.length; i++ ) {
-		pls = tunelib["i" + setlist[i]] ;
+		pls = tunelib[setlist[i]] ;
+        if( pls == undefined ){
+            continue ;
+        }
 		s += "<tr>" ;
 		s += "<td>" + (i+1) + "</td>" ;
 		s += "<td>" + pls[TLCOL_TITLE] + "</td>" ;
@@ -187,10 +198,10 @@ function updateProgress( progress ) {
 	
 	var rt = Math.round( progress["rpsec"]*10)/10 ;
 	if( progress["is_turning"] ) {
-		textById("turning", "Turning")
+		textById("turning", "Girando")
 	}
 	else {
-		textById("turning", "Not turning")
+		textById("turning", "No gira")
 	}
 	textById("rpsecText", "" + rt) ;
     barGraph( "rpsecGraph", rg/100, sap_green, 10, "left", 50 ) ;
@@ -199,6 +210,7 @@ function updateProgress( progress ) {
 
 async function stopTuneSetList() {
 	progress = await fetch_json("/stop_tune_setlist" ) ;
+    console.log("stop tune setlist", progress ) ;
 	updateProgress( progress ) ;
 }
 
@@ -208,15 +220,14 @@ async function backSetList() {
 }
 
 
-
 async function saveSetList() {
 	let resp = await fetch_json("/save_setlist" ) ;
 	if( resp["result"] == "ok" ) {
-		showPopup( "saved", "Saved") ;
-	    // textById("saved", "Saved" );
+		showPopup( "saved", "Guardado") ;
+	    // textById("saved", "Guardado" );
 	}	
 	else {
-		showPopup( "saved", "Not saved, error") ;
+		showPopup( "saved", "No guardado, error") ;
 	}
 }
 

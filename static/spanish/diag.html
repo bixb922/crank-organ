@@ -10,7 +10,7 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
-		&nbsp;System information
+		&nbsp;Diagn&oacute;stico
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -19,65 +19,65 @@
     
 <table>
     <tbody>
-		<tr><td>Description</td><td id="description"></td></tr>
+		<tr><td>Descripción</td><td id="description"></td></tr>
         <tr><td>Host name</td><td id="name"></td></tr>
 	     <tr>
 			<td>
 				<button type="button" onclick="showLog()" id="showLogButton">
-					Show log
+					Ver log
 				</button>
 			</td>
 			<td>
 				<span id="logfilename"></span><br>
-				(<span id="errors_since_reboot"></span> errors)
+				(<span id="errors_since_reboot"></span> errores)
 			</td>
 		</tr>
-        <tr><td>Microcontroller</td><td id="microcontroller"></td></tr>
-		<tr><td>Micropython version</td><td id="mp_version"></td></tr>
-		<tr><td>Micropyton image</td><td id="mp_bin"></td></tr>
-		<tr><td>Date/Time</td><td id="last_refresh"></td></tr>
-		<tr><td>Time since reboot</td><td id="reboot_mins"></td><td>minutes</td></tr>
-		<tr><td>Free flash</td><td id="free_flash"></td><td>[bytes]</td></tr>
-		<tr><td>Used flash</td><td id="used_flash"></td><td>[bytes]</td></tr>
-		<tr><td>Free RAM</td><td id="free_ram"></td><td>[bytes]</td></tr>
-		<tr><td>Used RAM</td><td id="used_ram"></td><td>[bytes]</td></tr>
-		<tr><td>Solenoid configuration</td><td id="solenoid_devices"></td></tr>
-		<tr><td>Mode</td><td id="operating_mode"></td></tr>
-		<tr><td>MIDI files</td><td id="midi_files"></td></tr>
-		<tr><td>Music folder</td><td id="music_folder"></td></tr>
+		<tr><td>Versión Micropython</td><td id="mp_version"></td></tr>
+		<tr><td>Imagen Micropython</td><td id="mp_bin"></td></tr>
+		<tr><td>Fecha/hora</td><td id="last_refresh"></td></tr>
+		<tr><td>Tiempo desde reboot</td><td id="reboot_mins"></td><td>minutos</td></tr>
+		<tr><td>Flash libre</td><td id="free_flash"></td><td>[bytes]</td></tr>
+		<tr><td>Flash usada</td><td id="used_flash"></td><td>[bytes]</td></tr>
+		<tr><td>RAM libre</td><td id="free_ram"></td><td>[bytes]</td></tr>
+		<tr><td>RAM usada</td><td id="used_ram"></td><td>[bytes]</td></tr>
+        <tr><td>Tiempo para gc</td><td id="gc_collect_time"></td><td>[mseg]</td></tr>
+		<tr><td>Fecha/hora compilación</td><td id="compile_date"></td><td></td></tr>
+		<tr><td>Configuración solenoides</td><td id="solenoid_devices"></td></tr>
+		<tr><td>Archivos MIDI</td><td id="midi_files"></td></tr>
+		<tr><td>Carpeta música</td><td id="music_folder"></td></tr>
 	</tbody>
 </table>
 	
-<div class="middlediv2">WIFI configuration</div>
+<div class="middlediv2">Configuración WIFI</div>
 <table>
 	<tbody id="wifiConfig">
 	<tr>	
 		<td>Host name, AP SSID, BLE name:</td><td id="hostname"></td>
 	</tr>
 	<tr>	
-		<td>IP of clients active in last 60 sec</td><td id="client_IPs"></td>
+		<td>IP de clientes activos (60 segundos)</td><td id="client_IPs"></td>
 	</tr>
 	<tr>
-		<td colspan="2"><b>As WiFi station</b></td>
+		<td colspan="2"><b>Como WiFi station</b></td>
 	</tr>
 	<tr>	
-		<td>Connects to SSID</td><td id="sta_if_ap"></td>
+		<td>Se conecta a SSID</td><td id="sta_if_ssid"></td>
 	</tr>
 	<tr>	
 		<td>IP</td><td id="sta_if_ip"></td>
 	</tr>
 	<tr>	
-		<td>Active</td><td id="sta_if_active"></td>
+		<td>Activa</td><td id="sta_if_active"></td>
 	</tr>
 	<tr>	
-		<td>Connected to a SSID</td><td id="sta_if_connected"></td>
+		<td>Conectado a un SSID</td><td id="sta_if_connected"></td>
 	</tr>
 	<tr>	
 		<td>Connection status</td><td id="sta_if_status"></td>
 	</tr>
 	</tr>
 	<tr>
-		<td colspan="2"><b>As WiFi access point</b></td>
+		<td colspan="2"><b>Como WiFi access point</b></td>
 	</tr>
 	<tr>	
 		<td>SSID</td><td id="ap_if_ssid"></td>
@@ -85,10 +85,10 @@
 		<td>IP</td><td id="ap_if_ip"></td>
 	</tr>
 	<tr>	
-		<td>Someone connected</td><td id="ap_if_connected"></td>
+		<td>Alguien conectado</td><td id="ap_if_connected"></td>
 	</tr>
 	<tr>	
-		<td>Active</td><td id="ap_if_active"></td>
+		<td>Activa</td><td id="ap_if_active"></td>
 	</tr>
 	</tbody>
 </table>

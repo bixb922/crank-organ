@@ -1,4 +1,11 @@
 # Software for crank organs
+# Recent changes
+history
+integrated tunelib editor 
+Sticky table headers
+More description fields: rating, date added, number of times played
+Time zones
+Basic authentication
 
 
 # Purpose
@@ -173,7 +180,7 @@ It's best to have the main menu page, tunelist page or performance page open in 
 
 If a RGB (neopixel) LED is on the board and configured, it will show blue on start and flashes green when ready. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.
 
-Startup takes about 15 seconds until the system is ready. Some valves will move as a signal when ready. 
+Startup takes about 6 seconds until the system is ready. You will hear some valves  move as a signal when ready. 
 
 The software will automatically load the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
@@ -182,6 +189,8 @@ If there is no setlist stored (empty setlist). turning the crank or releasing th
 So for all cases: turn on, and turn the crank or touch the touchpad and music starts.
 
 If you have the tune list or performance page open in your cell phone, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. No need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
+
+You don't need your cell phone turned on to play music, only to alter the setlist.
 
 
 # Tuner mode

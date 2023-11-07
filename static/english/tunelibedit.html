@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+		&nbsp;Tunelib editor
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+<script type="text/javascript" src="/static/common.js"></script>
+    
+<span id="wait_for_update"></span>
+<div class="tableFixHead">
+
+    <table id="tunelist">
+    </table>
+</div>
+<br>
+<button onclick="save()" id="saveButton">Save tunelib info</button>
+<br>
+<b>Reload page after saving to refresh information.</b>
+<div class="footerdiv"></div>
+</body>
+
+<script>
+
+
+async function getTuneList( ) {
+    wfu = document.getElementById( "wait_for_update" ) ;
+    wfu.innerHTML +=  "Checking for new files, updating...<br>" ;
+	let resp = await fetch_json( "/start_tunelib_sync" ) ;
+    while( true ){
+        resp = await fetch_json( "/tunelib_sync_progress" );
+        wfu.innerHTML +=  resp["progress"] + "<br>" ;
+        if( resp["progress"] == "" ){
+            break ;
+        }
+        await sleep_ms( 2000 );
+    }
+	wfu.innerHTML = "" ;
+    let tunelib = await fetch_json( "/data/tunelib.json" ) ;
+    let tunelist = [];
+    for( const [key, tune] of Object.entries(tunelib)) {
+        tunelist.push( tune ) ;
+    }
+    sortTunelist( tunelist );
+    updateForm( tunelist ) ;
+}
+
+let changed_fields = [] ;
+function updateForm( tunelist ){
+	let tableheader = ["Title", "Genre", "Author", "Year", "Autoplay", "Rating", "Info", "Duration", "Date&nbsp;added", "Filename", "Size", "Clear row"] ;
+
+	let s = "<thead><tr>" ;
+	for (let  j = 0 ; j < tableheader.length ; j++ ){
+		s += `<th class='tunetable'>${tableheader[j]}</th>` ;
+	}
+	s += "</tr></thead>" ;
+	s += "<tbody>" ;
+	for( i in tunelist ) {
+        tune = tunelist[i];
+		row = `<tr> 
+    <td>
+        ${makeBox(tune[TLCOL_ID],'title',20,tune[TLCOL_TITLE])}
+      </td>
+    <td>
+        ${makeBox(tune[TLCOL_ID],'genre',20,tune[TLCOL_GENRE])}
+    </td>
+    <td>
+        ${makeBox(tune[TLCOL_ID],'author',20,tune[TLCOL_AUTHOR])}
+    </td>
+    <td>
+        ${makeBox(tune[TLCOL_ID],'year',6,tune[TLCOL_YEAR])}
+    </td>
+    <td>
+        ${makeBox(tune[TLCOL_ID],'autoplay',-1,tune[TLCOL_AUTOPLAY])}
+    </td>
+    <td>
+        ${makeBox(tune[TLCOL_ID],'rating',6,tune[TLCOL_RATING])}
+    </td>
+    <td>${makeBox(tune[TLCOL_ID],'info',20,tune[TLCOL_INFO])}</td>
+    <td align="right">${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
+    <td>${tune[TLCOL_DATEADDED]}</td>
+    <td>${tune[TLCOL_FILENAME]}</td> 
+    <td align="right">${tune[TLCOL_SIZE]}</td> 
+    <td>
+        ${makeBox(tune[TLCOL_ID],'clear',-1,false)}
+    </td>
+    </tr>`;
+        s += row ;
+
+	}
+	s += "</tbody>" ;
+	htmlById("tunelist", s) ;
+	changed_fields = [] ;
+}
+    
+
+function makeBox( tuneid, name, size, value ){
+    const id = `${tuneid}.${name}`;
+    if( size == -1 ) {
+        // Size -1 means "check box"
+        let attr = "" ;
+        if( value ){
+            attr = "checked";
+        }
+        return `<input type='checkbox' name='${tuneid}' id='${id}'${attr} onchange='markField("${id}")' />`;
+    }
+    
+    return `<input type='text' name='${tuneid}' id='${id}' size='${size}' value='${value}' oninput='markField("${id}")'/>`;
+}
+ 
+function markField( id ){
+    if( !changed_fields.includes(id) ){
+        changed_fields.push( id );
+    }
+    const d = document.getElementById( id ) ;
+    d.style.backgroundColor = cream ;
+}
+    
+
+function pageUp() {
+	// On index page, reload this same page
+	window.location.href = "/static/index.html" ;
+}
+
+async function save( ){
+    let newjson = {} ;
+    for( let d in changed_fields ){
+        let ele = document.getElementById(changed_fields[d]) ;
+        // Cream means changed. 
+        
+        if( ele.type == "text" ){
+            newjson[ele.id] = escapeHtml( ele.value )  ;
+            ele.style.backgroundColor = "#ffffff" ;
+        }
+        else if( ele.type == "checkbox" ){
+            newjson[ele.id] = ele.checked ;
+        }
+       
+    }
+    resp = await fetch_json( "/save_tunelib", newjson ) ;
+    changed_fields = [] ;
+    if( resp["result"] == "ok"){
+        showPopup("saveButton", "Tunelib updated on flash" ) ;
+    }
+}
+
+    
+   
+function sortTunelist( tunelist){
+    function compareFn(a, b ){
+        // Sort ascending by title
+        if( a[TLCOL_TITLE] < b[TLCOL_TITLE] ){
+            return -1 ;
+        }
+        if( a[TLCOL_TITLE] > b[TLCOL_TITLE] ){
+            return 1 ;
+        }
+        return 0;
+    } 
+ 
+    tunelist.sort( compareFn );
+}
+
+    getTuneList() ;
+</script>

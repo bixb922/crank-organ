@@ -12,25 +12,20 @@
 from collections import OrderedDict
 from math import log
 
+
 # Some useful functions related to MIDI
 _NOTE_LIST = ( "C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" )
 
 
 
-def frequency_to_midi( freq ):
-    # Find which organ note corresponds to this frequency
-    for midi in pinout.all_valid_midis:
-        f = midi_to_frequency( midi )
-        if f*2**(0.5/12) < freq <= f*2**(1.5/12):
-            return midi
-    return None
-
-def find( all_valid_midis, midi_note_number ):
-    for a in all_valid_midis:
-        if (a.midi_note == midi_note_number and
-           a.instrument != "z"):
-                return a
-    raise KeyError
+#def frequency_to_midi( freq, all_valid_midis ):
+#    from pinout import midinotes
+#    # Find which organ note corresponds to this frequency
+#    for midi in midinotes.all_valid_midis:
+#        f = midi_to_frequency( midi )
+#        if f*2**(0.5/12) < freq <= f*2**(1.5/12):
+#            return midi
+#    return None
 
 DRUM_PROGRAM = 129
     
@@ -214,7 +209,7 @@ class Note:
         return 440*2**((self.midi_note-69)/12)
 
     def cents( self, freq ):
-        if freq <= 0:
+        if not freq or freq <= 0:
             return None
         return 1200*log(freq/self.frequency())/log(2) 
 

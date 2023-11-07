@@ -32,7 +32,6 @@
 				(<span id="errors_since_reboot"></span> errors)
 			</td>
 		</tr>
-        <tr><td>Microcontroller</td><td id="microcontroller"></td></tr>
 		<tr><td>Micropython version</td><td id="mp_version"></td></tr>
 		<tr><td>Micropyton image</td><td id="mp_bin"></td></tr>
 		<tr><td>Date/Time</td><td id="last_refresh"></td></tr>
@@ -41,8 +40,9 @@
 		<tr><td>Used flash</td><td id="used_flash"></td><td>[bytes]</td></tr>
 		<tr><td>Free RAM</td><td id="free_ram"></td><td>[bytes]</td></tr>
 		<tr><td>Used RAM</td><td id="used_ram"></td><td>[bytes]</td></tr>
+        <tr><td>gc time</td><td id="gc_collect_time"></td><td>[msec]</td></tr>
+		<tr><td>Compilation date/time</td><td id="compile_date"></td><td></td></tr>
 		<tr><td>Solenoid configuration</td><td id="solenoid_devices"></td></tr>
-		<tr><td>Mode</td><td id="operating_mode"></td></tr>
 		<tr><td>MIDI files</td><td id="midi_files"></td></tr>
 		<tr><td>Music folder</td><td id="music_folder"></td></tr>
 	</tbody>
@@ -61,7 +61,7 @@
 		<td colspan="2"><b>As WiFi station</b></td>
 	</tr>
 	<tr>	
-		<td>Connects to SSID</td><td id="sta_if_ap"></td>
+		<td>Connects to SSID</td><td id="sta_if_ssid"></td>
 	</tr>
 	<tr>	
 		<td>IP</td><td id="sta_if_ip"></td>

@@ -1,38 +1,70 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Webserver module, serves all http requests. 
-# Based on tinyweb
+
 import os
 import sys
 import gc
 import asyncio
 import json
 import time
+import ubinascii
+import random
 
-import tinyweb
+from microdot_asyncio import Microdot, send_file, redirect
+
 from minilog import getLogger
 import scheduler
-import config
+from config import config, password_manager
 import pinout
-import battery
-import wifimanager
-import solenoid
-import modes
-from tinytz import ttz
+from battery import battery
+from wifimanager import wifimanager
+from solenoid import solenoid
+from compiledate import compiledate
+    
+from tunemanager import tunemanager
+import tachometer
 
-# Allowed pages for each mode
-_ALLOWED_PAGES = {
-"play": ("index.html","diag.html", "play.html", "tunelist.html", "config.html"),
-"tuner": ("index.html", "diag.html", "note.html", "notelist.html", "config.html" ),
-"keyboard": ("index.html", "diag.html", "keyboard.html", "config.html"),
-"config": {"index.html", "pinout.html", "config.html"}
-} 
+from setlist import setlist
+from history import history
+from timezone import timezone
+from player import player
+from organtuner import organtuner
 
-app = tinyweb.webserver( debug=True )
-FILE_BUF_SIZE = None # will be changed by run_webserver()
+# Testing needed
+# import soleble
+
+app = Microdot()
+
 USE_CACHE = True # will be set by run_webserver() to value in config.json
 MAX_AGE = 24*60*60 # Pages are in cache for 1 day. Will be set to 0 of no cache
-_pages_served = 0
+
+
+#index.html, tunelist.html, play.html: enable play mode
+#notelist.html note.html, pinout.html: disable play mode
+#tunelibedit, diag, history, config: no change
+
+ENABLE_PLAYBACK = {
+    "index.html": True,
+    "tunelist.html": True,
+    "play.html": True,
+    "notelist.html": False,
+    "note.html": False,
+    "pinout.html": False
+}
+
+#@app.before_request
+#def func_before_req( request ):
+#    pass
+
+
+#@app.after_request
+#def func_after_req( response ):
+#    dt = time.ticks_diff( time.ticks_ms(), r.g.t0 )
+#    print(f"request ended  {r.method=} {r.url=} {dt} msec")
+#    return response
+
+
 
 def _file_exists( filename ):
     try:
@@ -41,28 +73,13 @@ def _file_exists( filename ):
     except:
         return False
 
-    
-def set_mode():
-    if modes.is_play_mode():
-        global tunelist, tachometer, player, setlist
-        import tunelist
-        import tachometer
-        import player
-        import setlist
-    elif modes.is_tuner_mode():
-        global organtuner
-        import organtuner
-    elif modes.is_keyboard_mode():
-        global soleble
-        import soleble
 
-set_mode()
 
 # Information active clients
 # key=client IP, data=time.ticks_ms()) of last activity
 client_activity = {}
 def register_activity( request ):
-    client_activity[request.caddr[0]] = time.ticks_ms()
+    client_activity[request.client_addr[0]] = time.ticks_ms()
 
 
 def is_active( since_seconds=60 ):
@@ -91,464 +108,498 @@ _CONTENT_TYPE_DICT = {
         "log": "text/html; charset=UTF-8"
     }
 
-def get_content_type( filename ):
-    try:
-        filetype = filename.split(".")[1].lower()
-        if filetype in _CONTENT_TYPE_DICT:
-            return _CONTENT_TYPE_DICT[filetype]
-    except:
-        return _CONTENT_TYPE_DICT["json"] 
 
-async def send_json( response, filename, cache=USE_CACHE ):
-    await response.send_file( filename, 
-                        max_age=MAX_AGE,
-                        content_type=_CONTENT_TYPE_DICT["json"],
-                        buf_size=FILE_BUF_SIZE) 
-
-async def simple_response( message, response ):
+def simple_response( message, k=None, v=None ):
     if message == "ok":
         resp = { "result": "ok"}
     else:
         resp = {"alert": message }
-    await response.send( json.dumps( resp ))
+    if k:
+        resp[k] = v
+    return resp
 
-# Index page
-@app.route("/", save_headers=["User-Agent"] )
-async def index_page( request, response ) :
-    ipg = "/static/" + config.cfg.get( "initial_page", "index") + ".html"
-    await response.redirect( ipg )
+    
+def check_authorization( request ):
+    if not config.cfg["password_required"]:
+        return
+    ask_for_password = ({}, 401, {"WWW-Authenticate": 'Basic realm="My Realm"'})
+    # This will prompt a "basic authentication" dialog, asking for username/password  
+    # on the browser side. In case of password error, the browser will retry on its own
+    # sending username/password in the Authorization header.
+    # @app.route, msut have 
+    # save_headers=["Content-Length","Content-Type","Authorization"])
+    auth = request.headers.get("Authorization","")
+    
+    if not auth:
+        # No authorization header present, responde with 
+        _logger.debug("Web access not authorized: no username/password yet")
+        return ask_for_password
+
+    # Authorization header expected to be "Basic xxxxxx", xxx is base64 of username/password
+    basic, userpass = auth.decode().split(" ")
+    
+    assert basic == "Basic", f"Basic authentication expected, got {basic}"
+    # base64 information is "user:password"
+    user, password = ubinascii.a2b_base64( userpass ).decode().split(":")
+    if not password_manager.verify_password( password ):
+        _logger.debug("Web access not authorized: no username/password yet")
+        _logger.info("Web access not authorized: bad password")
+        return ask_for_password
+    # Authenticated
+    return
+    
+# Home page
+@app.route("/" )
+async def index_page( request ) :
+    inipage = "/static/" + config.cfg.get( "initial_page", "index") + ".html"
+    return redirect( inipage )
 
 # File related web requests
-@app.route("/static/<filepath>", save_headers=["User-Agent"])
-async def static_files(request, response, filepath ):
-    global _pages_served
-    ua = request.headers.get(b'User-Agent')
+@app.route("/static/<filepath>" )
+async def static_files(request, filepath ):
+   
+    ua = request.headers.get("User-Agent")
     if ua:
-        if b'Chrome' not in ua and b'Firefox' not in ua:
+        if "Chrome" not in ua and "Firefox" not in ua:
             # Could not make run Javascript await fetch in Safari.
             _logger.debug(f"Browser not supported {ua}")
-            #raise tinyweb.HTTPException(403) # Forbidden
-            await response.start_html()
-            await response.send( "Safari not supported, use Chrome or Firefox" )
-            return
+
+            return "Safari not supported, use Chrome or Firefox" 
         
     register_activity( request )
-    
-    if ".html" in filepath:
-        _pages_served += 1
-        
-        # Check if page allowed
-        mode = modes.get_mode()
-        allowed_list = _ALLOWED_PAGES[mode]
-        if filepath not in allowed_list:
-            _logger.debug(f"{filepath} not allowed in mode {mode}")
-            if _pages_served == 1 and "index.html" not in filepath:
-                await response.redirect( "index.html" )
-            else:
-                await response.start_html()
-                await response.send( f"Page not allowed in this mode: {modes.get_mode()}" )
-            return
-
-        
+      
+    # Playback mode depends on page last loaded
+    pb = ENABLE_PLAYBACK.get( filepath, None )
+    if pb is not None:
+        scheduler.set_playback_mode( pb )
         
     filename = STATIC_FOLDER + filepath
-    await response.send_file( filename, 
-                            max_age=MAX_AGE,
-                            content_type=get_content_type( filename ),
-                            buf_size=FILE_BUF_SIZE ) 
+    return send_file( filename, 
+                            max_age=MAX_AGE ) 
  
 @app.route("/data/<filepath>")
-async def data_files( request, response, filepath ):
+async def send_data_file( request, filepath ):
+    if "config" in filepath:
+        # Config.json and backups not visible this way.
+        return {}, 404
+        
     register_activity( request )
     filename = DATA_FOLDER + filepath
-    await response.send_file( filename, 
-                        max_age=0,
-                        content_type=get_content_type( filename ),
-                        buf_size=FILE_BUF_SIZE) 
+    return send_file( filename, 
+                        max_age=0 ) 
 
-@app.route("/tunelib_json")
-async def send_tunelib_file( request, response ):
-    await send_json( response, config.MUSIC_JSON, cache=USE_CACHE )
-    
-
-@app.route("/get_progress" )
-async def get_progress( request, response ):
-    # Get progress of current tune
-    # When playing music, /get_progress is good indicator of activity
+def get_progress( request ):
     register_activity( request )
-
-    progress = setlist.get_progress()
+    progress = player.get_progress()
+    tachometer.complement_progress( progress )
+    scheduler.complement_progress( progress )
+    setlist.complement_progress( progress )
         
-    await response.send( json.dumps( progress ))
+    return progress
+
+async def wait_get_progress( request ):
+    # Wait for setlist process to catch up to change
+    await asyncio.sleep_ms( 200 )
+    for w in range(10):
+        await asyncio.sleep_ms(100)
+        p = get_progress( request )
+        if p["status"] != "cancelled":
+            break
+    print("wait_get_progress",p["status"], p["tune"] )
+    return p  
+    
+@app.route("/get_progress" )
+async def process_get_progress( request ):
+    return get_progress( request )
+
 
 @app.route("/queue_tune/<tune>")
-async def queue_tune( request, response, tune ):
+async def queue_tune( request, tune ):
     # Queue tune to setlist
     setlist.queue_tune( tune )
     # Wait for setlist process to catch up
-    await asyncio.sleep_ms( 500 )
-    await get_progress( request, response )
+    #await asyncio.sleep_ms( 500 )
+    #return get_progress( request )
+    return await wait_get_progress( request )
 
-
-            
 @app.route("/start_tune")
-async def go_tempo( request, response ):
+async def go_tempo( request ):
     setlist.start_tune()
     # Wait for setlist process to catch up
-    await asyncio.sleep_ms( 400 )
-    await get_progress( request, response )
+    # await asyncio.sleep_ms( 400 )
+    # return get_progress( request )
+    return await wait_get_progress( request )
 
 
 @app.route("/stop_tune_setlist" )
-async def stop_tune_setlist( request, response ):
+async def stop_tune_setlist( request ):
     setlist.stop_tune()
-    # Wait for setlist process to catch up
-    await asyncio.sleep_ms( 400 )
-    await get_progress( request, response )
-    
+    await asyncio.sleep_ms(1000)
+    return get_progress( request )
+
 
 @app.route("/back_setlist" )
-async def back_setlist( request, response ):
+async def back_setlist( request ):
     setlist.to_beginning_of_tune()
-    await asyncio.sleep_ms( 400 )
-    await get_progress( request, response )
+    #await asyncio.sleep_ms( 400 )
+    #return get_progress( request )
+    return await wait_get_progress( request )
 
 @app.route("/save_setlist")
-async def save_setlist( request,response ):
+async def save_setlist( request ):
     setlist.save()
-    await simple_response( "ok", response )
+    return simple_response( "ok" )
 
 @app.route("/load_setlist")    
-async def load_setlist( request,response ):
+async def load_setlist( request ):
     setlist.load()
-    await get_progress( request, response )
+    return get_progress( request )
 
 @app.route("/clear_setlist")    
-async def clear_setlist( request,response ):
+async def clear_setlist( request ):
     setlist.clear()
-    await get_progress( request, response )
+    return get_progress( request )
 
-@app.route("/up_setlist/<pos>")    
-async def up_setlist( request,response, pos ):
-    setlist.up( int(pos) )
-    await get_progress( request, response )
+@app.route("/up_setlist/<int:pos>")    
+async def up_setlist( request, pos ):
+    setlist.up( pos )
+    return get_progress( request )
 
-@app.route("/down_setlist/<pos>")    
-async def down_setlist( request,response, pos ):
-    setlist.down(int(pos) )
-    await get_progress( request, response )
+@app.route("/down_setlist/<int:pos>")    
+async def down_setlist( request, pos ):
+    setlist.down( pos )
+    return get_progress( request )
 
 @app.route("/shuffle_set_list")
-async def shuffle_set_list( request, response ):
+async def shuffle_set_list( request ):
     setlist.shuffle()
-    await get_progress( request, response )
+    return get_progress( request )
     
 @app.route("/shuffle_all_tunes")
-async def shuffle_all_tunes( request, response ):
+async def shuffle_all_tunes( request ):
     setlist.shuffle_all_tunes()
-    await get_progress( request, response )
+    return get_progress( request )
 
 # Organ tuner web requests
 
-@app.route("/note/<midi_note>")
-async def note_page( request, response, midi_note ):
-    await static_files( request, response, "note.html")
+@app.route("/note/<int:midi_note>")
+async def note_page( request, midi_note ):
+    return send_file( STATIC_FOLDER + "note.html", 
+                            max_age=MAX_AGE ) 
 
 
 @app.route("/tune_all")
-async def start_tune_all( request, response  ):
+async def start_tune_all( request  ):
+    # All tuning requests (except clear_tuning)
+    # just queue the operation and respond, so
+    # it's not of interest to return organtuner.json 
+    # in these functions
     organtuner.tune_all()
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+    return simple_response( "ok" )
 
 
-@app.route("/start_tuning/<midi_note>")
-async def start_tuning( request, response, midi_note ):
+@app.route("/start_tuning/<int:midi_note>")
+async def start_tuning( request, midi_note ):
     # Tune one note
-    organtuner.queue_tuning( ("tune", int(midi_note) ) ) 
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+    organtuner.queue_tuning( ("tune", midi_note ) ) 
+    return simple_response( "ok" )
 
-@app.route("/sound_note/<midi_note>")
-async def sound_note( request, response, midi_note ):
-    organtuner.queue_tuning( ("note_on",  int(midi_note) )) 
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+@app.route("/sound_note/<int:midi_note>")
+async def sound_note( request, midi_note ):
+    organtuner.queue_tuning( ("note_on",  midi_note )) 
+    return simple_response( "ok" )
 
-@app.route("/sound_repetition/<midi_note>")
-async def sound_repetition( request, response, midi_note ):
-    organtuner.queue_tuning( ("note_repeat", int(midi_note) ) ) 
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+@app.route("/sound_repetition/<int:midi_note>")
+async def sound_repetition( request, midi_note ):
+    organtuner.queue_tuning( ("note_repeat", midi_note ) ) 
+    return simple_response( "ok" )
 
 
 @app.route("/scale_test")
-async def scale_test( request, response ):
+async def scale_test( request ):
     organtuner.queue_tuning( ("scale_test", 0 ) ) 
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+    return simple_response( "ok" )
 
 
     
 @app.route("/clear_tuning")
-async def scale_test( request, response ):
+async def scale_test( request ):
     organtuner.clear_tuning() 
-    await send_json( response, config.ORGANTUNER_JSON, cache=False )
+    return send_file( config.ORGANTUNER_JSON )
 
 
-# Keyboard mode web requests, keyboard.html page 
+@app.route("/stop_tuning")
+async def scale_test( request ):
+    organtuner.stop_tuning() 
+    return simple_response( "ok" )
+
+# keyboard.html page 
 @app.route("/keyboard_status" )
-async def keyboard_status( request, response ):
-    # await response.start_html()
-    s = json.dumps( soleble.get_status() )
-    _logger.debug(f"/keyboard_status={s}" ) 
-    await response.send( s )
+async def keyboard_status( request ):
+    return soleble.get_status()
 
 
 # Battery information web request, common to most pages, called from common.js  
 @app.route("/battery")
-async def get_battery_status( request, response ):
+async def get_battery_status( request ):
     # When playing music, /battery is good indicator of activity
     register_activity( request )
-    await response.send( json.dumps( battery.get_info() ) )
+    return battery.get_info()
 
 # Index.html page web requests
-
-@app.route("/get_mode")
-async def get_mode( request, response ):
-    await response.send( json.dumps( { "mode" : modes.get_mode() } ) )
-
-@app.route("/change_mode/<newmode>")
-async def change_mode( request, response, newmode ):
-    modes.change_mode( newmode )
-    set_mode( )
-    await response.send( "{}" )   
-  
-@app.route("/valid_modes")
-async def valid_modes( request, response ):
-    await response.send( json.dumps( config.cfg["modes"] ) )
  
 @app.route("/battery_zero")
-async def battery_zero( request, response ):
+async def battery_zero( request ):
     battery.set_to_zero()
-    await response.send( json.dumps( battery.get_info() ) )
+    return battery.get_info()
 
 
 @app.route("/errorlog")
-async def show_log( request, response ):
+async def show_log( request ):
+    def log_generator( ):
     # Format log as HTML, only last log is shown.
-    await response.start_html()
-    await response.send( "<head></head><body><table>" )
-    with open( _logger.get_filename() ) as file:
-        while True:
-            s = file.readline()
-            if s == "":
-                break
-            if s[0:1] == " ":
-                # This happens for exception traceback, put traceback info in column 3
-                await response.send( "<tr><td></td><td></td><td></td><td>" + s + "</td></tr>" )
-            else:
-                await response.send( "<tr>" )
-                for p in s.split(" - "):
-                    await response.send( "<td>" + p + "</td>" )
-                await response.send( "</tr>" )
-    await response.send( '</table><br id="last"></body>' )
-    await response.send( "<script>" )
-    await response.send( 'document.getElementById("last").scrollIntoView(false);' )
-    await response.send( "</script>" )
+        with open( _logger.get_current_log_filename() ) as file:
+            yield "<!DOCTYPE html><head></head><body><title>Error log</title><body><table>"
+            while True:
+                s = file.readline()
+                if s == "":
+                    break
+                if s[0:1] == " ":
+                    # This happens for exception traceback, put traceback info in column 3
+                    yield "<tr><td></td><td></td><td></td><td>" + s + "</td></tr>" 
+                else:
+                    yield "<tr>" 
+                    for p in s.split(" - "):
+                        yield "<td>" + p + "</td>" 
+                    yield "</tr>" 
+        yield '</table></body>' 
+        
+    return log_generator(), 200, { "Content-Type": "text/html; charset=UTF-8" }
 
 # diag.html web requests 	
 @app.route("/diag")
-async def diag( request, response ):
-
-    # With ESP32S3 8 MB SPIRAM getting memory info takes 410 millisec
-    # Collect=110ms, mem_free=150ms, mem_alloc=150ms
-    async with scheduler.RequestSlice("webserver gc.collect", 150, 1000 ):
-        gc.collect() # This is rather slow with 8MB
-    async with scheduler.RequestSlice("webserver gc.mem_free", 200, 1000 ):
-        free_ram = gc.mem_free() # This is rather slow with 8MB
-    async with scheduler.RequestSlice("webserver gc.mem_alloc", 200, 1000 ):
-        used_ram = gc.mem_alloc() # This is rather slow with 8MB
-
-    async with scheduler.RequestSlice("webserver os.statvfs", 500, 1000 ):
-        vfs = os.statvfs("/")
-    block_size = vfs[0]
-    
+async def diag( request ):
+    # Collect=110ms, mem_free=150ms, mem_alloc=150ms 
     try:
-        midi_files = tunelist.get_tune_count()
+        async with scheduler.RequestSlice("webserver diag", 5000, 10_000 ):
+            gc.collect() 
+            t0 = time.ticks_ms()
+            gc.collect() # measure optimal gc.collect() time
+            t1 = time.ticks_ms()
+            gc_collect_time = time.ticks_diff( t1, t0 )
+
+            free_ram = gc.mem_free() # This is rather slow with 8MB
+            used_ram = gc.mem_alloc() # This is rather slow with 8MB
+            # statvfs takes 1.5 sec
+            vfs = os.statvfs("/")      
+            
+    except:
+        gc_collect_time = "?"
+        free_ram = "?"
+        used_ram = "?"
+        vfs = (0,0,0,0,0,0)
+            
+    try:
+        midi_files = tunemanager.get_tune_count()
     except:
         midi_files = ""
     
-    tzoffset = config.get_float("time_zone_offset", 0)
-    if tzoffset  <= 24:
-        now = time.localtime( time.time() + int(tzoffset*3600))
-    else:
-        now = ttz.now()
-
+    now = timezone.now_ymdhmsz()
+    
     reboot_mins = time.ticks_diff( time.ticks_ms(), config.boot_ticks_ms )/ 1000 /60
     d = {
         "description": config.cfg["description"],
         "name": config.cfg["name"],
-        "microcontroller": config.architecture,
         "mp_version": os.uname().version,
         "mp_bin": sys.implementation._machine,
-        "last_refresh": f"{now[0]}/{now[1]}/{now[2]} {now[3]:02d}:{now[4]:02d}:{now[5]:02d}",
+        "last_refresh": now,
         "reboot_mins" : reboot_mins,
         "free_flash" : vfs[0]*vfs[3],
         "used_flash" : vfs[0]*(vfs[2]-vfs[3]),
         "free_ram": free_ram,
         "used_ram": used_ram,
+        "gc_collect_time": gc_collect_time,
         "solenoid_devices": solenoid.get_status(),
-        "operating_mode" : modes.get_mode(),
         "midi_files" : midi_files,
         "music_folder": config.MUSIC_FOLDER,
-        "logfilename": _logger.get_filename(),
-        "errors_since_reboot": _logger.get_error_count()
+        "logfilename": _logger.get_current_log_filename(),
+        "errors_since_reboot": _logger.get_error_count(),
+		"compile_date": compiledate,
         }
-    await response.send( json.dumps( d ) ) 
+    return d
 
 
 @app.route("/wifi_scan")
-async def wifi_scan( request, response ):
-    await response.send( json.dumps( wifimanager.sta_if_scan() ) )
+async def wifi_scan( request ):
+    return wifimanager.sta_if_scan() 
 
 @app.route("/get_wifi_status")
-async def get_wifi_status( request, response ):
+async def get_wifi_status( request ):
     register_activity( request )
     c = wifimanager.get_status()
     now = time.ticks_ms()
     c["client_IPs"] = "".join([ ip+" " for ip in client_activity 
                         if time.ticks_diff( now, client_activity[ip] )< 10_000 ])
-    await response.send( json.dumps( c ) )
-
+    return c 
 
 # Play page web requests
-@app.route("/set_velocity/<vel>")
-async def set_velocity( request, response, vel ):
-    _logger.debug(f"/set_velocity {vel}")
-    tachometer.set_velocity( int(vel) )
-    await get_progress( request, response )
+@app.route("/set_velocity/<int:vel>")
+async def set_velocity( request, vel ):
+    tachometer.set_velocity( vel )
+    return get_progress( request )
 
-@app.route("/top_setlist/<pos>")    
-async def down_setlist( request,response, pos ):
-    setlist.top(int(pos) )
-    await get_progress( request, response )
+@app.route("/top_setlist/<int:pos>")    
+async def down_setlist( request, pos ):
+    setlist.top( pos )
+    return get_progress( request )
 
-@app.route("/drop_setlist/<pos>")    
-async def drop_setlist( request,response, pos ):
-    setlist.drop(int(pos) )
-    await get_progress( request, response )
+@app.route("/drop_setlist/<int:pos>")    
+async def drop_setlist( request, pos ):
+    setlist.drop( pos )
+    return get_progress( request )
 
 # Configuration change
-@app.route("/verify_password", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def verify_password( request, response ):
-    data = await request.read_parse_form_data()
-    if modes.change_mode( "config", data["password"] ):
-        resp = "ok" 
-    else:
-        resp = "Incorrect password"
-    await simple_response( resp, response )
 
 @app.route("/get_config")
-async def get_config( request, response ):
-    await response.send( json.dumps( config.get_config() ) )
+async def get_config( request ):
+    return config.get_config()
 
-
-@app.route("/save_config", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def change_config( request, response ):
-    data = await request.read_parse_form_data()
-    resp = config.save( data )
-    await simple_response( resp, response )
+@app.post("/save_config")
+async def change_config( request ):
+    if (response := check_authorization( request ) ):
+        return response
+    
+    resp = config.save( request.json )
+    return simple_response( resp )
  	
-@app.route("/start_ftp", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def start_ftp( request, response ):
-    data = await request.read_parse_form_data()
+@app.route("/start_ftp" )
+async def start_ftp( request):
+    if (response := check_authorization( request ) ):
+        return response
 
-    if config.verify_password( data["password"] ):
-        resp = "ok"
-        # Run FTP in a separate thread
-        import _thread
-        def uftpd_in_a_thread():
-            import uftpd
-            _logger.info( "uftp started" )
-        _thread.start_new_thread( uftpd_in_a_thread, () )
-       
-    else:
-        resp = "Incorrect password"
-    await simple_response( resp, response )
+    # Run FTP in a separate thread
+    import _thread
+    def uftpd_in_a_thread():
+        import uftpd
+        _logger.info( "uftp started" )
+    _thread.start_new_thread( uftpd_in_a_thread, () )
+    
+    return simple_response( "ok" )
     
 # Pinout functions
 @app.route("/pinout_list" )
-async def pinout_list( request, response ):
-    _logger.debug("enter pinout_list")
-    await response.send( json.dumps( pinout.pinout_list()) )
+async def pinout_list( request ): 
+    return pinout.plist.get_filenames_descriptions()
 
 @app.route("/pinout_detail")
-async def pinout_detail( request, response ):
-    filename = pinout.get_pinout_filename()
-    await send_json( response, config.DATA_FOLDER + "/" + filename, cache=False )
+async def pinout_detail( request):
+    filename = pinout.plist.get_current_pinout_filename()
+    return send_file( filename )
 
 @app.route("/get_pinout_filename")
-async def get_pinout_filename( request, response ):
-    resp = { "pinout_filename": pinout.get_pinout_filename()}
-    await response.send( json.dumps( resp ))
+async def get_pinout_filename( request):
+    resp = { "pinout_filename": pinout.plist.get_current_pinout_filename(),
+           "pinout_description": pinout.plist.get_description(), }
+    return resp 
+  
     
-@app.route("/save_pinout_filename", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def save_pinout_filename( request, response ):
-    data = await request.read_parse_form_data()
+@app.post("/save_pinout_filename" )
+async def save_pinout_filename( request):
+    if (response := check_authorization( request ) ):
+        return response
+    data = request.json
     
-    pinout.set_pinout_filename( data["pinout_filename"] )
-    await simple_response( "ok", response )
+    pinout.plist.set_current_pinout_filename( data["pinout_filename"] )
+    solenoid.init_pinout()
+    organtuner.clear_tuning()
+    
+    # Organtuner be aware: organtuner.json may no longer
+    # be valid
+    organtuner.pinout_changed()
+    return simple_response( "ok" )
 
-@app.route("/save_pinout_detail", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"],
-           max_body_size=4096,)
-async def save_pinout_detail( request, response ):
-    _logger.debug("/save_pinout_detail entered")
-    data = await request.read_parse_form_data()
-    _logger.debug(f"save_pinout_detail received {len(data)=} elements")
-    pinout.save( data )
-    _logger.debug(f"save_pinout_detail pinoupt.save complete")
-    await simple_response( "ok", response )
-    
-    
-@app.route("/test_mcp", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def test_mcp( request, response ):
-    data = await request.read_parse_form_data()
-    await pinout.web_test_mcp( int(data["sda"]), int(data["scl"]), int(data["mcpaddr"]), int(data["pin"]))
-    await simple_response( "ok", response )
+@app.post("/save_pinout_detail")
+async def save_pinout_detail( request):
+    if (response := check_authorization( request ) ):
+        return response
+    try: 
+        pinout.SaveNewPinout( request.json )
+        solenoid.init_pinout()
+        organtuner.clear_tuning()
+        _logger.debug(f"save_pinout_detail pinoupt.save complete")
+        return simple_response( "ok" )
+    except RuntimeError as e:
+        _logger.debug(f"save_pinout_detail exception {e}")
+        return simple_response( f"pinout not saved: {e}" )
 
-@app.route("/test_gpio", methods=["GET", "POST"],
-           save_headers=["Content-Length","Content-Type"])
-async def test_gpio( request, response ):
-    data = await request.read_parse_form_data()
-    await pinout.web_test_gpio( int(data["pin"]))
-    await simple_response( "ok", response )
+    
+@app.post("/test_mcp")
+async def test_mcp( request):
+    data = request.json
+    await pinout.test.web_test_mcp( int(data["sda"]), int(data["scl"]), int(data["mcpaddr"]), int(data["pin"]))
+    return simple_response( "ok" )
+
+@app.route("/test_gpio")
+async def test_gpio( request):
+    data = request.json
+    await pinout.test.web_test_gpio( int(data["pin"]))
+    return simple_response( "ok" )
                       
 
 # Generic requests requests: some browsers request favicon
 @app.route("/favicon.ico")    
-async def serve_favicon( request,response ):
-    await static_files( request, response, "favicon.ico" )
+async def serve_favicon( request ):
+    return send_file( STATIC_FOLDER + "favicon.ico", max_age=MAX_AGE )
 
 @app.route("/favicon.png")
-async def static_favicon( request, response ):
-    await static_files( request, response, "favicon.png" )
- 
+async def static_favicon( request):
+    return send_file( STATIC_FOLDER + "favicon.png", max_age=MAX_AGE )
 
-@app.catchall()
-async def catchall_handler( request, response ):
-    _logger.error(f"catchall_handler unknown request= {request.path.decode()}")
-    #raise tinyweb.HTTPException(404)
-    await response.redirect( "/" )
+    
+@app.route("/revoke_credentials")
+async def revoke_credentials( request ):
+    return {}, 401  
+ 
+# Tunelib editor
+@app.route("/start_tunelib_sync")
+async def start_tunelib_sync( request ):
+    
+    tunemanager.start_sync()
+    return simple_response("ok" )
+
+# Tunelib editor
+@app.route("/tunelib_sync_progress")
+async def tunelib_sync_progress( request ):
+    progress = tunemanager.sync_progress()
+    return simple_response("ok", k="progress", v=progress )
+# 
+# Tunelib editor
+@app.post("/save_tunelib" )
+async def save_tunelib( request ):
+    if (response := check_authorization( request ) ):
+        return response
+
+    tunemanager.save( request.json )
+    return simple_response("ok" )
+
+@app.route("/get_history")
+async def get_history( request ):
+    return tunemanager.get_history()
+    
+    
+# NO CATCHALL HANDLER FOR NOW
+
+@app.errorhandler(RuntimeError)
+def runtime_error(request, exception):
+    return simple_response( "RuntimeError exception detected")
 
 
 async def run_webserver(  ):
-    global _logger, USE_CACHE, FILE_BUF_SIZE, MAX_AGE
+    global _logger, USE_CACHE, MAX_AGE
     global STATIC_FOLDER, DATA_FOLDER
     
     _logger = getLogger(__name__)
-    
+      
     DATA_FOLDER = "data/"
     if _file_exists("software/static/"):
         STATIC_FOLDER = "software/static/"
@@ -563,16 +614,9 @@ async def run_webserver(  ):
     else:
         MAX_AGE = config.get_int("max_age", 24*60*60)
 
-        
-    # Configure chunk size to send files
-    if config.large_memory:
-        FILE_BUF_SIZE = 4096
-    else:
-        FILE_BUF_SIZE = 128
-        
     _logger.info(
-        f"{USE_CACHE=} {MAX_AGE=:,} sec, send_file {FILE_BUF_SIZE=} bytes")
-    await app.run( host='0.0.0.0', port=80 )
+        f"{USE_CACHE=} {MAX_AGE=:,} sec")
+    await app.start_server( host='0.0.0.0', port=80, debug=False )
 
 async def shutdown():
     await app.shutdown()
