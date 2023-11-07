@@ -35,7 +35,7 @@ This is the complete software for automating a MIDI and solenoid valve based cra
 
 Please see the doc-software folder, click the file README.md for a detailed description of the software, with screen images.
 
-See the doc-hardware folder, click the file README.md for schematics of the hardware and instructions on how to build the hardware.
+See the doc-hardware folder, click the file README.md for schematics of the hardware and detailed instructions on how to build the hardware.
 
 This is work in progress. Please post an issue for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 

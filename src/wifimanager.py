@@ -47,7 +47,6 @@ class WiFiManager:
         # Configure hostname before setting .active(True)
         # Works for both AP and STA_IF mode
         network.hostname( config.cfg["name"] )
-        self.logger.debug(f"Hostname {network.hostname()}")
         self.sta_if_cancel_event = asyncio.Event()
 
     async def async_init( self ):
@@ -100,7 +99,7 @@ class WiFiManager:
                     # Will fail if not configured, but AP should start anyhow.
                     self.sta_if_ssid = config.cfg["access_point" + ap]
                     password = password_manager.get_password( "password" + ap )
-                    self.logger.debug(f"_start_station_interface for {self.sta_if_ssid=}" )
+                    self.logger.debug(f"_start_station_interface for ssid={self.sta_if_ssid=}" )
                     await self._station_connect_to_ap( self.sta_if_ssid, password )
                     if self.sta_if.isconnected():
                         led.connected()

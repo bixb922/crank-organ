@@ -110,7 +110,7 @@ class Config:
 
         self.wifi_mac = ubinascii.hexlify( network.WLAN(network.STA_IF).config("mac")).decode()
 
-        _logger.info(f"Config {self.cfg['description']} {self.wifi_mac=} hostname=AP-ssid=BLE={self.cfg['name']}")
+        _logger.info(f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}")
 
         
     def get_config( self ):

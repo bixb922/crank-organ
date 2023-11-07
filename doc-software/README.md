@@ -20,6 +20,12 @@ The purpose of this software is to power a microcontroller (see schematic in thi
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
+# If you want to try out the software
+To see this software in operation, you need a ESP32-S3 development board (such as a DEVKIT-C board) with at least 1 MB of RAM. You can install the software as documented here, and then connect with a browser and navigate and use all functions. 
+
+The only thing you won't be able is to hear music...
+
+
 # Main menu and navigation
 The home page has the main menu and shows detailed battery use information.
 
@@ -244,14 +250,14 @@ Columns:
 * Date added, registered automatically
 * File name
 * Size: file size in bytes
-+ Clean row: click here to clear all fields of this row on save. This does not delete the file.
++ Clean row: mark here to clear all fields of this row on save. This is used to get rid of the information about a deleted file.
 
 
 
 # System information
-The home page, the WiFi page and the Show log page show diagnostic and technical information about what's going on in the microcontroller.
+The home page, the System Information and the Show log page show diagnostic and technical information about what's going on in the microcontroller.
 
-These pages are mostly to aid diagnosis of possible problems.
+These pages are mostly to aid diagnosis of possible problems, to see WiFi status and operating status. Free and used flash memory space is reported.
 
 ## Event log
 
@@ -307,27 +313,28 @@ What you put into the fields is up to you. The tunelist page allows to search an
 
 # Installation and configuration
 ## Prerequisite hardware and software
-This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Mb flash, 8 Mb RAM. N16R8 means 16 Mb flash, 8 Mb RAM. The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or equivalents. There are many vendors offering these boards.
 
-For a 20 pipe organ, see the hardware section for a schematic. It's best to connect a touchpad, which really is any metal knob such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology.
+This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Mb flash, 8 Mb RAM. N16R8 means 16 Mb flash, 8 Mb RAM. The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards. 
 
-Optionally a crank sensor and microphone can be installed. Crank sensor is still being developed.
+For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schematic. It's best to connect a touchpad, which really is any metal knob or disc such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology.
 
-If more than 20 pipes/solenoids are needed, see hardware section of this repository.
+Optionally a crank sensor and microphone can be installed. Crank sensor is still being developed. Post an issue for an update about the crank sensor.
+
+If more than 20 pipes/solenoids are needed, see hardware section of this repository. This will need a MCP23017 port expander.
 
 Use Chrome or Firefox on a cell phone, PC, MAC or tablet to control the microcontroller. Safari is not supported.
 
 ## Prerequisites installing and configuring the software
 
-Installation is easiest done with command line commandss, i.e. cmd on windows, terminal on Mac. You should be familiar with commands such as dir or ls and cd. 
+Installation is easiest done with command line commands, i.e. using cmd on windows or Terminal on Mac. You should be familiar with commands such as dir or ls and cd. 
 
 No programming required. Configuration is done via web pages and forms with a browser.
 
 Install Python from python.org. You don't need to program with python, but the programs to manage the microcontroller need the Python runtime.
 
-Python includes the pip "pip installs Python" utility. Install esptool and mpremote using: ```pip install esptool```and ```pip install mpremote```
+Python includes the pip "pip installs Python libraries" utility. Install esptool and mpremote using: ```pip install esptool```and ```pip install mpremote```
 
-Install the git utility, to access github.com easily.
+Install the git utility, to access github.com easily, to clone this repository to your PC.
 
 
 # Installation
@@ -335,15 +342,22 @@ Install MicroPython on the ESP32-S3, please see micropython.org. You will have t
 
 You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html
 
-Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to your hard drive of the PC.
+Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to the hard drive of your PC. 
 
-Go to the install folder and run ```mpremote run install_software.py``` and then ```mpremote run install_data.py```
+Go to the install folder and execute the commands: ```
 
-Now enter ```mpremote ls``` and the output should be similar to:
+```
+mpremote run install_software.py
+mpremote run install_data.py
+```
+
+During the installation, a list of all files installed on the microcontroller will be displayed.
+
+Enter ```mpremote ls``` and the output should be similar to:
 ```
 ls :
            0 data/
-         520 main.py
+         516 main.py
            0 software/
            0 tunelib/
 ```
@@ -355,42 +369,34 @@ mpremote exec "import main"
 ```
 You should see a startup log similar to this, with no error or exception messages:
 ```
-MPY: soft reboot
 Go!
-frozen_root.extract / is up to date.
-frozen_software.extract /software is up to date.
-frozen_tunelib.extract /tunelib not empty, no action.
-2023/08/21 11:44:35 - minilog - INFO - === RESTART ===
-2023/08/21 11:44:36 - config - INFO - No SD card detected at /sd
-2023/08/21 11:44:36 - config - INFO - Config YD-ESP32-S3 N8R8 architecture=ESP32S3 wifi_mac=7cdfa1e8c240 hostname=AP-ssid=BLE=esp32s3
-2023/08/21 11:44:36 - wifimanager - DEBUG - _init start
-2023/08/21 11:44:36 - wifimanager - DEBUG - WiFi hostname esp32s3
-2023/08/21 11:44:37 - wifimanager - DEBUG - AP mode started ssid esp32s3 config ('192.168.144.1', '255.255.255.0', '192.168.144.1', '192.168.144.1')
-2023/08/21 11:44:37 - wifimanager - DEBUG - _start_station_interface for _sta_if_ap=my_home_router
-2023/08/21 11:44:37 - wifimanager - DEBUG - init ok
-2023/08/21 11:44:38 - solenoid - DEBUG - setup softi2c mcp_def.rank=mcp_melody
-2023/08/21 11:44:38 - solenoid - DEBUG - init ok _device_info={'mcp_melody.pins': 16, 'mcp_melody.mcp23017': 'test', 'gpio_melody.pins': 2}
-2023/08/21 11:44:38 - modes - DEBUG - init start
-2023/08/21 11:44:39 - battery - DEBUG - init ok
-2023/08/21 11:44:40 - tunelist - DEBUG - init ok 52 tunes
-2023/08/21 11:44:40 - tachometer - DEBUG - init ok
-2023/08/21 11:44:41 - player - DEBUG - init ok
-2023/08/21 11:44:41 - setlist - DEBUG - init ok
-2023/08/21 11:44:41 - modes - DEBUG - Mode changed to play
-2023/08/21 11:44:41 - modes - DEBUG - init ok
-2023/08/21 11:44:41 - setlist - DEBUG - Setlist loaded _current_setlist=[]
-2023/08/21 11:44:41 - startup - DEBUG - Starting asyncio loop
-2023/08/21 11:44:41 - webserver - INFO - USE_CACHE=True MAX_AGE=86,400 sec, send_file FILE_BUF_SIZE=4096 bytes
-2023/08/21 11:44:43 - startup - INFO - uftp started
-2023/08/21 11:44:52 - wifimanager - INFO - Status'(my_home_router 1001)', could not connect to my_home_router
-2023/08/21 11:44:53 - wifimanager - DEBUG - _start_station_interface for _sta_if_ap=my_cell_phone
-2023/08/21 11:44:53 - setlist - INFO - Automatic play, shuffle all tunes 51
-2023/08/21 11:44:56 - setlist - INFO - play tune will start tune=jf8E0LIr
-2023/08/21 11:44:56 - player - INFO - Starting tune jf8E0LIr tunelib/boccher_gw.mid
-2023/08/21 11:44:57 - wifimanager - INFO - Connected to my_cell_phone network config ('192.168.43.73', '255.255.255.0', '192.168.43.1', '192.168.43.1') hostname esp32s3
-2023/08/21 11:44:57 - tinyweb - DEBUG - /battery 201 msec
-2023/08/21 11:44:59 - tinyweb - DEBUG - /battery 182 msec
-etc etc etc
+2023-11-07 17:10:19-03 - minilog - INFO - === RESTART ===
+2023-11-07 17:10:20-03 - config - INFO - Config ESP32-S3 N16R8/grande wifi_mac=f412fae72980 hostname and AP SSID=s3n16
+2023-11-07 17:10:22-03 - wifimanager - DEBUG - _init start
+2023-11-07 17:10:22-03 - wifimanager - DEBUG - AP mode started ssid s3n16 config ('192.168.144.1', '255.255.255.0', '192.168.144.1', '192.168.144.1')
+2023-11-07 17:10:22-03 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=magus-2.4G
+2023-11-07 17:10:22-03 - wifimanager - DEBUG - init ok
+2023-11-07 17:10:23-03 - tachometer - DEBUG - init ok
+2023-11-07 17:10:23-03 - solenoid - DEBUG - start _init solenoid
+2023-11-07 17:10:23-03 - solenoid - ERROR - No I2C connected sda=11 scl=12
+2023-11-07 17:10:23-03 - solenoid - ERROR - No I2C connected sda=15 scl=16
+2023-11-07 17:10:23-03 - solenoid - DEBUG - init complete self.solenoid_def.device_info={'i2c1': 'not connected', 'i2c0': 'not connected', 'i2c1.mcp.0': 'test', 'i2c0.mcp.0': 'test'}
+2023-11-07 17:10:24-03 - tunemanager - DEBUG - init ok 160 tunes
+2023-11-07 17:10:24-03 - battery - DEBUG - init ok
+2023-11-07 17:10:25-03 - organtuner - INFO - Microphone ADC configured
+2023-11-07 17:10:26-03 - organtuner - INFO - Calibration done duration=0.056616 _TUNING_ITERATIONS=5 samples_per_sec=35325.7
+2023-11-07 17:10:26-03 - organtuner - INFO - Frequency from 88.31425 to 8831.426
+2023-11-07 17:10:26-03 - organtuner - DEBUG - init ok
+2023-11-07 17:10:26-03 - player - DEBUG - init ok
+2023-11-07 17:10:26-03 - setlist - DEBUG - init ok
+2023-11-07 17:10:27-03 - poweroff - DEBUG - init ok
+2023-11-07 17:10:27-03 - startup - DEBUG - imports done
+2023-11-07 17:10:27-03 - tunemanager - DEBUG - Tunelist history updated
+2023-11-07 17:10:27-03 - setlist - DEBUG - Setlist loaded self.current_setlist=[]
+2023-11-07 17:10:27-03 - poweroff - DEBUG - Power off monitor started
+2023-11-07 17:10:27-03 - startup - DEBUG - Starting asyncio loop
+2023-11-07 17:10:27-03 - mdwebserver - INFO - USE_CACHE=True MAX_AGE=300 sec
+2023-11-07 17:10:28-03 - solenoid - DEBUG - clap 8
 ```
 
 If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is.
