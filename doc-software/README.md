@@ -35,7 +35,7 @@ flowchart LR
     H[main menu]
     H --> |Crank organ button| T[tune list page]
     T --> |Performance button| P[Performance control page]
-    P --> | #11013; back button, top left corner | T
+    P --> | <- back button, top left corner | T
     H --> |Tuner button| NL[Note list page]
     NL --> |Click on note name/MIDI number| NN[Note page]
     H --> |History button| HI[History page]
