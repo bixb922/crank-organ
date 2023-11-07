@@ -30,7 +30,7 @@ The home page has the main menu and shows detailed battery use information.
 This diagram shows page navigation.
 The page top has a left arrow to navigate up one level.
 
-<pre class="mermaid">
+```mermaid
 flowchart LR
     H[main menu]
     H --> |Crank organ button| T[tune list page]
@@ -44,7 +44,7 @@ flowchart LR
     H --> |Click on MIDI Configuration| MC[MIDI and pin configuration page]
     H --> |System info button| W[System information page]
     W --> |Show log button| E[Event log]
-</pre>
+```
 
 It's best to navigate the application using the buttons and the back button on the top of the page. Since pages are cached for fast response, sometimes reloading pages will update/clear information.
 
