@@ -55,6 +55,9 @@ It's best to navigate the application using the buttons and the back button on t
 
 The home page is by default the menu page, but the configuration allows to define the tune list or the performance page as "home" page.
 
+While music is playing, try to stay on the tune list and the performance page. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages.
+
+
 ## The page header
 ![page header](page_header.jpg)
 

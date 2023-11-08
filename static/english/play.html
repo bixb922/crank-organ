@@ -114,8 +114,8 @@ function updateProgress( progress ) {
 		let header = ["Title", "Genre","Author", "Duration","Year", "Info" ] ;
 		// Unicode 9198 = media control skip backward
 		// Unicode 23F9 = media control "stop"
-        s = `<tr><td><b>${header[0]}</b></td>
-                <td><b>${tune[TLCOL_TITLE]}</b></td>
+        s = `<tr><td colspan="2">
+                <b>${tune[TLCOL_TITLE]}</b></td>
              </tr>
              <tr><td colspan='2'> 
                 <button onclick = 'startTune()'>Start</button>

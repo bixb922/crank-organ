@@ -137,34 +137,34 @@ class Battery():
         return self.battery_info
 
     async def _heartbeat_process( self ):
+        from solenoid import solenoid
         
         HEARTBEAT_INTERVAL = 5000
         HEARTBEAT_DURATION = 100
-        await asyncio.sleep( HEARTBEAT_INTERVAL )
         
-        from solenoid import solenoid
 
         while True:
-            while True:
-                # Leave at least one interval between playing and start
+            while self.make_heartbeat:
                 #>>> change if resistor installed
-                await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
-                if not self.make_heartbeat:
-                    break
                 # >>> debug?
                 print(".", end="")
                 solenoid.play_random_note(
                     HEARTBEAT_DURATION )
+                await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
 
 
             while not self.make_heartbeat:
                 await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
+            # Wait a bit before starting
+            await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
 
 
     def start_battery_heartbeat( self ):
+        print(">>> start battery heartbeat")
         self.make_heartbeat = True
 
     def end_battery_heartbeat( self ):
+        print(">>> end battery heartbeat")
         self.make_heartbeat = False
 
 

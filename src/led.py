@@ -1,11 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Blinks RGB (neopixel) LED. ESP32-S3 boards may have one of these.
-#>>> REDESIGN.
-#>>>blue during startup, green flash when ready.
-#>>>red when error in log.
-#
-#>>> intense white when touching touchpad
+#>>> new options:
 #>>> battery heartbeat????
 #>>> poweroff idle???
 #
