@@ -83,6 +83,8 @@ class Config:
             "battery_watt_hours": 24,
             "solenoid_watts": 1.6,
             "fixed_watts": 0.6,
+            "battery_heartbeat_duration": 0,
+            "battery_heartbeat_period": 0,
 
             "touchpad_big_change": 20000,
             "tzidentifier": "America/Santiago",
@@ -274,7 +276,7 @@ class PasswordManager:
 
     # Services to verify password (called by webserver)
     def verify_password( self, password ):
-        return password == get_password("ap_password")
+        return password == self.get_password("ap_password")
 
 password_manager = PasswordManager( )
 config = Config()

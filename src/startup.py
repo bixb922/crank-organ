@@ -53,7 +53,7 @@ import setlist # 20
 #import tinyweb # 0
 led.starting(3)
 from microdot_asyncio import Microdot
-import mdwebserver as webserver # 26
+import webserver # 26
 import poweroff # 28
 
 

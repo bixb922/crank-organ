@@ -44,7 +44,7 @@ MAX_AGE = 24*60*60 # Pages are in cache for 1 day. Will be set to 0 of no cache
 #notelist.html note.html, pinout.html: disable play mode
 #tunelibedit, diag, history, config: no change
 
-ENABLE_PLAYBACK = {
+PAGE_ENABLES_PLAYBACK = {
     "index.html": True,
     "tunelist.html": True,
     "play.html": True,
@@ -122,28 +122,27 @@ def simple_response( message, k=None, v=None ):
 def check_authorization( request ):
     if not config.cfg["password_required"]:
         return
-    ask_for_password = ({}, 401, {"WWW-Authenticate": 'Basic realm="My Realm"'})
+    name = config.cfg["name"]
+    ask_for_password = ({}, 401, {f"WWW-Authenticate": 'Basic realm="{name}"'})
     # This will prompt a "basic authentication" dialog, asking for username/password  
     # on the browser side. In case of password error, the browser will retry on its own
     # sending username/password in the Authorization header.
     # @app.route, msut have 
     # save_headers=["Content-Length","Content-Type","Authorization"])
     auth = request.headers.get("Authorization","")
-    
+    print(f">>> {auth=}")
     if not auth:
         # No authorization header present, responde with 
         _logger.debug("Web access not authorized: no username/password yet")
         return ask_for_password
 
     # Authorization header expected to be "Basic xxxxxx", xxx is base64 of username/password
-    basic, userpass = auth.decode().split(" ")
-    
+    basic, userpass = auth.split(" ")
     assert basic == "Basic", f"Basic authentication expected, got {basic}"
     # base64 information is "user:password"
-    user, password = ubinascii.a2b_base64( userpass ).decode().split(":")
+    user, password = ubinascii.a2b_base64( userpass.encode() ).decode().split(":")
     if not password_manager.verify_password( password ):
-        _logger.debug("Web access not authorized: no username/password yet")
-        _logger.info("Web access not authorized: bad password")
+        _logger.info("Web access not authorized: incorrect password")
         return ask_for_password
     # Authenticated
     return
@@ -169,18 +168,17 @@ async def static_files(request, filepath ):
     register_activity( request )
       
     # Playback mode depends on page last loaded
-    pb = ENABLE_PLAYBACK.get( filepath, None )
+    pb = PAGE_ENABLES_PLAYBACK.get( filepath, None )
     if pb is not None:
         scheduler.set_playback_mode( pb )
         
-    filename = STATIC_FOLDER + filepath
-    return send_file( filename, 
+    return send_file( STATIC_FOLDER + filepath, 
                             max_age=MAX_AGE ) 
  
 @app.route("/data/<filepath>")
 async def send_data_file( request, filepath ):
     if "config" in filepath:
-        # Config.json and backups not visible this way.
+        # Config.json and it's backups not visible this way.
         return {}, 404
         
     register_activity( request )
@@ -205,7 +203,6 @@ async def wait_get_progress( request ):
         p = get_progress( request )
         if p["status"] != "cancelled":
             break
-    print("wait_get_progress",p["status"], p["tune"] )
     return p  
     
 @app.route("/get_progress" )

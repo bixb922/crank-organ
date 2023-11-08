@@ -181,7 +181,7 @@ These controls regulate playback speed. This is mainly for future use with the c
 # Operation on power on
 It takes about 10 or 12 seconds from power on until the system is ready. Some valves will move when ready, normally that sound can be heard.
 
-If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green on start. It will flash white several times when WiFi has connected. It will flash green several times when ready to play music. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.  The led will flash white when touching and releasing the touchpad. 
+If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green on start. It will flash white several times when WiFi has connected. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.  The led will flash white when touching and releasing the touchpad. 
 
 The software will automatically load the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
@@ -397,7 +397,7 @@ Go!
 2023-11-07 17:10:27-03 - setlist - DEBUG - Setlist loaded self.current_setlist=[]
 2023-11-07 17:10:27-03 - poweroff - DEBUG - Power off monitor started
 2023-11-07 17:10:27-03 - startup - DEBUG - Starting asyncio loop
-2023-11-07 17:10:27-03 - mdwebserver - INFO - USE_CACHE=True MAX_AGE=300 sec
+2023-11-07 17:10:27-03 - webserver - INFO - USE_CACHE=True MAX_AGE=300 sec
 2023-11-07 17:10:28-03 - solenoid - DEBUG - clap 8
 ```
 

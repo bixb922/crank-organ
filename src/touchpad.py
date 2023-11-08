@@ -49,6 +49,8 @@ class TouchButton:
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms( MSEC_SETTLE )
                 tpval = self.tp.read()
+            elif tpval-tpval_ant > self.big_change:
+                led.touch_start()
 
             tpval_ant = tpval
 

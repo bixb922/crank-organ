@@ -68,9 +68,9 @@ class BlinkingLed:
         # Shades of green
         if 0 <= phase <= 3:
             self.on( 
-                ( (0,0,INTENSITY), 
-                  (0,INTENSITY//2,INTENSITY//2), 
-                  (0,INTENSITY,INTENSITY//2),
+                ( (0,0,INTENSITY//2), 
+                  (0,0,INTENSITY//2), 
+                  (0,INTENSITY//2,INTENSITY//2),
                  (0,INTENSITY,0), )[phase] )
 
     async def touch_flash( self ):
@@ -78,7 +78,10 @@ class BlinkingLed:
         await asyncio.sleep_ms(30)
         self.off()
         
-    async def blink_ready( self, color, times ):
+    def touch_start( self ):
+        self.on( (4,4,4) )
+        
+    async def blink_few( self, color, times ):
         for _ in range(times):
             self.on ( color )
             await asyncio.sleep_ms( 100 )
@@ -86,8 +89,10 @@ class BlinkingLed:
             await asyncio.sleep_ms( 100 )
 
     def connected( self ):
-          asyncio.create_task(
-              self.blink_ready( (INTENSITY,INTENSITY,INTENSITY), 5) )
+        # Create a background task to avoid
+        # delaying caller
+        asyncio.create_task(
+              self.blink_few( (INTENSITY,INTENSITY,INTENSITY), 5) )
             
     def problem( self ):
         # Blink red

@@ -37,7 +37,7 @@ _UPDATE_EVERY_SECONDS = const(60) # update readings every 60 seconds
 _BATTERY_LOW_PERCENT = 90 # Percent
 
 class Battery():
-    def __init__( self, battery_json_filename, solenoid_watts, fixed_watts, battery_watt_hours ):
+    def __init__( self, battery_json_filename, solenoid_watts, fixed_watts, battery_watt_hours, heartbeat_period, heartbeat_duration ):
         self.battery_json_filename = battery_json_filename
         self.solenoid_watts = solenoid_watts
         self.fixed_watts = fixed_watts
@@ -64,12 +64,15 @@ class Battery():
                 
         # refresh battery capacity every reboot
         self.battery_info["capacity"] = self.battery_watt_hours
+        
         self.battery_task = asyncio.create_task( self._battery_process() )
 
         # Start with heartbeat
-        self.make_heartbeat = True
-        self.heartbeat_task = asyncio.create_task(
-                self._heartbeat_process() )
+        
+        if heartbeat_period != 0 and heartbeat_duration != 0:
+            self.make_heartbeat = True
+            self.heartbeat_task = asyncio.create_task(
+            self._heartbeat_process( heartbeat_period,  heartbeat_duration ) )
 
         self._write_battery_info()
         self.logger.debug("init ok")
@@ -120,9 +123,10 @@ class Battery():
                 pass
 
     def _write_battery_info( self ):
-        fileops.write_json( self.battery_info,
-                           self.battery_json_filename, 
-                           keep_backup=False )
+        fileops.write_json( 
+                self.battery_info,
+                self.battery_json_filename, 
+                keep_backup=False )
 
     def set_to_zero( self ):
         self.logger.info(f"{self.battery_info}, now setting to zero")
@@ -136,40 +140,34 @@ class Battery():
     def get_info( self ):
         return self.battery_info
 
-    async def _heartbeat_process( self ):
+    async def _heartbeat_process( self, heartbeat_period,  heartbeat_duration ):
+        await asyncio.sleep_ms( heartbeat_period )
         from solenoid import solenoid
-        
-        HEARTBEAT_INTERVAL = 5000
-        HEARTBEAT_DURATION = 100
-        
-
+  
         while True:
             while self.make_heartbeat:
-                #>>> change if resistor installed
-                # >>> debug?
                 print(".", end="")
                 solenoid.play_random_note(
-                    HEARTBEAT_DURATION )
-                await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
-
-
+                    heartbeat_duration )
+                await asyncio.sleep_ms( heartbeat_period )
+                
             while not self.make_heartbeat:
-                await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
+                await asyncio.sleep_ms( heartbeat_period )
             # Wait a bit before starting
-            await asyncio.sleep_ms( HEARTBEAT_INTERVAL )
+            await asyncio.sleep_ms( heartbeat_period )
 
 
     def start_battery_heartbeat( self ):
-        print(">>> start battery heartbeat")
         self.make_heartbeat = True
 
     def end_battery_heartbeat( self ):
-        print(">>> end battery heartbeat")
         self.make_heartbeat = False
 
 
 battery = Battery(config.BATTERY_JSON, 
                  config.get_float("solenoid_watts", 1.6 ),
                  config.get_float("fixed_watts", 0.6 ),
-                 config.get_int( "battery_watt_hours", 50 )
+                 config.get_int( "battery_watt_hours", 50 ),
+                  config.get_int( "battery_heartbeat_period", 0 )   ,
+                  config.get_int( "battery_heartbeat_duration", 0 )
                  )

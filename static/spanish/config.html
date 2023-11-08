@@ -93,7 +93,17 @@ password</div>
 	<label for="ap_max_idle">Time the AP WiFi radio will be active  without no one connecting. After this time, if idle, the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes fail.  No decimals, integer only:</label>
 	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4"/>
 	<br>
-	<button type="button" onclick="save('battery_watt_hours','idle_deepsleep_minutes','ap_max_idle', 'solenoid_watts' )">Save power settings</button>
+    
+    <label>USB power pack heartbeat period (leave 0 if battery is not a USB power pack), in milliseconds</label>
+    <input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4"/>
+    <br>
+    
+    <label>USB power pack heartbeat duration (leave 0 if battery is not a USB power pack), in milliseconds</label>
+    <input id="battery_heartbeat_duration" name="battery_heartbeat_duration" type="text" size="4"/>
+    <br>
+    
+    
+	<button type="button" onclick="save('battery_watt_hours','idle_deepsleep_minutes','ap_max_idle', 'solenoid_watts', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
 
 <div class="middlediv">Enable FTP access</div>
