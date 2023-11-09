@@ -453,7 +453,7 @@ The configuration parameters explained in detail on the configuration page.
 A initial configuration file is supplied. This is what you should modify:
 
 * The configuration password (as noted above). The configuration password is also the password for connecting to the microcontroller in AP mode.
-* The network name and description. This name is important, it will be both the WiFi name in AP mode and also to navigate in the browser to the microcontroller, you enter this host name: either http://hostname or http://hostname.local i
+* The network name and description. This name is important, it will be both the WiFi name in AP mode and also to navigate in the browser to the microcontroller, you enter this host name: either http://hostname or http://hostname.local 
 * The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone.
 
 You should check the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. I make no claim about the security of this software, but the password will aid to prevent unauthorized or accidental changes.
@@ -465,7 +465,11 @@ If this option is checked, the a dialog like the following one will appear when 
 Leave the username blank. Enter the configuration password and press accept.
 
 
-## Pinout
+## MIDI configuration
+
+The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
+
+There are templates for the pin definition for several usual crank organ scales.
 
 ### Select scale
 
@@ -474,14 +478,23 @@ Go to "MIDI configuration" to select the scale of the organ:
 * 20 note Carl Frei scale (the default)
 * 26 note Alderman/Melvin Wright scale
 * 31 note Raffin scale
-* If you need another scale, post an issue or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus.
+* 35 note custom (a custom scale)
 
-The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
+If you need another scale, post an issue or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file.
+
 
 ### Transpose scale if necessary
-If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes. Use the transpose buttons to adjust the scale until the loweest note fits. The transpose buttons shift the complete scale up or down one semitone.
+If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowe
+
+st note fits. The transpose buttons shift the complete scale up or down one semitone.
+
+### Test solenoids
+Next to each solenoid pin definition there is a test button. If the hardware and solenoids are connected, this is a way to test if the wiring is correct.
+
+If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here.
 
 ### Redefine MIDI notes (only if necessary)
+
 This is advanced configuration, should be necessary only for custom scales, or crank organs with drums or glockenspiel, where the glockenpiel have their own program number and the drums are on the percussion channel number 10.
 
 There are three ways to define a MIDI note here:
@@ -495,11 +508,11 @@ There are three ways to define a MIDI note here:
 
 This configuration is necessary to review, depending on what sensors you install in your microcontroller hardware.
 
-On this page you also select if you will have a microphone, crank sensor, neopixel led or touchpad button installed, and which GPIO ports will be assigned to them. 
+You select if you will have a microphone, crank sensor, neopixel led or touchpad button installed, and which GPIO ports will be assigned to them. 
 
 If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. Only some pins of the ESP32 support touchpad and analog-digital conversion. 
 
-Many ESP32-S3 boards have a neopixel RGB led either on pin 38 or 48. See the vendor's description or schematic, or try with both values.
+Many ESP32-S3 boards have a "neopixel" RGB WS2812 led either on pin 38 or 48. See the vendor's description or schematic, or try with both values. 
 
 If you don't have, say, a microphone, leave the pin definition blank to tell the software to ignore the microphone.
 
@@ -592,31 +605,26 @@ Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder aft
 * Sticky table headers
 * Allow ordering of tune list
 * Time zone support. Time zone and current DST is read from worldtimeapi.org once a day.
-* Web authentication if password is required to change configuration
-* Heartbeat to keep USB battery pack alive 
+* Standard Web authentication if password is required to change configuration
 * Microcontroller enters deepsleep after a time to conserve energy
 * Keep backup of json files when changed
 * Make tune play speed changable even without crank sensor
 * RGB Led colors on startup
-* Changed web server from tinyweb to Microdot, preparing for https support.
-* Improved MIDI and pin configuration support
+* Migrated web server from tinyweb to Microdot, preparing for https support.
 * Improved blocking of MIDI playback when using tuner or pin test functions
-* Tested for interference of web server functions with MIDI music playback. Perfected a guard to minimize interference of essential functions during playback.
-* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes.
+* Tested and measured for interference of web server functions with MIDI music playback. Enhanced a guard to minimize delays of MIDI events due to essential functions during playback.
+* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes. RGB LED gives visual      feedback when using touchpad.
 * Changed fields on forms change background color until saved.
 * Tuner now locks in on signals where harmonics are much stronger than the fundamental.
 * Refactored many modules to be based on classes instead of plain modules.
-* Added better support for instruments/program change commands. This allows, for example, to support glockenspiel and drum as MIDI instruments and enables channel 10 drum support.
-* Updated documentation
-* Updated license information. The software is available under the permissive free software "MIT license". The hardware design diagrams are available under the permissive and free "Creative Commons" license.
+* Updated documentation, made diagrams work on github
 * Restructured language support. Complete software is available in english language. Web pages related to music performance are available in spanish translation.
-* Standarized parameters for battery usage to watts and watt-hours.
+* Standarized parameters for battery usage to watts and watt-hours. Record when battery is set to zero, and record playing time. USB battery pack keepalive function.
 * Initial page can now be set by configuration
-* Corrected errors in the detailed hardware documentation, schematics and images
-* Corrected errors in the software documentation, corrected some screenshots
+* Corrected errors in detailed hardware and software documentation, schematics and images 
 * Added button on the MIDI configuration page to test the solenoid when installing the wiring.
 
- 
+
 
 
 # Programming language
