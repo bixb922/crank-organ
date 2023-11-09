@@ -272,7 +272,7 @@ class OrganTuner:
             try:
                 if len( self.tuner_queue ) > 0:
                     (request, midi_note ) = self.tuner_queue.pop(0)
-                    battery.end_battery_heartbeat()
+                    battery.end_heartbeat()
 
                     # Tuner queue can contain (request, integer hash)
                     # or (request, Note )
@@ -291,7 +291,7 @@ class OrganTuner:
                     else:
                         raise RuntimeError( f"Organtuner request unknown: {request}")
                 else:
-                    battery.start_battery_heartbeat()
+                    battery.start_heartbeat()
                     
                     # Queue empty, wait to be woken up
                     await self.start_tuner_event.wait()

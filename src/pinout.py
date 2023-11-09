@@ -9,6 +9,7 @@ import machine
 import sys
 import time
 from random import randrange
+import re
 
 from mcp23017 import MCP23017
 
@@ -46,7 +47,6 @@ class PinoutParser:
         if type( source ) is list:
             pinout_data = source
         elif type( source ) is str:
-            print(">>>reading pinout json=", source, type(self) )
             pinout_data = fileops.read_json( source )
         else:
             raise RuntimeError("PinoutParser neither filename nor list received")
@@ -259,15 +259,13 @@ class PinoutList:
         # Examples: 20_note_Carl_Freil.json, 31_note_Raffin.json)
         # self.pinout_files is a dict, key=filename, value=description (initally blank, filled later)
         self.pinout_files = {}
+        pattern = re.compile("^[0-9]+_note_.+\.json$")
         for fn in os.listdir( self.pinout_folder ):
             # Pinout files must have the form <nnn>_note_<name>.json
             # where <nnn> is the number of notes of the scale and
             # <name> is the name itself, example 20_note_Carl_Frei.json
             # where 20 is the number of notes and Carl_Frei is the name.
-#>>> use re "^[0-9]+_note_.+\.json$"
-            if (fn.endswith("json") and 
-                "_note_" in fn and
-                "1" <= fn[0:1] <= "9"):
+            if re.match( pattern, fn ):
                 filename = self.pinout_folder + fn
                 # the value is the description, get that
                 # only when needed

@@ -9,6 +9,7 @@ import time
 
 from config import config
 from led import led
+from battery import battery
 
 MSEC_BETWEEN_SAMPLES = const(100)
 MSEC_SETTLE = const(50)
@@ -40,6 +41,8 @@ class TouchButton:
             await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )
             tpval = self.tp.read()
             if tpval - tpval_ant < -self.big_change:
+                # Touch end: set event to publish this
+                # Also: see if this is a "double touch"
                 await led.touch_flash()
                 if self.release_event:
                     self.release_event.set()
@@ -50,7 +53,10 @@ class TouchButton:
                 await asyncio.sleep_ms( MSEC_SETTLE )
                 tpval = self.tp.read()
             elif tpval-tpval_ant > self.big_change:
+                # Touch start: show led. Since this will
+                # lead to playing a tune, stop heartbeat.
                 led.touch_start()
+                battery.end_heartbeat()
 
             tpval_ant = tpval
 

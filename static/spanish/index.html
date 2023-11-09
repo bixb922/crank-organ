@@ -125,7 +125,11 @@
 		<tr>
 			<td>Tiempo operaci&oacute;n</td><td id="time"></td><td>[hh:mm]</td>
 		</tr>
+        <tr>
+			<td>Tiempo tocando</td><td id="time_playing"></td><td>[hh:mm]</td>
+		</tr>
 		<tr><td>Tiempo remanente</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
+        <tr><td>Puesto en cero</td><td id="date_zero"></td><td></td></tr>
     </tbody>
 </table>
 <table style="width:100%">
@@ -185,7 +189,11 @@ function updateBatteryInfo( battery ) {
 				format_secHHMM( battery["time"] )) ;
 	textById("time_remaining", 
 				format_secHHMM( battery["time_remaining"] )) ;
-	
+	textById("time_playing", 
+				format_secHHMM( battery["time_playing"] )) ;
+
+    textById("date_zero", battery["date_zero"] ) ;
+
 
 	barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
 }

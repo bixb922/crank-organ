@@ -400,7 +400,7 @@ Please use a fuse. A short circuit may cause fire and injury.
 
 It's safest to connect this way:
 
-```mmd
+```mermaid
 flowchart LR
 BH[battery holder]
 FU[fuse]

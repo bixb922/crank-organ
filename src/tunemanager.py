@@ -54,35 +54,12 @@ class TuneManager:
         except OSError as e:
             self.logger.exc(e, f"tunelib {self.music_json} could not be opened")
             self.tunelib = {  }
-
-        self.patch_tunelib( self.tunelib ) #>>>TRANSITION
         
         self.update_history_task = asyncio.create_task(
                     self._update_history_process() )
         self.tunelib_progress = "Tunelib update not started"
         self.sync_task = None
         self.logger.debug(f"init ok {len(self.tunelib)} tunes")
-
-    def patch_tunelib( self, tunelib ):
-        
-        # >>> TRANSITION ONLY
-        try:
-            del tunelib["header"]
-        except:
-            pass
-        try:
-            del tunelib["autoplay"]
-        except:
-            pass
-        for tuneid, tune in tunelib.items():
-            if len(tune[TLCOL_ID]) == 8:
-                print(">>>> tuneid was len 8 corrected")
-                tune[TLCOL_ID] = "i" + tune[TLCOL_ID]
-            assert len(tuneid) == 9
-            assert tuneid == tune[TLCOL_ID]
-            assert len(tune[TLCOL_ID]) == 9
-            assert tuneid[0:1] == "i"
-        # >>> END TRANSITION
  
     def get_filename_by_id( self, tuneid ):
         return self.music_folder + self.tunelib[tuneid][TLCOL_FILENAME]
@@ -219,7 +196,7 @@ class TuneManager:
         return hash.replace("\n", "").replace("+", "-").replace("/","_")
 
     def _make_unique_hash( self, fn, newtunelib ):
-        # Make a hash for each file without collisions
+        # Make a collision-less hash for each file
 
         for _ in range(3):
             key = "i" + self._compute_hash( fn )
@@ -229,7 +206,7 @@ class TuneManager:
                     print(f"new key {key=} {fn=} {tune=}")
                 return key, fn
             print(">>>>collision", key, fn)
-            # Collision. Probability 1/2**48
+            # Collision. Probability is near nil: 1/2**48
             # Change filename to get another hash
             newfn = fn.replace(".", "_.")
             self.logger.info(f"Hash collision, rename {fn} to {newfn}, lucky day")
@@ -240,7 +217,6 @@ class TuneManager:
         return key, fn
 
     def _write_tunelib_json( self ):
-        self.patch_tunelib( self.tunelib ) #>>>TRANSITION
         fileops.write_json( self.tunelib, self.music_json )
     
 

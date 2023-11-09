@@ -13,10 +13,11 @@ RETRIES = 10
 
 class TimeZone:
     def __init__( self ):
+        # Start with a default time zone
         self.tz = {
-            "offset_sec": -3*3600,
+            "offset_sec": 0,
             "next_refresh": "0000-00-00",
-            "abbreviation": "SCL" }
+            "abbreviation": "UTC" }
 
         self.timezone_task_active = False
         try:
@@ -35,12 +36,10 @@ class TimeZone:
         self.timezone_task_active = True
     
         self.timezone_task = asyncio.create_task( self._timezone_process() )
-        self.timezone_task_active = False
-        
-        
+        self.timezone_task_active = False        
 
     async def _timezone_process(self):
-
+        # Get ntp time, then update time zone
         await self._get_ntp_time()
         
         await self._update_time_zone()
@@ -55,6 +54,7 @@ class TimeZone:
         for _ in range(RETRIES):
             try:
                 async with scheduler.RequestSlice( "ntptime", 1000 ):
+                    # settime is not async, will block
                     ntptime.settime()
                 return
             except asyncio.TimeoutError:
@@ -172,7 +172,6 @@ class TimeZone:
     def _log_exception( self, e, message ):
         print(message, e)
         sys.print_exception(e)
-        # Can't use minilog, some thread problem here?
         
 
 timezone = TimeZone()
@@ -220,6 +219,8 @@ if __name__ == "__main__":
         await asyncio.sleep(10000)
     asyncio.run(main())
 
+# Sample json returned by worldtimeapi.org
+# dst_from, dst_until are shown only when dst is true.
 #{
 #  "abbreviation": "-03",
 #  "client_ip": "2800:300:6331:8190::2",

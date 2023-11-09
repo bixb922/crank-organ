@@ -58,7 +58,7 @@ class MIDIPlayer:
     async def play_tune( self, tuneid ):
         try:
             self.time_played_us = 0
-            battery.end_battery_heartbeat()
+            battery.end_heartbeat()
             midi_file = tunemanager.get_filename_by_id( tuneid )
             duration = tunemanager.get_duration( tuneid )         
             solenoid.all_notes_off()       
@@ -95,7 +95,8 @@ class MIDIPlayer:
                 self.logger.exc(e, "Exception adding history")
             solenoid.all_notes_off()
             scheduler.run_always()
-            battery.start_battery_heartbeat()
+            battery.start_heartbeat()
+            battery.add_msec_playing( self.time_played_us / 1_000_000 )
 
             # The channelmap contains the current program for each channel
 

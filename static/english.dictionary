@@ -19,7 +19,9 @@ status_text = "cancelado"|status_text = "cancelled"
 >Capacidad|>Capacity
 >Bater&iacute;a|>Battery
 >Tiempo operaci&oacute;n|>Time powered on
+>Tiempo tocando<|>Time playing<
 >Tiempo remanente|>Remaining time
+>Puesto en cero<|>Set to zero<
 <td>Remanente</td>|<td>Remaining</td>
 Poner contadores en cero|Set battery counters to zero
 Editar tunelib|Edit tunelib

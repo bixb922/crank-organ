@@ -405,7 +405,9 @@ If there is an entry marked ERROR or EXCEPTION, there is some problem to be solv
 
 Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser and wait for the main menu page to show.
 
-Then configure the WiFi parameters using the General Configuration button on the index page.
+Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
+
+![general_configuration](general_configuration.jpg)
 
 # WiFi capabilities
 
@@ -415,15 +417,17 @@ The microcontroller can connect to a WiFi Access Point, for example your home Wi
 
 These 3 options are available simultaneously for WiFi connection:
 
-* Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing. You setup the Access Point on your cell phone and the microcontroller will connect to it.
-```mmd
+* Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
+
+```mermaid
 flowchart LR
    S[cell phone]-->|WiFi| AP[AP on cell phone] --> I[Internet]
    
 ```
 
-* Option 2: Have the microcontroller connect to your home router. The microcontroller will try option 1 and option 2 one after the other until connected. This way of connecting is useful at home. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs.
-```mmd
+* Option 2: Have the microcontroller connect to your home router. The microcontroller will try option 1 and option 2 one after the other until connected. This way of connecting is useful at home. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs. The microcontroller is in "station mode".
+
+```mermaid
 flowchart LR
    S[cell phone]-->|WiFi| AP[home router]
    MC[microcontroller]-->|WiFi| AP --> I[Internet]
@@ -431,7 +435,7 @@ flowchart LR
 ```
 * Option 3: This is the fallback option and the option used the first time to configure the microcontroller. The microcontroller publishes a Access Point where you can connect. You connect to that Access Point just like you connect to your home router, but there is no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on, or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone one). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2.
 
-```mmd
+```mermaid
 flowchart LR
    S[cell phone]-->|WiFi| AP[Microcontroller as access point]
 ```

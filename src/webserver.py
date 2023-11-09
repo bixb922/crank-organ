@@ -30,6 +30,7 @@ from history import history
 from timezone import timezone
 from player import player
 from organtuner import organtuner
+import fileops
 
 # Testing needed
 # import soleble
@@ -130,7 +131,6 @@ def check_authorization( request ):
     # @app.route, msut have 
     # save_headers=["Content-Length","Content-Type","Authorization"])
     auth = request.headers.get("Authorization","")
-    print(f">>> {auth=}")
     if not auth:
         # No authorization header present, responde with 
         _logger.debug("Web access not authorized: no username/password yet")
@@ -171,9 +171,11 @@ async def static_files(request, filepath ):
     pb = PAGE_ENABLES_PLAYBACK.get( filepath, None )
     if pb is not None:
         scheduler.set_playback_mode( pb )
-        
-    return send_file( STATIC_FOLDER + filepath, 
-                            max_age=MAX_AGE ) 
+    filename = STATIC_FOLDER + filepath
+    if not fileops.file_exists( filename ):
+        return "", 404
+    
+    return send_file( filename, max_age=MAX_AGE ) 
  
 @app.route("/data/<filepath>")
 async def send_data_file( request, filepath ):
@@ -183,8 +185,10 @@ async def send_data_file( request, filepath ):
         
     register_activity( request )
     filename = DATA_FOLDER + filepath
-    return send_file( filename, 
-                        max_age=0 ) 
+    if not fileops.file_exists( filename ):
+        return "", 404
+    
+    return send_file( filename,  max_age=0 ) 
 
 def get_progress( request ):
     register_activity( request )
