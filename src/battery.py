@@ -8,6 +8,7 @@ import time
 from minilog import getLogger
 
 from config import config
+from led import led
 from solenoid import solenoid
 import scheduler
 import fileops
@@ -59,6 +60,7 @@ class Battery():
                 "low": False,
 				"percent_used": 0,
 				"capacity": 0,
+                "solenoids_on": 0,
                 "date_zero": "0000-00-00"
 				}
         for k,v in fallback.items(): 
@@ -85,17 +87,18 @@ class Battery():
 
             # Get time solenoids were "on", convert ms to seconds
             solenoid_time = solenoid.get_sum_msec_solenoids_on_and_zero()/1000
-            # Accumulate energy use in Watt-hours, convert time from seconds to hours
+            # Times in battery_info in seconds
+            self.battery_info["solenoids_on"] += solenoid_time
+            
+            # Get time elapsed
             now = time.ticks_ms()
             time_diff = time.ticks_diff( now, last_update )/1000
             last_update = now
-            # Times in seconds
             # Calculate use in watt-hours, same units as
             # battery capacity
             self.battery_info["use"] += ( 
                 self.fixed_watts * time_diff
                 + self.solenoid_watts * solenoid_time )/3600
-
             self.battery_info["time"] += time_diff
 
             # Estimate remaining time
@@ -137,7 +140,10 @@ class Battery():
         self.battery_info["use"] = 0
         self.battery_info["time"] = 0
         self.battery_info["time_remaining"] = 0
+        self.battery_info["time_playing"] = 0
         self.battery_info["low"] = False
+        self.battery_info["percent_used"] = 0
+        self.battery_info["solenoids_on"] = 0   
         self.battery_info["date_zero"] = timezone.now_ymdhm()
         self._write_battery_info()
 
@@ -159,8 +165,9 @@ class Battery():
         while True:
             while self.make_heartbeat:
                 print(".", end="")
-                solenoid.play_random_note(
-                    heartbeat_duration )
+                led.heartbeat_on()
+                solenoid.play_random_note( heartbeat_duration )
+                led.heartbeat_off()
                 await asyncio.sleep_ms( heartbeat_period )
                 
             while not self.make_heartbeat:

@@ -79,10 +79,10 @@ async function getProgress() {
         progress = await fetch_json ( "/get_progress" ) ;
         updateProgress( progress );
         if( progress["status"] == "playing"){
-		  await sleep_ms( 10_000 ) ;
+		  await sleep_ms( 2_000 ) ; // >>>safer would be 10_000
         }
         else{
-            await sleep_ms( 2000 ) ;
+            await sleep_ms( 2_000 ) ;
         }
 	}
 }
@@ -208,18 +208,6 @@ function updateProgress( progress ) {
 }
 
 
-async function stopTuneSetList() {
-	progress = await fetch_json("/stop_tune_setlist" ) ;
-    console.log("stop tune setlist", progress ) ;
-	updateProgress( progress ) ;
-}
-
-async function backSetList() {
-	progress = await fetch_json("/back_setlist" ) ;
-	updateProgress( progress ) ;
-}
-
-
 async function saveSetList() {
 	let resp = await fetch_json("/save_setlist" ) ;
 	if( resp["result"] == "ok" ) {
@@ -278,11 +266,38 @@ async function set_velocity( increment ) {
 	updateProgress( await fetch_json( "/set_velocity/" + newvel ) );
 }
 
+async function check_cancelled( progress ) {
+    // Skip cancelled state, it distracts visually
+    for( i = 0; i < 3; i++ ){
+        progress = await fetch_json( "/get_progress" ) ;
+        if( progress["status"] != "cancelled" ){
+            break ;
+        }
+    }
+    return progress ;
+}
+    
+// For these functions skip cancelled state since
+// it's temporary and distracting
 async function startTune() {
-    updateProgress( await fetch_json( "/start_tune" ) );
+    progress =  await fetch_json( "/start_tune" ) ;
+    updateProgress( progress );
 
 }
-       
+
+async function stopTuneSetList() {
+	progress = await fetch_json("/stop_tune_setlist" ) ;
+    progress = await check_cancelled() ;
+	updateProgress( progress ) ;
+}
+
+async function backSetList() {
+	progress = await fetch_json( "/back_setlist" ) ;
+    progress = await check_cancelled() ;
+	updateProgress( progress ) ;
+}
+
+
 function pageUp() {
 	// On index page, reload this same page
 	window.location.href = "/static/tunelist.html" ;

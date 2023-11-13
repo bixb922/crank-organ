@@ -72,7 +72,6 @@ class MIDIPlayer:
 
         except asyncio.CancelledError:
             self.logger.debug("Player cancelled")
-            solenoid.all_notes_off()
             self.progress.tune_cancelled()
 
         except OSError as e:
@@ -86,14 +85,14 @@ class MIDIPlayer:
             self.logger.exc(e,  f"play_tune+umidiparser {tuneid=}" )
             self.progress.report_exception( "exception in play_tune! " + str(e) )
         finally:
-            self.logger.debug(f"finally section reached")
+            self.logger.info(f"Tune ended {solenoid.max_polyphony=}")
+            solenoid.all_notes_off()
             try:
                 history_percentage = round(self.time_played_us / 1000 / duration * 100)
                 self.logger.debug(f"add history {tuneid} {self.time_played_us=} {duration=}  {history_percentage=}")
                 history.add_entry( tuneid, history_percentage )
             except Exception as e:
                 self.logger.exc(e, "Exception adding history")
-            solenoid.all_notes_off()
             scheduler.run_always()
             battery.start_heartbeat()
             battery.add_msec_playing( self.time_played_us / 1_000_000 )

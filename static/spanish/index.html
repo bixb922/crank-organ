@@ -128,6 +128,9 @@
         <tr>
 			<td>Tiempo tocando</td><td id="time_playing"></td><td>[hh:mm]</td>
 		</tr>
+        <tr>
+			<td>Tiempo solenoides energizados</td><td id="solenoids_on"></td><td>[hh:mm]</td>
+		</tr>
 		<tr><td>Tiempo remanente</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
         <tr><td>Puesto en cero</td><td id="date_zero"></td><td></td></tr>
     </tbody>
@@ -175,7 +178,7 @@ async function getBatteryInfo( ) {
     // gets updated in common.js
 	while( true ) {
 		updateBatteryInfo( await fetch_json( "/battery" ) ) ;
-		await sleep_ms( 29000 ) ;
+		await sleep_ms( 15000 ) ;
 	}
 }
 
@@ -191,8 +194,8 @@ function updateBatteryInfo( battery ) {
 				format_secHHMM( battery["time_remaining"] )) ;
 	textById("time_playing", 
 				format_secHHMM( battery["time_playing"] )) ;
-
     textById("date_zero", battery["date_zero"] ) ;
+    textById("solenoids_on", format_secHHMM( battery["solenoids_on"] )) ;
 
 
 	barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
@@ -205,6 +208,15 @@ async function battery_zero() {
 
 getPageData() ; 
 
+/* document.addEventListener("visibilitychange", () => {
+  // Refresh battery info when page becomes visible
+  // only of utility for browser "back" button
+    console.log("index page visibility change", document.visibilityState ) ;
+  if (document.visibilityState === "visible") {
+    getBatteryInfo() ;
+  } 
+});
+*/
 
    
 </script>

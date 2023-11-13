@@ -33,12 +33,14 @@ The ESP32-S3 also has enough GPIO ports to drive 20 solenoids. It has WiFi to co
 
 The 90 Ohm solenoid valves are driven by a ULN2803A or TBD62003A 7-circuit transistor array. Both ICs have 7 channels (i.e. can drive 7 solenoids). Both are plug compatible. The TBD62003A has a lower voltage drop when operating, so more voltage is available for the solenoids. 
 
-The solenoids are driven by 12V, so this circuit needs a 12V power supply. Some options are:
-* 10 AA rechargable NiMH batteries
+The solenoids are driven by 12V, so this circuit needs a 12V or higher power supply. Some options are:
+* 10 AA rechargable NiMH batteries.
 * A USB power bank with PD or QC capabilities and a PD/QC decoy trigger set to coax 12V out of the batteries.
+* A lithium battery with protections, fuses and BMS
 
-I'll show the circuit with 10 AA rechargeable batteries.
+For some 12V valves, feeding with 12V can be insufficient, since 0.7V goes lost in the ULN2003A drivers. See the manufacturer specs, if they state that the voltage that reach the solenoids must be 12V, you need to get a higher voltage source or insert a DC-DC boost converter to get the right voltage.
 
+For smaller pipes, 12V may be enough. For bass pipes with foot pipe diameters of 14mm and more, at 10cmH2O or more of pressure, a higher voltage is necessary.
 
 Although MIDI file and software update can be done via WiFi using the software provided, on some occasions, at least initially, it may be of interest to connect a PC or MAC via USB to the USB input of the ESP32-S3. There are several ways to do that safely:
 * Remove the ESP32-S3 from the sockets and then plug in
@@ -86,7 +88,7 @@ Batteries see section below.
 
 Of course, you will need solenoid valves. These are used in big organs (church organs).
 
-![solenoid valves](solenoid-close-up.jpg)
+![solenoid valves](solenoids-close-up.jpg)
 
 
 ### ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
@@ -98,7 +100,7 @@ Make sure it is a N8R8 or N16R8 board. N8R8V (with a V in the designator) have l
 
 It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. I
 
-Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed.  See the data sheet or ask the vendor to verify if the ESP32-S3 allows to be connected to 12V, in that case the 12V to 5V regulator is not necessary.
+Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed.  See the data sheet or ask the vendor to verify if the ESP32-S3 allows to be connected to 12V, in that case the 12V to 5V regulator might not be necessary.
 
 
 ### Two 22 pin contacts for ESP32-S3
@@ -137,7 +139,7 @@ If these diodes are present, don't add another diode but connect the 5V output o
 ### 12V to 5V 2A DC-DC buck converter
 Current rating should be 2A but can be higher. These circuits are called "buck converter" or DC-DC regulators. What matters it that they should convert 12V DC to 5V DC. Conversion efficiency should be published by the vendor, and be better than 90%.
 
-I am using a very simple converter:
+This is a possiblity:
 
 ![DC-DC-converter](DC-DC-converter.png)
 
@@ -155,7 +157,7 @@ Can be any size, but 3x and 2x are convenient to combine.
 
 ![3x and 2x screw terminals](screw-terminal.png)
 
-The 12V-GND terminal should be 3x, one for 12V input, one for 12V to solenoids, one for ground.
+The 12V-GND terminal should be 3x or 4x, one for 12V input, one for 12V to solenoids, one for ground.
 
 The terminal for the wire to the touchpad could be 1x, but it can be convenient to leave another GPIO port avalable on a 2x terminal for some future use.
 
@@ -165,7 +167,7 @@ The 20 terminals for the 20 solenoids can be any combination of 3x or 2x. I depi
 ### Color wire
 It's useful to have different color wire. To wire the board, 22AWG is nice, 24AWG also works.
 
-To connect to 12V it's better to have cable (with many strands) since cable resists some bending and moving. Red for positive, black or blue for negative.ç
+To connect to 12V it's better to have cable (with many strands) since cable resists some bending and moving. Red for positive, black or blue for negative.
 
 ![color wire](wire-22awg.jpg)
 
@@ -363,7 +365,7 @@ Use multitester with continuity test to test all pins and contacts against all o
 
 Connect the solenoids. One pole of each solenoid go to the screw terminal (the colored wires on the photo below) the other pole of the solenoid goes to the 12V screw terminal (the red wire on the photo below). It does not matter which side goes to 12V.
 
-![solenoid wiring](solenoid-wiring.png)
+![solenoid wiring](solenoid-wiring.jpg)
 
 Plug the USB connector of the ESP32-S3 to a PC. The ESP32-S3 should have some leds that turn on or flash.
 
@@ -481,7 +483,8 @@ The software allows to connect a microphonefor tuning. You have to turn the cran
 Any small microphone with amplifier will do. It has to operate with 3.3V and have 3 pins: ground, output and Vcc. Vcc goes to 3.3V, ground to ground, and microphone output to a GPIO pin on the ESP32-S3, for example pin 4.
 
 This board is one example MAX4466 Electret Microphone Amplifier Module, adjustable gain:
-![microphone](microphone.jpg)
+
+![microphone](microphone.png)
 
 
 There are microphones with automatic volume control. These do not allow to measure volume.

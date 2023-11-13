@@ -199,16 +199,7 @@ def get_progress( request ):
         
     return progress
 
-async def wait_get_progress( request ):
-    # Wait for setlist process to catch up to change
-    await asyncio.sleep_ms( 200 )
-    for w in range(10):
-        await asyncio.sleep_ms(100)
-        p = get_progress( request )
-        if p["status"] != "cancelled":
-            break
-    return p  
-    
+  
 @app.route("/get_progress" )
 async def process_get_progress( request ):
     return get_progress( request )
@@ -221,30 +212,26 @@ async def queue_tune( request, tune ):
     # Wait for setlist process to catch up
     #await asyncio.sleep_ms( 500 )
     #return get_progress( request )
-    return await wait_get_progress( request )
+    return get_progress( request )
+
 
 @app.route("/start_tune")
 async def go_tempo( request ):
     setlist.start_tune()
-    # Wait for setlist process to catch up
-    # await asyncio.sleep_ms( 400 )
-    # return get_progress( request )
-    return await wait_get_progress( request )
+    return get_progress( request )
 
 
 @app.route("/stop_tune_setlist" )
 async def stop_tune_setlist( request ):
     setlist.stop_tune()
-    await asyncio.sleep_ms(1000)
     return get_progress( request )
 
 
 @app.route("/back_setlist" )
 async def back_setlist( request ):
     setlist.to_beginning_of_tune()
-    #await asyncio.sleep_ms( 400 )
-    #return get_progress( request )
-    return await wait_get_progress( request )
+    return get_progress( request )
+
 
 @app.route("/save_setlist")
 async def save_setlist( request ):

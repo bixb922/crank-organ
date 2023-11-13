@@ -1,6 +1,3 @@
-
-
-
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # zero crossing frequency measurement

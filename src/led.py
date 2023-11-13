@@ -1,9 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-# Blinks RGB (neopixel) LED. ESP32-S3 boards may have one of these.
-#>>> new options:
-#>>> battery heartbeat????
-#>>> poweroff idle???
+# Blinks RGB (neopixel) LED. 
+# ESP32-S3 boards may have one of these.
 #
 import asyncio
 import neopixel
@@ -16,12 +14,13 @@ from minilog import getLogger
 
 TIME_ON = const(50) # millisec the led is on when blinking
 BLINK_EVERY = 2_000 # millisec to blink
-INTENSITY = const(4) # 1=lowest, 255=highest
+VERY_LOW = const(2)
+LOW = const(4) # 1=lowest, 255=highest
+STRONG = const(128)
 
 class BlinkingLed:
     def __init__( self, p ):
         if not p:
-            print("No blinking neopixel")
             # No LED task is needed
             return
 
@@ -52,7 +51,7 @@ class BlinkingLed:
         self.on( (0,0,0) )
 
     def blink( self, period, col ):
-
+        # ignore if no led defined
         if not self.neopixel_led:
             return
         self.color = col
@@ -68,13 +67,13 @@ class BlinkingLed:
         # Shades of green
         if 0 <= phase <= 3:
             self.on( 
-                ( (0,0,INTENSITY//2), 
-                  (0,0,INTENSITY//2), 
-                  (0,INTENSITY//2,INTENSITY//2),
-                 (0,INTENSITY,0), )[phase] )
+                ( (0,0,VERY_LOW), 
+                  (0,0,LOW), 
+                  (0,VERY_LOW,VERY_LOW),
+                 (0,LOW,0), )[phase] )
 
     async def touch_flash( self ):
-        self.on( (128,128,128) )
+        self.on( (STRONG,STRONG,STRONG) )
         await asyncio.sleep_ms(30)
         self.off()
         
@@ -92,18 +91,28 @@ class BlinkingLed:
         # Create a background task to avoid
         # delaying caller
         asyncio.create_task(
-              self.blink_few( (INTENSITY,INTENSITY,INTENSITY), 5) )
+              self.blink_few( (LOW,LOW,LOW), 5) )
             
+    def heartbeat_on( self ):
+        self.on( (0,LOW,0) )
+        
+    def heartbeat_off( self ):
+        self.off( )
+        
     def problem( self ):
         # Blink red
-        self.blink( BLINK_EVERY, (INTENSITY,0,0) )
+        self.blink( BLINK_EVERY, (LOW,0,0) )
 
+    def short_problem( self ):
+        # one blink red
+        asyncio.create_task( self.blink_few( (STRONG,STRONG,0), 1) )
+        
     def severe( self ):
         # Magenta on, no blink
         if not self.neopixel_led:
             return
         self.background_task.cancel()
-        self.neopixel_led[0] = (INTENSITY,0,int(INTENSITY/2))
+        self.neopixel_led[0] = (LOW,0,LOW)
         self.neopixel_led.write()
 
 

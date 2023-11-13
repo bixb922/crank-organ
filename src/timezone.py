@@ -1,3 +1,5 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
 import sys
 import time
 # >>> TODO: change sometime to requests when with 1.22

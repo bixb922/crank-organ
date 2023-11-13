@@ -36,6 +36,7 @@ class TouchButton:
         self.release_event = ev
         
     async def tp_process( self ): 
+        await asyncio.sleep(1)
         tpval_ant = self.tp.read()
         while True:
             await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )

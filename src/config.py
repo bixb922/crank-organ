@@ -85,7 +85,8 @@ class Config:
             "fixed_watts": 0.6,
             "battery_heartbeat_duration": 0,
             "battery_heartbeat_period": 0,
-
+            "max_polyphony": 9,
+            
             "touchpad_big_change": 20000,
             "tzidentifier": "America/Santiago",
 
@@ -158,7 +159,9 @@ class Config:
         for k,v in newconfig.items():
             if k in ( "max_age", "ap_max_idle",
                     "idle_deepsleep_minutes",
-                    "solenoid_resistance", "touchpad_big_change" ):
+                    "solenoid_resistance", "touchpad_big_change",
+                    "max_polyphony", "battery_heartbeat_duration",
+                    "battery_heartbeat_period"):
                 try:
                     newconfig[k] = int(v)
                 except:

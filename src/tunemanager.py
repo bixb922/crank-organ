@@ -145,7 +145,7 @@ class TuneManager:
             #[ tuneid, title=filename, genre, author. year
             #        duration, filename, autoplay, info, date added, rating, size in bytes, unused field ]
             newtunelib[key] = [ key, fn[0:-4], "", "", "", 
-                             duration, fn, False, "", creation_date, "", size, 0  ]
+                             duration, fn, True, "", creation_date, "", size, 0  ]
 
             changed = True   
 

@@ -205,9 +205,9 @@ class OrganTuner:
 
     async def sound_note( self, midi_note ) :
         for _ in range(8):
-            # 8 quarter notes at a moderato 100 bpm       
+            # Sound 8 times for 1 second each time.
             solenoid.note_on( midi_note )
-            await asyncio.sleep_ms( 600 )
+            await asyncio.sleep_ms( 1000 )
             solenoid.note_off( midi_note )
             await asyncio.sleep_ms( 100 )
 

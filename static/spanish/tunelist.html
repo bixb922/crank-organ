@@ -176,10 +176,10 @@ async function getProgress() {
         let progress = await fetch_json ( "/get_progress" ) ;
         updateProgress( progress );
         if( progress["status"] == "playing"){
-		  await sleep_ms( 10000 ) ;
+		  await sleep_ms( 2_000 ) ; // safer would be 10_000
         }
         else{
-            await sleep_ms( 2000 ) ;
+            await sleep_ms( 2_000 ) ;
         }
 	}
 }

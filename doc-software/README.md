@@ -178,18 +178,19 @@ The large buttons are:
 These controls regulate playback speed. This is mainly for future use with the crank rotation speed sensor. 
 
 
-# Operation on power on
+# Operation on power on and onboard RGB led
+
 It takes about 10 or 12 seconds from power on until the system is ready. Some valves will move when ready, normally that sound can be heard.
 
 If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green on start. It will flash white several times when WiFi has connected. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.  The led will flash white when touching and releasing the touchpad. 
 
 The software will automatically load the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
-If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad twice will shuffle all tunes randomly and start playing the first tune.
+If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad *twice in a row* will shuffle all tunes randomly. Entering the tuning page or MIDI configuration will disable this function.
 
 So for all cases: turn on, and turn the crank or touch the touchpad and music starts.
 
-If you have the tune list or performance page open in your cell phone, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. No need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
+If you have the tune list or performance page open in your cell phone, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. There should be no need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
 
 You don't need your cell phone turned on to play music, only to alter the setlist.
 
@@ -201,6 +202,8 @@ When entering tuning mode,  MIDI playback is disabled.
 
 Even without a microphone installed, these pages are useful to make individual notes sound, to play scales and do repetition tests.
 
+Actions such as "sound a note" or "repetition tests" are queued if you press the button several times. This is useful to free your hands during tests. The "stop" button on the "all notes page" will empty the queue.
+
 ## All notes page
 
 ![tuning all notes page](tuning.jpg)
@@ -211,7 +214,7 @@ This page shows all defined MIDI notes. Frequency and amplitude bar graph only h
 
 The "Play scale" button will play a scale up and down activating all solenoids in order.
 
-"Tune all" will make each pipe sound in order. If a microphone is installed, tuning and amplitude is updated and stored. Tuning is shown in cents. Zero cents is a perfect tuning. 100 cents means one semitone away. 5 cents or less is probably good enough.
+"Tune all" will make each pipe sound in order. If a microphone is installed, tuning and amplitude is updated and stored. Tuning is shown in cents (1 cent = 1/100 of a semitone). Zero cents is a perfect tuning. 100 cents means one semitone away. 5 cents or less is probably good enough.
 
 Amplitude is shown in relative scale in dB (decibel). 0 dB is the loudest possible measurement, -10 dB is less loud, etc. dB scales are logarithmic, just as the human perception is. The purpose of this measurement is to aid comparison of loudness of the pipes. The final judgement should be your ear.
 
@@ -456,7 +459,7 @@ A initial configuration file is supplied. This is what you should modify:
 * The network name and description. This name is important, it will be both the WiFi name in AP mode and also to navigate in the browser to the microcontroller, you enter this host name: either http://hostname or http://hostname.local 
 * The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone.
 
-You should check the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. I make no claim about the security of this software, but the password will aid to prevent unauthorized or accidental changes.
+You should check the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. I make no claim about the security of this software, but the password will aid to prevent unauthorized or accidental changes. Also, if checked, enabling FTP access will require password.
 
 If this option is checked, the a dialog like the following one will appear when you save General Configuration, MIDI configuration and Tunelib Editor (in your cell phone's language):
 
@@ -623,37 +626,46 @@ Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder aft
 * Initial page can now be set by configuration
 * Corrected errors in detailed hardware and software documentation, schematics and images 
 * Added button on the MIDI configuration page to test the solenoid when installing the wiring.
-
-
+* Detection of polyphony to limit battery consumption 
+* Cream background color for changed fields in forms
 
 
 # Programming language
-The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript with web requests done with fetch/async.
+The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript with web requests done with fetch/async. No C/C++ code was necessary.
 
-Frequency detection is done with the zero crossing algorithm (See zcr.py). This is quite appropriate for organs, since the fundamental is strong. The algorithm also is fast.
+The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
+
+Frequency detection is done with the zero crossing algorithm (See zcr.py). The algorithm is fast and quite precise. To guard against noise, autocorrelation of the signal is done and the strongest part of the autocorrelation is used. With closed (bourdon) pipes, the harmonics can be quite strong and that is accounted for also.
 
 MicroPython version 1.21 (or 1.20 later than sept 2023) is required. Since MicroPython is continually enhanced, best use the latest version.
 
-Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microdot server, temporarily added some logging to debug my software), and Robert-hh and several others for uftpd. All these library modules are available on github under MIT license:
+# Credits
+
+Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microdot server, temporarily added some logging to debug my software), and Robert-hh and several others for uftpd. All these library modules are available on github:
 * https://github.com/mcauser/micropython-mcp23017
 * https://github.com/miguelgrinberg/microdot
 * https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
 
+These components are (c) Copyright by their respective authors and are available under the same MIT license as this software.
+
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
 # Under development/testing
+
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes. I have tried tested all options under many circumstances. Please report problems as github issue.
 
 The following features need more testing or development:
-* Microphone for tuning. I have not included a way to aid setting the sensitivity of the microphone. Automatic volume control microphones are best to measure tuning, but will not measure volume.
-* Sensor for crank speed to influence playback speed. Pending to test and for several adjustments.
+
+* Microphone for tuning. It works well, but I have not included a way to aid setting the sensitivity of the microphone. Microphones have a volume setting. If set for high, signal is distorted but that does not impair frequency detection, but intensity cannot be measured. Microphones with automatic volume control are ok to measure tuning, but will not measure volume.
+
+* Sensor for crank speed to influence playback speed. Pending to test and for fine adjustments.
 
 
 
 # Restrictions
 Safari as a browser is not supported.
 
-The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. The webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved. 
+The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. I have put several safeguards in the software, such as cyphering (encrypting) passwords with a hidden key, controlling access via WiFi to files, etc. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB or FTP, all elements including passwords can be ultimately retrieved and new code can be installed. 
 
 Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time, since more than one client may delay notes when playing back music.
 

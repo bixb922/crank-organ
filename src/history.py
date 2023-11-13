@@ -1,3 +1,6 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+# >>> BUTTON TO TRUNCATE HISTORY: all history, leave 3 month.
 import btree
 import time
 import sys
