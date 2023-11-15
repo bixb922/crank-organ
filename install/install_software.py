@@ -108,14 +108,14 @@ _f42 = const(
   b'\x96\xb2I\xa5\x03\xb9\xc2\xb4\xf1\xc8"aqa\x1b6'\
   b'\x84\xe1\xff\x03\xe0Zq\xc9'\
   b'')
-# /software/mpy/compiledate.mpy size=84, compressed level=9 wbits=10 compressed size=81
+# /software/mpy/compiledate.mpy size=84, compressed level=9 wbits=10 compressed size=83
 _f17 = const(
   b'(\xcf\xf3ec\x90gf\xb4I.J\xcc\xcb\xd6\xcd'\
   b'/JO\xcc\xd3/.J\xd6O\xce\xcf-\xc8\xccI'\
   b'MI,I\xd5+\xa8d\xe0\x17C\x12``\x156'\
-  b'202\xd654\xd454U04\xb22\x05"'\
-  b's\x06\x0f\x06&Fe\x061\xa6\xc0d\x00\x18\xe7\x15'\
-  b'\xfb'\
+  b'202\xd654\xd454U04\xb126\xb5'\
+  b'2\xb1d\xf0``bTf\x10c\nL\x06\x00\x19'\
+  b'#\x15\xff'\
   b'')
 # /software/mpy/config.mpy size=4103, compressed level=9 wbits=10 compressed size=2695
 _f39 = const(
@@ -7176,7 +7176,7 @@ direntries = const(( ( '/main.py',  ( _f43, True, 132 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2023/11/15 12:53:02' )
+date_frozen = const( '2023/11/15 14:35:49' )
 
 sum_size = const(209784)
 files_folders = const(48)

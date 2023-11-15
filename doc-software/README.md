@@ -627,7 +627,7 @@ The backup files in the /data folder (for example /data/tunelib.json-2023-11-10,
 * Improved blocking of MIDI playback when using tuner or pin test functions
 * Tested and measured for interference of web server functions with MIDI music playback. Enhanced a guard to minimize delays of MIDI events due to essential functions during playback.
 * Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes. RGB LED gives visual feedback when using touchpad.
-* Changed fields on forms change background color until saved.
+* Changed fields on forms change background color to cream until saved.
 * Tuner now locks in on signals where harmonics are much stronger than the fundamental.
 * Refactored many modules to be based on classes instead of plain modules.
 * Updated documentation, made Mermaid diagrams work on github
@@ -635,10 +635,8 @@ The backup files in the /data folder (for example /data/tunelib.json-2023-11-10,
 * Initial page can now be set by configuration
 * Corrected errors in detailed hardware and software documentation, schematics and images 
 * Added button on the MIDI configuration page to test the solenoid when installing the wiring.
-* Detection of polyphony to limit battery consumption 
-* Cream background color for changed fields in forms
-* Check maximum number of solenoids on to limit current consumption of battery.
-* German and spanish translation of many pages
+* Detection of polyphony to limit battery consumption. Will flash onboard RGB red briefly when limit acts.
+* German and spanish translation of many pages. Basic installation is english, can change to other language easily by installing language .py file.
 
 
 

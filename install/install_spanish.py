@@ -2145,7 +2145,7 @@ direntries = const(( ( '/common.js',  ( _f10, True, 13593 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2023/11/15 12:53:03' )
+date_frozen = const( '2023/11/15 14:35:50' )
 
 sum_size = const(87797)
 files_folders = const(11)
