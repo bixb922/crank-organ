@@ -18,11 +18,11 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
-		&nbsp;Lista de melodías
+		&nbsp;Melodieliste
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
-<h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
+<h1 id="play_mode" style="display:none">Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe</h1>
 <!-- html continues below javascript -->
 <script type="text/javascript" src="/static/common.js"></script>
 <script>
@@ -58,7 +58,7 @@ function searchTable() {
 	for (let i = 1; i < tr.length; i++) {
 		let txtValue = normalizaTildes( tr[i].innerText ) ;
 		if (txtValue.toUpperCase().indexOf(filter) > -1 ) {
-				//|| txtValue.indexOf("Título") == 0 ) {
+				//|| txtValue.indexOf("Titel") == 0 ) {
 			tr[i].style.display = "";
 		} else {
 			tr[i].style.display = "none";
@@ -70,9 +70,9 @@ function searchTable() {
 
 	<input type="text" id="searchInput"
            onkeyup="searchTable()"
-           placeholder="&#128269;B&uacute;squeda"
+           placeholder="&#128269;Suche"
            size="10"/>
-	<button id="navigateToPlayPage" type="button" onclick="navigateToPlayPage()">Actuación</button>
+	<button id="navigateToPlayPage" type="button" onclick="navigateToPlayPage()">Setlist</button>
     
     <div class="tableFixHead">
       <table id="tunelisttable">
@@ -92,7 +92,7 @@ function searchTable() {
 let tunelist = [] ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
-let header = ["Título", "Género", "Autor", "", "Año", "Hist", "Info", "Fecha", "Pts"] ;
+let header = ["Titel", "Genre", "Autor", "", "Jahr", "Wiedergaben", "Info", "Datum", "Punkte"] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
@@ -112,7 +112,7 @@ async function setTuneList( ) {
 
 function fillHeader( ){
 
-	let header = ["Título", "Género", "Autor", "m:ss", "Año", "Hist", "Info", "Fecha", "Pts"] ;
+	let header = ["Titel", "Genre", "Autor", "m:ss", "Jahr", "Wiedergaben", "Info", "Datum", "Punkte"] ;
 	let s = "<tr>" ;
 	for (let  j = 0 ; j < header.length ; j++ ){
         let h = "";
@@ -168,7 +168,7 @@ function navigateToPlayPage() {
 }
 
 async function queueTune( tune_number ) {
-	showPopup( "t"+tune_number, "actualizando setlist");
+	showPopup( "t"+tune_number, "Setlist wird aktualisiert");
 	let progress = await fetch_json( "/queue_tune/" + tune_number ) ;
 	updateProgress( progress ) ;
 }

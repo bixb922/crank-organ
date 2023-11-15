@@ -1,6 +1,6 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-# >>> BUTTON TO TRUNCATE HISTORY: all history, leave 3 month.
+
 import btree
 import time
 import sys
@@ -9,6 +9,7 @@ if __name__ == "__main__":
     sys.path.append("software/mpy")
 from config import config
 from timezone import timezone
+from minilog import getLogger
 
 TIME_ENTRY='DT'
 TUNEID_ENTRY='TD'
@@ -58,20 +59,21 @@ def time_range( date1, date2 ):
 
 class HistoryManager:
     def __init__( self, filename ):
+        self.logger = getLogger( __name__ )
         try:
             self.file = open( filename, "r+b ")
         except:
             self.file = open( filename, "w+b ")
         gc.collect()
         self.db = btree.open( self.file, cachesize=4*4096 )
-    
+        self.logger.debug("init ok")
         
     def add_entry( self, tuneid, percentage, date=None ):
         # Add same entry twice with key ordered
         # by tuneid and key ordered by date.
-        key = encode_time_entry( tuneid, date )
         data = bytearray(1)
         data[0] = percentage
+        key = encode_time_entry( tuneid, date  )
         self.db[key] = data
         key = encode_tuneid_entry( tuneid, date  )
         self.db[key] = data
@@ -87,7 +89,8 @@ class HistoryManager:
         for k, percentage in self.db.items( key1, key2 ):
             tuneid, date = decode_entry( k )
             yield tuneid, date, int.from_bytes( percentage, "big" )
-        
+
+    
     def get_all_events( self ):
         # Sorted by date 
         first_date, last_date = time_range( "0000-00-00 00:00", "9999-99-99 99:99" )
@@ -96,6 +99,35 @@ class HistoryManager:
        
     def get_tuneid_events( self, tuneid ):
         yield from self._get_events( tuneid_range( tuneid ) )
+   
+    def delete_old( self, months ):
+        if months < 0:
+            raise ValueError("Months must be >= 0")
+        # purge history
+        now = timezone.now_ymd()
+        # 0000-00-00
+        # 0....5..8
+        year = int( now[0:4] )
+        month = int( now[5:7] )
+        day = int( now[8:] )
+        month -= months
+        while month < 1:
+            year -= 1
+            month += 12
+        ymd = f"{year:4d}-{month:02d}-{day:02d} 00:00"
+        k1, k2 = time_range( "0000-00-00 00:00", ymd )
+        n = 0
+        for tuneid, date, _ in self._get_events( k1, k2 ):
+            key1 = encode_tuneid_entry( tuneid, date  )
+            key2 = encode_time_entry( tuneid, date )
+            for k in (key1, key2):
+                try:
+                    del self.db[k]
+                except Exception as e:
+                    self.logger.exc(e, f"could not delete history {k=}")
+            n += 1
+        self.logger.info(f"{n} history entries deleted")
+        self.db.flush()
         
     def get_all_tuneid_counts( self ):
         hist = {}
@@ -107,8 +139,18 @@ class HistoryManager:
         return hist 
 
 
+
 history = HistoryManager( config.HISTORY_DATABASE )
 
 if __name__ == "__main__":
+    history.add_entry( "isqgaMYPA", 33 )
+    history.add_entry( "iKnrPo9uf", 44 )
+    history.add_entry( "iDpKbWgZr", 55 )
     for k,v in history.db.items():
-        print(k, v)
+        if "2000" in k:
+            print(k, v)
+    history.delete_old( 3 )
+    for k,v in history.db.items():
+        if "2000" in k:
+            print(k, v)
+    

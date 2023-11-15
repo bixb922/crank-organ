@@ -251,7 +251,7 @@ async function fetch_json( url, post_data ){
             // In the header battery time, replace battery
             // icon and time remaining with message
             // symbols.
-			msg = "no conectado" ;
+			msg = "nicht angeschlossen" ;
             htmlByIdIgnoreErrors( "header_time",
                                  msg + " &#x1f494;") ;
 			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
@@ -262,7 +262,7 @@ async function fetch_json( url, post_data ){
 
 	if( !response.ok ){
 		// Response not ok will abort and notify error to user.
-        console.log("Respuesta via red no ok" + response.status, "url", url, "check mode") ;
+        console.log("Antwort über Netzwerk nicht ok " + response.status, "url", url, "check mode") ;
 
         if( response.status == 500 ) {
             // Show alert (not popup)
@@ -347,16 +347,16 @@ function make_status_text( progress_status, percentage ) {
 	// Transform player status to language
     let status_text ;
 	if (progress_status === "ended") {
-		status_text = "fin" ;
+		status_text = "Ende" ;
 	}
 	else if(progress_status === "playing" ) {
 		status_text = "" + Math.round(percentage) + "%" ;
 	}
 	else if(progress_status === "cancelled" ) {
-		status_text = "cancelado" ;
+		status_text = "gestrichen" ;
 	}
     else if( progress_status == "waiting"){
-        status_text = "\u231B esperando" ;
+        status_text = "\u231B erwartet Start" ;
     }
 	else {
 		status_text = progress_status ;
@@ -388,10 +388,10 @@ function textById( id, newText ) {
 	// Format if number or boolean
     let formattedNewText ;
 	if( newText === true ){
-		formattedNewText = "sí" ;
+		formattedNewText = "ja" ;
 	}
 	else if( newText === false ){
-		formattedNewText = "no" ;
+		formattedNewText = "nein" ;
         }
 	else {
 		formattedNewText = formatIfNumber( newText ) ;

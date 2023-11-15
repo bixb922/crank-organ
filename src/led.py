@@ -27,9 +27,10 @@ class BlinkingLed:
         self.neopixel_led = neopixel.NeoPixel( machine.Pin(p), 1)
 
         self.off()
-        self.color = (4,4,4)
+        self.color = (0,0,LOW)
         self.time_off = 0
         self.background_task = asyncio.create_task( self.neopixel_led_process() )
+        self.starting(0)
         self.logger = getLogger( __name__ )
         
     async def neopixel_led_process( self ):
@@ -65,12 +66,11 @@ class BlinkingLed:
 
     def starting( self, phase ):
         # Shades of green
-        if 0 <= phase <= 3:
-            self.on( 
+        self.on( 
                 ( (0,0,VERY_LOW), 
                   (0,0,LOW), 
                   (0,VERY_LOW,VERY_LOW),
-                 (0,LOW,0), )[phase] )
+                 (0,LOW,0), )[phase%4] )
 
     async def touch_flash( self ):
         self.on( (STRONG,STRONG,STRONG) )
@@ -78,7 +78,7 @@ class BlinkingLed:
         self.off()
         
     def touch_start( self ):
-        self.on( (4,4,4) )
+        self.on( (LOW,LOW,LOW) )
         
     async def blink_few( self, color, times ):
         for _ in range(times):

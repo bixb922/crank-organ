@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<title>Drehorgel</title>
+	<link rel="icon" type="image/png" href="favicon.png?a=1"/>	
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft" >
+        <a onclick="pageUp()">&#11013;</a>
+		&nbsp;Home page
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+<div style="clear:both" height=1></div>
+<script type="text/javascript" src="/static/common.js"></script>
+<table>
+	<tbody>
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('tunelist')">
+                    Drehorgel
+				</button>
+			</td>
+			<td>
+				<img src="/static/crank.jpg" width=100>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('notelist')">
+                    Stimmgerät
+				</button>
+			</td>
+			<td>
+				<!-- <img src="/static/tuner.jpg" width=80> -->
+				<!-- wrench emoji -->
+				    <span style="font-size:36px">&#x1F527;</span>
+			</td>
+        </tr>
+		<tr id="keyboard" style="display:none">
+			<td>
+				<button type="button" onclick="navigate('keyboard')" id="keyboardModeButton">
+                    Bluetooth keyboard
+				</button>
+			</td>
+			<td>
+				<!--Keyboard emoji -->
+				<span style="font-size:36px">&#127929;</span>
+			</td>
+		</tr>
+        <tr>
+			<td>
+				<button type="button" onclick="navigate('history')">
+                    Verlauf
+				</button>
+			</td>
+			<td>
+                <!-- tear off calendar emoji -->
+				<span style="font-size:36px">&#x1F4C6;</span>
+			</td>
+		</tr>
+
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('tunelibedit')">
+                    Tunelib bearbeiten
+				</button>
+			</td>
+			<td>
+                <!-- palette emoji -->
+				<span style="font-size:36px">&#x1F3A8;</span>
+			</td>
+		</tr>
+
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('config')">
+                    Allgemeine Konfiguration
+				</button>
+			</td>
+			<td>
+                <!-- gear emoji &#9881; -->
+                <!-- control knob emoji +1F39B U+FE0F-->
+				<span style="font-size:36px">&#x1F39B;</span>
+			</td>
+		</tr>
+        <tr>
+			<td>
+				<button type="button" onclick="navigate('pinout')">
+                    MIDI configuration
+				</button>
+			</td>
+            <!-- emoji ladder -->
+			<td id="pinout_description">
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<button type="button" onclick="navigate('diag')">
+					Systeminformation
+				</button>
+			</td>
+			<td>
+			<!-- Antenna with signal emoji &#128246;-->
+            <!-- magnifying glass 1F50D -->
+				<span style="font-size:36px">&#x1f50d;</span>
+			</td>
+		</tr>
+
+	</tbody>
+</table>
+<div class="middlediv2">Batterie</div>
+<table>
+	<tbody>
+		<tr>
+			<td>Gebraucht</td><td id="use"></td><td>[Wh]</td>
+		</tr>
+		<tr>
+			<td>Kapazität</td><td id="capacity"></td><td>[Wh]</td>
+		</tr>
+		<tr>
+			<td>Zeit operativ</td><td id="time"></td><td>[hh:mm]</td>
+		</tr>
+        <tr>
+			<td>Zeit Musikwiedergabe</td><td id="time_playing"></td><td>[hh:mm]</td>
+		</tr>
+        <tr>
+			<td>Zeit Ventile an</td><td id="solenoids_on"></td><td>[hh:mm]</td>
+		</tr>
+		<tr><td>Verbleibende Zeit</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
+        <tr><td>Auf Null gesetzt</td><td id="date_zero"></td><td></td></tr>
+    </tbody>
+</table>
+<table style="width:100%">
+	<tbody>
+        <tr>
+            <td>Verbleibend</td>
+            <td id="percent_remaining"></td>
+        </tr>
+		<tr>
+			<td id="batterygraph" colspan="2">
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+<button type="button" onclick="battery_zero()" id="resetBatteryButton">
+	Setze Batteriezähler auf Null
+</button>
+
+
+
+
+<div class="footerdiv"></div>
+
+
+<script>
+
+async function getPageData(){
+    resp = await fetch_json( "/get_pinout_filename" ) ;
+    textById( "pinout_description", resp.pinout_description ) ;
+    getBatteryInfo();
+    
+}    
+   
+
+function navigate( newpage ){
+    window.location.href = "/static/" + newpage + ".html" ;
+}
+
+async function getBatteryInfo( ) {
+    // This is the detailed battery info in the body
+    // of the page, the battery info in the header
+    // gets updated in common.js
+	while( true ) {
+		updateBatteryInfo( await fetch_json( "/battery" ) ) ;
+		await sleep_ms( 15000 ) ;
+	}
+}
+
+function updateBatteryInfo( battery ) {
+	// Needed for /battery and /battery_zero
+	textById("use", Math.round( battery["use"]*10 )/10) ;
+	var used_proportion = battery["use"] / battery["capacity"] ;
+	textById("percent_remaining", "" +  Math.round( 100-used_proportion*100 ) + "%") ;
+	textById("capacity", battery["capacity"]) ;
+	textById("time",  
+				format_secHHMM( battery["time"] )) ;
+	textById("time_remaining", 
+				format_secHHMM( battery["time_remaining"] )) ;
+	textById("time_playing", 
+				format_secHHMM( battery["time_playing"] )) ;
+    textById("date_zero", battery["date_zero"] ) ;
+    textById("solenoids_on", format_secHHMM( battery["solenoids_on"] )) ;
+
+
+	barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
+}
+
+async function battery_zero() {
+	showPopup( "resetBatteryButton", "Batteriezähler aof Null");
+	updateBatteryInfo( await fetch_json( "/battery_zero" ) ) ;
+}
+
+getPageData() ; 
+
+/* document.addEventListener("visibilitychange", () => {
+  // Refresh battery info when page becomes visible
+  // only of utility for browser "back" button
+    console.log("index page visibility change", document.visibilityState ) ;
+  if (document.visibilityState === "visible") {
+    getBatteryInfo() ;
+  } 
+});
+*/
+
+   
+</script>
+</body>

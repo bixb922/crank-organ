@@ -85,17 +85,19 @@ function searchTable() {
 </body>
 
 <script>
-// tunelib/tunelib.json is cached in tunelib
-let tunelib = {}; 
+
+// Tnis page needs tunelib as a list, mainly to
+// facilitate sorting. Store in global
+// variable, will be refreshed on reload of page.
 let tunelist = [] ;
+    
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let header = ["Title", "Genre", "Author", "", "Year", "Hist", "Info", "date", "Rtng"] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
 async function setTuneList( ) {
-	// tunelib is global, don't use let
-	tunelib = await fetch_json( "/data/tunelib.json" ) ;
+	let tunelib = await get_tunelib() ;
     tunelist = [];
     for( const [key, tune] of Object.entries(tunelib)) {
         tunelist.push( tune ) ;

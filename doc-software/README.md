@@ -584,10 +584,18 @@ The tunelib folder will then be at /sd/tunelib
 With the SD card, only about 500kb of free flash memory is necessary. The /tunelib folder on flash will serve as fallback should the SD card fail or come loose.
 
 
+## Spanish and german
+Pages for daily operation such as home page, tunelist, performance and history are available in english, spanish and german.
+
+Pages for configuration are only available in english. Since these pages are not used very frequently, please use on a PC and use the translation provided by the browser if necessary.
+
+To install another language, run the provided files, either:
+```mpremote run install_spanish.py```  or ```mpremote run install_german.py```
+
 ## Customization crank organ photo
 You can replace the crank organ ohite of the home screen by replacing the file /static/crank.jpg. A size of 100x75 pixels may be a good size to start with. 
 
-## Backup
+# Backup
 Microcontroller flash storage is fairly robust. However, 
 once you configure your microcontroller, you should backup relevant files:
 * /data/tunelib.json (the additional information about each tune)
@@ -600,34 +608,38 @@ Copy with FileZilla or mpremote to your PC. You also can print the configuration
 
 Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder after changes.
 
+The backup files in the /data folder (for example /data/tunelib.json-2023-11-10, /data/config.json-2023-11-02) can be deleted after a backup has been done.
+
+
 # Recent changes
 
-* Record history of tunes played. Show times a tune has played. New history page to show past performances with dates and times.
-* More fields for tunelib: date added, rating, info, number of times played, and more.
+* Page with history of tunes played, button to purge old records.
+* More fields for tunelib: date added, rating, info, number of times played.
 * Integrated tunelib editor
-* Sticky table headers
-* Allow ordering of tune list
+* Order tunes on tunelist page by any field
 * Time zone support. Time zone and current DST is read from worldtimeapi.org once a day.
 * Standard Web authentication if password is required to change configuration
 * Microcontroller enters deepsleep after a time to conserve energy
 * Keep backup of json files when changed
 * Make tune play speed changable even without crank sensor
-* RGB Led colors on startup
-* Migrated web server from tinyweb to Microdot, preparing for https support.
+* Bettery RGB LED colors on startup
+* Migrated web server from tinyweb to Microdot
 * Improved blocking of MIDI playback when using tuner or pin test functions
 * Tested and measured for interference of web server functions with MIDI music playback. Enhanced a guard to minimize delays of MIDI events due to essential functions during playback.
-* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes. RGB LED gives visual      feedback when using touchpad.
+* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes. RGB LED gives visual feedback when using touchpad.
 * Changed fields on forms change background color until saved.
 * Tuner now locks in on signals where harmonics are much stronger than the fundamental.
 * Refactored many modules to be based on classes instead of plain modules.
-* Updated documentation, made diagrams work on github
-* Restructured language support. Complete software is available in english language. Web pages related to music performance are available in spanish translation.
+* Updated documentation, made Mermaid diagrams work on github
 * Standarized parameters for battery usage to watts and watt-hours. Record when battery is set to zero, and record playing time. USB battery pack keepalive function.
 * Initial page can now be set by configuration
 * Corrected errors in detailed hardware and software documentation, schematics and images 
 * Added button on the MIDI configuration page to test the solenoid when installing the wiring.
 * Detection of polyphony to limit battery consumption 
 * Cream background color for changed fields in forms
+* Check maximum number of solenoids on to limit current consumption of battery.
+* German and spanish translation of many pages
+
 
 
 # Programming language

@@ -12,13 +12,13 @@
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
 	</span>
-    <b>&nbsp;&nbsp;&nbsp;Current tune</b>
+    <b>&nbsp;&nbsp;&nbsp;Jetzige Melodie</b>
 	<span class="headerright" id="header_time"></span>
 </div>
 
 
 <script type="text/javascript" src="/static/common.js"></script>
-<h1 id="play_mode" style="display:none">Disabled by tuner, pinout test</h1>
+<h1 id="play_mode" style="display:none">Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe</h1>
 <table>
 	<tbody id="tuneinfo">
 	</tbody>
@@ -29,25 +29,25 @@
 	<tbody id="setlist">
 	</tbody>
 </table>
-<button type="button" onclick="saveSetList()">Save setlist</button><span id="saved"></span>
-<button type="button" onclick="loadSetList()">Load setlist</button>
-<button type="button" onclick="clearSetList()">Clear setlist</button>
-<button type="button" onclick="shuffleSetList()">Shuffle setlist</button>
-<button type="button" onclick="shuffleAllTunes()">Shuffle all tunes</button>
+<button type="button" onclick="saveSetList()">Setlist speichern</button><span id="saved"></span>
+<button type="button" onclick="loadSetList()">Setlist laden</button>
+<button type="button" onclick="clearSetList()">Setlist löschen</button>
+<button type="button" onclick="shuffleSetList()">Setlist mischen</button>
+<button type="button" onclick="shuffleAllTunes()">Alle Melodien mischen</button>
 
-<div class="middlediv2">Tempo control</div>
+<div class="middlediv2">Temposteuerung</div>
 
 
     <p>        
-    Set playback speed:
+    Rückgabegeschwindingkeit:
     <br>
     <a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
     <span id="velocityGraph"></span>
     <a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
 
     <p>    
-        <span id="turning">Turning</span>
-        <span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
+        <span id="turning">Dreht</span>
+        <span id="rpsecText">nnn</span>&nbsp;Umdrehungen/Sekunde&nbsp;
         <span id="rpsecGraph"></span>
 
     </p>
@@ -107,7 +107,7 @@ async function updateProgress( progress ) {
 	}
 	else {
 		let tune = tunelib[current_tuneid] ;
-		let header = ["Title", "Genre","Author", "Duration","Year", "Info" ] ;
+		let header = ["Titel", "Genre","Author", "Länge","Jahr", "Info" ] ;
 		// Unicode 9198 = media control skip backward
 		// Unicode 23F9 = media control "stop"
         s = `<tr><td colspan="2">
@@ -115,8 +115,8 @@ async function updateProgress( progress ) {
              </tr>
              <tr><td colspan='2'> 
                 <button onclick = 'startTune()'>Start</button>
-                <button onclick = 'backSetList()'>To beginning </button>
-                <button onclick = 'stopTuneSetList()'>Next </button></td>
+                <button onclick = 'backSetList()'>Zum Anfang </button>
+                <button onclick = 'stopTuneSetList()'>Nächster </button></td>
             </tr>
             <tr><td>${header[1]}</td>
                 <td>${tune[TLCOL_GENRE]}</td>
@@ -194,10 +194,10 @@ async function updateProgress( progress ) {
 	
 	var rt = Math.round( progress["rpsec"]*10)/10 ;
 	if( progress["is_turning"] ) {
-		textById("turning", "Turning")
+		textById("turning", "Dreht")
 	}
 	else {
-		textById("turning", "Not turning")
+		textById("turning", "Dreht nicht")
 	}
 	textById("rpsecText", "" + rt) ;
     barGraph( "rpsecGraph", rg/100, sap_green, 10, "left", 50 ) ;
@@ -207,11 +207,11 @@ async function updateProgress( progress ) {
 async function saveSetList() {
 	let resp = await fetch_json("/save_setlist" ) ;
 	if( resp["result"] == "ok" ) {
-		showPopup( "saved", "Saved") ;
-	    // textById("saved", "Saved" );
+		showPopup( "saved", "Gespeichert") ;
+	    // textById("saved", "Gespeichert" );
 	}	
 	else {
-		showPopup( "saved", "Not saved, error") ;
+		showPopup( "saved", "Nicht gespeichert, Fehler aufgetreten") ;
 	}
 }
 

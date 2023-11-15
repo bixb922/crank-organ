@@ -36,7 +36,6 @@ import mcp23017 # 0
 import midi # 0
 import pinout # 9
 from led import led # config, fileops, late:config, late:timezone, mcp23017, midi, minilog, pinout, re, scheduler, timezone
-led.starting(0) 
 import touchpad # 6
 import tachometer # 10
 import history # 6

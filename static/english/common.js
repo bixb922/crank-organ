@@ -501,4 +501,18 @@ function currentPage(){
     return path.split("/").pop();
 }
 
-
+// Cached tunelib >>> add expiration date?
+async function get_tunelib() {
+	let data = sessionStorage.getItem( "tunelib" );
+	if( data == null ){
+		let tunelib = await fetch_json( "/data/tunelib.json" );
+        sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
+		return tunelib ;
+	}
+    console.log("get_tunelib data", data.substr(0,30), "...");
+	return JSON.parse( data ) ;
+}
+function drop_tunelib(){
+	// call from tunelibedit
+	sessionStorage.removeItem( "tunelib" );
+}

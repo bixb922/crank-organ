@@ -10,7 +10,7 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
-		&nbsp;System information
+		&nbsp;Systeminformation
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -19,49 +19,49 @@
     
 <table>
     <tbody>
-		<tr><td>Description</td><td id="description"></td></tr>
+		<tr><td>Beschreibung</td><td id="description"></td></tr>
         <tr><td>Host name</td><td id="name"></td></tr>
 	     <tr>
 			<td>
 				<button type="button" onclick="showLog()" id="showLogButton">
-					Show log
+					Log anzeigen
 				</button>
 			</td>
 			<td>
 				<span id="logfilename"></span><br>
-				(<span id="errors_since_reboot"></span> errors)
+				(<span id="errors_since_reboot"></span> Fehler)
 			</td>
 		</tr>
-		<tr><td>Micropython version</td><td id="mp_version"></td></tr>
-		<tr><td>Micropyton image</td><td id="mp_bin"></td></tr>
-		<tr><td>Date/Time</td><td id="last_refresh"></td></tr>
-		<tr><td>Time since reboot</td><td id="reboot_mins"></td><td>minutes</td></tr>
-		<tr><td>Free flash</td><td id="free_flash"></td><td>[bytes]</td></tr>
-		<tr><td>Used flash</td><td id="used_flash"></td><td>[bytes]</td></tr>
-		<tr><td>Free RAM</td><td id="free_ram"></td><td>[bytes]</td></tr>
-		<tr><td>Used RAM</td><td id="used_ram"></td><td>[bytes]</td></tr>
-        <tr><td>gc time</td><td id="gc_collect_time"></td><td>[msec]</td></tr>
-		<tr><td>Compilation date/time</td><td id="compile_date"></td><td></td></tr>
-		<tr><td>Solenoid configuration</td><td id="solenoid_devices"></td></tr>
-		<tr><td>MIDI files</td><td id="midi_files"></td></tr>
-		<tr><td>Music folder</td><td id="music_folder"></td></tr>
+		<tr><td>MicroPythonversion</td><td id="mp_version"></td></tr>
+		<tr><td>MicroPython image</td><td id="mp_bin"></td></tr>
+		<tr><td>Datum/Zeit</td><td id="last_refresh"></td></tr>
+		<tr><td>Zeit seit reboot</td><td id="reboot_mins"></td><td>Minuten</td></tr>
+		<tr><td>Flash frei</td><td id="free_flash"></td><td>[bytes]</td></tr>
+		<tr><td>flash belegt</td><td id="used_flash"></td><td>[bytes]</td></tr>
+		<tr><td>RAM frei</td><td id="free_ram"></td><td>[bytes]</td></tr>
+		<tr><td>RAM belegt</td><td id="used_ram"></td><td>[bytes]</td></tr>
+        <tr><td>gc Zeit</td><td id="gc_collect_time"></td><td>[msec]</td></tr>
+		<tr><td>Kompilationsdatum</td><td id="compile_date"></td><td></td></tr>
+		<tr><td>Solenoidkonfiguration</td><td id="solenoid_devices"></td></tr>
+		<tr><td>MIDI-dateien</td><td id="midi_files"></td></tr>
+		<tr><td>MIDI ordner</td><td id="music_folder"></td></tr>
 	</tbody>
 </table>
 	
-<div class="middlediv2">WIFI configuration</div>
+<div class="middlediv2">WIFI-Konfiguration</div>
 <table>
 	<tbody id="wifiConfig">
 	<tr>	
 		<td>Host name, AP SSID, BLE name:</td><td id="hostname"></td>
 	</tr>
 	<tr>	
-		<td>IP of clients active in last 60 sec</td><td id="client_IPs"></td>
+		<td>IP aktiver Kunden (60 Sek)</td><td id="client_IPs"></td>
 	</tr>
 	<tr>
-		<td colspan="2"><b>As WiFi station</b></td>
+		<td colspan="2"><b>Als WIFI-Station</b></td>
 	</tr>
 	<tr>	
-		<td>Connects to SSID</td><td id="sta_if_ssid"></td>
+		<td>SSID</td><td id="sta_if_ssid"></td>
 	</tr>
 	<tr>	
 		<td>IP</td><td id="sta_if_ip"></td>
@@ -70,14 +70,14 @@
 		<td>Active</td><td id="sta_if_active"></td>
 	</tr>
 	<tr>	
-		<td>Connected to a SSID</td><td id="sta_if_connected"></td>
+		<td>An SSID angeschlossen</td><td id="sta_if_connected"></td>
 	</tr>
 	<tr>	
 		<td>Connection status</td><td id="sta_if_status"></td>
 	</tr>
 	</tr>
 	<tr>
-		<td colspan="2"><b>As WiFi access point</b></td>
+		<td colspan="2"><b>Als WiFi access point</b></td>
 	</tr>
 	<tr>	
     <td>SSID</td><td id="ap_if_ssid"></td>
@@ -85,7 +85,7 @@
 		<td>IP</td><td id="ap_if_ip"></td>
 	</tr>
 	<tr>	
-		<td>Someone connected</td><td id="ap_if_connected"></td>
+		<td>Jemand angeschlossen</td><td id="ap_if_connected"></td>
 	</tr>
 	<tr>	
 		<td>Active</td><td id="ap_if_active"></td>

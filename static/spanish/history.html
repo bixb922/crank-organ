@@ -32,6 +32,10 @@
         </tbody>
     </table>
 </div>
+<div class="middlediv"></div>
+	Si historia más antigua que
+	<input type="text" size="3" value="3" id="months"/>meses,
+	<button onclick="deleteHistory()" id="purgeButton">Borrar </button>
 <div class="footerdiv"></div>
 </body>
 
@@ -85,6 +89,13 @@ async function getHistory( ) {
 	htmlById("history", s) ;
 }
 
+async function deleteHistory(){
+	months = parseInt( document.getElementById("months").value );
+	resp = await fetch_json( "/delete_history/" + months ) ;
+    if( resp["result"] == "ok"){
+	   window.location.href = "/static/history.html" ;
+    }
+}
 
 
 function pageUp() {

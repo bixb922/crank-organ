@@ -106,6 +106,7 @@ class Config:
 
         # Cypher passwords, if not done already
         if password_manager._cypher_all_passwords( self.cfg ):
+            # A password had to be cyphered.
             # Rewrite config.json with cyphered passwords.
             fileops.write_json( self.cfg,  self.CONFIG_JSON, keep_backup=False )
             _logger.info("Passwords cyphered")
@@ -225,20 +226,30 @@ class PasswordManager:
         return key
 
     def _cypher_password( self, password ):
-        #>>>TODO: ADD SALT
         if not isinstance(password, str):
             raise ValueError("Can't cypher object that isn't str")
         if password.startswith(PASSWORD_PREFIX):
             raise ValueError("Can't cypher twice")
 
-        from ucryptolib import aes
         pass_encoded = password.encode()
-        pass_with_len = bytearray(1)
-        pass_with_len[0] = len(pass_encoded)
-        pass_with_len.extend( pass_encoded )
-        while len(pass_with_len)%16 != 0:
-            pass_with_len.append(0)
-        c = aes( self._get_key(), 1 ).encrypt( pass_with_len )
+        # Space for password, 4 bytes salt, 4 bytes check, 1 byte
+        # encoded length, the encoded password, and 1 extra just in case
+        pass_buffer_len = len(pass_encoded) + 4 + 4 + 1 + 1
+        # AES likes buffer length multiple of 16
+        pass_buffer_len += 16 - ( pass_buffer_len % 16 )
+        # Fill buffer with random so unused bytes act as salt
+        # This makes equal passwords encrypt differently.
+        pass_buffer = bytearray( os.urandom( pass_buffer_len ) )
+        # Add text to help _uncypher_password recognize if correctly decrypted
+        pass_buffer[4:8] = b'salt'
+        # Add password length
+        pass_buffer[8] = len( pass_encoded )
+        # Add password
+        pass_buffer[9:9+len(pass_encoded)] = pass_encoded  
+
+        from ucryptolib import aes
+        c = aes( self._get_key(), 1 ).encrypt( pass_buffer )
+        
         return PASSWORD_PREFIX + ubinascii.hexlify( c ).decode()
 
     def _uncypher_password( self, c ):  
@@ -249,9 +260,18 @@ class PasswordManager:
             return c   
         c = ubinascii.unhexlify( c[len(PASSWORD_PREFIX):] )
         from ucryptolib import aes
-        pass_with_len = aes( self._get_key(), 1 ).decrypt( c )
-        passlen = pass_with_len[0]
-        return pass_with_len[1:].decode()[0:passlen]
+        pass_buffer = aes( self._get_key(), 1 ).decrypt( c )
+        if len(pass_buffer)<10:
+            raise ValueError("Could not decrypt password, wrong length")
+        if pass_buffer[4:8] != b'salt':
+            raise ValueError( "Could not decrypt password, wrong key")
+        # pass_buffer[8] has the length of the encoded password.
+        pass_encoded = pass_buffer[9:9+pass_buffer[8]]
+
+        return pass_encoded.decode()
+    
+    
+
 
     def _cypher_all_passwords( self, cfg ):
         # Cyphers passwords in config.json if not yet cyphered

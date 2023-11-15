@@ -2,7 +2,7 @@
 # MIT License
 import sys
 import time
-# >>> TODO: change sometime to requests when with 1.22
+# >>> TODO: change to requests when using with 1.22
 import urequests as requests
 import ntptime
 import json

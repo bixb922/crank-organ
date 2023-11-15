@@ -573,8 +573,13 @@ async def save_tunelib( request ):
 @app.route("/get_history")
 async def get_history( request ):
     return tunemanager.get_history()
-    
-    
+  
+@app.route("/delete_history/<int:months>")
+async def delete_history( request, months ):
+	history.delete_old( months )
+	return simple_response( "ok" )
+
+
 # NO CATCHALL HANDLER FOR NOW
 
 @app.errorhandler(RuntimeError)

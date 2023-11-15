@@ -135,9 +135,14 @@ Configuración WIFI|WIFI configuration
 >Conectado a un SSID<|>Connected to a SSID<
 >Como WiFi access point<|>As WiFi access point<
 >Alguien conectado<|>Someone connected<
+
 *history.html
+Historia|History
 Fecha|Date
 Melodía|Tune
 Avance %|% completed
+Si historia más antigua que|When older than
+meses,|months,
+Borrar|delete
 
 

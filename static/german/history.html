@@ -11,7 +11,7 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
-		&nbsp;History
+		&nbsp;Verlauf
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -23,9 +23,9 @@
     <table>
         <thead>
           <tr>
-            <th class='tunetable'>Date</th>
-            <th class='tunetable'>Tune</th>
-            <th class='tunetable'>% completed&nbsp;</th>
+            <th class='tunetable'>Datum</th>
+            <th class='tunetable'>Melodie</th>
+            <th class='tunetable'>% abgespielt&nbsp;</th>
           </tr>
         </thead>
         <tbody id="history">
@@ -33,9 +33,9 @@
     </table>
 </div>
 <div class="middlediv"></div>
-	When older than
-	<input type="text" size="3" value="3" id="months"/>months,
-	<button onclick="deleteHistory()" id="purgeButton">delete </button>
+	Wenn älter als
+	<input type="text" size="3" value="3" id="months"/>Monate,
+	<button onclick="deleteHistory()" id="purgeButton">Löschen </button>
 <div class="footerdiv"></div>
 </body>
 

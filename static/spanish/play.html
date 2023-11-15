@@ -67,17 +67,12 @@
 //		"/static/m" + (Date.now() % numberOfImages) + ".jpg" ;
 
 // Tune list with titles and attributes gets loaded in memory
-let tunelib = [] ;
 let last_progress_seen = {} ;
 
-async function getProgress() {
-    // Load into global variable to avoid reloading
-	tunelib = await fetch_json( "/data/tunelib.json" ) ;
-	
-	// Now that we have the tunelib, show progress
+async function getProgress() {	
 	while( true ) {
         progress = await fetch_json ( "/get_progress" ) ;
-        updateProgress( progress );
+        await updateProgress( progress );
         if( progress["status"] == "playing"){
 		  await sleep_ms( 2_000 ) ; // >>>safer would be 10_000
         }
@@ -87,7 +82,9 @@ async function getProgress() {
 	}
 }
 
-function updateProgress( progress ) {
+async function updateProgress( progress ) {
+    // Get tunelib with local cache
+    let tunelib = await get_tunelib() ;
 	last_progress_seen = progress ;
 
     let pm = "";
@@ -219,35 +216,35 @@ async function saveSetList() {
 }
 
 async function shuffleAllTunes() {
-	updateProgress( await fetch_json("/shuffle_all_tunes" ) ) ;
+	await updateProgress( await fetch_json("/shuffle_all_tunes" ) ) ;
 }
 
 async function shuffleSetList() {
-	updateProgress( await fetch_json("/shuffle_set_list" ) ) ;
+	await updateProgress( await fetch_json("/shuffle_set_list" ) ) ;
 }
 
 async function loadSetList() {
-	updateProgress( await fetch_json("/load_setlist" ) ) ;
+	await updateProgress( await fetch_json("/load_setlist" ) ) ;
 }
 
 async function clearSetList() {
-	updateProgress( await fetch_json("/clear_setlist" ) ) ;
+	await updateProgress( await fetch_json("/clear_setlist" ) ) ;
 }
 
 async function upSetList(pos) {
-	updateProgress( await fetch_json("/up_setlist/" + pos ) ) ;
+	await updateProgress( await fetch_json("/up_setlist/" + pos ) ) ;
 }
 
 async function downSetList(pos) {
-	updateProgress( await fetch_json("/down_setlist/" + pos ) ) ;
+	await updateProgress( await fetch_json("/down_setlist/" + pos ) ) ;
 }
 
 async function dropSetList(pos) {
-	updateProgress( await fetch_json("/drop_setlist/" + pos ) ) ;
+	await updateProgress( await fetch_json("/drop_setlist/" + pos ) ) ;
 }
 
 async function topSetList(pos) {
-	updateProgress( await fetch_json("/top_setlist/" + pos ) ) ;
+	await updateProgress( await fetch_json("/top_setlist/" + pos ) ) ;
 }
 
 async function set_velocity( increment ) {
@@ -262,7 +259,7 @@ async function set_velocity( increment ) {
 	else if( newvel > 100 ) {
 		newvel = 100 ;
 	}
-	updateProgress( await fetch_json( "/set_velocity/" + newvel ) );
+	await updateProgress( await fetch_json( "/set_velocity/" + newvel ) );
 }
 
 async function check_cancelled( progress ) {
@@ -280,20 +277,20 @@ async function check_cancelled( progress ) {
 // it's temporary and distracting
 async function startTune() {
     progress =  await fetch_json( "/start_tune" ) ;
-    updateProgress( progress );
+    await updateProgress( progress );
 
 }
 
 async function stopTuneSetList() {
 	progress = await fetch_json("/stop_tune_setlist" ) ;
     progress = await check_cancelled() ;
-	updateProgress( progress ) ;
+	await updateProgress( progress ) ;
 }
 
 async function backSetList() {
 	progress = await fetch_json( "/back_setlist" ) ;
     progress = await check_cancelled() ;
-	updateProgress( progress ) ;
+	await updateProgress( progress ) ;
 }
 
 

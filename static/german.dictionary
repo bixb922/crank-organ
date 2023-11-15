@@ -1,0 +1,147 @@
+# Format:
+# *filename is a file to be translated
+# Without * the line is a rule of the form from_string|to_string
+# i.e. original text and translated text separated by | (pipe) character. 
+# There may be surrounding characters in
+# the from_string and to_string to ensure uniqueness of the from_string.
+*common.js
+"no conectado|"nicht angeschlossen
+"fin"|"Ende"
+esperando"|erwartet Start"
+status_text = "cancelado"|status_text = "gestrichen"
+= "sí" ;|= "ja" ;
+= "no" ;|= "nein" ;
+"Respuesta via red no ok|"Antwort über Netzwerk nicht ok 
+
+*index.html
+>Drehorgel|>Drehorgel
+<td>Uso</td>|<td>Gebraucht</td>
+>Capacidad|>Kapazität
+>Bater&iacute;a|>Batterie
+>Tiempo operaci&oacute;n|>Zeit operativ
+>Tiempo tocando<|>Zeit Musikwiedergabe<
+>Tiempo remanente|>Verbleibende Zeit
+>Tiempo solenoides energizados<|>Zeit Ventile an<
+>Puesto en cero<|>Auf Null gesetzt<
+<td>Remanente</td>|<td>Verbleibend</td>
+Poner contadores en cero|Setze Batteriezähler auf Null
+Editar tunelib|Tunelib bearbeiten
+Diagnóstico|Systeminformation
+Organillo|Drehorgel
+Historia|Verlauf
+Configuración general|Allgemeine Konfiguration
+Configuración MIDI|MIDI configuration
+Afinador|Stimmgerät
+Teclado bluetooth|Bluetooth keyboard
+"Contadores batería en cero"|"Batteriezähler aof Null"
+
+*tunelist.html
+Deshabilitado por afinador, pinout|Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe
+Lista de melodías|Melodieliste
+B&uacute;squeda|Suche
+>Actuación|>Setlist
+# In the javascript code:
+"Título"|"Titel"
+"Género"|"Genre"
+"Autor"|"Autor"
+"Año"|"Jahr"
+"Hist"|"Wiedergaben"
+"Info"|"Info"
+"Fecha"|"Datum"
+"Pts"|"Punkte"
+"actualizando setlist"|"Setlist wird aktualisiert"
+
+*keyboard.html
+Nombre Bluetooth|Bluetooth name
+Aviso Bluetooth|Advertising
+Conectado|Connected
+Notas tocadas|Notes played
+Notas omitidas|Notes omitted
+# In the javascript code:
+
+*note.html
+Afinar|Stimmen
+Sonar nota|Notentest
+Repetición|Wiederholungstest
+>Programa-nota<|>Programm-Note<
+>Amplitud|>Amplitude
+# In the javascript code.
+"Afinaci&oacute;n|"Frequenz
+"Amplitud|"Amplitude
+
+*notelist.html
+Afinar todos|Alle Noten stimmen
+Escala de prueba|Notenskala
+# In the javascript code:
+"Programa-nota"|"Programm-Note"
+"Afinaci&oacute;n|"Frequenz
+"Amplitud|"Amplitude
+Borrar afinación|Gespeicherte Frequenzen löschen
+
+
+*play.html
+Deshabilitado por afinador, pinout|Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe
+Melodía actual|Jetzige Melodie
+>Partir|>Start
+>Al comienzo|>Zum Anfang
+>Próximo|>Nächster
+>Guardar lista<|>Setlist speichern<
+>Cargar lista<|>Setlist laden<
+>Borrar setlist<|>Setlist löschen<
+>Desordenar lista<|>Setlist mischen<
+>Desordenar todos<|>Alle Melodien mischen<
+Control tempo|Temposteuerung
+Ajuste velocidad|Rückgabegeschwindingkeit
+>Girando|>Dreht
+"Girando"|"Dreht"
+"No gira"|"Dreht nicht"
+rev/seg|Umdrehungen/Sekunde
+# In the javascript code:
+"T&iacute;tulo"|"Titel"
+"G&eacute;nero"|"Genre"
+"Autor"|"Author"
+"Duraci&oacute;n"|"Länge"
+"A&ntilde;o"|"Jahr"
+"Info"|"Info"
+"Guardado"|"Gespeichert"
+"No guardado, error"|"Nicht gespeichert, Fehler aufgetreten"
+
+*diag.html
+>Descripción<|>Beschreibung<
+Diagn&oacute;stico|Systeminformation
+Ver log|Log anzeigen
+errores)|Fehler)
+>Versión Micropython<|>MicroPythonversion<
+>Imagen Micropython<|>MicroPython image<
+>Fecha/hora<|>Datum/Zeit<
+>Tiempo desde reboot<|>Zeit seit reboot<
+>minutos<|>Minuten<
+>Flash libre|>Flash frei
+>Flash usada|>flash belegt
+>Tiempo para gc<|>gc Zeit<
+[mseg]|[msec]
+>RAM libre|>RAM frei
+>RAM usada|>RAM belegt
+>Fecha/hora compilación<|>Kompilationsdatum<
+>Configuración solenoides|>Solenoidkonfiguration
+>Archivos MIDI|>MIDI-dateien
+>Carpeta música|>MIDI ordner
+Configuración WIFI|WIFI-Konfiguration
+>IP de clientes activos (60 segundos)<|>IP aktiver Kunden (60 Sek)<
+>Como WiFi station<|>Als WIFI-Station<
+>Se conecta a SSID<|>SSID<
+>Activa<|>Active<
+>Conectado a un SSID<|>An SSID angeschlossen<
+>Como WiFi access point<|>Als WiFi access point<
+>Alguien conectado<|>Jemand angeschlossen<
+
+*history.html
+Historia|Verlauf
+Fecha|Datum
+Melodía|Melodie
+Avance %|% abgespielt
+Si historia más antigua que|Wenn älter als
+meses,|Monate,
+Borrar|Löschen
+
+
