@@ -87,7 +87,7 @@ password</div>
 	<br>
 
 	
-	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, for example: not playing music, no web activity, no FTP. Turn power off then on to restore function.  No decimals, integer only:</label>
+	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, i.e. ifnot playing music, no web activity. Turn power off then on to restore.  No decimals, integer only:</label>
 	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3" oninput="markField('idle_deepsleep_minutes')"/>&nbsp;minutes.
 	<br>
 
@@ -107,11 +107,6 @@ password</div>
     
 	<button type="button" onclick="save('max_polyphony', 'battery_watt_hours','idle_deepsleep_minutes','ap_max_idle', 'fixed_watts', 'solenoid_watts', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
-
-<div class="middlediv">Enable FTP access</div>
-	With this option you can use Windows Explorer or FileZilla to access all files in the microcontroller with the FTP standard (File Transfer Protocol). This enables to copy or replace files with drag and drop operations. The FTP server will stop with the next power down.
-	<br>
-	<button type="button" onclick="startFTP()">Start FTP on the microcontroller</button>
 
 <div class="middlediv">Other parameters</div>
     Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
@@ -278,11 +273,6 @@ function getRadioButtonValue( element_name ) {
 	return checked ;
 }
 	
-
-async function startFTP(){
-	await fetch_json("/start_ftp" ) ;
-    await revoke_credentials();
-}
 function pageUp(){
 	window.location.href = "/static/index.html" ;
 }

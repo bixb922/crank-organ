@@ -110,6 +110,17 @@
 				<span style="font-size:36px">&#x1f50d;</span>
 			</td>
 		</tr>
+		<tr>
+			<td>
+				<button type="button" onclick="startFTP()" id="ftpButton">
+					FTP
+				</button>
+			</td>
+			<td id="ftpResult">
+			<!-- Open folder emoji-->
+				<span style="font-size:36px">&#x1f4c2;</span>
+			</td>
+		</tr>
 
 	</tbody>
 </table>
@@ -206,17 +217,16 @@ async function battery_zero() {
 	updateBatteryInfo( await fetch_json( "/battery_zero" ) ) ;
 }
 
+async function startFTP(){
+	resp = await fetch_json("/start_ftp" ) ;
+    await revoke_credentials();
+    if( resp["result"] == "ok" ){
+        showPopup( "ftpButton", "FTP started." );
+        textById( "ftpResult", "FTP started. Reboot to stop. Connect with FileZilla or Windows Explorer");
+    } 
+}
 getPageData() ; 
 
-/* document.addEventListener("visibilitychange", () => {
-  // Refresh battery info when page becomes visible
-  // only of utility for browser "back" button
-    console.log("index page visibility change", document.visibilityState ) ;
-  if (document.visibilityState === "visible") {
-    getBatteryInfo() ;
-  } 
-});
-*/
 
    
 </script>

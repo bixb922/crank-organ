@@ -34,6 +34,7 @@ Configuración MIDI|MIDI configuration
 Afinador|Tuner
 Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Battery counters set to zero"
+"Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|"FTP started. Reboot to stop. Connect with FileZilla or Windows Explorer"
 
 *tunelist.html
 Deshabilitado por afinador, pinout|Disabled by tuner, pinout test
@@ -50,6 +51,7 @@ B&uacute;squeda|Search
 "Fecha"|"date"
 "Pts"|"Rtng"
 "actualizando setlist"|"updating setlist"
+
 
 *keyboard.html
 Nombre Bluetooth|Bluetooth name

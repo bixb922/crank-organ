@@ -116,7 +116,7 @@ class TuneManager:
         await asyncio.sleep_ms(10)
         filelist = []
         for fn in os.listdir( self.music_folder ):
-            if fn.endswith(".MID") or fn.endswith(".mid"):
+            if fn[-4:].lower() == ".mid":
                 filelist.append( fn ) 
 
         self.tunelib_progress = "Checking for new files"

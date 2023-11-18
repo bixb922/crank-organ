@@ -2,6 +2,8 @@
 # MIT License
 # Webserver module, serves all http requests. 
 
+# >>> SERVER pythonanywhere.com
+
 import os
 import sys
 import gc
@@ -31,6 +33,7 @@ from timezone import timezone
 from player import player
 from organtuner import organtuner
 import fileops
+from poweroff import poweroff
 
 # Testing needed
 # import soleble
@@ -133,7 +136,7 @@ def check_authorization( request ):
     auth = request.headers.get("Authorization","")
     if not auth:
         # No authorization header present, responde with 
-        _logger.debug("Web access not authorized: no username/password yet")
+        # http 401 error "not authorized" to ask for password
         return ask_for_password
 
     # Authorization header expected to be "Basic xxxxxx", xxx is base64 of username/password
@@ -464,7 +467,9 @@ async def change_config( request ):
 async def start_ftp( request):
     if (response := check_authorization( request ) ):
         return response
-
+    poweroff.cancel_power_off()
+    scheduler.set_playback_mode( False )
+    
     # Run FTP in a separate thread
     import _thread
     def uftpd_in_a_thread():

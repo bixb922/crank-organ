@@ -48,6 +48,7 @@ flowchart LR
     H --> |General Configuration button| GC[Configuration page]
     H --> |Click on MIDI Configuration| MC[MIDI and pin configuration page]
     H --> |System info button| W[System information page]
+    H --> |FTP button| H
     W --> |Show log button| E[Event log]
 ```
 
@@ -368,7 +369,7 @@ ls :
 ```
 The application is now installed.
 
-To start the application with the MicroPython console use:
+To test the application with the MicroPython console use:
 ```
 mpremote exec "import main"
 ```
@@ -406,7 +407,7 @@ Go!
 
 If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is.
 
-Now connect with WiFi and use a browser to use the software. See below, there are several options to connect with WiFi. The first connection must be done to the Access Point provided by the microcontroller. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser and wait for the main menu page to show.
+Now connect with WiFi. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear.
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
 
@@ -414,11 +415,9 @@ Then configure the WiFi parameters using the General Configuration button on the
 
 # WiFi capabilities
 
-You connect to the controller with a browser (Chrome or Firefox) via WiFi. 
-
 The microcontroller can connect to a WiFi Access Point, for example your home WiFi Router. It can simultaneously be be an Access Point so that a cell phone or PC can connect to it as if it were a home router.
 
-These 3 options are available simultaneously for WiFi connection:
+These options are available simultaneously for WiFi connection:
 
 * Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
 
@@ -436,7 +435,7 @@ flowchart LR
    MC[microcontroller]-->|WiFi| AP --> I[Internet]
    
 ```
-* Option 3: This is the fallback option and the option used the first time to configure the microcontroller. The microcontroller publishes a Access Point where you can connect. You connect to that Access Point just like you connect to your home router, but there is no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on, or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone one). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2.
+* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect. You connect to that Access Point just like you connect to your home router, but there is no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on, or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone one). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2.
 
 ```mermaid
 flowchart LR
@@ -447,10 +446,12 @@ Once connected, you start the Chrome or Firefox and enter ```organillo.local```.
 
 Sometimes, the browser changes the http:// prefix to https://, verify that the prefix is http since https does not work currrently. (I plan to upgrade to https support once the Microdot web server supports https. https support in Micropython is fairly recent, 2023).
 
+The microcontroller always tries option 1 and option 2 until one of those two succeds. The microcontroller publishes option 3 during 2 minutes and maintains that option active only of you connect.
+
 
 # Configuration
 
-The configuration parameters explained in detail on the configuration page.
+The configuration parameters explained in detail on the configuration page. After changing and saving a new configuration, please reboot the microcontroller.
 
 ## Configurations you should change
 A initial configuration file is supplied. This is what you should modify:
@@ -467,12 +468,43 @@ If this option is checked, the a dialog like the following one will appear when 
 
 Leave the username blank. Enter the configuration password and press accept.
 
+## Power management settings
+
+Configure the battery capacity, in watts-hour. You get the watts-hour by multiplying the battery voltage by the milliampere-hours figure (mAh) figure of the battery. Some manufacturers will publish the watts-hour figure.
+
+Example: a AA battery is rated at 2000mAh, that is 2 Ah (ampere-hours. The battery pack has 10 batteries delivering 1.2V each, for a total of 12V. The capacity is 12V*2Ah = 24 watt-hours.
+
+Another example: a USB battery pack is rated at 10000mAh = 10 Ah. Although the battery pack delivers 5V, lithium batteries are 3.3V, so the capacity is 3.3V*10Ah = 33 watt-hours.
+
+Configure the solenoid resistance (default: 90 Ohms).
+
+## Time zone
+When connected to a router or cell phone hot spot, the software uses ntptime (network time protocol) to acquire the UTC time, and then it queries worldtimeapi.org once a day for the time zone offset and DST offset. Once that is done, the time zone offset is stored in flash for the next refresh, that takes place at most once a day.
+
+Enter your local time zone in the "other parameters" section. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of official names of time zones. The time zone name has to match one recognized by worldtimeapi.org.
+
+If no internet access is available, time starts on Jan 1st, 2000. This does not impair operation. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
+
+Before copying tunes to the microcontroller, it is best to have the time set by ```mpremote rtc --set```.
+
+## Other parameters (less likely to need change)
+
+Go through the rest and change what you may need, use save button to save to the microcontroller. Most parameters are there just to explain how the software works.
+
+The sections are:
+* Crank settings. Necessary to change when a crank speed sensor is installed (still under development).
+
+The rest of the sections is even less likely to require change:
+* Debug/test settings
+* Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the event log.
+
+The configuration gets stored to /data/config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
 
 ## MIDI configuration
 
 The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
-There are templates for the pin definition for several usual crank organ scales.
+There are templates for the pin definition for several usual crank organ scales. For a 20 note Carl Frei scale, the preconfigured settings should normally do, but check if transposition of the configuration is needed.
 
 ### Select scale
 
@@ -487,9 +519,7 @@ If you need another scale, post an issue or look at the configuration files to f
 
 
 ### Transpose scale if necessary
-If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowe
-
-st note fits. The transpose buttons shift the complete scale up or down one semitone.
+If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowest note fits. The transpose buttons shift the complete scale up or down one semitone.
 
 ### Test solenoids
 Next to each solenoid pin definition there is a test button. If the hardware and solenoids are connected, this is a way to test if the wiring is correct.
@@ -523,43 +553,10 @@ It's best if you have at least the touchpad button, which essentially is a singl
 
 *After saving configuration, please reboot.*
 
-## Power management settings
 
-Configure the battery capacity, in watts-hour. You get the watts-hour by multiplying the battery voltage by the milliampere-hours figure (mAh) figure of the battery. Some manufacturers will publish the watts-hour figure.
-
-Example: a AA battery is rated at 2000mAh, that is 2 Ah (ampere-hours. The battery pack has 10 batteries delivering 1.2V each, for a total of 12V. The capacity is 12V*2Ah = 24 watt-hours.
-
-Another example: a USB battery pack is rated at 10000mAh = 10 Ah. Although the battery pack delivers 5V, lithium batteries are 3.3V, so the capacity is 3.3V*10Ah = 33 watt-hours.
-
-Configure the solenoid resistance (default: 90 Ohms).
-
-## Time zone
-When connected to a router or cell phone hot spot, the software uses ntptime (network time protocol) to acquire the UTC time, and then it queries worldtimeapi.org once a day for the time zone offset and DST offset. Once that is done, the time zone offset is stored in flash for the next refresh, that takes place at most once a day.
-
-Enter your local time zone in the "other parameters" section. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of official names of time zones. The time zone name has to match one recognized by worldtimeapi.org. 
-
-If no internet access is available, time starts on Jan 1st, 2000. This does not impair operation. The history page will show the tunes as played on 2000-01-01, and the error log will show time only.
-
-Before copying tunes to the microcontroller, it is best to have the time set by ```mpremote rtc --set'''.
-
-## Other parameters (less likely to need change)
-
-Go through the rest and change what you may need, use save button to save to the microcontroller. Most parameters are there just to explain how the software works.
-
-The sections are:
-* Crank settings. Necessary to change when a crank speed sensor is installed (still under development).
-
-The rest of the sections is even less likely to require change:
-* Debug/test settings
-* Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the event log.
-
-The configuration gets stored to /data/config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
-
-
-*After saving configuration, please reboot.*
 
 ## FTP: drag and drop to update files with WiFi
-Press the "FTP access" button on the configuration page.,
+Press the "FTP access" button on the main menu page.
 
 This will allow to access the microcontroller's files via FTP with Windows Explorer or with the (free) Filezilla program.
 
@@ -577,6 +574,9 @@ import os
 import machine
 os.mount(machine.SDCard(), "/sd")
 ```
+
+It is quite easy to connect a SD card if desirable. There are schematics of boards with SD card included, and the MicroPython support is good.
+
 If the SD card is connected to a non-standard SPI port, other parameters will be necessary, search for  "micropython.org class sdcard" plus the documentation for ESP32-S3. 
 
 The tunelib folder will then be at /sd/tunelib

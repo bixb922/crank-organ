@@ -56,5 +56,8 @@ class PowerManager:
         except Exception as e:
             self.logger.exc( e, "power management process aborted")
 
+    def cancel_power_off( self ):
+        self.power_task.cancel()
+        
 
 poweroff = PowerManager()

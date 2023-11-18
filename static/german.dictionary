@@ -33,7 +33,7 @@ Configuración general|Allgemeine Konfiguration
 Configuración MIDI|MIDI configuration
 Afinador|Stimmgerät
 Teclado bluetooth|Bluetooth keyboard
-"Contadores batería en cero"|"Batteriezähler aof Null"
+"Contadores batería en cero"|"Batteriezähler aof Null""FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
 
 *tunelist.html
 Deshabilitado por afinador, pinout|Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe
