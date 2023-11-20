@@ -7,7 +7,7 @@ MIDI based crank organ software and hardware
 This animation shows how a crank organ with MIDI control works:
 ![animated gif for crank organ](animacion_organillo.gif)
 
-The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 50 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). A microcontroller has a MIDI file that stores the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, and air enters the pipe and vibrates, producing sound. 
+The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 50 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores a MIDI files that have the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 
 
 This repository has a complete hardware and software solution for this kind of mechanical music. This diagram shows how this system works:
 
@@ -25,7 +25,7 @@ The repository describes the complete solution:
 
 There are many places on internet to describe how to build a crank organ, how to design and cut the pipes, make bellows, windchests, etc.  That description is not part of this repository.
 
-How is this solution used?
+## How is this solution used?
 
 Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and copy your MIDI files to the microcontroller via WiFi or USB. You can add more information such as title and genre to the music.
 

@@ -275,7 +275,7 @@ The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython
 
 
 # The tune library
-All MIDI files to be played reside in the tunelib folder in the microcontroller.
+All MIDI files to be played reside in the tunelib folder in the microcontroller. The filenames must end with .mid or .MID
 
 The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating,
 
@@ -669,6 +669,10 @@ The following features need more testing or development:
 * Microphone for tuning. It works well, but I have not included a way to aid setting the sensitivity of the microphone. Microphones have a volume setting. If set for high, signal is distorted but that does not impair frequency detection, but intensity cannot be measured. Microphones with automatic volume control are ok to measure tuning, but will not measure volume.
 
 * Sensor for crank speed to influence playback speed. Pending to test and for fine adjustments.
+
+# Troubleshooting
+If you added tunes to the tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and changes recognized.
+
 
 
 

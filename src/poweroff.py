@@ -49,13 +49,17 @@ class PowerManager:
                 if idle_minutes > idle_deepsleep_minutes:
                     led.off()
                     self.logger.info(f"Idle for {idle_minutes} minutes, entering deepsleep")
-                    await asyncio.sleep_ms(100)
-                    machine.deepsleep()
+                    self.power_off()
                     # Not to return
 
         except Exception as e:
             self.logger.exc( e, "power management process aborted")
 
+    def power_off( self ):
+        # Closest thing to self power off.
+        await asyncio.sleep_ms(100)
+        machine.deepsleep()
+                
     def cancel_power_off( self ):
         self.power_task.cancel()
         
