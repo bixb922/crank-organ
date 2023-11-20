@@ -3,22 +3,31 @@ MIDI based crank organ software and hardware
 
 # Overview
 
-Here is a animation on how a crank organ with MIDI control works:
+
+This animation shows how a crank organ with MIDI control works:
 ![animated gif for crank organ](animacion_organillo.gif)
 
-The crank moves bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 50 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). A microcontroller has a MIDI file that stores the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, and air enters the pipe and vibrates, producing sound. 
+The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 50 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). A microcontroller has a MIDI file that stores the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, and air enters the pipe and vibrates, producing sound. 
 
-This diagram shows how this MIDI control works:
+This repository has a complete hardware and software solution for this kind of mechanical music. This diagram shows how this system works:
 
 ![diagram](diagram.png)
 
-A crank organ consists of windchests with pipes. A bellows pumps air into the windchests. One solenoid valve for each pipe controls the air flow, when open, the pipe sounds.
+The microcontroller stores the MIDI files with the tunes and is also a web server for the cell phone (or a tablet, or PC). On the cell phone a browser such as Chrome or Firefox is used to select the MIDI files that are going to be played. Once a setlist or a tune have been selected, the microcontroller plays the files.
 
-This hardware and software is the MIDI controller for this setup. It is controlled with a browser in a cell phone (or tablet or PC), and in turn controls the solenoid valves to open according to MIDI files stored in the microcontroller.
+The repository describes the complete solution:
+* hardware schematics
+* list of materials
+* instructions on how to build the hardware
+* complete software (open source) written in a high level language: MicroPython
+* a easy installation procedure for the software (no programming skills necessary)
+* ready to use configuration files for common crank organ setups
+
+There are many places on internet to describe how to build a crank organ, how to design and cut the pipes, make bellows, windchests, etc.  That description is not part of this repository.
 
 How is this solution used?
 
-Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and put your MIDI files in the tunelib folder of the PC. You can add more information such as title to the music.
+Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and copy your MIDI files to the microcontroller via WiFi or USB. You can add more information such as title and genre to the music.
 
 You control the order of the tunes with the cell phone. You select tunes to play by tapping on them on the tunelist page on the cell phone.
 
@@ -34,31 +43,24 @@ The diligent and flexible mode: You can modify the setlist on the fly with the p
 
 The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
-# Description
+# Contents
 
-This is the complete software for automating a MIDI and solenoid valve based crank organ. A description on how to build the electronic hardware is included in the doc-hardware folder.
+Please see the doc-software folder and click the file README.md for a detailed description of the software, with screen images.
 
-Please see the doc-software folder, click the file README.md for a detailed description of the software, with screen images.
+See the doc-hardware folder and click the file README.md for schematics of the hardware and detailed instructions on how to build the hardware.
 
-See the doc-hardware folder, click the file README.md for schematics of the hardware and detailed instructions on how to build the hardware.
-
-This is work in progress. Please post an issue for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
-
-Time permitting, I'll complete this repository:
-* Better description of hardware and building the hardware
-* Better description of I2C based controller cards for more than 20 pipes
-* Crank rotation sensor (tachometer)
+This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 
 # Folders
-These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC, you should see the folders at https://github.com/bixb922/crank-organ
+These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders.
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
-|Documentation                                      |
+|Documentation folders:                                      |
 |doc-software|Description of the controller software. Open README.md|
 |doc-hardware|Description of the controller hardware. Open README.md|
-|Software folders                                   |
+|Software folders:                                   |
 |src| Source code (MicroPython) |
 |data| Pin assignment (pinout) configuration files |
 |static| Web pages for the microcontroller (html)   |
@@ -68,7 +70,7 @@ These are the folders in this GITHUB repository. On a cell phone, select "Browse
 
 
 # License
-This license and disclaimer also covers the hardware design. The hardware design is part of the software published here.
+This license and disclaimer also covers the hardware design documents. The hardware design is part of the software published here.
 
 Copyright (c) 2023 Hermann Paul von Borries
 
