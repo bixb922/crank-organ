@@ -17,7 +17,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp()" id="pageUp">&#11013;</a>
 		&nbsp;Lista de melodías
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -90,6 +90,8 @@ function searchTable() {
 // facilitate sorting. Store in global
 // variable, will be refreshed on reload of page.
 let tunelist = [] ;
+let serverMode = false ;
+let device_id = "" ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let header = ["Título", "Género", "Autor", "", "Año", "Hist", "Info", "Fecha", "Pts"] ;
@@ -97,6 +99,20 @@ let sortColumn = 0 ;
 direction = 1 ;
 
 async function setTuneList( ) {
+    let page_url = new URL(window.location.href) ;
+    let path = page_url.pathname.split("/") ;
+    if( path.length == 4 && path[3] != "" ){
+        device_id = "/" + path[3] ;
+        // URL was /static/tunelist.html/something
+        // Server mode: this runs in a flask server
+        // on some internet host, not on the microcontroller
+        serverMode = true; 
+        document.getElementById( "navigateToPlayPage").style.display = "none" ;
+        // No left arrow button in header
+        let d = document.getElementById( "pageUp" ) ;
+        d.style.display = "none" ;
+        console.log("Server mode" );
+    }
 	let tunelib = await get_tunelib() ;
     tunelist = [];
     for( const [key, tune] of Object.entries(tunelib)) {
@@ -169,13 +185,13 @@ function navigateToPlayPage() {
 
 async function queueTune( tune_number ) {
 	showPopup( "t"+tune_number, "actualizando setlist");
-	let progress = await fetch_json( "/queue_tune/" + tune_number ) ;
+	let progress = await fetch_json( "/queue_tune/" + tune_number + device_id ) ;
 	updateProgress( progress ) ;
 }
 
 async function getProgress() {
 	while( true ) {
-        let progress = await fetch_json ( "/get_progress" ) ;
+        let progress = await fetch_json ( "/get_progress" + device_id ) ;
         updateProgress( progress );
         if( progress["status"] == "playing"){
 		  await sleep_ms( 2_000 ) ; // safer would be 10_000

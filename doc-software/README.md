@@ -498,7 +498,7 @@ The rest of the sections is even less likely to require change:
 * Debug/test settings
 * Other parameters, such as the time zone offset. The time zone is only relevant for the time displayed in the event log.
 
-The configuration gets stored to /data/config.json in the microcontroller. Passwords are cyphered. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
+The configuration gets stored to /data/config.json in the microcontroller. Passwords are encrypted. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
 
 ## MIDI configuration
 
@@ -599,7 +599,7 @@ You can replace the crank organ ohite of the home screen by replacing the file /
 Microcontroller flash storage is fairly robust. However, 
 once you configure your microcontroller, you should backup relevant files:
 * /data/tunelib.json (the additional information about each tune)
-* /data/config.json (cyphered password, WiFi and general configuration). 
+* /data/config.json (encrypted passwords, WiFi and general configuration). 
 * /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information). This is necessary only if you change the standard configuration.
 * /data/pinout.txt (although this file is very easy to restore using the MIDI configuration page)
 * /data/history.db (if you are interested in conserving the history of when tunes have played)
@@ -679,7 +679,7 @@ If you added tunes to the tunelib folder of the microcontroller, and they do not
 # Restrictions
 Safari as a browser is not supported.
 
-The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. I have put several safeguards in the software, such as cyphering (encrypting) passwords with a hidden key, controlling access via WiFi to files, etc. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB or FTP, all elements including passwords can be ultimately retrieved and new code can be installed. 
+The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. I have put several safeguards in the software, such as encrypting passwords with a hidden key, controlling access via WiFi to files, etc. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB or FTP, all elements including passwords can be ultimately retrieved and new code can be installed. 
 
 Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time, since more than one client may delay notes when playing back music.
 

@@ -109,6 +109,8 @@ function getResourceNumberFromURL(){
 }
 
 
+
+
 function barGraph( container_name, value, color, scale_divisions, alignment, width_percent ) {
 	// barGraph on container, must create canvas
 	let canvas_name = container_name + "canvas" ;
@@ -321,7 +323,7 @@ async function updateHeader() {
 	await sleep_ms( 1_000 );
 	while( true ) {
 		let battery = await fetch_json( "/battery" ) ;
-        let batteryText ;
+        let batteryText = "" ;
 		if( battery["low"] ) {
 			// Low battery emoji on BlanchedAlmond background
 			batteryText = "<span style='background-color:#FFEBCD'>&#x1faab;</span>" ;
@@ -333,7 +335,12 @@ async function updateHeader() {
         batteryText += "&nbsp;" + Math.round( 100-battery["percent_used"] ) + "%&nbsp;";
 		batteryText += format_secHHMM( battery["time_remaining"] ) ;
 
-        htmlById( "header_time", batteryText ) ;
+        if( battery["capacity"] != "no_battery" ){
+            htmlById( "header_time", batteryText ) ;
+        }
+        else {
+            htmlById( "header_time", "" );
+        }
         // Battery info gets updated once a minute.
         // Refresh display about twice a minute, that's more than enough 
         // since battery info changes slowly.

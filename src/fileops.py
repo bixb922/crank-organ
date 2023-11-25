@@ -17,7 +17,7 @@ def backup( filename ):
     # organtuner: for each note tuned
     # pinout: only when saving user input 
     # config: when saving user input. 
-    #        Cypher password has no backup
+    #        Encrypt password has no backup
     # tunemanager: when updating tunelib and when saving
     #              user data. 
     #              Updating history has no backup.

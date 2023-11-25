@@ -58,7 +58,21 @@ class Config:
         except Exception as e:
             _logger.exc( e, f"Could not read {self.CONFIG_JSON}, loading fallback configuration" )
             self.cfg = {}
-
+        
+        # >>> Transitory
+        changed = False
+        for k, v in self.cfg.items():
+            if not isinstance(v, str):
+                continue
+            if "password" in k:
+                if v.startswith("@cyphered_"):
+                    self.cfg[k] = self.cfg[k].replace("@cyphered_", "@encrypted_" )
+                    changed = True
+        if changed:
+            fileops.write_json( self.cfg,  self.CONFIG_JSON )
+            
+        # >>> END TRANSITORY
+        
         # Load a fallback configuration, populate cfg with missing values if any
         # If that value is saved, information gets complemented.
         # Also, the save() function relies on all keys be present. Only
@@ -104,12 +118,12 @@ class Config:
             if k not in self.cfg:
                 self.cfg[k] = v
 
-        # Cypher passwords, if not done already
-        if password_manager._cypher_all_passwords( self.cfg ):
-            # A password had to be cyphered.
-            # Rewrite config.json with cyphered passwords.
+        # Encrypted passwords, if not done already
+        if password_manager._encrypt_all_passwords( self.cfg ):
+            # A password had to be encrypted.
+            # Rewrite config.json with encrypted passwords.
             fileops.write_json( self.cfg,  self.CONFIG_JSON, keep_backup=False )
-            _logger.info("Passwords cyphered")
+            _logger.info("Passwords encrypted")
 
 
         self.wifi_mac = ubinascii.hexlify( network.WLAN(network.STA_IF).config("mac")).decode()
@@ -197,8 +211,8 @@ class Config:
             if k in newconfig:
                 self.cfg[k] = newconfig[k]
 
-        # Cypher passwords if not cyphered
-        password_manager._cypher_all_passwords( self.cfg )
+        # encrypt passwords if not encrypted
+        password_manager._encrypt_all_passwords( self.cfg )
         
         fileops.write_json( self.cfg,  self.CONFIG_JSON )
 
@@ -206,10 +220,10 @@ class Config:
 
     
     
-PASSWORD_PREFIX = "@cyphered_"
+PASSWORD_PREFIX = "@encrypted_"
 class PasswordManager:
         
-    # Password are stored cyphered in config.cfg
+    # Password are stored encrypted in config.cfg
     def _get_key( self ):
         from esp32 import NVS
         nvs = NVS("drehorgel")
@@ -225,22 +239,22 @@ class PasswordManager:
             nvs.set_blob("aeskey", key )
         return key
 
-    def _cypher_password( self, password ):
+    def _encrypt_password( self, password ):
         if not isinstance(password, str):
-            raise ValueError("Can't cypher object that isn't str")
+            raise ValueError("Can't encrypt object that isn't str")
         if password.startswith(PASSWORD_PREFIX):
-            raise ValueError("Can't cypher twice")
+            raise ValueError("Can't encrypt twice")
 
         pass_encoded = password.encode()
-        # Space for password, 4 bytes salt, 4 bytes check, 1 byte
+        # Space for password, 4 bytes initial vector, 4 bytes check, 1 byte
         # encoded length, the encoded password, and 1 extra just in case
         pass_buffer_len = len(pass_encoded) + 4 + 4 + 1 + 1
         # AES likes buffer length multiple of 16
         pass_buffer_len += 16 - ( pass_buffer_len % 16 )
-        # Fill buffer with random so unused bytes act as salt
+        # Fill buffer with random so unused bytes act as initial vector
         # This makes equal passwords encrypt differently.
         pass_buffer = bytearray( os.urandom( pass_buffer_len ) )
-        # Add text to help _uncypher_password recognize if correctly decrypted
+        # Add text to help _decrypt_password recognize if correctly decrypted
         pass_buffer[4:8] = b'salt'
         # Add password length
         pass_buffer[8] = len( pass_encoded )
@@ -252,11 +266,11 @@ class PasswordManager:
         
         return PASSWORD_PREFIX + ubinascii.hexlify( c ).decode()
 
-    def _uncypher_password( self, c ):  
+    def _decrypt_password( self, c ):  
         if not isinstance(c, str):
-            raise ValueError("Can't uncypher object that isn't str")
+            raise ValueError("Can't decrypt object that isn't str")
         if not c.startswith(PASSWORD_PREFIX):
-            # Not cyphered, no need to do magic     
+            # Not encrypted, no need to do magic     
             return c   
         c = ubinascii.unhexlify( c[len(PASSWORD_PREFIX):] )
         from ucryptolib import aes
@@ -273,8 +287,8 @@ class PasswordManager:
     
 
 
-    def _cypher_all_passwords( self, cfg ):
-        # Cyphers passwords in config.json if not yet cyphered
+    def _encrypt_all_passwords( self, cfg ):
+        # encrypts passwords in config.json if not yet encrypted
         # Save changes to flash
         changed = False
         for k, v in cfg.items():
@@ -282,10 +296,9 @@ class PasswordManager:
                 continue
             if "password" in k:
                 if v.startswith(PASSWORD_PREFIX):
-                    # Don't cypher again
+                    # Don't encrypt again
                     continue
-                _logger.info(f"Cypher {k}" )
-                cfg[k] = self._cypher_password( v )
+                cfg[k] = self._encrypt_password( v )
                 changed = True
         return changed
         
@@ -294,7 +307,7 @@ class PasswordManager:
     def get_password( self, pwdname ):
         # Used here and by webserver for http authentication
         pwd = config.cfg[pwdname]
-        return self._uncypher_password( pwd )
+        return self._decrypt_password( pwd )
 
 
     # Services to verify password (called by webserver)
