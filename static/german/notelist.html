@@ -58,15 +58,16 @@ function updateNoteList( notelist ) {
 	s += "<tbody>" ;
     // notelist is a dictionary, key=midi note number
     
-    let max_amplitude = get_max_amplitude( notelist ) ;
 	for( let midi in notelist ){
 		let note = notelist[midi]  ;
-        let amp = list_average( note["amplist"] ) ;
-        let ampdb = "-" ;
-        if( amp != null ){
-            let ampdb = amplitude_to_db( amp, max_amplitude ) ;
+        let ampdb = note["ampdb"] ;
+        if( ampdb == null ){
+            ampdb = "-";
         }
-        let cents = list_average( note["centslist"] ) ;
+        else{
+            ampdb = Math.round( ampdb ) ;
+        }
+        let cents = note["cents"] ;
         if( cents == null ){
             cents = "-" ;
         }
@@ -88,7 +89,7 @@ function updateNoteList( notelist ) {
 
 	for( let midi in notelist ){
 		let note = notelist[midi] ;
-        let cents = list_average( note["centslist"] ) ;
+        let cents = note["cents"]  ;
         let elename = "tuning" + midi ;
         let docele = document.getElementById( elename ) ;
         if( cents != null ){
@@ -99,13 +100,12 @@ function updateNoteList( notelist ) {
             docele.style.visibility = "hidden" ;
         }
 
-        amp = list_average( note["amplist"] ) ;
+        let ampdb = note["ampdb"] ;
         elename = "amp" + midi ;
         docele = document.getElementById( elename ) ;
-        if( amp != null && amp > 0 ){
+        if( ampdb != null ){
           docele.style.visibility = "visible" ;
-		  let db = amplitude_to_db( amp, max_amplitude ) ;
-		  barGraph( elename, scale_db( db ), sap_green, scale_divisions_db, "right", 20 );
+		  barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 20 );
         }
         else {
             docele.style.visibility = "hidden" ;

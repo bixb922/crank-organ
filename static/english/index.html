@@ -27,6 +27,9 @@
 			</td>
 			<td>
 				<img src="/static/crank.jpg" width=100>
+                <span id="serverinfo"><br>
+                    <a href="" id="serverlink">Server link</a>
+                </span>
 			</td>
 		</tr>
 		<tr>
@@ -172,8 +175,13 @@
 <script>
 
 async function getPageData(){
-    resp = await fetch_json( "/get_pinout_filename" ) ;
+    resp = await fetch_json( "/get_index_page_info" ) ;
     textById( "pinout_description", resp.pinout_description ) ;
+    if( resp["serverlink"] != undefined &&
+        resp["serverlink"] != ""){
+        document.getElementById("serverinfo").style.display = "" ;
+        document.getElementById("serverlink").href = resp["serverlink"]
+    }
     getBatteryInfo();
     
 }    

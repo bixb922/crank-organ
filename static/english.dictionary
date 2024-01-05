@@ -9,9 +9,7 @@
 "fin"|"end"
 esperando"|waiting"
 status_text = "cancelado"|status_text = "cancelled"
-= "sí" ;|= "yes" ;
-= "no" ;|= "no" ;
-"Respuesta via red no ok|"Network response not ok 
+
 
 *index.html
 >Drehorgel|>Crank organ
@@ -51,7 +49,7 @@ B&uacute;squeda|Search
 "Fecha"|"date"
 "Pts"|"Rtng"
 "actualizando setlist"|"updating setlist"
-
+"No hay información de avance disponible"|"No progress information available"
 
 *keyboard.html
 Nombre Bluetooth|Bluetooth name
@@ -108,6 +106,7 @@ rev/seg|rev/sec
 "Info"|"Info"
 "Guardado"|"Saved"
 "No guardado, error"|"Not saved, error"
+"No hay información de avance disponible"|"No progress information available"
 
 *diag.html
 >Descripción<|>Description<
@@ -143,6 +142,7 @@ Historia|History
 Fecha|Date
 Melodía|Tune
 Avance %|% completed
+Pedido|Request
 Si historia más antigua que|When older than
 meses,|months,
 Borrar|delete

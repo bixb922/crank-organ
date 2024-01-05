@@ -90,39 +90,31 @@ function searchTable() {
 // facilitate sorting. Store in global
 // variable, will be refreshed on reload of page.
 let tunelist = [] ;
-let serverMode = false ;
-let device_id = "" ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let header = ["Título", "Género", "Autor", "", "Año", "Hist", "Info", "Fecha", "Pts"] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
+function isUsedFromServer(){
+    return document.cookie.includes( "drehorgel=" ) ;   
+}
+// Called when loading page:
 async function setTuneList( ) {
-    let page_url = new URL(window.location.href) ;
-    let path = page_url.pathname.split("/") ;
-    if( path.length == 4 && path[3] != "" ){
-        device_id = "/" + path[3] ;
-        // URL was /static/tunelist.html/something
-        // Server mode: this runs in a flask server
-        // on some internet host, not on the microcontroller
-        serverMode = true; 
+    console.log("setTuneList cookie=", document.cookie );
+    if( isUsedFromServer() ){
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
-        // No left arrow button in header
-        let d = document.getElementById( "pageUp" ) ;
-        d.style.display = "none" ;
-        console.log("Server mode" );
     }
-	let tunelib = await get_tunelib() ;
+    let tunelib = await get_tunelib() ;
     tunelist = [];
     for( const [key, tune] of Object.entries(tunelib)) {
         tunelist.push( tune ) ;
     }
-
     sortTunelist( 0 );
-    updateTunelistTable();
+    // Now update tunelist html
+    updateTunelistTable( );
     
-    // Refresh progress every once in a while
+    // Refresh progress periodically
 	await getProgress() ;
 }
 
@@ -147,7 +139,7 @@ function fillHeader( ){
     document.getElementById("tunelisthead").innerHTML = s ;
 }
     
-function fillBody() {
+function fillBody( ) {
     let s = "";
     
 	for( i in tunelist ) {
@@ -174,26 +166,42 @@ function fillBody() {
 	htmlById("tunelistbody", s) ;
 }
 
-function updateTunelistTable(){
-    fillHeader();
-    fillBody() ;
+function updateTunelistTable( ){
+    fillHeader( );
+    fillBody( ) ;
     
 }    
 function navigateToPlayPage() {
 	window.location.href = "/static/play.html" ;
 }
 
-async function queueTune( tune_number ) {
-	showPopup( "t"+tune_number, "actualizando setlist");
-	let progress = await fetch_json( "/queue_tune/" + tune_number + device_id ) ;
+async function queueTune( tuneid ) {
+    let spectator_name = "" ;
+    if( isUsedFromServer()  ){
+        let resp = await fetch_json( "/get_spectator_name" ) ;
+        console.log("queueTune resp=", resp );
+        spectator_name = resp["spectator_name"] ;
+        while( spectator_name == "" ){
+            spectator_name = window.prompt("¿Cual es tu nombre?").trim().replace(/<\/?[^>]+(>|$)/g, "");
+        }
+    }
+
+	showPopup( "t"+tuneid, "actualizando setlist");
+    postdata = { 
+        "spectator_name": spectator_name, 
+        "tuneid": tuneid } ;
+	let progress = await fetch_json( "/queue_tune/" + tuneid, postdata ) ;
 	updateProgress( progress ) ;
 }
 
 async function getProgress() {
 	while( true ) {
-        let progress = await fetch_json ( "/get_progress" + device_id ) ;
+        let progress = await fetch_json ( "/get_progress"  ) ;
         updateProgress( progress );
-        if( progress["status"] == "playing"){
+        if( progress == undefined ){
+            showPopup( "", "No hay información de avance disponible");
+        }
+        if(     progress == undefined || progress["status"] == "playing"){
 		  await sleep_ms( 2_000 ) ; // safer would be 10_000
         }
         else{
@@ -207,6 +215,7 @@ function titleAndProgressBar( tune, progress ){
 	const gray_bar = "&#9617;" ; 
 	const music_note = "&#127925;" ; 
 
+    
     let t = tune[TLCOL_TIME] ;
 	if( t > 0 ){
 		percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
@@ -219,18 +228,26 @@ function titleAndProgressBar( tune, progress ){
 	let bar_length = 10 ;
 	let blacks = Math.round( bar_length * percent/100 ) ;
 	let grays = bar_length - blacks ;
-	let bar = "<br><span>" + music_note + status_text + " " + 
+    let bar = "" ;
+    if( progress["playtime"] >= 0 ){
+	   bar = "<br><span>" + music_note + status_text + " " + 
 		black_bar.repeat( blacks ) + gray_bar.repeat( grays ) +
 		"</span>";
+    }
+    else {
+        bar = "<br><span>" + music_note + "</span>";
+    }
 	return bar ;
 }
     
     
 function updateProgress( progress ) {
-    
-    let pm = "";
-    if( progress["play_mode"] == true ){
-        pm = "none" ;
+    if( progress == undefined ){
+        return ;
+    }
+    let pm = "none";
+    if( progress["play_mode"] == false ){
+        pm = "" ;
     }
     document.getElementById("play_mode").style.display = pm ;
     
@@ -239,6 +256,11 @@ function updateProgress( progress ) {
 
 	let playing_tuneid = progress["tune"] ;
     let setlist = progress["setlist"] ;
+    let tune_requests = progress["tune_requests"] ;
+    if( tune_requests == undefined ){
+        tune_requests = {} ;
+    }
+    
     // Update all titles, reset if not in setlist,
     // mark if in setlist, mark current playing tune.
     for( i in tunelist ){
@@ -254,13 +276,19 @@ function updateProgress( progress ) {
         let s = tune[TLCOL_TITLE];
         if( tuneid == playing_tuneid ) {
             let bar = titleAndProgressBar( tune, progress );
-            s = "<b>" + tune[TLCOL_TITLE] +"</b>"+ bar ; 
+            s = "<b>" + tune[TLCOL_TITLE] +"</b>" + bar ; 
         }
         if( setlist.includes( tuneid ) ){
-            let k = setlist.indexOf( tuneid ) ;
-            s = `${queue_img}(${k+1}) ${s}`;
+            let position = setlist.indexOf( tuneid ) ;
+            let spnam = "";
+            let spectator_name = tune_requests[ tuneid ];
+            if( spectator_name != undefined ){
+                // add spectator name
+                spnam = " - " + spectator_name ;
+            }
+            s = `${queue_img}(${position+1}${spnam}) ${s}`;
         }
-        newtitle = `<a onclick='queueTune("${tuneid}")'
+        let newtitle = `<a onclick='queueTune("${tuneid}")'
 					style='cursor:pointer'
 					id='t${tuneid}'
 				>${s}</a>`;
@@ -270,8 +298,7 @@ function updateProgress( progress ) {
 }
 
 function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/index.html" ;
+    window.location.href = "/" ;
 }
 
 

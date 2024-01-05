@@ -1,119 +1,184 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-# Blinks RGB (neopixel) LED. 
+# Blinks RGB (neopixel) LED.
 # ESP32-S3 boards may have one of these.
 #
 import asyncio
 import neopixel
 import machine
-import os
-import time
+
+# if __name__ == "__main__":
+#    sys.path.append("software/mpy")
 
 from pinout import gpio
 from minilog import getLogger
 
-TIME_ON = const(50) # millisec the led is on when blinking
-BLINK_EVERY = 2_000 # millisec to blink
-VERY_LOW = const(2)
-LOW = const(4) # 1=lowest, 255=highest
+# 1=lowest, 255=highest
+VERY_LOW = const(4)
+LOW = const(8)
+MEDIUM = 32
 STRONG = const(128)
+VERY_STRONG = const(255)
+
 
 class BlinkingLed:
-    def __init__( self, p ):
+    def __init__(self, p):
+        self.neopixel_led = None
         if not p:
             # No LED task is needed
             return
 
-        self.neopixel_led = neopixel.NeoPixel( machine.Pin(p), 1)
-
+        self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
         self.off()
-        self.color = (0,0,LOW)
-        self.time_off = 0
-        self.background_task = asyncio.create_task( self.neopixel_led_process() )
-        self.starting(0)
-        self.logger = getLogger( __name__ )
-        
-    async def neopixel_led_process( self ):
-        while True:
-            self.neopixel_led[0] = self.color
-            self.neopixel_led.write()
-            await asyncio.sleep_ms( TIME_ON )
-            self.neopixel_led[0] = (0,0,0)
-            self.neopixel_led.write()
-            await asyncio.sleep_ms( self.time_off )
 
-            if self.logger.get_error_count() > 0:
-                self.problem()
-                
-    def on( self, col ):
-        self.blink( None, col )
+        self.logger = getLogger(__name__)
 
-    def off( self ):
-        self.on( (0,0,0) )
+        self.problem_task = asyncio.create_task(self._problem_process())
+        self.logger.debug("init done")
 
-    def blink( self, period, col ):
-        # ignore if no led defined
+    # Simple (permanent) led on and off
+    def on(self, color):
         if not self.neopixel_led:
             return
-        self.color = col
-        if period:
-            self.time_off = max( 0, int(period - TIME_ON) )
-        else:
-            # period == None means no blinking
-            self.time_off = 0
-        self.neopixel_led[0] = self.color
+        self.neopixel_led[0] = color
         self.neopixel_led.write()
 
-    def starting( self, phase ):
+    def off(self):
+        self.on((0, 0, 0))
+
+    # Problem encountered? run permanent task flashing red
+    async def _problem_process(self):
+        if not self.neopixel_led:
+            return
+        while True:
+            # Problem: error or exception entry in log
+            if self.logger.get_error_count() > 0:
+                self.problem_task = self._blink_background((MEDIUM, 0, 0))
+                return
+            await asyncio.sleep_ms(1000)
+
+    # Starting phases, blue->green
+    def starting(self, phase):
         # Shades of green
-        self.on( 
-                ( (0,0,VERY_LOW), 
-                  (0,0,LOW), 
-                  (0,VERY_LOW,VERY_LOW),
-                 (0,LOW,0), )[phase%4] )
+        self.on(
+            (
+                (0, 0, VERY_LOW),
+                (0, 0, LOW),
+                (0, VERY_LOW, VERY_LOW),
+                (0, LOW, 0),
+            )[phase % 4]
+        )
 
-    async def touch_flash( self ):
-        self.on( (STRONG,STRONG,STRONG) )
-        await asyncio.sleep_ms(30)
-        self.off()
-        
-    def touch_start( self ):
-        self.on( (LOW,LOW,LOW) )
-        
-    async def blink_few( self, color, times ):
-        for _ in range(times):
-            self.on ( color )
-            await asyncio.sleep_ms( 100 )
-            self.off()
-            await asyncio.sleep_ms( 100 )
+    # Touch start and touch flash
+    def touch_flash(self):
+        self._blink_background((STRONG, STRONG, STRONG), repeat=1)
 
-    def connected( self ):
+    def touch_start(self):
+        self.on((LOW, LOW, LOW))
+
+    def ack(self):
+        self._blink_background(
+            (
+                (MEDIUM, 0, 0),
+                (MEDIUM, MEDIUM, 0),
+                (0, MEDIUM, 0),
+                (0, MEDIUM, MEDIUM),
+                (0, 0, MEDIUM),
+                (MEDIUM, 0, MEDIUM),
+            ),
+            timeon=100,
+            timeoff=10,
+            repeat=2,
+        )
+
+    def connected(self):
         # Create a background task to avoid
         # delaying caller
-        asyncio.create_task(
-              self.blink_few( (LOW,LOW,LOW), 5) )
-            
-    def heartbeat_on( self ):
-        self.on( (0,LOW,0) )
-        
-    def heartbeat_off( self ):
-        self.off( )
-        
-    def problem( self ):
-        # Blink red
-        self.blink( BLINK_EVERY, (LOW,0,0) )
+        self._blink_background((LOW, LOW, LOW), repeat=6, timeoff=200)
 
-    def short_problem( self ):
-        # one blink red
-        asyncio.create_task( self.blink_few( (STRONG,STRONG,0), 1) )
-        
-    def severe( self ):
+    def heartbeat(self):
+        self._blink_background(
+            ((0, MEDIUM, 0), (0, 0, MEDIUM)), repeat=1, timeon=100, timeoff=50
+        )
+
+    def short_problem(self):
+        self._blink_background((STRONG, MEDIUM, 0), repeat=1, timeon=100)
+
+    def severe(self):
         # Magenta on, no blink
+        # Severe problem: unhandled exception caught
+        # by global async error handler.
+        if self.problem_task:
+            # No more flashing for problem
+            self.problem_task.cancel()
+        self.on((MEDIUM, 0, MEDIUM))
+
+    def _blink_background(
+        self, colors, repeat=1_000_000_000, timeon=50, timeoff=2000
+    ):
         if not self.neopixel_led:
             return
-        self.background_task.cancel()
-        self.neopixel_led[0] = (LOW,0,LOW)
-        self.neopixel_led.write()
+        return asyncio.create_task(
+            self._blink_process(colors, repeat, timeon, timeoff)
+        )
+
+    async def _blink_process(self, colors, repeat, timeon, timeoff):
+        clist = colors
+        if isinstance(colors[0], int):
+            # Only one color specified
+            clist = [colors]
+        for _ in range(repeat):
+            # Show all colors in succession
+            for color in clist:
+                self.on(color)
+                await asyncio.sleep_ms(timeon)
+            # now wait for next cycle
+            self.off()
+            await asyncio.sleep_ms(timeoff)
 
 
-led = BlinkingLed( gpio.neopixel_pin )
+led = BlinkingLed(gpio.neopixel_pin)
+
+# if __name__ == "__main__":
+#    async def test():
+#        print("led blue")
+#        led.on((0,0,32))
+#        await asyncio.sleep(1)
+#
+#        print("led touch start")
+#        led.touch_start()
+#        await asyncio.sleep(0.5)
+#
+#        print("led touch flash")
+#        led.touch_flash()
+#        await asyncio.sleep(1)
+#
+#        for _ in range(3):
+#            print("led short problem")
+#            led.short_problem()
+#            await asyncio.sleep(1)
+#
+#        for _ in range(3):
+#            print("led heartbeat")
+#            led.heartbeat()
+#            await asyncio.sleep(1)
+#
+#        print("led connected")
+#        led.connected()
+#        await asyncio.sleep(1)
+#
+#        print("led ack")
+#        led.ack()
+#        await asyncio.sleep(1)
+#
+#        print("led problem")
+#        # simulate problem
+#        led.logger.baselogger.error_count = 1
+#        await asyncio.sleep(10)
+#
+#        print("led severe")
+#        led.severe()
+#        await asyncio.sleep(1)
+#        led.off()
+#
+#    asyncio.run( test() )

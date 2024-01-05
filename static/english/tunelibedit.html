@@ -41,8 +41,9 @@ async function getTuneList( ) {
 	let resp = await fetch_json( "/start_tunelib_sync" ) ;
     while( true ){
         resp = await fetch_json( "/tunelib_sync_progress" );
-        wfu.innerHTML +=  resp["progress"] + "<br>" ;
-        if( resp["progress"] == "" ){
+        wfu.innerHTML =  resp["progress"] ;
+        if( resp["progress"].includes( "***end***") ){
+            await sleep_ms( 2000 ) ;
             break ;
         }
         await sleep_ms( 2000 );

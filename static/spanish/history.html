@@ -25,7 +25,8 @@
           <tr>
             <th class='tunetable'>Fecha</th>
             <th class='tunetable'>Melodía</th>
-            <th class='tunetable'>Avance %&nbsp;</th>
+            <th class='tunetable'>Avance %</th>
+            <th class='tunetable'>Pedido&nbsp;</th>
           </tr>
         </thead>
         <tbody id="history">
@@ -70,6 +71,8 @@ async function getHistory( ) {
     previous_date = "";
 	for( i in histlist ) {
         let hist_element = histlist[i]; 
+        // parts of hist_element:
+        // tuneid, date,  percentage, requested
         tsplit = hist_element[1].split(" ");
         date = tsplit[0] ;
         time = tsplit[1] ;
@@ -80,10 +83,16 @@ async function getHistory( ) {
             <tr>` ;
         };
         previous_date = date ;
+        let user_request = "" ;
+        if( hist_element[3] ) {
+            // user request
+            user_request = "&#x2714;" ; // check mark
+        }
 		s += `<tr> 
 			   <td>${time}</td>
 			   <td>${hist_element[0]}</td>
 		       <td align="right">${hist_element[2]}%</td>
+			   <td>${user_request}</td>
 		      </tr>`;
 	}
 	htmlById("history", s) ;

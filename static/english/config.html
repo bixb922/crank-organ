@@ -122,6 +122,11 @@ password</div>
 	<br>&nbsp;
     <br>
     
+    <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
+	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')"/>dB
+	<br>&nbsp;
+    <br>
+    
     <label for="initial_page">Initial page (home page):</label>
     <br>
     <input type="radio" name="initial_page" id="index" value="index" oninput="markField('index')"/>Main menu page
@@ -130,8 +135,9 @@ password</div>
     <br>
     <input type="radio" name="initial_page" id="play" value="play" oninput="markField('play')"/>Performance page
 	<br>
+    
 	
-	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page' )">Save other parameters</button>
+	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
     
 <div class="middlediv2">Debug/test settings</div>
    
@@ -150,7 +156,17 @@ password</div>
     <br>
 	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode' )">Save debug settings</button>
 
-		
+<div class="middlediv2">Server (optional)</div>
+   
+    <label for="server">Server node name. Leave blank if no server node. mcserver must be installed for servernode to work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
+	<input id="servernode" name="servernode" type="text"  size="20" oninput="markField('servernode')"/>
+	
+	
+	<br>
+	<label for="serverpassword">Password to access server:</label>	<input id="serverpassword" name="serverpassword" type="password" size="12"  oninput="markField('serverpassword')"/>
+    <br>
+    <button type="button" onclick="save( 'servernode', 'serverpassword' )">Save server settings</button>
+    
 <div class="footerdiv"></div>
 <script>
 
@@ -223,9 +239,8 @@ async function changePassword() {
 	
 async function save( /* argument list */) {
     // Save new configuration data
-	let post_data = {} ;
-    // Always add password entered, changing config
-    // only allowed with password.
+    let post_data = {} ;
+
 
     // Add al arguments of save to list
     let value = "" ;
@@ -241,8 +256,12 @@ async function save( /* argument list */) {
             value = getValue( arguments[i] )
         }
         clearMark( arguments[i] ) ;
+        if( arguments[i].includes( "password" ) && value == "***************" ){
+            // Don't store unchanged passwords
+            continue ;
+        }
         post_data[ arguments[i] ] = value ;
-	}	
+	}
 	const resp = await fetch_json( "/save_config", post_data ) ;
 	if( resp["result"] == "ok") {
 		showPopup( "", "Configuration saved to flash" ) ;
@@ -250,9 +269,9 @@ async function save( /* argument list */) {
     await revoke_credentials();
 }
 function getValue( element_id ){
-	let a = document.getElementById( element_id ) ;
+    let a = document.getElementById( element_id ) ;
     let value = null ;
-	if( a.type == "checkbox") {
+    if( a.type == "checkbox") {
         value = a.checked ;
 	}
 	else {
@@ -297,6 +316,9 @@ function markField( id ){
     d.style.backgroundColor = cream ;
 }
 function clearMark( id ){
+    if( ["initial_page", "webserver_cache", "mic_test_mode", "password_required"].includes(id) ){
+        return ;
+    }
     document.getElementById( id ).style.backgroundColor = "#ffffff" ;
 }
 function clearMarks() {

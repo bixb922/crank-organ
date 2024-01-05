@@ -20,54 +20,7 @@ cream = "#FDFDD3";
 gargoyle_gas = "#F7E13E";
 
 
-function list_average( list ){
-    let total = 0 ;
-    let elements = 0 ;
-    for( let i in list ){
-        let e = list[i] ;
-        // Discard null, 
-        if( !isNaN(e) && e != 1 && e != -9999 & e != -99 ){
-            total += list[i] ;
-            elements += 1 ;
-        }
-    }
-    if( elements == 0 ) {
-        return null ;
-    }
-    return total / elements ;
-}
 
-function get_max_amplitude( notelist ){
-    let max_amplitude = 0 ;
-    for( let m in notelist ){
-        let note = notelist[m] ;
-        amplist = note["amplist"] ;
-        for( let i in amplist ){
-            let amp = amplist[i] ;
-            // discard null, -99, -9999, negative, cero, 1
-            if( !isNaN(amp) && amp > 1 ){
-                if( amp > max_amplitude ){
-                    max_amplitude = amp ;
-                }
-            }
-        }
-    }
-    return max_amplitude ;
-}
-
-function amplitude_to_db( amp, max_amplitude ) {
-	// amp goes from 0 to a maximum of 32767
-    let dbval = "-" ;
-	if( amp > 0 && amp != null  && max_amplitude > 0 ) {
-		dbval = 20 * Math.log10( amp/max_amplitude ) ;
-		dbval = Math.round( dbval ) ;
-	}
-	else {
-		dbval = "-" ;
-	}
-	return dbval;
-}
-	
 function scale_db( db ) {
 	let scaled = (db - min_db)/(max_db - min_db) ;
 	return scaled ;
@@ -78,6 +31,7 @@ function scale_cents( cents ) {
 }
 
 function format02i( n ) {
+    // to be used in formatMilliMMSS and format_secHHMM
 	let ss = "" + Math.round( n );
 	if( ss.length == 1 ) {
 			ss = "0" + ss ;
@@ -97,15 +51,29 @@ function format_secHHMM( sec ) {
 	return "" + Math.floor(t/60) + ":" + mm ;
 }
 
-function getResourceNumberFromURL(){
+function getResourceFromURL(){
 	let page_url = new URL(window.location.href) ;
 	let path = page_url.pathname.split("/") ;
 	if( path.length <= 2 ) {
 		return "" ;
 	}
 	else {
-		return path[2]*1 ; // convert to number
+		let r = path.slice(-1)[0]; // get last element as "resource"
+        console.log("getResourceFromUrl", r, r.includes("html"), r.includes("json") ) ;
+        if( r.includes("html") + r.includes("json") != 0 ){
+            r = "" ;   
+        }
+        return r;
 	}
+}
+function getResourceNumberFromURL(){
+    r = getResourceFromURL() ;
+    if(r == ""){
+        return "";
+    }
+    else {
+        return r*1 ;
+    }
 }
 
 
@@ -264,12 +232,11 @@ async function fetch_json( url, post_data ){
 
 	if( !response.ok ){
 		// Response not ok will abort and notify error to user.
-        console.log("Network response not ok " + response.status, "url", url, "check mode") ;
-
-        if( response.status == 500 ) {
-            // Show alert (not popup)
-			alert("Server error 500 url " + url  ) ;
-		}
+        status = response.status ;
+        response_html = await response.text() ; 
+        response_text = response_html.replace(/<[^>]*>/g, ' ');
+        console.log("Error response", status, "url", url, "response", response, "text", response_text ) ;
+        alert( `Server error ${status} ${response_text}` ) ;
         return ;
 	}
 
@@ -395,10 +362,10 @@ function textById( id, newText ) {
 	// Format if number or boolean
     let formattedNewText ;
 	if( newText === true ){
-		formattedNewText = "yes" ;
+		formattedNewText = "✔️" ;
 	}
 	else if( newText === false ){
-		formattedNewText = "no" ;
+		formattedNewText = "❌" ;
         }
 	else {
 		formattedNewText = formatIfNumber( newText ) ;
@@ -511,12 +478,12 @@ function currentPage(){
 // Cached tunelib >>> add expiration date?
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
-	if( data == null ){
+	if( data == null || data == undefined || data == "undefined"){
+        console.log("getting data from net") ;
 		let tunelib = await fetch_json( "/data/tunelib.json" );
         sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
 		return tunelib ;
 	}
-    console.log("get_tunelib data", data.substr(0,30), "...");
 	return JSON.parse( data ) ;
 }
 function drop_tunelib(){

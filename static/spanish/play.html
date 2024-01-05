@@ -72,8 +72,12 @@ let last_progress_seen = {} ;
 async function getProgress() {	
 	while( true ) {
         progress = await fetch_json ( "/get_progress" ) ;
+        if( progress == undefined ){
+            showPopup( "", "No hay información de avance disponible");
+        }
+
         await updateProgress( progress );
-        if( progress["status"] == "playing"){
+        if( progress == undefined || progress["status"] == "playing"){
 		  await sleep_ms( 2_000 ) ; // >>>safer would be 10_000
         }
         else{
@@ -83,17 +87,24 @@ async function getProgress() {
 }
 
 async function updateProgress( progress ) {
+    if( progress == undefined ){
+        return ;
+    }
     // Get tunelib with local cache
     let tunelib = await get_tunelib() ;
 	last_progress_seen = progress ;
 
-    let pm = "";
-    if( progress["play_mode"] == true ){
-        pm = "none" ;
+    let pm = "none";
+    if( progress["play_mode"] == false ){
+        pm = "" ;
     }
     document.getElementById("play_mode").style.display = pm ;
 	// Update tune info only if tune is playing
 	let current_tuneid = progress["tune"] ;
+    let tune_requests = progress["tune_requests"] ;
+    if( tune_requests == undefined ){
+        tune_requests = {} ;
+    }
     let s = "" ;
 	if( current_tuneid === null ) {
 		// No tune playing
@@ -108,9 +119,17 @@ async function updateProgress( progress ) {
 	else {
 		let tune = tunelib[current_tuneid] ;
 		let header = ["T&iacute;tulo", "G&eacute;nero","Autor", "Duraci&oacute;n","A&ntilde;o", "Info" ] ;
+        let s = "" ;
+        let spectator_name = tune_requests[current_tuneid];
+        if( spectator_name != undefined ){
+            s += `<tr><td>Pedido por</td>
+                      <td>${spectator_name}</td>
+                  </tr>`;
+        }
+
 		// Unicode 9198 = media control skip backward
 		// Unicode 23F9 = media control "stop"
-        s = `<tr><td colspan="2">
+        s += `<tr><td colspan="2">
                 <b>${tune[TLCOL_TITLE]}</b></td>
              </tr>
              <tr><td colspan='2'> 
@@ -136,7 +155,7 @@ async function updateProgress( progress ) {
             <tr><td id='progress'></td>
 		         <td id='timebar'></td>
             </tr>`;
-				
+			
 		htmlById("tuneinfo", s) ;
 		
 		// Update progress bar every second, first call
@@ -150,7 +169,8 @@ async function updateProgress( progress ) {
 	var setlist = progress["setlist"] ;
 	s = "";
 	for( var i = 0; i < setlist.length; i++ ) {
-		pls = tunelib[setlist[i]] ;
+        let tuneid = setlist[i];
+		let pls = tunelib[tuneid] ;
         if( pls == undefined ){
             continue ;
         }
@@ -172,7 +192,14 @@ async function updateProgress( progress ) {
 			b2 = "<td></td>" ;
 		}
 		s += b1 + b2 + b3 + b4;
+        
+        // show spectator name, if any
+        let sn = tune_requests[tuneid] ;
+        if( sn != undefined ){
+            s += `<td>${sn}</td>`;
+        }
 		s += "</tr>" ;
+
 	}
 	htmlById("setlist", s ) ;
 

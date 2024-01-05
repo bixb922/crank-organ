@@ -55,23 +55,21 @@ async function getNoteInfo() {
 
     
 function updateNoteInfo( notelist ) {
-    max_amplitude = get_max_amplitude( notelist ) ;
-
 	let midi = getResourceNumberFromURL() ;
 	let note = notelist[midi] ;
 	let s = "" ;
 	
 	s += "<tr><td>Programm-Note</td><td>" + note["name"] + "</td></tr>" ;
-    cents = list_average( note["centslist"] ) ;
+    cents = note["cents"] ;
     if( cents != null ){
 	   s += "<tr><td>Cents</td><td>" + Math.round(cents) + "</td></tr>" ;
     }
     else {
         s += "<tr><td>-</td><td>-</td></tr>" ;
     }    
-    amp = list_average( note["amplist"] ) ;
-    if( amp != null && amp > 0 ) {
-	   s += "<tr><td>Amplitude</td><td>" + amplitude_to_db(amp, max_amplitude ) + "</td></tr>" ;
+    ampdb = note["ampdb"] ;
+    if( ampdb != null ) {
+	   s += "<tr><td>Amplitude</td><td>" + Math.round(ampdb) + "</td></tr>" ;
     }
     else {
         s += "<tr><td>-</td><td>-</td></tr>" ;
@@ -95,10 +93,12 @@ function updateNoteInfo( notelist ) {
 	}
 	htmlById("tuningbody", st) ;
 	
-	let amplist = note["amplist"] ;
+	let amplistdb = note["amplistdb"] ;
+    console.log("note=", note) ;
+    console.log("note[amplistdb]=", note["amplistdb"] );
 	textById("ampcaption", "Amplitude (" + min_db + " a "+ max_db +" dB)" );
 	sa = "" ;
-	for( let j = 0 ; j < amplist.length ; j++ ){
+	for( let j = 0 ; j < amplistdb.length ; j++ ){
 		sa += `<tr>
 				<td id="amp${j}"></td>
 			   </tr>`;
@@ -122,14 +122,13 @@ function updateNoteInfo( notelist ) {
             docele.style.visibility = "hidden" ;
         }
 	}
-	for( let j = 0 ; j < amplist.length ; j++ ){
-        amp = amplist[j] ;
+	for( let j = 0 ; j < amplistdb.length ; j++ ){
+        ampdb = amplistdb[j] ;
         elename = "amp" + j ;
         docele = document.getElementById( elename ) ;
-        if( amp != null && amp > 0 ){
+        if( ampdb != null ){
             docele.style.visibility = "visible" ;
-            let db = amplitude_to_db( amp, max_amplitude ) ;
-            barGraph( elename, scale_db( db ), sap_green, scale_divisions_db, "right", 100 );
+            barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 100 );
         }
         else{
             docele.style.visibility = "hidden" ;

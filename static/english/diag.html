@@ -32,6 +32,15 @@
 				(<span id="errors_since_reboot"></span> errors)
 			</td>
 		</tr>
+        <tr>
+            <td>
+                <button type="button" onclick="reset()">Reset</button>
+            </td>
+               
+            <td>
+                 <button type="button" onclick="deepSleep()">Deep sleep</button>
+            </td>
+        </tr>
 		<tr><td>Micropython version</td><td id="mp_version"></td></tr>
 		<tr><td>Micropyton image</td><td id="mp_bin"></td></tr>
 		<tr><td>Date/Time</td><td id="last_refresh"></td></tr>
@@ -175,6 +184,12 @@ function showLog() {
 	window.location.href = "/errorlog" ;
 }
 
+async function deepSleep() {
+    await fetch_json( "/deep_sleep" ) ;
+}
+async function reset() {
+    await fetch_json( "/reset") ;
+}
 
 getDiagInfo();
 </script>
