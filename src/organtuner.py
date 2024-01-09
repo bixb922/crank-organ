@@ -63,7 +63,6 @@ class Signal:
             self.adc_device = None
 
         self.do_autocorrelation = True
-        print(">>>>>> ORGANTUNER AUTOCORRELATION TRUE")
         self._test_performance()
 
     def _test_performance(self):

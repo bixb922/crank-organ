@@ -24,10 +24,10 @@ class Config:
         # Data file/folder names used in the software
         self.CONFIG_JSON = "data/config.json"
         if fileops.file_exists("/sd"):
-            self.MUSIC_FOLDER = "/sd/"
+            self.TUNELIB_FOLDER = "/sd/"
         else:
-            self.MUSIC_FOLDER = "/tunelib/"
-        self.MUSIC_JSON = "data/tunelib.json"
+            self.TUNELIB_FOLDER = "/tunelib/"
+        self.TUNELIB_JSON = "data/tunelib.json"
 
         self.BATTERY_JSON = "data/battery.json"
         self.ORGANTUNER_JSON = "data/organtuner.json"

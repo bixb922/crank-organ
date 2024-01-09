@@ -3,14 +3,11 @@
 import sys
 import time
 
-# >>> TODO: change to aiohttp when using with 1.22
-import urequests as requests
 import ntptime
 import json
 import asyncio
 
 import scheduler
-from wifimanager import wifimanager
 
 TZFILE = "data/timezone.json"
 RETRIES = 10
@@ -59,13 +56,12 @@ class TimeZone:
             try:
                 async with scheduler.RequestSlice("ntptime", 1000):
                     # settime is not async, will block
+                    # >>> could get time with call to worldtimeapi also...
+                    # >>> and that is async...
                     ntptime.settime()
                 return
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, OSError):
                 # RequestSlice did not give slice, retry later
-                pass
-            except OSError:
-                # Retry
                 # OSError -202 means server not found, happens once in a while
                 pass
             except Exception as e:

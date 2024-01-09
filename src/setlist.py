@@ -99,9 +99,10 @@ class Setlist:
             )
             try:
                 await self.player_task
-            except Exception:  # >>>> really any exception?
+            except Exception as e:  # >>>> really any exception?
                 # Don't let player exceptions stop the setlist task.
-                pass
+                # Player should have handled/reported the exception
+                self.logger.exc( e, "Unhandled exception in player_task")
             self.player_task = None
 
             # Clean up tune_requests, delete all

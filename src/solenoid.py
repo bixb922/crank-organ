@@ -148,7 +148,7 @@ class Solenoid:
         if self.solenoid_on_msec[midi_note] == 0:
             self.solenoid_on_msec[midi_note] = now
             # Compute how many notes are on
-            # >>> IMPLEMENTAR CON CONTADOR
+            # >>> IMPLEMENTAR CON CONTADOR?
             polyphony = sum(1 for x in self.solenoid_on_msec.values() if x != 0)
             if polyphony > self.max_polyphony:
                 # Problems: battery overload. make that known.

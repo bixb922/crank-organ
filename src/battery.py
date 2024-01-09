@@ -55,7 +55,7 @@ class Battery:
         try:
             self.battery_info = fileops.read_json(self.battery_json_filename)
         except Exception as e:
-            self.logger.info(f"init error loading json, rebuilding. {e}")
+            self.logger.info(f"init error loading json, rebuilding. {repr(e)}")
             self.battery_info = {}
         # Put missing information in battery_info, if necessary
         fallback = {

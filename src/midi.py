@@ -245,18 +245,6 @@ class MIDIdict():
     def __setitem__(self,key,value):
         self.mididict[key] = value
         
-    def old_getitem(self, instrument_note):
-        # >>> delete, old code
-        try:
-            # First check for exact match
-            return self.mididict.__getitem__(instrument_note)
-        except (AttributeError, KeyError):  # >>>>ADD EXCEPTION
-            if instrument_note.instrument == DRUM_PROGRAM:
-                # Drum only accepts exact match
-                raise KeyError
-            # Search for a wildcard match if the exact
-            # match failed
-            return self.mididict.__getitem__(Note(WILDCARD_PROGRAM,instrument_note.midi_note))
 
     def __getitem__(self,instrument_note):
         # First check for exact match
@@ -267,18 +255,9 @@ class MIDIdict():
             raise KeyError
         # Now check for wildcard match, i.e. midi program 0 
         return self.mididict[Note(WILDCARD_PROGRAM,instrument_note.midi_note)]
-    
-    def old_contains(self, instrument_note):
-        # >>>> OLD CODE, DELETE?
-        try:
-            self.__getitem__(instrument_note)
-            return True
-        except (AttributeError, KeyError):  # >>>>ADD EXCEPTION
-            return False
-        except Exception as e:
-            print("__contains__", e )
             
     def __contains__( self, instrument_note ):
+        # Could use __get_item__ but better not raise/trap exception here
         if instrument_note in self.mididict:
             return True
         if instrument_note.instrument == DRUM_PROGRAM:

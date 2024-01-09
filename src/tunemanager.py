@@ -53,9 +53,9 @@ NOT_FOUND_MARK = chr(126) + "(not found) "
 
 
 class TuneManager:
-    def __init__(self, music_folder, music_json):
-        self.music_folder = music_folder
-        self.music_json = music_json
+    def __init__(self, tunelib_folder, tunelib_json):
+        self.tunelib_folder = tunelib_folder
+        self.tunelib_json = tunelib_json
         self.logger = getLogger(__name__)
 
         # Get list of autoplay tuneids and translation from tuneid to
@@ -63,13 +63,13 @@ class TuneManager:
         # is for the web pages, to be used by javascript.
         self.tunelib = {}
         try:
-            self.tunelib = fileops.read_json(self.music_json)
+            self.tunelib = fileops.read_json(self.tunelib_json)
         except OSError as e:
-            self.logger.exc(e, f"tunelib {self.music_json} could not be opened")
+            self.logger.exc(e, f"tunelib {self.tunelib_json} could not be opened")
 
         if len(self.tunelib) == 0:
             try:
-                os.mkdir(config.MUSIC_FOLDER)
+                os.mkdir(config.tunelib_folder)
             except OSError:
                 pass
 
@@ -81,7 +81,7 @@ class TuneManager:
         self.logger.debug(f"init ok {len(self.tunelib)} tunes")
 
     def get_filename_by_id(self, tuneid):
-        return self.music_folder + self.tunelib[tuneid][TLCOL_FILENAME]
+        return self.tunelib_folder + self.tunelib[tuneid][TLCOL_FILENAME]
 
     def get_tune_count(self):
         return len(self.tunelib)
@@ -104,7 +104,7 @@ class TuneManager:
         self.sync_task = asyncio.create_task(self._sync())
 
     def _get_file_attr(self, fn):
-        filename = self.music_folder + fn
+        filename = self.tunelib_folder + fn
         osstat = os.stat(filename)
         size = osstat[6]
         cds = osstat[7]
@@ -134,7 +134,7 @@ class TuneManager:
 
         await asyncio.sleep_ms(10)
         filelist = []
-        for fn in os.listdir(self.music_folder):
+        for fn in os.listdir(self.tunelib_folder):
             if fn[-4:].lower() == ".mid":
                 filelist.append(fn)
 
@@ -145,7 +145,7 @@ class TuneManager:
 
             key, fn = self._make_unique_hash(fn, newtunelib)
 
-            filename = self.music_folder + fn
+            filename = self.tunelib_folder + fn
 
             if key in self.tunelib:
                 continue
@@ -204,7 +204,7 @@ class TuneManager:
                     changed = True
             else:
                 # Correct missing date added if not there
-                # >>> consider deleting this code?
+                # This is due to an old version only....
                 if tune[TLCOL_DATEADDED] == "":
                     size, creation_date = self._get_file_attr(
                         tune[TLCOL_FILENAME]
@@ -258,14 +258,14 @@ class TuneManager:
             self.logger.info(
                 f"Hash collision, rename {fn} to {newfn}, lucky day"
             )
-            filename = self.music_folder + fn
-            newfilename = self.music_folder + newfn
+            filename = self.tunelib_folder + fn
+            newfilename = self.tunelib_folder + newfn
             os.rename(filename, newfilename)
             fn = newfn
         return key, fn
 
     def _write_tunelib_json(self):
-        fileops.write_json(self.tunelib, self.music_json, keep_backup=True)
+        fileops.write_json(self.tunelib, self.tunelib_json, keep_backup=True)
 
     def save(self, update):
         # update[hash.fieldname] is a changed field
@@ -314,4 +314,4 @@ class TuneManager:
             self.logger.debug("Tunelist history updated")
 
 
-tunemanager = TuneManager(config.MUSIC_FOLDER, config.MUSIC_JSON)
+tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON)

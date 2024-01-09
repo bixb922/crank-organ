@@ -415,7 +415,7 @@ async def diag(request):
         "gc_collect_time": gc_collect_time,
         "solenoid_devices": solenoid.get_status(),
         "midi_files": midi_files,
-        "music_folder": config.MUSIC_FOLDER,
+        "tunelib_folder": config.TUNELIB_FOLDER,
         "logfilename": _logger.get_current_log_filename(),
         "errors_since_reboot": _logger.get_error_count(),
         "compile_date": compiledate,
@@ -577,8 +577,8 @@ async def save_pinout_detail(request):
         _logger.debug("save_pinout_detail pinoupt.save complete")
         return simple_response("ok")
     except RuntimeError as e:
-        _logger.debug(f"save_pinout_detail exception {e}")
-        return simple_response(f"pinout not saved: {e}")
+        _logger.debug(f"save_pinout_detail exception {repr(e)}")
+        return simple_response(f"pinout not saved: {repr(e)}")
 
 
 @app.post("/test_mcp")

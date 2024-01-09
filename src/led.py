@@ -32,7 +32,8 @@ class BlinkingLed:
         self.off()
 
         self.logger = getLogger(__name__)
-
+        self.setlist = None # We don't know the setlist yet, too early
+        
         self.problem_task = asyncio.create_task(self._problem_process())
         self.logger.debug("init done")
 
@@ -73,11 +74,14 @@ class BlinkingLed:
     def touch_flash(self):
         self._blink_background((STRONG, STRONG, STRONG), repeat=1)
 
+    def set_setlist(self,setlist):
+        # This avoids doing late import
+        self.setlist = setlist
+        
     def touch_start(self):
-        from setlist import setlist
         color = (LOW,LOW,LOW)
-        if setlist.isempty():
-            color = (LOW,LOW,MEDIUM)
+        if self.setlist and self.setlist.isempty():
+            color = (LOW,MEDIUM,STRONG)
         self.on(color)
 
     def ack(self):

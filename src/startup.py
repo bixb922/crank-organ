@@ -49,9 +49,9 @@ import tunemanager  # 9
 
 led.starting(2)
 import umidiparser  # 1
-import player  # 17
-import setlist  # 20
-
+from player import player  # 17
+from setlist import setlist  # 20
+led.set_setlist(setlist)
 led.starting(3)
 from microdot_asyncio import Microdot
 import webserver  # 26
@@ -90,7 +90,8 @@ async def background_garbage_collector():
                 "gc.collect", config.max_gc_time, 5000
             ):
                 gc.collect()
-         # >>>> File "crank-organ/src/startup.py", line 92, in background_garbage_collector
+        # >>>> File "crank-organ/src/startup.py", line 92, in background_garbage_collector
+        # Happened once, probably during ^C
         # AttributeError: 'NoneType' object has no attribute '__aexit__'
         # 
         except RuntimeError:
