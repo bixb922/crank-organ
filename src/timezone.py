@@ -3,13 +3,14 @@
 import sys
 import time
 
-# >>> TODO: change to requests when using with 1.22
+# >>> TODO: change to aiohttp when using with 1.22
 import urequests as requests
 import ntptime
 import json
 import asyncio
 
 import scheduler
+from wifimanager import wifimanager
 
 TZFILE = "data/timezone.json"
 RETRIES = 10
@@ -84,6 +85,9 @@ class TimeZone:
                 return
             try:
                 # If network is working, response takes 350 msec
+                # Using RequestSlice is really not relevant since
+                # get_time_zone is async non blocking. But
+                # just in case protect the playing...
                 async with scheduler.RequestSlice("timezone", 1000):
                     await self.get_time_zone()
                 return
@@ -94,14 +98,13 @@ class TimeZone:
                 # e.errno == -202 No network connection
                 # e.errno == 118 EHOSTUNREACH
                 # Retry
-                # Continue loop
                 pass
             except Exception as e:
                 self._log_exception(
                     e, "unrecoverable exception in get time zone"
                 )
                 return
-            await asyncio.sleep_ms(1000)
+            await asyncio.sleep_ms(10_000)
 
     def write_timezone_file(self):
         self._get_next_refresh_date()
@@ -109,13 +112,14 @@ class TimeZone:
             json.dump(self.tz, file)
 
     async def get_time_zone(self):
+        
         from config import config
-
-        url = (
-            "http://worldtimeapi.org/api/timezone/" + config.cfg["tzidentifier"]
-        )
-
-        resp = requests.request("GET", url).json()
+        url = "http://worldtimeapi.org/api/timezone/" + config.cfg["tzidentifier"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    return
+                resp = await response.json()
 
         if "error" in resp:
             self.tz["offset_sec"] = 0
@@ -126,13 +130,17 @@ class TimeZone:
         dst_offset = int(resp.get("dst_offset", 0))
         raw_offset = int(resp.get("raw_offset", 0))
 
-        # Cache offset and abbreviation until next
-        # refresh
+        # Cache offset and abbreviation in flash until next
+        # refresh (i.e. at least 1 day)
         # Result is in seconds
-        self.tz["offset_sec"] = dst_offset + raw_offset
-        self.tz["abbreviation"] = resp.get("abbreviation", "")
-        # Store for future reboots
-        self.write_timezone_file()
+        new_offset = dst_offset + raw_offset
+        new_abbreviation = resp.get("abbreviation", "")
+        if (new_offset != self.tz["offset_sec"] or 
+            new_abbreviation != self.tz["abbreviation"]):
+            self.tz["offset_sec"] = dst_offset + raw_offset
+            self.tz["abbreviation"] = new_abbreviation
+            # Store for future reboots
+            self.write_timezone_file()
 
     def _get_next_refresh_date(self):
         t = self.now()
@@ -147,7 +155,7 @@ class TimeZone:
     def now(self):
         t = time.localtime(time.time() + self.tz["offset_sec"])
         if t[0] < 2010:
-            # Don't apply time zone if no clock set (ntptime)
+            # Don't apply time zone if no clock set (no ntptime yet)
             return time.localtime()
         return t
 

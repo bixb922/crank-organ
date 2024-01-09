@@ -36,16 +36,16 @@ from led import (
 )  # config, fileops, late:config, late:timezone, mcp23017, midi, minilog, pinout, re, scheduler, timezone
 
 led.starting(0)
-import touchpad  # 6
-import tachometer  # 10
-import history  # 6
 from solenoid import solenoid  # 10
 
 led.starting(1)
-import tunemanager  # 9
 import battery  # 12
 import zcr  # 0
 import organtuner  # 14
+import touchpad  # 6
+import tachometer  # 10
+import history  # 6
+import tunemanager  # 9
 
 led.starting(2)
 import umidiparser  # 1
@@ -90,6 +90,9 @@ async def background_garbage_collector():
                 "gc.collect", config.max_gc_time, 5000
             ):
                 gc.collect()
+         # >>>> File "crank-organ/src/startup.py", line 92, in background_garbage_collector
+        # AttributeError: 'NoneType' object has no attribute '__aexit__'
+        # 
         except RuntimeError:
             # IF timeout, collect garbage anyhow
             # No good to accumulate pending gc

@@ -27,6 +27,7 @@ _NOTE_LIST = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 #    return None
 
 DRUM_PROGRAM = 129
+WILDCARD_PROGRAM = 0
 
 GM_PROGRAM = [
     "",
@@ -181,7 +182,7 @@ class Note:
             blank = ("", " ", "  ", "\xa0")
 
             if self.instrument in blank:
-                self.instrument = 0
+                self.instrument = WILDCARD_PROGRAM
             if self.midi_note in blank:
                 self.midi_note = 0
             # Note(0,0) or Note("","") does not exist
@@ -192,10 +193,10 @@ class Note:
         return self.hash
 
     def __str__(self):
-        if self.instrument == 0:
-            instr = ""
+        if self.instrument == WILDCARD_PROGRAM:
+            instr = "*"
         else:
-            instr = f"{GM_PROGRAM[self.instrument]}({instr})-"
+            instr = f"{GM_PROGRAM[self.instrument]}({self.instrument})-"
 
         note_name = f"{self.note_name()}({self.midi_note})"
         return f"{instr}{note_name}"
@@ -217,6 +218,8 @@ class Note:
         return _NOTE_LIST[self.midi_note % 12] + str((self.midi_note // 12) - 1)
 
     def __eq__(self, other):
+        if not isinstance(other,Note):
+            return False
         # Same hash means same value:
         if self.hash == other.hash:
             return True
@@ -235,28 +238,62 @@ class Note:
         return bool(self.midi_note)
 
 
-class MIDIdict(OrderedDict):
-    def __getitem__(self, instrument_note):
+class MIDIdict():
+    def __init__( self ):
+        self.mididict = OrderedDict()
+        
+    def __setitem__(self,key,value):
+        self.mididict[key] = value
+        
+    def old_getitem(self, instrument_note):
+        # >>> delete, old code
         try:
             # First check for exact match
-            return super().__getitem__(instrument_note)
-        except AttributeError:  # >>>>ADD EXCEPTION
+            return self.mididict.__getitem__(instrument_note)
+        except (AttributeError, KeyError):  # >>>>ADD EXCEPTION
             if instrument_note.instrument == DRUM_PROGRAM:
                 # Drum only accepts exact match
                 raise KeyError
             # Search for a wildcard match if the exact
             # match failed
-            return super().__getitem__(Note(0, instrument_note.midi_note))
+            return self.mididict.__getitem__(Note(WILDCARD_PROGRAM,instrument_note.midi_note))
 
-    def __contains__(self, instrument_note):
+    def __getitem__(self,instrument_note):
+        # First check for exact match
+        if instrument_note in self.mididict:
+            return self.mididict[instrument_note]
+        # drum program notes cannot be matched with wildcard match
+        if instrument_note.instrument == DRUM_PROGRAM:
+            raise KeyError
+        # Now check for wildcard match, i.e. midi program 0 
+        return self.mididict[Note(WILDCARD_PROGRAM,instrument_note.midi_note)]
+    
+    def old_contains(self, instrument_note):
+        # >>>> OLD CODE, DELETE?
         try:
             self.__getitem__(instrument_note)
             return True
-        except AttributeError:  # >>>>ADD EXCEPTION
+        except (AttributeError, KeyError):  # >>>>ADD EXCEPTION
             return False
-
-
-# if __name__ == "__main__":
+        except Exception as e:
+            print("__contains__", e )
+            
+    def __contains__( self, instrument_note ):
+        if instrument_note in self.mididict:
+            return True
+        if instrument_note.instrument == DRUM_PROGRAM:
+            return False
+        return Note(WILDCARD_PROGRAM, instrument_note.midi_note) in self.mididict
+    
+    def values( self ):
+        return self.mididict.values()
+    
+    def keys( self ):
+        return self.mididict.keys()
+    
+    
+    
+#if __name__ == "__main__":
 #
 #    d = MIDIdict()
 #

@@ -28,7 +28,7 @@ import fileops
 # of data.
 _BUFFER_SIZE = const(2048)
 
-_TUNING_ITERATIONS = const(5)
+_TUNING_ITERATIONS = const(3)
 _logger = getLogger(__name__)
 
 
@@ -62,7 +62,8 @@ class Signal:
             )
             self.adc_device = None
 
-        self.do_autocorrelation = False
+        self.do_autocorrelation = True
+        print(">>>>>> ORGANTUNER AUTOCORRELATION TRUE")
         self._test_performance()
 
     def _test_performance(self):
@@ -169,8 +170,6 @@ class Signal:
         return frequency, amplitude, duration
 
     async def get_note_pitch(self, midi_note):
-        # Leave some time to start turning crank
-        await asyncio.sleep_ms(1000)
         freqlist = []
         amplist = []
         solenoid.note_on(midi_note)
@@ -183,18 +182,18 @@ class Signal:
                     amplitude,
                     duration,
                 ) = self._sample_normalize_filter_zcr(midi_note)
-                if frequency:
+                nominal = midi_note.frequency()
+                if frequency and nominal*0.97 < frequency < nominal*1.03:
                     freqlist.append(frequency)
                     amplist.append(amplitude)
                     # Show tuning
                     cents = midi_note.cents(frequency)
-                    nominal = midi_note.frequency()
                     _logger.debug(
                         f"get_note_pitch iteration {iteration=} {midi_note=} {nominal=:.1f}Hz measured={frequency:.1f}Hz {cents=:.1f} {amplitude=}"
                     )
                 else:
                     _logger.debug(
-                        f"get_note_pitch iteration {iteration}  {midi_note=} no frequency could be measured, {amplitude=}"
+                        f"get_note_pitch iteration {iteration}  {midi_note=} no frequency could be measured, {frequency/nominal=:.2f} {amplitude=}"
                     )
                 await asyncio.sleep_ms(10)  # yield, previous code was CPU bound
             # Store a sample in flash
@@ -221,7 +220,7 @@ class Signal:
         with open(filename, "w") as file:
             file.write(f"\t\tduration\t{duration}")
             for x in self.auto_signal:
-                file.write(f"\t{x}\n")
+                file.write(f"\t{x:.0f}\n")
         _logger.info(f"{filename} written")
 
 
@@ -245,6 +244,7 @@ class OrganTuner:
         self.start_tuner_event.clear()
 
     def tune_all(self):
+        self.queue_tuning(("wait",0))
         for midi_note in pinout.midinotes.get_all_valid_midis():
             self.queue_tuning(("tune", midi_note))
 
@@ -311,7 +311,8 @@ class OrganTuner:
         _logger.info("Stored tuning removed")
         # Reinitialize myself
         organtuner = OrganTuner(Signal())
-
+    
+    
     async def _organtuner_process(self):
         # Processes requests put into self.tuner_queue
         while True:
@@ -334,6 +335,8 @@ class OrganTuner:
                         await self.repeat_note(midi_note)
                     elif request == "scale_test":
                         await self.scale_test()
+                    elif request == "wait":
+                        await asyncio.sleep_ms( 1000 )
                     else:
                         raise RuntimeError(
                             f"Organtuner request unknown: {request}"

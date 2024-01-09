@@ -235,6 +235,8 @@ class Setlist:
             progress["playtime"] = 0
             progress["tune_requests"] = self.tune_requests
         return progress
-
-
+    
+    def isempty(self):
+        return len(self.current_setlist) == 0
+    
 setlist = Setlist()

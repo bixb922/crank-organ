@@ -291,6 +291,7 @@ async def start_tune_all(request):
 @app.route("/start_tuning/<int:midi_note>")
 async def start_tuning(request, midi_note):
     # Tune one note
+    organtuner.queue_tuning(("wait",0))
     organtuner.queue_tuning(("tune", midi_note))
     return simple_response("ok")
 

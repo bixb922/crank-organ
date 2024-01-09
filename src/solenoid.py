@@ -115,13 +115,7 @@ class Solenoid:
 
         # Parse pinout to populate SolenoidDef
         self.init_pinout()
-
-        # Times a solenoid is on is computed as a basis
-        # to calculate battery power consumed. That needs
-        # to store the time when a note gets turned on.
-        self.solenoid_on_msec = midi.MIDIdict()
-        for m in pinout.midinotes.get_all_valid_midis():
-            self.solenoid_on_msec[m] = 0
+         
         self.sumsolenoid_on_msec = 0
         self.max_solenoids_on = 0
 
@@ -198,6 +192,12 @@ class Solenoid:
         # changing pinout
         # Parse pinout json to define solenoid midi to pin
         self.solenoid_def = SolenoidPins()
-
+        # Times a solenoid is on is computed as a basis
+        # to calculate battery power consumed. That needs
+        # to store the time when a note gets turned on.
+        self.solenoid_on_msec = midi.MIDIdict()
+        for m in pinout.midinotes.get_all_valid_midis():
+            self.solenoid_on_msec[m] = 0
+ 
 
 solenoid = Solenoid(config.cfg["max_polyphony"])

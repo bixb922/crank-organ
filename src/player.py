@@ -69,7 +69,7 @@ class MIDIPlayer:
             self.logger.info(f"Starting tune {tuneid} {midi_file}")
 
             await self._play(midi_file)
-
+            self.logger.info(f"Ended tune {tuneid} {midi_file}")
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
@@ -79,7 +79,7 @@ class MIDIPlayer:
         except OSError as e:
             if e.errno == errno.ENOENT:
                 self.logger.error(f"File {midi_file=} {tuneid=} file not found")
-                self._report_exception("file not found")
+                self.progress.report_exception("file not found")
             else:
                 self.logger.exc(e, f"Exception playing {midi_file=} {tuneid=}")
                 self.progress.report_exception(

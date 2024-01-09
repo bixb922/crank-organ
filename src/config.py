@@ -167,7 +167,6 @@ class Config:
             return default
 
     def save(self, newconfig):
-        #>>>>>>>>>>NO GUARDAR PASSWORDS *******!!!!
         # Save new configuration, validate before storing
         # Authentication is already done by webserver.py
         # Validate data received from config.html

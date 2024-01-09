@@ -73,8 +73,10 @@ def compute_frequency(signal, duration, estimated_freq, autocorrelated=True):
         # cycles of the signal.
         n = (len(zeros) * 2) // 3
         freq = 1 / average(zeros[0:n])
-
+    
+    
     return freq
+    # Return none if not in range
 
 
 def interpolate1(y1, y2):

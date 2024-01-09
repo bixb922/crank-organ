@@ -74,17 +74,21 @@ class BlinkingLed:
         self._blink_background((STRONG, STRONG, STRONG), repeat=1)
 
     def touch_start(self):
-        self.on((LOW, LOW, LOW))
+        from setlist import setlist
+        color = (LOW,LOW,LOW)
+        if setlist.isempty():
+            color = (LOW,LOW,MEDIUM)
+        self.on(color)
 
     def ack(self):
         self._blink_background(
             (
-                (MEDIUM, 0, 0),
-                (MEDIUM, MEDIUM, 0),
+                (0, 0, MEDIUM),
                 (0, MEDIUM, 0),
                 (0, MEDIUM, MEDIUM),
-                (0, 0, MEDIUM),
+                (MEDIUM, 0, 0),
                 (MEDIUM, 0, MEDIUM),
+                (MEDIUM, MEDIUM, 0),
             ),
             timeon=100,
             timeoff=10,

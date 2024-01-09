@@ -86,10 +86,10 @@ Melodía actual|Current tune
 >Partir|>Start
 >Al comienzo|>To beginning
 >Próximo|>Next
->Guardar lista<|>Save setlist<
->Cargar lista<|>Load setlist<
+>Guardar setlist<|>Save setlist<
+>Cargar setlist<|>Load setlist<
 >Borrar setlist<|>Clear setlist<
->Desordenar lista<|>Shuffle setlist<
+>Desordenar setlist<|>Shuffle setlist<
 >Desordenar todos<|>Shuffle all tunes<
 Control tempo|Tempo control
 Ajuste velocidad|Set playback speed
