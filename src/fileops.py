@@ -50,7 +50,6 @@ def read_json(filename):
         with open(f) as file:
             return json.load(file)
 
-
 def write_json(json_data, filename, keep_backup=True):
     if keep_backup:
         backup(filename)

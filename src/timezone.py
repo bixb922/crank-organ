@@ -8,6 +8,7 @@ import json
 import asyncio
 
 import scheduler
+import aiohttp
 
 TZFILE = "data/timezone.json"
 RETRIES = 10
@@ -28,17 +29,20 @@ class TimeZone:
                 self.tz = json.load(file)
         except (OSError, ValueError):
             pass
+        # No logger yet, timezone is prerrequisite for minilog
+        self.logger = None
 
+    def setLogger(self,getLogger):
+        self.logger = getLogger(__name__)
+        
     def network_up(self):
         # wifimanager calls here when network is up
-
         if self.timezone_task_active:
             # Avoid reentering task while active
             return
         self.timezone_task_active = True
 
         self.timezone_task = asyncio.create_task(self._timezone_process())
-        self.timezone_task_active = False
 
     async def _timezone_process(self):
         # Get ntp time, then update time zone
@@ -56,16 +60,16 @@ class TimeZone:
             try:
                 async with scheduler.RequestSlice("ntptime", 1000):
                     # settime is not async, will block
-                    # >>> could get time with call to worldtimeapi also...
-                    # >>> and that is async...
+                    # Can't do this with worldtimeapi, should not call frequently
                     ntptime.settime()
                 return
-            except (asyncio.TimeoutError, OSError):
+            except (asyncio.TimeoutError, OSError) as e:
+                self.logger.info(f"Recoverable ntptime exception {repr(e)}")
                 # RequestSlice did not give slice, retry later
                 # OSError -202 means server not found, happens once in a while
                 pass
             except Exception as e:
-                self._log_exception(e, "unrecoverable exception in ntptime")
+                self.logger.info(f"Unrecoverable ntptime exception {repr(e)}")
                 return
 
             await asyncio.sleep_ms(1000)
@@ -87,19 +91,23 @@ class TimeZone:
                 async with scheduler.RequestSlice("timezone", 1000):
                     await self.get_time_zone()
                 return
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 # RequestSlice signaled busy, try later
+                sys.print_exception(e)
                 pass
-            except OSError:
+            except OSError as e:
                 # e.errno == -202 No network connection
                 # e.errno == 118 EHOSTUNREACH
                 # Retry
+                sys.print_exception(e)
                 pass
             except Exception as e:
                 self._log_exception(
                     e, "unrecoverable exception in get time zone"
                 )
+                sys.print_exception(e)
                 return
+            self.logger.info("error in get time zone, retry")
             await asyncio.sleep_ms(10_000)
 
     def write_timezone_file(self):
@@ -137,6 +145,8 @@ class TimeZone:
             self.tz["abbreviation"] = new_abbreviation
             # Store for future reboots
             self.write_timezone_file()
+            self.logger.info("Timezone updated")
+            
 
     def _get_next_refresh_date(self):
         t = self.now()

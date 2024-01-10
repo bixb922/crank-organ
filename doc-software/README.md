@@ -350,11 +350,24 @@ You can use the mpremote utility to verify over a USB cable that MicroPython is 
 
 Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to the hard drive of your PC. 
 
+Install prerrequisite drivers:
+````
+mpremote mip install aiohttp
+````
+
 Go to the install folder and execute the commands: ```
 
 ```
 mpremote run install_software.py
 mpremote run install_data.py
+```
+Install the language, if german or spanish is desired instead of english:
+````
+mpremote run install_german.py
+```
+or
+'''
+mpremote run install_spanish.py
 ```
 
 During the installation, a list of all files installed on the microcontroller will be displayed.
@@ -367,7 +380,11 @@ ls :
            0 software/
            0 tunelib/
 ```
-The application is now installed.
+The application is now installed. You can copy MIDI files (with .mid type) to the tunelib folder with mpremote:
+```
+mpremote cp my_nice_melody :/tunelib
+````
+
 
 To test the application with the MicroPython console use:
 ```

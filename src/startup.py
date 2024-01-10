@@ -22,8 +22,10 @@ except OSError:
 # 5 seg con sys.path=['.frozen', '/lib'] y sin archivos de respaldo en /data
 # => 5 segundos hasta desde boot hasta clap (medido incluso antes de ntptime)
 import scheduler
-import timezone
+from timezone import timezone
 from minilog import getLogger
+timezone.setLogger(getLogger)
+
 import compiledate
 import fileops  # 3
 from config import config  # 5

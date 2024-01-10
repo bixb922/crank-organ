@@ -65,7 +65,7 @@ def _init():
     # Set UI reference to 50, halfway from 0 to 100.
     set_velocity(50)
     _start_turning_event = asyncio.Event()
-    _calculate_task = asyncio.create_task(_calculate_rpsec())
+    _calculate_task = asyncio.create_task(_calculate_rpsec_process())
 
     _logger.debug("init ok")
 
@@ -75,7 +75,7 @@ def set_start_turning_event(ev):
     _start_turning_event = ev
 
 
-async def _calculate_rpsec():
+async def _calculate_rpsec_process():
     global irq_array, rpsec, tachometer_pin
 
     tachometer_pin = gpio.tachometer_pin
