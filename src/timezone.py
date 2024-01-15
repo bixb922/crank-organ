@@ -4,17 +4,20 @@ import sys
 import time
 
 import ntptime
-import json
 import asyncio
 
 import scheduler
 import aiohttp
+
+import fileops
 
 TZFILE = "data/timezone.json"
 RETRIES = 10
 
 
 class TimeZone:
+    # Get time zone information once a day at most from worldtimeapi.org.
+    # Provide formatted local time functions.
     def __init__(self):
         # Start with a default time zone
         self.tz = {
@@ -25,8 +28,7 @@ class TimeZone:
 
         self.timezone_task_active = False
         try:
-            with open(TZFILE) as file:
-                self.tz = json.load(file)
+            self.tz = fileops.read_json(TZFILE)
         except (OSError, ValueError):
             pass
         # No logger yet, timezone is prerrequisite for minilog
@@ -112,8 +114,7 @@ class TimeZone:
 
     def write_timezone_file(self):
         self._get_next_refresh_date()
-        with open(TZFILE, "w") as file:
-            json.dump(self.tz, file)
+        fileops.write_json( self.tz, TZFILE, keep_backup=False )
 
     async def get_time_zone(self):
         

@@ -391,6 +391,7 @@ function htmlByIdIgnoreErrors( id, htmlText ){
 function setAllTextById( json_result ) {
     // Set DOM elements by ID with matching key in json_result.
 	for( const [key, value] of Object.entries(json_result)) {
+        console.log("setAlLText", key );
 		textById( key, value );
 	}
 }

@@ -15,6 +15,7 @@ from microdot_asyncio import Microdot, send_file, redirect
 from minilog import getLogger
 import scheduler
 from config import config, password_manager
+import fileops
 import pinout
 from battery import battery
 from wifimanager import wifimanager
@@ -22,14 +23,13 @@ from solenoid import solenoid
 from compiledate import compiledate
 
 from tunemanager import tunemanager
-import tachometer
+from tachometer import crank
 
 from setlist import setlist
 from history import history
 from timezone import timezone
 from player import player
 from organtuner import organtuner
-import fileops
 from poweroff import poweroff
 from led import led
 
@@ -188,7 +188,7 @@ async def send_data_file(request, filepath):
 def get_progress(request):
     register_activity(request)
     progress = player.get_progress()
-    tachometer.complement_progress(progress)
+    crank.complement_progress(progress)
     scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
 
@@ -460,7 +460,7 @@ async def get_wifi_status(request):
 # Play page web requests
 @app.route("/set_velocity/<int:vel>")
 async def set_velocity(request, vel):
-    tachometer.set_velocity(vel)
+    crank.set_velocity(vel)
     return get_progress(request)
 
 

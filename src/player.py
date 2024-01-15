@@ -14,7 +14,7 @@ import scheduler
 import midi
 from battery import battery
 from history import history
-import tachometer
+from tachometer import crank
 
 CANCELLED = const("cancelled")
 ENDED = const("ended")
@@ -51,7 +51,10 @@ class MIDIPlayer:
         # Channel map has current program number for each
         # channel
         self.channelmap = bytearray(16)
-
+        # Register event when cranking starts (0 msec after start)
+        # This is used to know when to restart if cranking stops
+        # during playback.
+        self.crank_start_event = crank.register_event(0)
         self.logger.debug("init ok")
 
     async def play_tune(self, tuneid, requested):
@@ -196,26 +199,20 @@ class MIDIPlayer:
         return self.progress.get(self.time_played_us)
 
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
+        if not crank.is_installed():
+            return midi_event_delta_us
+        
         # Transforms midi_event_delta in a time difference
         # according to tachometer speed
-        # Calculate dt, difference of time due to
-        # crank turning speed
-        # >>> REVISAR
-        if not tachometer.is_installed() or tachometer.is_turning():
-            tmeter_vel = tachometer.get_normalized_rpsec()
-            if tmeter_vel == 0:
-                tmeter_vel = 1
+        if crank.is_turning():
+            tmeter_vel = crank.get_normalized_rpsec()
             return round(midi_event_delta_us / tmeter_vel)
 
         # Turning too slow or stopped, wait until crank turning
-        start_wait = time.ticks_us()
         self.logger.debug("waiting for crank to turn")
+        start_wait = time.ticks_us()
         solenoid.all_notes_off()
-        while True:
-            if tachometer.is_turning():
-                break
-            await scheduler.wait_and_yield_ms(100)
-        # Make the time equal to the wait
+        await self.crank_start_event.wait()
         return time.ticks_diff(time.ticks_us(), start_wait)
 
 

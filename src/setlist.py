@@ -8,7 +8,7 @@ from random import randrange
 import scheduler
 from config import config
 from tunemanager import tunemanager
-import tachometer
+from tachometer import crank
 from player import player
 from pinout import gpio
 import touchpad
@@ -25,21 +25,35 @@ class Setlist:
     def __init__(self):
         self.logger = getLogger(__name__)
         self.touch_button = touchpad.TouchButton(gpio.touchpad_pin)
-
         self.clear()
         self.waiting_for_start_tune_event = False
-
-        self.setlist_task = asyncio.create_task(self._setlist_process())
-        self.player_task = None
 
         # Register start event for tachometer and touch button
         # Webserver calls start_tune, instead of registering event
         # but all "start tune" methods converge on setting self.start_event
-        self.start_event = asyncio.Event()
-        tachometer.set_start_turning_event(self.start_event)
-        self.touch_button.set_release_event(self.start_event)
-        # DIctionary, key=tuneid, data=spectator name
+        # 500 ms == crank turns are already stable
+        self.start_event = crank.register_event(500)
+        # Make touch button release do the same as start turning crank
+        self.touch_button.register_up_event(self.start_event)
+        
+        # Event to know when bored turning the crank and nothing happens
+        self.shuffle_event = crank.register_event(3000)
+        # Make touch button double click to the same as cranking a lot of time
+        self.touch_button.register_double_event(self.shuffle_event)
+        
+        # Event to get "stop turning"
+        self.stop_turning_event = asyncio.Event()
+        crank.register_stop_turning_event(self.stop_turning_event)
+        
+        # Dictionary of tune requests: key=tuneid, data=spectator name
+        # Will ony be used if mcserver module is present.
         self.tune_requests = {}
+
+        
+        self.setlist_task = asyncio.create_task(self._setlist_process())
+        self.shuffle_task = asyncio.create_task(self._shuffle_process())
+        self.player_task = None
+
         self.logger.debug("init ok")
 
     # Functions related to the different ways to start a tune
@@ -48,6 +62,12 @@ class Setlist:
         self.start_event.set()
 
     def wait_for_start(self):
+
+        # For TouchPad and Web: Clear to get rid of previous value. 
+        # TouchPad and Web must set this event starting now. Previous set event
+        # are disregarded.
+        # For crank: if the crank is turning, this event will be set very shortly.
+        # If the crank is not turning, wait....
         self.start_event.clear()
         self.waiting_for_start_tune_event = True
         await self.start_event.wait()
@@ -68,7 +88,7 @@ class Setlist:
             # Wait for user to start tune
             await self.wait_for_start()
 
-            # If tuner, test mode are active, don't
+            # If tuner or test mode are active, don't
             # interfere playing music. Reloading the
             # page restores control.
             if not scheduler.is_playback_mode():
@@ -78,14 +98,7 @@ class Setlist:
             # User signalled start of tune
             # Do we have a setlist?
             if len(self.current_setlist) == 0:
-                if self.touch_button.is_double_touch():
-                    # No setlist: make a new setlist
-                    self.shuffle_all_tunes()
-                    self.logger.info(
-                        f"Automatic play, shuffle all tunes {len(self.current_setlist)}"
-                    )
-                    # Next touch starts first tune
-                # Setlist empty and sigle touch: continue waiting
+                # No setlist, do nothing
                 continue
 
             # Get top tune and play
@@ -99,10 +112,10 @@ class Setlist:
             )
             try:
                 await self.player_task
-            except Exception as e:  # >>>> really any exception?
+            except Exception as e: 
                 # Don't let player exceptions stop the setlist task.
                 # Player should have handled/reported the exception
-                self.logger.exc( e, "Unhandled exception in player_task")
+                self.logger.exc( repr(e), "Unhandled exception in player_task")
             self.player_task = None
 
             # Clean up tune_requests, delete all
@@ -115,12 +128,26 @@ class Setlist:
             self.logger.info("play_tune ended")
 
             # Wait for the crank to cease turning
-            # after a tune has played
-            if tachometer.is_installed():
-                while tachometer.is_turning():
-                    await asyncio.sleep_ms(100)
+            # after a tune has played before proceeding to next tune.
+            await self.stop_turning_event.wait()
+   
 
-    # Setlist managment functinos: add/queue tune, start, stop, top, up, down,...
+    async def _shuffle_process(self):
+        # Process to wait for a shuffle event:
+        #       long time turning crank
+        #       double touch of touch pad
+        # Web interface "shuffle all" button calls will 
+        # shuffle_all_tunes directly, no checking of empty setlist. This button
+        # does not use the shuffle_event.
+        while True:
+            self.shuffle_event.clear()
+            await self.shuffle_event.wait()
+            if len(self.current_setlist) == 0:
+                self.shuffle_all_tunes()
+            await asyncio.sleep_ms(100)
+                
+
+    # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
     def queue_tune(self, tuneid):
         # If not in setlist: add
         # If in setlist: delete
