@@ -7,6 +7,8 @@ Don't feel overwhelmed with the information presented here. Should you use this 
 
 No software programming knowledge is needed to use this software. However, full source code is provided for perusal and with permission to change it, if you would like. 
 
+Please post an github issue for any question you might have. Please star the github repository if this is of interest for you.
+
 # Features
 
 * Browser as user interface. Control is done with WiFi with a browser on a cell phone, tablet or PC.
