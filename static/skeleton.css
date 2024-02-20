@@ -223,13 +223,7 @@ input[type="button"].button-primary:focus {
   background-color: #1EAEDB;
   border-color: #1EAEDB; }
 
-/*agregado HVB color boton apretado*/
-.button:active, button:active  {
-	background-color:#0a283E;
-}
-.a:active, a:active {
-	background-color:#0a283E;
-}
+
 
 button.smallbutton  {
   display: inline-block;
@@ -312,12 +306,6 @@ label > .label-body {
   margin-left: .5rem;
   font-weight: normal; }
 
-/* changed fields */
-input[type="text"].changed,
-input[type="checkbox"].changed,
-input[type="radio"].changed {
-    background-color: "#FDFDD3" ;
-} 
 /* Lists
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 ul {
@@ -359,14 +347,9 @@ th {
   padding: 2px, 2px;
   text-align: left;
   border-bottom: 1px solid #E1E1E1;
-  color: #FFFFFF; }
-th.tunetable {
-  padding: 2px 2px;
-  text-align: left;
-  border-bottom: 1px solid #E1E1E1;
-  color: #FFFFFF;
-  background-color: #438029;
-}  
+  color: #FFFFFF; 
+}
+
 
 /* .tableFixHead          { overflow: auto; height: 100px; width: 240px; }*/
 .tableFixHead          { overflow: auto; height: 100vh; width: 100vw; }
@@ -445,7 +428,6 @@ hr {
 div.headerdiv {
 	width:100%; 
 	height:26px;
-	background-color:#619A46;
 	/* text-align:right;*/
 	color:white;
 }
@@ -455,31 +437,12 @@ p.alignleft {
 p.alignright {
 	float:right:
 }
-/* Estilo para clase separador debajo de botones */
-div.buttondiv {
-	width:100%; 
-	height:24px; 
-	background-color:#B29700 ; /* light gold */
-    color: white;
-    font-weight: bold ;
-	padding-left: 1em ;
-}
 
 div.middlediv {
 	width:100%; 
 	height:24px; 
-	background-color:#7DAA6A ; /* asparagus */
-    color: white;
-    font-weight: bold ;
-	padding-left: 1em ;
-}
-
-div.middlediv2 {
-	width:100%; 
-	height:24px; 
-	background-color:#7DAA6A ; /* asparagus */
-    color: white ;
-    font-weight: bold ;
+	color: white;
+	font-weight: bold ;
 	padding-left: 1em ;
 }
 
@@ -487,7 +450,6 @@ div.middlediv2 {
 div.footerdiv {
 	width:100%; 
 	height:20px; 
-	background-color:#E1C158 ; /* sunray */
     color: white; 
 	padding-left: 1em ;
 }
@@ -497,7 +459,6 @@ div.footerdiv {
   visibility: hidden;
   width: 160px;
   height: 30px;
-  background-color: #FDFDD3; /* cream */
   color: black ; 
   text-align: center;
   border-radius: 6px;
@@ -559,3 +520,37 @@ there.
 
 /* Larger than Desktop HD */
 @media (min-width: 1200px) {}
+
+
+/* color scheme */
+input[type="text"].changed,
+input[type="checkbox"].changed,
+input[type="radio"].changed {
+    background-color: "#FDFDD3" ; /* cream */
+} 
+
+th {
+	background-color:#B29700;  /* same as middlediv */
+}
+
+div.headerdiv {
+	background-color:#438029;
+}
+
+div.middlediv {
+	background-color:#B29700 ; 
+}
+
+div.footerdiv {
+	background-color:#0C435E ; 
+}
+.popuptext {
+  background-color: #FDFDD3; /* cream */
+}
+
+.button:active, button:active  {
+	background-color:#0a283E;
+}
+.a:active, a:active {
+	background-color:#0a283E;
+}

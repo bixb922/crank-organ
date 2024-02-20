@@ -10,7 +10,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;Historia
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -23,10 +23,10 @@
     <table>
         <thead>
           <tr>
-            <th class='tunetable'>Fecha</th>
-            <th class='tunetable'>Melodía</th>
-            <th class='tunetable'>Avance %</th>
-            <th class='tunetable'>Pedido&nbsp;</th>
+            <th>Fecha</th>
+            <th>Melodía</th>
+            <th>Avance %</th>
+            <th>Pedido&nbsp;</th>
           </tr>
         </thead>
         <tbody id="history">
@@ -35,7 +35,7 @@
 </div>
 <div class="middlediv"></div>
 	Si historia más antigua que
-	<input type="text" size="3" value="3" id="months"/>meses,
+	<input type="text" size="3" value="90" id="days"/>días,
 	<button onclick="deleteHistory()" id="purgeButton">Borrar </button>
 <div class="footerdiv"></div>
 </body>
@@ -99,18 +99,13 @@ async function getHistory( ) {
 }
 
 async function deleteHistory(){
-	months = parseInt( document.getElementById("months").value );
-	resp = await fetch_json( "/delete_history/" + months ) ;
+	days = parseInt( document.getElementById("days").value );
+	resp = await fetch_json( "/delete_history/" + days ) ;
     if( resp["result"] == "ok"){
 	   window.location.href = "/static/history.html" ;
     }
 }
 
-
-function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/index.html" ;
-}
 
 getHistory() ;
 </script>

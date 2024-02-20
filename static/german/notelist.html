@@ -4,17 +4,12 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
-	<style>
-	  th {
-		background-color: #D4AF37; 
-		}
-	</style>
 </head>
 <body>
 <span id="popup" class="popuptext"></span>    
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -29,7 +24,17 @@
 <button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
 
 <div class="tableFixHead">
-    <table id="notelist" style="width:100%">
+    <table  style="width:100%">
+		<thead>
+			<tr>
+				<th>Programm-Note</th>
+				<th colspan="2">Frequenz (cents)</th>
+				<th colspan="2">Amplitude (db)</th>
+				<th>Pin</th>
+			</tr>
+		</thead>
+		<tbody id="notelist">
+		</tbody>
     </table>
 </div>
 <div class="footerdiv"></div>
@@ -46,16 +51,7 @@ async function getNoteList() {
 }
 
 function updateNoteList( notelist ) {
-	const header = ["Programm-Note", "cents", "dB", 
-		"Frequenz (-"+max_cents+" a +"+max_cents+" cents)", 
-		"Amplitude (" + min_db + " a " + max_db + " dB)",
-        "Pin"] ;
-	let s = "<thead><tr>" ;
-	for (let i = 0; i < header.length; i++) {
-		s += `<th>${header[i]}</th>`;
-	}
-	s += "</tr></thead>" ;
-	s += "<tbody>" ;
+	let s = "" ;
     // notelist is a dictionary, key=midi note number
     
 	for( let midi in notelist ){
@@ -78,13 +74,12 @@ function updateNoteList( notelist ) {
 		    <tr>
 			 <td><a href="/note/${midi}">${note["name"]}</td>
 			 <td>${cents}</td>
-			 <td>${ampdb}</td>
 			 <td id="tuning${midi}"></td>
+			 <td>${ampdb}</td>
 			 <td id="amp${midi}"></td>
 			 <td id="pin${midi}">${note["pinname"]}</td>
 			</tr>`;
 	};
-	s += "</tbody>" ;
 	htmlById("notelist", s) ;
 
 	for( let midi in notelist ){
@@ -94,7 +89,12 @@ function updateNoteList( notelist ) {
         let docele = document.getElementById( elename ) ;
         if( cents != null ){
           docele.style.visibility = "visible" ;
-		  lrBarGraph( elename, scale_cents( cents ), oxford_blue, scale_divisions_cents, 20 ) ;
+		  let color = sap_green ;
+		  if(  cents >0.05 || cents < -0.05 ){
+			  color = fire_brick ;
+		  }
+		  //lrBarGraph( elename, scale_cents( cents ), color, scale_divisions_cents, 20 ) ;
+		  centsBar( elename, cents, 20 );
         }
         else {
             docele.style.visibility = "hidden" ;
@@ -105,7 +105,8 @@ function updateNoteList( notelist ) {
         docele = document.getElementById( elename ) ;
         if( ampdb != null ){
           docele.style.visibility = "visible" ;
-		  barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 20 );
+		  //>>>barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 20 );
+		  dbBar( elename, ampdb, 15 ) ;
         }
         else {
             docele.style.visibility = "hidden" ;
@@ -132,11 +133,6 @@ async function stopTuning() {
 
 async function scaleTest() {
     await fetch_json( "/scale_test" ) ;   
-}
-    
-function pageUp() {
-	// Go back to index page
-	window.location.href = "/static/index.html" ;
 }
 
 getNoteList() ;

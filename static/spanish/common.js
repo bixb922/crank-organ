@@ -18,7 +18,12 @@ oxford_blue = "#062646";
 midnight_green = "#0C435E";
 cream = "#FDFDD3";
 gargoyle_gas = "#F7E13E";
+fire_brick = "#B22222" ;
 
+meter_green_color = "#95bb00" ; 
+meter_red_color = "#C36922";
+meter_grey = "#e8e8e8" ;
+progress_color = "#3EA8A3" ; 
 
 
 function scale_db( db ) {
@@ -26,6 +31,7 @@ function scale_db( db ) {
 	return scaled ;
 }
 
+//>>>> obsolete?
 function scale_cents( cents ) {
 	return cents/max_cents ;
 }
@@ -138,7 +144,7 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 	ctx.rect( 0, 0, cw, ch) ;
 	ctx.stroke() ;	
 }
-
+//>>> obsolete???
 function lrBarGraph( container_name, value, color, scale_divisions, width_percent ) {
 	// lrBarGraph on container, must create 2 canvasses
 	let canvas_name = container_name + "LRcanvas" ;
@@ -152,7 +158,6 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 	}
 	
 	let canvas = document.getElementById( canvas_name ) ;
-	let c = value;
 	let ctx = canvas.getContext("2d") ;
 	let cw = canvas.width ;
 	let ch = canvas.height ;
@@ -163,7 +168,7 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 	ctx.fillRect(0,0,cw,ch) ;
 	// Paint bar graph
 	ctx.fillStyle = color ;
-	c = value ;
+	let c = value;
 	if( c > 1 ){
 		c = 1 ;
 	}
@@ -200,9 +205,178 @@ function lrBarGraph( container_name, value, color, scale_divisions, width_percen
 
 }
 
+function drawNeedle( ctx, needle_pos, cw, ch ){
+	if( needle_pos < 2 ) {
+		needle_pos = 2 ;
+	}
+	if( needle_pos > cw-2 ) {
+		needle_pos = cw-2 ;
+	}
+	ctx.beginPath();
+	ctx.lineWidth = 1 ;
+	ctx.lineStyle = "#FFFFFF" ;
+	ctx.moveTo( needle_pos-1, ch-5 ) ;
+	ctx.lineTo( needle_pos, ch*0.2 ) ;
+	ctx.lineTo( needle_pos+1, ch-5 ) ;
+	ctx.closePath() ;
+	ctx.fillStyle = "#000000" ;
+	ctx.fill() ;
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.lineWidth = 1 ;
+	ctx.lineStyle = "#000000" ;
+	ctx.fillStyle = "#FFFFFF"
+	ctx.arc( needle_pos, ch-4, 3, 0, 6.3 ) ;
+	ctx.fill();
+	ctx.stroke();
+}
+function getCanvas( container_name, canvas_id, width_percent ){
+	let canvas_name = container_name + canvas_id ;
+	if( document.getElementById(canvas_name) === null ) {
+		let cd = document.getElementById( container_name ) ;
+		// compute width for graphics and text
+		let w = window.innerWidth*width_percent/100*0.98 ;
+		let h = 20 ;
+		let s = `<canvas id="${canvas_name}"  width="${w}" height="${h}"></canvas>`;
+		cd.innerHTML = s ;
+	}
+	
+	return document.getElementById( canvas_name ) ;	
+}
+function centsBar( container_name, cents, width_percent ) {
+	let MAXVALUE = 50 ; // min value is -MAXVALUE
+	let LIMIT = 5 ;
+
+	let canvas = getCanvas( container_name, "_centsBarCanvas", width_percent ) ;
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	
+	let ch = canvas.height ;
+	let limit_pos = cw*LIMIT/MAXVALUE/2;
+	
+	ctx.fillStyle = meter_grey ;
+	ctx.beginPath();
+	ctx.lineWidth = 0;
+	// 0.8 to leave space for needle
+	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
+	ctx.stroke();
+
+	let needle_pos = cw/2 + cw*cents/MAXVALUE/2 ;
+    
+	if( cents < -LIMIT  ) {
+		ctx.fillStyle = meter_red_color ;
+		ctx.beginPath();
+		ctx.lineWidth = 0;
+		ctx.fillRect( needle_pos,0, cw/2-needle_pos, ch*0.8 ) ;
+		ctx.stroke();
+	}
+	else if( cents > LIMIT  ) {
+		ctx.fillStyle = meter_red_color ;
+		ctx.beginPath();
+		ctx.lineWidth = 0;
+		ctx.fillRect( cw/2,0, needle_pos-cw/2, ch*0.8 ) ;
+		ctx.stroke();
+	}
+	
+	ctx.beginPath() ;
+	ctx.fillStyle = meter_green_color ;
+	ctx.fillRect( cw/2-limit_pos, 0, limit_pos*2, ch*0.8 ) ;
+	ctx.stroke() ;
+	
+	
+
+	drawNeedle( ctx, needle_pos, cw, ch );
+	
+}
+
+function dbBar( container_name, db, width_percent ) {
+	let MINVALUE = -20 ;
+	let MAXVALUE = 0 ;
+
+	let canvas = getCanvas( container_name, "_dbBarCanvas", width_percent ) ;
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	let ch = canvas.height ;
+	
+	ctx.fillStyle = meter_grey ;
+	ctx.beginPath();
+	ctx.lineWidth = 0;
+	// 0.8 to leave space for needle
+	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
+	ctx.stroke();
+	
+	let pos = cw*( db-MINVALUE)/(MAXVALUE-MINVALUE) ;
+	ctx.beginPath() ;
+	ctx.fillStyle = meter_green_color ;
+	init_pos = Math.max(pos, 3);
+	ctx.fillRect( init_pos, 0, cw-init_pos-4, ch*0.8 ) ;
+	ctx.stroke() ;
+	
+	drawNeedle( ctx, pos, cw, ch );
+}
+
+function progressBar( container_name, percent, width_percent ){
+	let canvas = getCanvas( container_name, "_progressBarCanvas", width_percent ) ;
+
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	let ch = canvas.height ;
+	
+
+	ctx.beginPath();
+	ctx.fillStyle = meter_grey ;
+	ctx.fillRect( 0, 0, cw, ch );
+	ctx.stroke() ;
+	
+	ctx.beginPath();
+	ctx.fillStyle = progress_color ;
+	pos = percent/100*cw ;
+	ctx.fillRect( 0, 0, pos, ch );
+	ctx.stroke() ;
+}
+
+
+function velocityBar( container_name, velocity, width_percent ) {
+	let MAXVALUE = 100;
+	let MINVALUE = 0 ;
+
+	let canvas = getCanvas( container_name, "_velocityBarCanvas", width_percent ) ;
+	let ctx = canvas.getContext("2d") ;
+	let cw = canvas.width ;
+	let ch = canvas.height ;
+	ctx.beginPath() ;
+	ctx.fillStyle = "#ffffff";
+	ctx.fillRect( 0, 0, cw, ch );
+	ctx.stroke() ;
+	
+	ctx.beginPath() ;
+	ctx.fillStyle = meter_grey ;
+	ctx.beginPath();
+	ctx.lineWidth = 0;
+	// 0.8 to leave space for needle
+	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
+	ctx.stroke();
+	
+	ctx.beginPath();
+	ctx.lineWidth = 1 ;
+	ctx.moveTo( cw/2, 0 ) ;
+	ctx.lineTo( cw/2, ch*0.8 )
+	ctx.stroke() ;
+	
+	needle_pos = cw*(velocity-MINVALUE)/(MAXVALUE-MINVALUE);
+	ctx.beginPath() ;
+	ctx.fillStyle = meter_green_color ;
+	ctx.fillRect( cw/2, 0, needle_pos-cw/2, ch*0.8 ) ;
+	ctx.stroke() ;
+	
+	
+	drawNeedle( ctx, needle_pos, cw, ch );
+	
+}
+
 // Function to fetch a json from server.
 // Retries communication until successful.
-async function fetch_json( url, post_data ){	
+async function fetch_json( url, post_data ){
     let t0 ;
     let t ;
     let response ;
@@ -482,6 +656,18 @@ async function get_tunelib() {
 	if( data == null || data == undefined || data == "undefined"){
         console.log("getting data from net") ;
 		let tunelib = await fetch_json( "/data/tunelib.json" );
+        let history = await fetch_json( "/data/history.json" )
+        for(i in history){
+            histitem = history[i];
+            tuneid = histitem[0];
+            tune = tunelib[tuneid];
+            if( tune == undefined || tune == null ){
+                continue ;
+            }
+            if( histitem[2] > 90){
+                tune[TLCOL_HISTORY] += 1 ;
+            }   
+        }
         sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
 		return tunelib ;
 	}
@@ -490,4 +676,17 @@ async function get_tunelib() {
 function drop_tunelib(){
 	// call from tunelibedit
 	sessionStorage.removeItem( "tunelib" );
+}
+function pageUp(pagename){
+    from = document.referrer;
+    if( from == undefined || from.includes("/static/"+pagename+".html") || pagename == undefined ){
+        // to be faster: if the previous page is the "up" page, go back
+        // This could lead to another page of the same name in history
+        // Tough luck.
+        history.back();
+    }
+    else{
+        // Came from other page, navigate to this page
+        window.location.href = "/static/" + pagename + ".html" ;
+    }
 }

@@ -164,30 +164,30 @@ GM_PROGRAM = [
 
 
 class Note:
-    def __init__(self, instrument=None, midi_note=None, byhash=None):
+    def __init__(self, instrument=None, midi_number=None, byhash=None):
         # Instrument can be:
         #   program number 1-128 (not 0-127!!!!)
         #   129 for drum channel 10
         #   0 or "" = wildcard to match any MIDI program number but not DRUM_PROGRAM, since the
         # percussion channel has to make exact match.
         # If created byhash=, then byhash is the hash of a midi.Note
-        # and __init__ computes midi_note and instrument with this input
+        # and __init__ computes midi_number and instrument with this input
         if byhash is not None:
-            self.midi_note = byhash % 256
+            self.midi_number = byhash % 256
             self.instrument = byhash // 256
             self.hash = byhash
         else:
             self.instrument = instrument
-            self.midi_note = midi_note
+            self.midi_number = midi_number
             blank = ("", " ", "  ", "\xa0")
 
             if self.instrument in blank:
                 self.instrument = WILDCARD_PROGRAM
-            if self.midi_note in blank:
-                self.midi_note = 0
+            if self.midi_number in blank:
+                self.midi_number = 0
             # Note(0,0) or Note("","") does not exist
             # and evaluates as False
-            self.hash = self.instrument * 256 + self.midi_note
+            self.hash = self.instrument * 256 + self.midi_number
 
     def __hash__(self):
         return self.hash
@@ -198,24 +198,24 @@ class Note:
         else:
             instr = f"{GM_PROGRAM[self.instrument]}({self.instrument})-"
 
-        note_name = f"{self.note_name()}({self.midi_note})"
+        note_name = f"{self.note_name()}({self.midi_number})"
         return f"{instr}{note_name}"
 
     def __repr__(self):
         return str(self)
 
     def frequency(self):
-        return 440 * 2 ** ((self.midi_note - 69) / 12)
+        return 440 * 2 ** ((self.midi_number - 69) / 12)
 
-    def cents(self, freq):
-        if not freq or freq <= 0:
+    def cents(self, measured_freq):
+        if not measured_freq or measured_freq <= 0:
             return None
-        return 1200 * log(freq / self.frequency()) / log(2)
+        return 1200 * log(measured_freq / self.frequency()) / log(2)
 
     def note_name(self):
         if self.instrument == DRUM_PROGRAM:
-            return f"drum.{self.midi_note}"
-        return _NOTE_LIST[self.midi_note % 12] + str((self.midi_note // 12) - 1)
+            return f"drum.{self.midi_number}"
+        return _NOTE_LIST[self.midi_number % 12] + str((self.midi_number // 12) - 1)
 
     def __eq__(self, other):
         if not isinstance(other,Note):
@@ -230,12 +230,12 @@ class Note:
         # This is the wildcard match, needs to match
         # only midi note, not program number
         if not self.instrument:
-            return self.midi_note == other.midi_note
+            return self.midi_number == other.midi_number
         return False
 
     def __bool__(self):
         # Return false for a undefined note
-        return bool(self.midi_note)
+        return bool(self.midi_number)
 
 
 class MIDIdict():
@@ -254,7 +254,7 @@ class MIDIdict():
         if instrument_note.instrument == DRUM_PROGRAM:
             raise KeyError
         # Now check for wildcard match, i.e. midi program 0 
-        return self.mididict[Note(WILDCARD_PROGRAM,instrument_note.midi_note)]
+        return self.mididict[Note(WILDCARD_PROGRAM,instrument_note.midi_number)]
             
     def __contains__( self, instrument_note ):
         # Could use __get_item__ but better not raise/trap exception here
@@ -262,7 +262,7 @@ class MIDIdict():
             return True
         if instrument_note.instrument == DRUM_PROGRAM:
             return False
-        return Note(WILDCARD_PROGRAM, instrument_note.midi_note) in self.mididict
+        return Note(WILDCARD_PROGRAM, instrument_note.midi_number) in self.mididict
     
     def values( self ):
         return self.mididict.values()
@@ -270,7 +270,13 @@ class MIDIdict():
     def keys( self ):
         return self.mididict.keys()
     
+    def items( self ):
+        return self.mididict.items()
     
+    def get(self, instrument_note, default=None ):
+        if self.__contains__(instrument_note):
+            return self.__getitem__(instrument_note)
+        return default
     
 #if __name__ == "__main__":
 #
@@ -369,7 +375,7 @@ class MIDIdict():
 #
 #    h = Note("",50).hash
 #    nn = Note(byhash=h)
-#    assert nn.midi_note == 50
+#    assert nn.midi_number == 50
 #    assert nn.instrument == 0
 #
 #    assert nn in d

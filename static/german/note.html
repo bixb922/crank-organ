@@ -9,7 +9,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('notelist')">&#11013;</a>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -19,7 +19,7 @@
 <button type="button" onclick="soundNote()" id="soundNoteButton">Notentest</button>
 <button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Wiederholungstest</button>
     
-<div class="buttondiv"></div>
+<div class="middlediv"></div>
 <table>
 	<tbody id="notebody">
 	</tbody>
@@ -31,7 +31,7 @@
 	<tbody id="tuningbody">
 	</tbody>
 </table>
-<div class="middlediv2"></div>
+<div class="middlediv"></div>
 <table style="width:100%">
 	<caption id="ampcaption"></caption>
 	<tbody id="amplitudebody">
@@ -84,7 +84,8 @@ function updateNoteInfo( notelist ) {
 	centslist = note["centslist"] ;
 	for( let j = 0 ; j < centslist.length ; j++ ){
 		st += `<tr>
-			   <td id="tuning${j}">
+			   <td id="tuning${j}_text"></td>
+			   <td id="tuning${j}"></td>
 			   </tr>`;
 		/*st += "<tr>" ;
 		st += '<td id="tuning' + j + '">' ;
@@ -97,9 +98,10 @@ function updateNoteInfo( notelist ) {
     console.log("note=", note) ;
     console.log("note[amplistdb]=", note["amplistdb"] );
 	textById("ampcaption", "Amplitude (" + min_db + " a "+ max_db +" dB)" );
-	sa = "" ;
+	let sa = "" ;
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
 		sa += `<tr>
+				<td id="amp${j}_text"></td>
 				<td id="amp${j}"></td>
 			   </tr>`;
 		/*sa += "<tr>" ;
@@ -111,27 +113,40 @@ function updateNoteInfo( notelist ) {
 	
 	for( let j = 0 ; j < centslist.length ; j++  ){
         cents = centslist[j];
-        elename = "tuning" + j ;
-        docele = document.getElementById( elename ) ;
+        let elename = "tuning" + j ;
+        let docele = document.getElementById( elename ) ;
+		let doctext = document.getElementById( elename + "_text" );
         if( cents != null && cents != -9999 ){
           docele.style.visibility = "visible" ;
+		  let color = fire_brick ;
+ 		  if( -0.05 <= cents <= 0.05 ){
+			  color = midnight_green ;
+		  }
+
 		  let c = scale_cents( centslist[j] ) ;
-		  lrBarGraph( elename, c, oxford_blue, scale_divisions_cents, 100 ) ;
+		  //lrBarGraph( elename, c, color, scale_divisions_cents, 100 ) ;
+		  centsBar( elename, cents, 80 ) ;
+		  doctext.innerText = Math.round(cents) ;
         }
         else{
             docele.style.visibility = "hidden" ;
+			doctext.innerText = "..." ;
         }
 	}
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
-        ampdb = amplistdb[j] ;
-        elename = "amp" + j ;
-        docele = document.getElementById( elename ) ;
+        let ampdb = amplistdb[j] ;
+        let elename = "amp" + j ;
+        let docele = document.getElementById( elename ) ;
+		let doctext = document.getElementById( elename + "_text" );
         if( ampdb != null ){
             docele.style.visibility = "visible" ;
-            barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 100 );
+            //>>>barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 100 );
+			dbBar( elename, ampdb, 80 ) ;
+			doctext.innerText = Math.round( ampdb ) ;
         }
         else{
             docele.style.visibility = "hidden" ;
+			doctext.innerText = "..." ;
         }
 	}
 }
@@ -150,11 +165,6 @@ async function soundNote() {
 
 async function soundRepetition() {
 	await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
-}
-
-function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/notelist.html" ;
 }
 
 getNoteInfo() ;

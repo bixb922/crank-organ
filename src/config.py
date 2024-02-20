@@ -16,7 +16,6 @@ _logger = getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
 
-
 class Config:
     def __init__(self):
         self.cfg = {}
@@ -24,9 +23,10 @@ class Config:
         # Data file/folder names used in the software
         self.CONFIG_JSON = "data/config.json"
         if fileops.file_exists("/sd"):
-            self.TUNELIB_FOLDER = "/sd/"
+            self.TUNELIB_FOLDER = "/sd/tunelib/"
         else:
             self.TUNELIB_FOLDER = "/tunelib/"
+        
         self.TUNELIB_JSON = "data/tunelib.json"
 
         self.BATTERY_JSON = "data/battery.json"
@@ -34,7 +34,8 @@ class Config:
         self.SETLIST_JSON = "data/setlist.json"
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data/"
-        self.HISTORY_DATABASE = "data/history.db"
+        self.HISTORY_JSON = "data/history.json"
+        
 
         # minilog folder defined in minilog module, not here
 
@@ -56,22 +57,6 @@ class Config:
                 f"Could not read {self.CONFIG_JSON}, loading fallback configuration",
             )
             self.cfg = {}
-
-        # >>> Transitory
-        changed = False
-        for k, v in self.cfg.items():
-            if not isinstance(v, str):
-                continue
-            if "password" in k:
-                if v.startswith("@cyphered_"):
-                    self.cfg[k] = self.cfg[k].replace(
-                        "@cyphered_", "@encrypted_"
-                    )
-                    changed = True
-        if changed:
-            fileops.write_json(self.cfg, self.CONFIG_JSON)
-
-        # >>> END TRANSITORY
 
         # Load a fallback configuration, populate cfg with missing values if any
         # If that value is saved, information gets complemented.

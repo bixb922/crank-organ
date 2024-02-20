@@ -9,7 +9,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;Systeminformation
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -57,7 +57,7 @@
 	</tbody>
 </table>
 	
-<div class="middlediv2">WIFI-Konfiguration</div>
+<div class="middlediv">WIFI-Konfiguration</div>
 <table>
 	<tbody id="wifiConfig">
 	<tr>	
@@ -159,12 +159,6 @@ async function wifiScan() {
 	}
 	htmlById( "scanInfo", s ) ;
 }
-
-function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/index.html" ;
-}
-
 
 
 async function getDiagInfo( ) {

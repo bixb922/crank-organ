@@ -10,7 +10,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;Tunelib editor
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -65,7 +65,7 @@ function updateForm( tunelist ){
 
 	let s = "<thead><tr>" ;
 	for (let  j = 0 ; j < tableheader.length ; j++ ){
-		s += `<th class='tunetable'>${tableheader[j]}</th>` ;
+		s += `<th>${tableheader[j]}</th>` ;
 	}
 	s += "</tr></thead>" ;
 	s += "<tbody>" ;
@@ -130,11 +130,6 @@ function markField( id ){
     d.style.backgroundColor = cream ;
 }
     
-
-function pageUp() {
-	// On index page, reload this same page
-	window.location.href = "/static/index.html" ;
-}
 
 async function save( ){
     let newjson = {} ;

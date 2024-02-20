@@ -62,10 +62,9 @@ class MIDIPlayer:
             self.time_played_us = 0
             battery.end_heartbeat()
             duration = 1
-            # get_filename_by_id could fail in case tunelib
+            # get_info_by_id could fail in case tunelib
             # has not been correctly updated
-            midi_file = tunemanager.get_filename_by_id(tuneid)
-            duration = tunemanager.get_duration(tuneid)
+            midi_file, duration = tunemanager.get_info_by_id(tuneid)
             solenoid.all_notes_off()
             self.progress.tune_started(tuneid)
             self._reset_channelmap()

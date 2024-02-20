@@ -28,7 +28,7 @@ Editar tunelib|Tunelib bearbeiten
 Diagnóstico|Systeminformation
 Organillo|Drehorgel
 Historia|Verlauf
-Configuración general|Allgemeine Konfiguration
+Config. general|Allgemeine Konfiguration
 Configuración MIDI|MIDI configuration
 Afinador|Stimmgerät
 Teclado bluetooth|Bluetooth keyboard
@@ -73,9 +73,9 @@ Repetición|Wiederholungstest
 Afinar todos|Alle Noten stimmen
 Escala de prueba|Notenskala
 # In the javascript code:
-"Programa-nota"|"Programm-Note"
-"Afinaci&oacute;n|"Frequenz
-"Amplitud|"Amplitude
+>Programa-nota|>Programm-Note
+>Afinación|>Frequenz
+>Amplitud|>Amplitude
 Borrar afinación|Gespeicherte Frequenzen löschen
 
 
@@ -143,7 +143,7 @@ Melodía|Melodie
 Avance %|% abgespielt
 Pedido|Wunsch
 Si historia más antigua que|Wenn älter als
-meses,|Monate,
+días,|Tage,
 Borrar|Löschen
 
 

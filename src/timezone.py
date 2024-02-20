@@ -58,6 +58,7 @@ class TimeZone:
             # Time already set
             return
         # Retry a few times.
+        retry_time = 2000
         for _ in range(RETRIES):
             try:
                 async with scheduler.RequestSlice("ntptime", 1000):
@@ -74,7 +75,8 @@ class TimeZone:
                 self.logger.info(f"Unrecoverable ntptime exception {repr(e)}")
                 return
 
-            await asyncio.sleep_ms(1000)
+            await asyncio.sleep_ms(retry_time)
+            retry_time = 70_000 # ntp servers don't like frequent retries...
 
     async def _update_time_zone(self):
         for _ in range(RETRIES):
@@ -120,12 +122,12 @@ class TimeZone:
         
         from config import config
         url = "http://worldtimeapi.org/api/timezone/" + config.cfg["tzidentifier"]
+        print(">>>>>>>>>>>UPDATE TIME ZONE CALL WORLDTIMEAPI<<<<<<<<", url )
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:
                     return
                 resp = await response.json()
-
         if "error" in resp:
             self.tz["offset_sec"] = 0
             self.tz["abbreviation"] = resp["error"]
@@ -136,17 +138,18 @@ class TimeZone:
         raw_offset = int(resp.get("raw_offset", 0))
 
         # Cache offset and abbreviation in flash until next
-        # refresh (i.e. at least 1 day)
+        # refresh (i.e. at least 1 day). If no network next day
+        # information is cached. But if no network, then there is
+        # no ntptime too, so that's not so bad
         # Result is in seconds
         new_offset = dst_offset + raw_offset
         new_abbreviation = resp.get("abbreviation", "")
-        if (new_offset != self.tz["offset_sec"] or 
-            new_abbreviation != self.tz["abbreviation"]):
-            self.tz["offset_sec"] = dst_offset + raw_offset
-            self.tz["abbreviation"] = new_abbreviation
-            # Store for future reboots
-            self.write_timezone_file()
-            self.logger.info("Timezone updated")
+        self.tz["offset_sec"] = dst_offset + raw_offset
+        self.tz["abbreviation"] = new_abbreviation
+        # Store for future reboots. Store always to avoid
+        # frequent refresh
+        self.write_timezone_file()
+        self.logger.info("Timezone updated")
             
 
     def _get_next_refresh_date(self):
@@ -159,8 +162,11 @@ class TimeZone:
         # Note that "2023-11-01" > "2023-10-32"
         self.tz["next_refresh"] = f"{t[0]}-{t[1]:02d}-{t[2]+1:02d}"
 
+    def now_timestamp(self):
+        return time.time() + self.tz["offset_sec"]
+    
     def now(self):
-        t = time.localtime(time.time() + self.tz["offset_sec"])
+        t = time.localtime(self.now_timestamp())
         if t[0] < 2010:
             # Don't apply time zone if no clock set (no ntptime yet)
             return time.localtime()

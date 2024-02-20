@@ -42,6 +42,7 @@ def file_exists(filename):
 
 def read_json(filename):
     try:
+        # V1.22: using json.load(file) uses lots of memory...???
         with open(filename) as file:
             return json.load(file)
     except (OSError, ValueError):

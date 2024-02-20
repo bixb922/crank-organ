@@ -4,20 +4,13 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
-<!--
-	<style>
-	  th {
-		background-color: #438029; 
-		}
-	</style>
--->
 </head>
 
 <body>
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()" id="pageUp">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;Melodieliste
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -133,10 +126,10 @@ function fillHeader( ){
             }
         }
         h += header[j] ;
-		s += `<th class='tunetable' onclick='changeOrder(${j})' >${h}</th>` ;
+		s += `<th onclick='changeOrder(${j})' >${h}</th>` ;
 	}
 	s += "</tr>" ;
-    document.getElementById("tunelisthead").innerHTML = s ;
+	htmlById( "tunelisthead", s );
 }
     
 function fillBody( ) {
@@ -275,8 +268,10 @@ function updateProgress( progress ) {
         }
         let s = tune[TLCOL_TITLE];
         if( tuneid == playing_tuneid ) {
-            let bar = titleAndProgressBar( tune, progress );
-            s = "<b>" + tune[TLCOL_TITLE] +"</b>" + bar ; 
+            //>>>let bar = titleAndProgressBar( tune, progress );
+            //>>>s = "<b>" + tune[TLCOL_TITLE] +"</b>" + bar ; 
+			const music_note = "&#127925;" ; 
+			s = "<b>" + music_note + tune[TLCOL_TITLE] +  "</b><br><span id='progresstime'></span><span id='progressbar'></span>"; 
         }
         if( setlist.includes( tuneid ) ){
             let position = setlist.indexOf( tuneid ) ;
@@ -293,14 +288,14 @@ function updateProgress( progress ) {
 					id='t${tuneid}'
 				>${s}</a>`;
         d.innerHTML = newtitle ;
+       if( tuneid == playing_tuneid ) {
+			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
+		  	textById("progresstime",  Math.round(percent)+"% " );
+			progressBar( "progressbar", percent, 20 );
+	   }
 	}
     return ;
 }
-
-function pageUp() {
-    window.location.href = "/" ;
-}
-
 
 function changeOrder( column ){
     sortTunelist( column );

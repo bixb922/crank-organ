@@ -22,11 +22,18 @@ class TouchButton:
     def __init__(self, gpio_pin):
         # Only release event, no touch event
         # Events are defined by registering a asyncio.Event()
+        # These events get "set" by this module but not cleared.
+        # These events can be set by other modules too, to implement
+        # "wait for any of these causes", for example crank starts turning,
+        # touchpad or web page button.
         ignore = asyncio.Event()
+        # Hand goes up from touchpad:
         self.up_event = ignore
+        # Hand goes down on touchpad:
         self.down_event = ignore
+        # Two down events in succesion (like a "double click"):
         self.double_event = ignore
-        
+        # Sensitivity of touchpad: size of change to cause an event
         self.big_change = int(config.get_int("touchpad_big_change", 10000))
         
         if gpio_pin:
@@ -34,7 +41,7 @@ class TouchButton:
             self.tp = machine.TouchPad(machine.Pin(gpio_pin))
             self.task = asyncio.create_task(self.tp_process())
         # If no gpio_pin, don't assign button, don't create task.
-        # Event will never get set.
+        # Events will never get set.
 
     def register_up_event(self, ev):
         # Event when lifting hand up leaving touch pad
@@ -61,7 +68,7 @@ class TouchButton:
             await asyncio.sleep_ms(MSEC_BETWEEN_SAMPLES)
             tpval = self.tp.read()
             # See if this is a transition: hand leaving the touchpad
-            if tpval - tpval_ant < -self.big_change:
+            if tpval-tpval_ant<-self.big_change:
                 led.touch_flash()
                 # Touch end: set event to publish this
                 self.up_event.set()
@@ -75,7 +82,7 @@ class TouchButton:
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms(MSEC_SETTLE)
             # See if this is a transition: hand touching the touchpad
-            elif tpval - tpval_ant > self.big_change:
+            elif tpval-tpval_ant>self.big_change:
                 # Touch down: show led, activate event, wait for signal to settle
                 led.touch_start()
                 self.down_event.set()
@@ -84,10 +91,3 @@ class TouchButton:
                 
             tpval_ant = tpval
 
-    def is_double_touch(self):
-        if (
-            time.ticks_diff(self.last_touch1, self.last_touch2)
-            < DOUBLE_TOUCH_TIME
-        ):
-            return True
-        return False

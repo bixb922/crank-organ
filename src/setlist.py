@@ -40,11 +40,7 @@ class Setlist:
         self.shuffle_event = crank.register_event(3000)
         # Make touch button double click to the same as cranking a lot of time
         self.touch_button.register_double_event(self.shuffle_event)
-        
-        # Event to get "stop turning"
-        self.stop_turning_event = asyncio.Event()
-        crank.register_stop_turning_event(self.stop_turning_event)
-        
+                
         # Dictionary of tune requests: key=tuneid, data=spectator name
         # Will ony be used if mcserver module is present.
         self.tune_requests = {}
@@ -129,16 +125,15 @@ class Setlist:
 
             # Wait for the crank to cease turning
             # after a tune has played before proceeding to next tune.
-            await self.stop_turning_event.wait()
+            await crank.stop_turning_event.wait()
    
 
     async def _shuffle_process(self):
         # Process to wait for a shuffle event:
         #       long time turning crank
         #       double touch of touch pad
-        # Web interface "shuffle all" button calls will 
-        # shuffle_all_tunes directly, no checking of empty setlist. This button
-        # does not use the shuffle_event.
+        # Web interface "shuffle all" button calls 
+        # shuffle_all_tunes directly, no checking of empty setlist.
         while True:
             self.shuffle_event.clear()
             await self.shuffle_event.wait()

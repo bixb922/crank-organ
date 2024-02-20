@@ -27,7 +27,7 @@ Editar tunelib|Edit tunelib
 Diagnóstico|System info
 Organillo|Crank organ
 Historia|History
-Configuración general|General configuration
+Config. general|General configuration
 Configuración MIDI|MIDI configuration
 Afinador|Tuner
 Teclado bluetooth|Bluetooth keyboard
@@ -74,9 +74,9 @@ Repetición|Repetition test
 Afinar todos|Tune all
 Escala de prueba|Play scale
 # In the javascript code:
-"Programa-nota"|"Program-note"
-"Afinaci&oacute;n|"Tuning
-"Amplitud|"Amplitude
+>Programa-nota<|>Program-note<
+>Afinación|>Tuning
+>Amplitud|>Amplitude
 Borrar afinación|Clear stored tuning
 
 
@@ -144,7 +144,7 @@ Melodía|Tune
 Avance %|% completed
 Pedido|Request
 Si historia más antigua que|When older than
-meses,|months,
+días,|days,
 Borrar|delete
 
 

@@ -3,6 +3,7 @@
 # Webserver module, serves all http requests.
 
 # >>> titulo de pagina = nombre dispositivo
+#>>> test back/pageup if first page, referrer is undefined
 import os
 import sys
 import gc
@@ -501,10 +502,10 @@ async def start_ftp(request):
     scheduler.set_playback_mode(False)
 
     # Run FTP in a separate thread
-    import _thread
+    import _thread 
 
     def uftpd_in_a_thread():
-        import uftpd
+        import uftpd # noqa
 
         _logger.info("uftp started")
 
@@ -617,6 +618,15 @@ async def revoke_credentials(request):
 
 
 # Tunelib editor
+
+# >>>> delete commented code
+#@app.route("/get_tunelib")
+#async def get_tunelib(request):
+    # This is used by tunelist.html, play.html and tunelibedit.html
+    # to get the tunelib.json (which is already in memory and has
+    # history updated)
+#    return tunemanager.get_tunelib()
+
 @app.route("/start_tunelib_sync")
 async def start_tunelib_sync(request):
     tunemanager.start_sync()
@@ -647,9 +657,9 @@ async def get_history(request):
     return h
 
 
-@app.route("/delete_history/<int:months>")
-async def delete_history(request, months):
-    history.delete_old(months)
+@app.route("/delete_history/<int:days>")
+async def delete_history(request, days):
+    history.delete_old(days)
     return simple_response("ok")
 
 

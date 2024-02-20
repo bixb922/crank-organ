@@ -8,7 +8,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
     </span>
 	&nbsp;Pinout and MIDI configuration
 	<span class="headerright" id="header_time"></span>
@@ -395,7 +395,7 @@ function showNoteName( f ){
                     nn = note_name( parseInt(v) ) ;
                 }
             }
-            document.getElementById( `nn.${f}`).innerText = nn;
+            textById( `nn.${f}`,  nn ) ;
             return ;
         }
 
@@ -411,12 +411,7 @@ function updateAllNoteNames() {
 function hidePinoutDetail(){
  document.getElementById("pinout_detail").style.display = "none";
 }
-    
-function pageUp(){
-	window.location.href = "/static/config.html" ;
-}
-
-
+2
 function transpose( semitones ){
     for( let f=0; f < pinoutDetailElements; f++ ){
         enames = [`gpio.midi.midi.${f}`,

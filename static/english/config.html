@@ -8,7 +8,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
     </span>
 	&nbsp;Configuration
 	<span class="headerright" id="header_time"></span>
@@ -19,7 +19,7 @@
 <div class="middlediv">Enter password</div>
 When pressing the save button, you may be asked for the password of the microcontroller. Please leave the username blank.
 
-<div class="middlediv2">Change configuration
+<div class="middlediv">Change configuration
 password</div>
     <input id="password_required" name="password_required" type="checkbox" oninput="markField('password_required')"/>
     <label for="password_required">Password is required to make configuration changes</label>
@@ -139,7 +139,7 @@ password</div>
 	
 	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
     
-<div class="middlediv2">Debug/test settings</div>
+<div class="middlediv">Debug/test settings</div>
    
 	<input id="webserver_cache" name="webserver_cache" type="checkbox" oninput="markField('webserver_cache')"/>
 	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily:</label>
@@ -151,12 +151,12 @@ password</div>
 
     <br>
     <input type="checkbox" name="microphone" id="mic_test_mode" value="mic_test_mode" oninput="markField('mic_test_mode')">
-    <label for="mic_test_mode">Debug mode for microphone. Generates random signals to test tuning mode. If a microphone is present, it is ignored:</label>
+    <label for="mic_test_mode">Debug mode for microphone. Generates  some signals to test tuning mode:</label>
     
     <br>
 	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode' )">Save debug settings</button>
 
-<div class="middlediv2">Server (optional)</div>
+<div class="middlediv">Server (optional)</div>
    
     <label for="server">Server node name. Leave blank if no server node. mcserver must be installed for servernode to work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
 	<input id="servernode" name="servernode" type="text"  size="20" oninput="markField('servernode')"/>
@@ -291,11 +291,7 @@ function getRadioButtonValue( element_name ) {
 	}
 	return checked ;
 }
-	
-function pageUp(){
-	window.location.href = "/static/index.html" ;
-}
-  
+
 function hostnameChanged(){
 	let hostname = document.getElementById("name").value ;
 	textById("copy_hostname1", hostname ) ;

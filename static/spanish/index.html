@@ -10,7 +10,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft" >
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;Home page
     </span>
 	<span class="headerright" id="header_time"></span>
@@ -82,7 +82,7 @@
 		<tr>
 			<td>
 				<button type="button" onclick="navigate('config')">
-                    Configuración general
+                    Config. general
 				</button>
 			</td>
 			<td>
@@ -127,7 +127,7 @@
 
 	</tbody>
 </table>
-<div class="middlediv2">Bater&iacute;a</div>
+<div class="middlediv">Bater&iacute;a</div>
 <table>
 	<tbody>
 		<tr>
@@ -204,8 +204,8 @@ async function getBatteryInfo( ) {
 function updateBatteryInfo( battery ) {
 	// Needed for /battery and /battery_zero
 	textById("use", Math.round( battery["use"]*10 )/10) ;
-	var used_proportion = battery["use"] / battery["capacity"] ;
-	textById("percent_remaining", "" +  Math.round( 100-used_proportion*100 ) + "%") ;
+	var used_percentage = battery["use"] / battery["capacity"]*100 ;
+	textById("percent_remaining", "" +  Math.round( 100-used_percentage ) + "%") ;
 	textById("capacity", battery["capacity"]) ;
 	textById("time",  
 				format_secHHMM( battery["time"] )) ;
@@ -217,7 +217,8 @@ function updateBatteryInfo( battery ) {
     textById("solenoids_on", format_secHHMM( battery["solenoids_on"] )) ;
 
 
-	barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
+	//>>>barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
+	progressBar( "batterygraph", 100-used_percentage, 80 );
 }
 
 async function battery_zero() {

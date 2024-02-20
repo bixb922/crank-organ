@@ -36,8 +36,6 @@ class BaseLogger:
         self.max_num = max(n for n, _ in self._filenumbers())
         self.current_log_filename = self._makefilename(self.max_num)
         self.file = open(self.current_log_filename, "a")
-
-        # >>>First write of append may take 1-2 seconds...
         self._log(__name__, INFO, "=== RESTART ===")
 
     def _check_max_logfile_size(self):
@@ -82,7 +80,6 @@ class BaseLogger:
         return f"{now} - {module} - {_LEVELNAMES[level]} - {message}"
 
     def _write(self, s):
-        # >>> write+flush may take 1 or 2 seconds!!!
         self.file.write(s)
         self.file.flush()
         self._check_max_logfile_size()

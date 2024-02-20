@@ -2,65 +2,112 @@
 # MIT License
 # First thing: show we are starting with the led, if installed
 
+import time
+startup_time = time.ticks_ms()
 import machine
 import gc
 import sys
 import os
 import asyncio
-import time
+import network
+import json
 
 # Create data folder if not there
 # Data that changes in time is stored here: battery info
 # setlist, logs, timezone information, pinout information. Create before importing minilog, config, battery, timezone.
 try:
     os.mkdir("data")
+    os.mkdir("tunelib")
 except OSError:
     pass
-# Startup time con hard reset.
-# 9 seg con todo en software/mpy, ese folder de primero en sys.path
-# 5 seg con sys.path=['.frozen', '/lib'] y similar con ["/lib", ".frozen"]
-# 5 seg con sys.path=['.frozen', '/lib'] y sin archivos de respaldo en /data
-# => 5 segundos hasta desde boot hasta clap (medido incluso antes de ntptime)
+
+gc.collect()
+last_alloc = gc.mem_alloc()
+lastt = time.ticks_ms()
+#print("initial allocation", last_alloc)
+def reportmem(s):
+    return # NO REPORT MEM
+    global last_alloc, lastt
+    size = 0
+    #try:
+    #    size = os.stat("software/mpy/"+s+".mpy")[6]
+    #except OSError:
+    #        size = 0
+    gc.collect()
+    alloc = gc.mem_alloc()
+    newt = time.ticks_ms()
+    dt = time.ticks_diff(newt,lastt)
+    print(s,alloc-last_alloc,"bytes", "alloc",alloc,"time:", dt)
+    last_alloc = alloc
+    lastt = newt
+    
+    
+ #Startup time con hard reset.
+ #9 seg con todo en software/mpy, ese folder de primero en sys.path
+ #5 seg con sys.path=['.frozen', '/lib'] y similar con ["/lib", ".frozen"]
+ #5 seg con sys.path=['.frozen', '/lib'] y sin archivos de respaldo en /data
+ #=> 5 segundos hasta desde boot hasta clap (medido incluso antes de ntptime)
 import scheduler
+reportmem("scheduler")
 from timezone import timezone
+reportmem("timezone")
 from minilog import getLogger
 timezone.setLogger(getLogger)
+reportmem("minilog")
 
+ 
 import compiledate
 import fileops  # 3
+reportmem("fileops")
 from config import config  # 5
+reportmem("config")
 import wifimanager  # 6
+reportmem("wifimanager")
 import mcp23017  # 0
+reportmem("mcp23017")
 import midi  # 0
+reportmem("midi")
 import pinout  # 9
-from led import (
-    led,
-)  # config, fileops, late:config, late:timezone, mcp23017, midi, minilog, pinout, re, scheduler, timezone
-
+reportmem("pinout")
+from led import led
+reportmem("led")
 led.starting(0)
 from solenoid import solenoid  # 10
-
+reportmem("solenoid")
 led.starting(1)
 import battery  # 12
-import zcr  # 0
+reportmem("battery")
+#>>>import zcr  # 0
+#>>>reportmem("zcr")
 import organtuner  # 14
+reportmem("organtuner")
 import touchpad  # 6
+reportmem("touchpad")
 import tachometer  # 10
+reportmem("tachometer")
 import history  # 6
+reportmem("history")
 import tunemanager  # 9
-
+reportmem("tunemanager")
 led.starting(2)
 import umidiparser  # 1
+reportmem("umidiparser")
 from player import player  # 17
+reportmem("player")
 from setlist import setlist  # 20
+reportmem("setlist")
 led.set_setlist(setlist)
 led.starting(3)
 from microdot_asyncio import Microdot
+reportmem("microdot")
 import webserver  # 26
+reportmem("webserver")
 import poweroff  # 28
+reportmem("poweroff")
 
 try:
     import mcserver
+    reportmem("mcserver")
 except ImportError:
     # No impact if mcserver not present.
     pass
@@ -85,17 +132,13 @@ async def background_garbage_collector():
     # With MicroPython 1.21 and later, gc.collect() is not critical anymore
     # But I'll still keep the code.
     while True:
-        await asyncio.sleep_ms(3000)
+        await asyncio.sleep_ms(2000)
         # gc is best if not delayed more than a few seconds
         try:
             async with scheduler.RequestSlice(
                 "gc.collect", config.max_gc_time, 5000
             ):
                 gc.collect()
-        # >>>> File "crank-organ/src/startup.py", line 92, in background_garbage_collector
-        # Happened once, probably during ^C
-        # AttributeError: 'NoneType' object has no attribute '__aexit__'
-        # 
         except RuntimeError:
             # IF timeout, collect garbage anyhow
             # No good to accumulate pending gc
@@ -133,6 +176,8 @@ async def signal_ready():
     await asyncio.sleep_ms(100)
     await solenoid.clap(8)
     led.off()
+    dt = time.ticks_diff(time.ticks_ms(), startup_time)
+    print(f"Total startup time (without main, until asyncio ready) {dt} msec")
 
 
 async def main():
