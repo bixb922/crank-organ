@@ -181,7 +181,7 @@ These controls regulate playback speed. This is mainly for future use with the c
 
 # Operation on power on and onboard RGB led
 
-It takes about 10 or 12 seconds from power on until the system is ready. Some valves will move when ready, normally that sound can be heard.
+It takes about 4 to 12 seconds from power on until the system is ready. Some valves will move when ready, normally that sound can be heard.
 
 If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green on start. It will flash white several times when WiFi has connected. If it turns red, an error has occurred, see event log in system configuration. If you suspect a problem with the software, please report errors as an issue, pasting log and description of situation.  The led will flash white when touching and releasing the touchpad. 
 
@@ -189,7 +189,7 @@ The software will automatically load the saved setlist. If you turn the crank (w
 
 If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad *twice in a row* will shuffle all tunes randomly. Entering the tuning page or MIDI configuration will disable this function.
 
-So for all cases: turn on, and turn the crank or touch the touchpad and music starts.
+TLDR: turn on, and turn the crank or touch the touchpad and music starts.
 
 If you have the tune list or performance page open in your cell phone, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. There should be no need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
 
@@ -231,7 +231,7 @@ The "Note test" button will sound that note.
 The "Repetition test" button will make a repetition test increasing speed until reaching a 30ms on/30ms off cycle.
 
 # History page
-The history page will show all dates a tune has been played, and a list of all tunes played that date.
+The history page will show all dates a tune has been played, and a list of all tunes played that date. There is a button to purge older history, if you should wish that.
 
 # Edit Tunelib
 The tunelib editor allows to edit information about the tunes.
@@ -286,7 +286,7 @@ Note on, note off and set tempo events are interpreted for MIDI file playing. Th
 
 Be sure to play any MIDI file at least once on your PC to see if it has a correct format.
 
-There is no functionality to transpose a MIDI file. Use any MIDI file editor to do that, if you need.
+There is no functionality to transpose a MIDI file. Use any MIDI file editor to do that before uploading, if you need.
 
 ## Adding and deleting MIDI tunes
 
@@ -302,11 +302,11 @@ Before copying tunes to the microcontroller, it is best to have the time set by 
 
 ## Update MIDI files with USB and mpremote
 
-mpremote is the standard tool to update files on the microcontroller, see https://docs.micropython.org/en/latest/reference/mpremote.html
+mpremote is the standard Micropython tool to update files on the microcontroller, see https://docs.micropython.org/en/latest/reference/mpremote.html
 
-Connect the microcontroller to the USB of the PC. Use ```mpremote cp my_midi_file.mid :/tunelib/my_midi_file.mid```to copy files from the PC to the microcontroller.
+Connect the microcontroller to the USB of the PC. Use ```mpremote cp my_midi_file.mid :/tunelib/my_midi_file.mid```to copy MIDI files from the PC to the microcontroller.
 
-## Process MIDI file updates
+## Make uploaded MIDI files visible
 New files will be visible only once you enter the Tunelib Editor option. This will take some time, since the microcontroller scans each MIDI file entirely.
 
 Then you can edit the additional information, using this screen. Since the form is rather wide, this is best done on a tablet or PC:
