@@ -5,6 +5,8 @@ The purpose of this software is to power a microcontroller (see schematic in thi
 
 Don't feel overwhelmed with the information presented here. Should you use this software, just install it and use it. The only configuration you need to do is to configure the WiFi router where the microcontroller needs to connect. All the rest is optional and the software will work out of the box.
 
+No software programming knowledge is needed to use this software. However, full source code is provided for perusal and with permission to change it, if you would like. 
+
 # Features
 
 * Browser as user interface. Control is done with WiFi with a browser on a cell phone, tablet or PC.

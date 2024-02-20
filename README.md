@@ -25,11 +25,13 @@ The repository describes the complete solution:
 
 There are many places on internet to describe how to build a crank organ, how to design and cut the pipes, make bellows, windchests, etc.  That description is not part of this repository.
 
+Please post an github issue for any question you might have. Please star this repository if you like what you have seen.
+
 ## How is this solution used?
 
 Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and copy your MIDI files to the microcontroller via WiFi or USB. You can add more information such as title and genre to the music.
 
-You control the order of the tunes with the cell phone. You select tunes to play by tapping on them on the tunelist page on the cell phone.
+You control the order of the tunes with the cell phone. You select tunes to play by tapping on them on the tunelist page on the cell phone. This is done with a very intuitive and easy to use interface using a common browser like Chrome or Firefox. Everything is done over web pages: select a tune, control setlists, configuration, etc.
 
 There are several ways to select tunes to be played:
 
@@ -43,11 +45,11 @@ The diligent and flexible mode: You can modify the setlist on the fly with the p
 
 The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
-# Contents
+# Detailed description of software and hardware, schematics, plans
 
-Please see the doc-software folder and click the file README.md for a detailed description of the software, with screen images.
+Please see [here](https://github.com/bixb922/crank-organ/blob/main/doc-software/README.md) for a detailed description of the software.
 
-See the doc-hardware folder and click the file README.md for schematics of the hardware and detailed instructions on how to build the hardware.
+See [here](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/README.md) for schematics of the hardware and detailed instructions on how to build the hardware.
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
