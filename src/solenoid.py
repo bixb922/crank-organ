@@ -67,7 +67,7 @@ class SolenoidPins(pinout.PinoutParser):
             self.device_info[device_name] = "not connected"
         else:
             self._current_i2c = machine.SoftI2C(sclpin, sdapin, freq=100_000)
-            self.device_info["i2c" + str(self._current_i2c_number)] = "ok"
+            self.device_info[device_name] = "ok"
 
     def define_mcp23017(self, address):
         self._current_mcp_number += 1
@@ -85,7 +85,7 @@ class SolenoidPins(pinout.PinoutParser):
             except OSError as e:
                 _logger.exc(
                     e,
-                    f"I2C {self._current_i2c_number} MCP {self._current_mcp_number} not found, disabled",
+                    f"MCP23027 {mcpid} not found, disabled",
                 )
                 self.device_info[mcpid] = "ok"
                 self._current_mcp23017 = simulated_MCP23017()
@@ -110,10 +110,14 @@ class SolenoidPins(pinout.PinoutParser):
 
 
 class Solenoid:
+    # Has all methods for solenoid valves to act according to midi notes played
+    # Interprets Note On and Note Off  MIDI events
     def __init__(self, max_polyphony):
+        # max_polyphony Controls maximum number of notes to sound simultaneously
+        # so that the total current current doesn't exceed a limit.
         self.max_polyphony = max_polyphony
 
-        # Parse pinout to populate SolenoidDef
+        # Parse pinout json to populate SolenoidDef
         self.init_pinout()
          
         self.sumsolenoid_on_msec = 0
@@ -141,6 +145,7 @@ class Solenoid:
     def note_on(self, midi_note):
         if midi_note not in self.solenoid_def.pin_functions:
             return
+        # Turn note on
         self.solenoid_def.pin_functions[midi_note](1)
 
         # Record time of note on, note_off will compute time this solenoid was "on"
@@ -151,11 +156,10 @@ class Solenoid:
             # >>> IMPLEMENTAR CON CONTADOR?
             polyphony = sum(1 for x in self.solenoid_on_msec.values() if x != 0)
             if polyphony > self.max_polyphony:
-                # Problems: battery overload. make that known.
+                # This could lead to battery overload, record to log at end of tune
                 self.max_solenoids_on = polyphony
                 led.short_problem()
-                # Turn off the oldest note to prevent
-                # battery overload
+                # Turn off the oldest note
                 oldest_time = min(
                     time.ticks_diff(x, now)
                     for x in self.solenoid_on_msec.values()
@@ -168,6 +172,7 @@ class Solenoid:
     def note_off(self, midi_note):
         if midi_note not in self.solenoid_def.pin_functions:
             return
+        # Turn note off
         self.solenoid_def.pin_functions[midi_note](0)
         # Compute time this note was on, add to battery use
         t0 = self.solenoid_on_msec[midi_note]
@@ -182,13 +187,14 @@ class Solenoid:
         return t
 
     def get_status(self):
+        # Get summary of current devices for display
         return self.solenoid_def.device_info
 
     def get_pin_name(self, midi_note):
         return self.solenoid_def.pin_names.get(midi_note, "")
 
     def init_pinout(self):
-        # Called during initialization, and alsofrom webserver when
+        # Called during initialization, and also from webserver when
         # changing pinout
         # Parse pinout json to define solenoid midi to pin
         self.solenoid_def = SolenoidPins()

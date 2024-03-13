@@ -17,6 +17,8 @@ class HistoryManager:
         self.filename = filename
         self.logger = getLogger(__name__)
         self.logger.debug(f"init done")
+        # Check if history is present, create empty if no backup
+        self._read_hlist()
 
     def _read_hlist(self):
         try:
@@ -25,6 +27,7 @@ class HistoryManager:
             self.logger.debug(f"Error reading {self.filename}")
             # File not present/readable, backup not present/readable
             hlist = []
+            fileops.write_json(hlist, self.filename)
         self.logger.debug(f"{len(hlist)} elements in history")
         return hlist
     

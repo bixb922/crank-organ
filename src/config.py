@@ -85,12 +85,12 @@ class Config:
             "touchpad_big_change": 20000,
             "tzidentifier": "America/Santiago",
             "initial_page": "index",
-            "modes": ["play", "tuner", "config"],
             "webserver_cache": True,
             # Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds
             "max_age": 300,
             "mic_test_mode": False,
             "mic_signal_low": -18,
+            "mic_store_signal": False,
             "servernode": "192.168.100.19:8080",
             "serverpassword": "password3",
         }
@@ -98,6 +98,10 @@ class Config:
         for k, v in fallback.items():
             if k not in self.cfg:
                 self.cfg[k] = v
+        # Alert for incorrect items
+        for k in self.cfg.keys():
+            if k not in fallback:
+                _logger.info(f"Incorrect item in config.json: {k}")
 
         # Encrypted passwords, if not done already
         if password_manager._encrypt_all_passwords(self.cfg):

@@ -18,8 +18,8 @@ from pinout import gpio
 
 # Number of pulses (1 pulse = off + on) per revolution
 # If optical stripes = number of stripes*2
-# If hall sensor magnets = number of magnets
-PULSES_PER_REV = const(4)
+# since the IRQ is fired both for rising and falling edge
+PULSES_PER_REV = const(32)
 # Less than these minimum means "stopped" or "not turning"
 
 # Factor to convert the milliseconds stored to revolutions per second (rpsec)
@@ -81,13 +81,13 @@ class TachoDriver:
             # Store the time this interrupt occurred 
             # and the time since the the previous interrupt
             self.last_irq_time = t
-            self.dt = dt #>>>>> DEBUG >>>>>>>>>>>>>>>>>>>>>
+            self.dt = dt #>>>>> store dt for DEBUG only
             p = self.irq_pointer
             self.irq_buffer[p] = dt
             self.irq_pointer = (p+1)%IRQ_BUFFER_SIZE
         # DEBUG>>>>
         debug_buffer[debug_buffer_pointer] = dt
-        debug_buffer_pointer += 1
+        debug_buffer_pointer = (debug_buffer_pointer+1)%len(debug_buffer)
 
         
     def get_rpsec(self):
@@ -215,9 +215,10 @@ crank = Crank(gpio.tachometer_pin)
 
 if __name__ == "__main__":
     from random import random
+    import neopixel
     # Test
     # Replace tachometer with simulated one
-    crank = Crank(3)
+    crank = Crank(5)
     td = crank.td
     
     async def getrawdata():
@@ -227,11 +228,11 @@ if __name__ == "__main__":
             await asyncio.sleep_ms(500)
             p = debug_buffer_pointer/len(debug_buffer)*100
             print(f"{debug_buffer_pointer} interrupts so far {p:5.1f}%")
-        with open("tachosample.tsv", "w") as file:
-            file.write("\n")
-            for k in debug_buffer:
-                file.write(f"\t{k}\n")
-            print("tachosample.tsv written")
+        #with open("tachosample.tsv", "w") as file:
+        #    file.write("\n")
+        #    for k in debug_buffer:
+        #        file.write(f"\t{k}\n")
+        #    print("tachosample.tsv written")
 
         
     async def testcrank():
@@ -250,6 +251,7 @@ if __name__ == "__main__":
             overlt = "Y" if rpsec > LOWER_THRESHOLD_RPSEC else " "
             overht = "Y" if rpsec > HIGHER_THRESHOLD_RPSEC else " "
             stopped = "Y" if crank.stop_turning_event.is_set() else " "
+            tdlast = ticks_diff(ticks_ms(),td.last_irq_time)
             print(f"rpsec={td.get_rpsec():2.1f} {cit} {start=} {stable=} {bored=} {stopped=} {overlt=} {overht=} {td.dt=:4d} {td.avgdt=:4.0f}")
             await asyncio.sleep_ms(100)
 
@@ -270,4 +272,4 @@ if __name__ == "__main__":
             await asyncio.sleep_ms(int(dt*(1+random()/5.0)))
             td.pin_irq(0)
 
-    asyncio.run(getrawdata())
+    asyncio.run(testcrank())

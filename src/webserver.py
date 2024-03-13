@@ -2,8 +2,7 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-# >>> titulo de pagina = nombre dispositivo
-#>>> test back/pageup if first page, referrer is undefined
+
 import os
 import sys
 import gc
@@ -11,7 +10,7 @@ import asyncio
 import time
 import ubinascii
 
-from microdot_asyncio import Microdot, send_file, redirect
+from microdot import Microdot, send_file, redirect
 
 from minilog import getLogger
 import scheduler
@@ -116,7 +115,7 @@ def check_authorization(request):
     if not config.cfg["password_required"]:
         return
     name = config.cfg["name"]
-    # >>>> CHECK USERNAME==NAME???
+
     ask_for_password = ({}, 401, {"WWW-Authenticate": f'Basic realm="{name}"'})
     # This will prompt a "basic authentication" dialog, asking for username/password
     # on the browser side. In case of password error, the browser will retry on its own
@@ -167,6 +166,7 @@ async def static_files(request, filepath):
         scheduler.set_playback_mode(pb)
     filename = STATIC_FOLDER + filepath
     if not fileops.file_exists(filename):
+        _logger.info(f"{filename} not found")
         return "", 404
 
     return send_file(filename, max_age=MAX_AGE)
@@ -181,6 +181,7 @@ async def send_data_file(request, filepath):
     register_activity(request)
     filename = DATA_FOLDER + filepath
     if not fileops.file_exists(filename):
+        _logger.info(f"{filename} not found")
         return "", 404
 
     return send_file(filename, max_age=0)
@@ -619,14 +620,6 @@ async def revoke_credentials(request):
 
 # Tunelib editor
 
-# >>>> delete commented code
-#@app.route("/get_tunelib")
-#async def get_tunelib(request):
-    # This is used by tunelist.html, play.html and tunelibedit.html
-    # to get the tunelib.json (which is already in memory and has
-    # history updated)
-#    return tunemanager.get_tunelib()
-
 @app.route("/start_tunelib_sync")
 async def start_tunelib_sync(request):
     tunemanager.start_sync()
@@ -663,7 +656,11 @@ async def delete_history(request, days):
     return simple_response("ok")
 
 
-# NO CATCHALL HANDLER FOR NOW
+# >>>> CATCHALL HANDLER FOR NOW
+@app.get('/<path:path>')
+def catch_all(request, path):
+    _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))
+    return "", 404
 
 
 @app.errorhandler(RuntimeError)

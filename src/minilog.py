@@ -36,6 +36,7 @@ class BaseLogger:
         self.max_num = max(n for n, _ in self._filenumbers())
         self.current_log_filename = self._makefilename(self.max_num)
         self.file = open(self.current_log_filename, "a")
+        # logging an entry takes 150 msec, rest of __init__ is <15msec
         self._log(__name__, INFO, "=== RESTART ===")
 
     def _check_max_logfile_size(self):
@@ -148,5 +149,5 @@ _baselogger = BaseLogger()
 # logger = getLogger( __name __ )
 def getLogger(module):
     logger = Logger(module, _baselogger)
-    logger.debug("init start")
+    #>>>logger.debug("getLogger")
     return logger

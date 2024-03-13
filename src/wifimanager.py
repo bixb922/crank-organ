@@ -11,7 +11,6 @@
 #  AP_IF mode
 #       Fallback if station mode does not work. Is active for 2 minutes
 #       only after power on, then it will turn off if inactive.
-
 import asyncio
 import network
 import time
@@ -208,7 +207,6 @@ class WiFiManager:
             # Don't log info messages if playing
             # does not allow it
             pass
-
 
 wifimanager = WiFiManager()
 asyncio.run(wifimanager.async_init())

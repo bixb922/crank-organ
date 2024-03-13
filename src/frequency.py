@@ -1,4 +1,17 @@
 import time
+import os
+
+# Must be clearly > 2, these is the number of samples per period
+# of the nominal frequency. 
+# Smaller means less error in computation of frequency
+# But 5 or smaller means that higher armonics may distort the FFT
+# because they may show up as noise...
+# So the 3rd armonic should at least always show up.
+# 3rd armonic = 2.5 times the fundamental. Because of Nyquist
+# the fundamental needs > 2 samples per period, so 2.5*2 = 5 as the
+# smallest value for SAMPLES_PER_PERIOD if the 3rd harmonic is strong.
+SAMPLES_PER_PERIOD = 6
+
 class HowLong:
     def __init__( self, title ):
         self.title = title
@@ -21,11 +34,15 @@ def vertex( x1, y1, x2, y2, x3, y3 ):
 
 # signal ---> abs_fft
 def find_max( signal ):
-    # Takes about 1-2ms
+    # Finds the peak frequency in spectrum
+    # Precondition: the range is limited so that there is only one peak
+    # This normally takes about 1-2ms
     maxsignal = max(signal)
     avgsignal = sum(signal)/len(signal)
     print(f"find_max {maxsignal=} {avgsignal=} {maxsignal/avgsignal=}")
     # If signal/noise is low, don't seek for the frequency
+    # If there is no signal at the mic, maxsignal is about avgsignal*3
+    # If there is a good signal at the mic, maxsignal is about avgsignal*10 or more
     if maxsignal < avgsignal*5:
         raise ValueError
     # Get position where maximum occurs
@@ -38,41 +55,48 @@ def get_peak( abs_fft ):
     return xv
 
 
-def frequency( signal, duration, nominal_freq, fft_module, midi_note ):
-    signal_len=len(signal)
-    amplitude = compute_amplitude(signal)
-    time_step = duration/signal_len
-    freq_step = 1/time_step/signal_len
-    save( signal, duration, midi_note, time_step, "signal")
-    
-    # 1.4 is a factor of about 6 semitones up and 6 semitones down.
-    # In this range there is no harmonic expected.
-    # This spans half an octave up and half down to search
-    # for peak frequency.
-    # But on the other hand if the note is 6 semitones out of tune
-    # please tune first with hand tuner...
-    from_position = round(nominal_freq/1.4/freq_step)
-    to_position = round(nominal_freq*1.4/freq_step)
-    print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
-    with HowLong("fft"):
+def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_result ):
+    with HowLong("Process signal, FFT and get frequency"):
+        signal_len=len(signal)
+        amplitude = compute_amplitude(signal)
+        time_step = duration/signal_len
+        freq_step = 1/duration
+        if save_result:
+            save( signal, duration, midi_note, time_step, "signal")
+
+        # 1.4 is a factor of about 6 semitones up and 6 semitones down.
+        # In this range there is no harmonic expected, so find_max needs to
+        # find the only peak there is.
+        # This spans half an octave up and half an octave down to search
+        # for the peak frequency.
+        # If the note is 6 semitones out of tune
+        # there is something seriously wrong..... so it doesn't make
+        # much sense to search in a larger range.
+        from_position = round(nominal_freq/1.4/freq_step)
+        to_position = round(nominal_freq*1.4/freq_step)
+        print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
         result = fft_module.fft(signal, True)
-    # >>>> save last result
-    save( fft_module.fft_abs(result, 0, len(result)), duration, midi_note, freq_step, "fft")
-    
-    #Get abs of the fft only in the range of desired
-    # frequency +- 1 semitone
-    # get abs(result) takes < 1ms
-    result = fft_module.fft_abs( result, from_position, to_position )
+
+        if save_result:
+            save( fft_module.fft_abs(result, 0, len(result)), duration, midi_note, freq_step, "fft")
+
+        # Get abs of the fft only in the range of desired
+        # frequency range
+        # get abs(result) takes < 1ms
+        result = fft_module.fft_abs( result, from_position, to_position )
 
     # Search for peak frequency and interpolate
     return (get_peak( result ) + from_position) * freq_step, amplitude
 
 def save( signal, duration, midi_note, step, prefix ):
+    # Save a signal, be it raw or FFT
     filename = f"{prefix}{midi_note.midi_number}.tsv"
     if prefix == "fft":
         units = "Hz"
     else:
         units = "ms"
+    # This takes about 350 ms, two times for each note 
+    # (one call to save for raw signal, one call to save for FFT)
     with open( filename, "w" ) as file:
         file.write(f"duration:\t{duration}\tlen:\t{len(signal)}\tstep {units}:\t{step}\n")
         for v in signal:
@@ -83,8 +107,12 @@ def compute_amplitude( signal ):
     avgsignal =  sum( s for s in signal )/len(signal)
     return sum( abs(s-avgsignal) for s in signal )/len(signal)
             
-def compute_time_step_usec( nominal_frequency, samples_per_period=8 ):
-    # set samples_per_period = 8 here
-    # Less than 8 samples per period tends to give more
-    # undesirable aliasing effects
-    return 1/nominal_frequency/samples_per_period*1_000_000
+def compute_time_step_usec( nominal_frequency  ):
+    return 1/nominal_frequency/SAMPLES_PER_PERIOD*1_000_000
+
+def clear_stored_signals():
+    for filename in os.listdir(""):
+        if filename.endswith(".tsv") and (filename.startswith("fft") or
+                                         filename.startswith("signal")):
+            os.remove(filename)
+        

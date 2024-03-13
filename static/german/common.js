@@ -1,10 +1,9 @@
-scale_divisions_db = 4 ;
-max_db = -20 ;
-min_db = -0 ;
 
-scale_divisions_cents = 10 ;
-max_cents = 50 ;
+let MAX_DB = -20 ;
+let MIN_DB = -0 ;
 
+let MAX_CENTS = 50 ;
+let CENTS_LIMIT = 5 ;
 
 light_gold = "#B29700";
 american_gold = "#D4AF37";
@@ -25,16 +24,6 @@ meter_red_color = "#C36922";
 meter_grey = "#e8e8e8" ;
 progress_color = "#3EA8A3" ; 
 
-
-function scale_db( db ) {
-	let scaled = (db - min_db)/(max_db - min_db) ;
-	return scaled ;
-}
-
-//>>>> obsolete?
-function scale_cents( cents ) {
-	return cents/max_cents ;
-}
 
 function format02i( n ) {
     // to be used in formatMilliMMSS and format_secHHMM
@@ -84,7 +73,7 @@ function getResourceNumberFromURL(){
 
 
 
-
+//>>> still used for velocity
 function barGraph( container_name, value, color, scale_divisions, alignment, width_percent ) {
 	// barGraph on container, must create canvas
 	let canvas_name = container_name + "canvas" ;
@@ -144,66 +133,6 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 	ctx.rect( 0, 0, cw, ch) ;
 	ctx.stroke() ;	
 }
-//>>> obsolete???
-function lrBarGraph( container_name, value, color, scale_divisions, width_percent ) {
-	// lrBarGraph on container, must create 2 canvasses
-	let canvas_name = container_name + "LRcanvas" ;
-	if( document.getElementById(canvas_name) === null ) {
-		let cd = document.getElementById( container_name )
-		let w = Math.round( window.innerWidth*width_percent/100*0.98 ) ;
-		let h = 15 ;
-		let s = 
-		'<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name +'</canvas>';
-		cd.innerHTML = s ;
-	}
-	
-	let canvas = document.getElementById( canvas_name ) ;
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	let ch = canvas.height ;
-	ctx.beginPath();
-	ctx.lineWidth = 0;
-	// Erase rectangle (fill with white)
-	ctx.fillStyle = "#ffffff" ;
-	ctx.fillRect(0,0,cw,ch) ;
-	// Paint bar graph
-	ctx.fillStyle = color ;
-	let c = value;
-	if( c > 1 ){
-		c = 1 ;
-	}
-	if( c < -1 ) {
-		c = -1 ;
-	}
-    let desde ;
-    let hasta ;
-	if( c < 0 ) {
-        desde = cw/2 + c*cw/2;
-		hasta = cw/2 - desde ;
-		ctx.fillRect( desde, 0, hasta, ch ) ;
-	}
-	else {
-		desde = cw/2 - 1 ;
-		hasta = cw/2 + c*cw/2 - desde ;
-		ctx.fillRect( desde, 0, hasta, ch ) ;
-	}
-	ctx.strokeStyle = "#ffffff" ;
-	ctx.lineWidth = 4 ;
-	for( let i = 0 ; i < scale_divisions ; i++ ){
-		w = cw*i/scale_divisions ;
-		ctx.moveTo( w, ch ) ;
-		ctx.lineTo( w, ch*0.75) ;
-	}
-	ctx.stroke() ;	
-
-	ctx.beginPath() ;
-	ctx.strokeStyle = color ;
-	ctx.fillStyle = color ;
-	ctx.lineWidth = 2 ;
-	ctx.rect( 0, 0, cw, ch) ;
-	ctx.stroke() ;	
-
-}
 
 function drawNeedle( ctx, needle_pos, cw, ch ){
 	if( needle_pos < 2 ) {
@@ -244,15 +173,13 @@ function getCanvas( container_name, canvas_id, width_percent ){
 	return document.getElementById( canvas_name ) ;	
 }
 function centsBar( container_name, cents, width_percent ) {
-	let MAXVALUE = 50 ; // min value is -MAXVALUE
-	let LIMIT = 5 ;
 
 	let canvas = getCanvas( container_name, "_centsBarCanvas", width_percent ) ;
 	let ctx = canvas.getContext("2d") ;
 	let cw = canvas.width ;
 	
 	let ch = canvas.height ;
-	let limit_pos = cw*LIMIT/MAXVALUE/2;
+	let limit_pos = cw*CENTS_LIMIT/MAX_CENTS/2;
 	
 	ctx.fillStyle = meter_grey ;
 	ctx.beginPath();
@@ -261,16 +188,16 @@ function centsBar( container_name, cents, width_percent ) {
 	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
 	ctx.stroke();
 
-	let needle_pos = cw/2 + cw*cents/MAXVALUE/2 ;
+	let needle_pos = cw/2 + cw*cents/MAX_CENTS/2 ;
     
-	if( cents < -LIMIT  ) {
+	if( cents < -CENTS_LIMIT  ) {
 		ctx.fillStyle = meter_red_color ;
 		ctx.beginPath();
 		ctx.lineWidth = 0;
 		ctx.fillRect( needle_pos,0, cw/2-needle_pos, ch*0.8 ) ;
 		ctx.stroke();
 	}
-	else if( cents > LIMIT  ) {
+	else if( cents > CENTS_LIMIT  ) {
 		ctx.fillStyle = meter_red_color ;
 		ctx.beginPath();
 		ctx.lineWidth = 0;
@@ -290,8 +217,8 @@ function centsBar( container_name, cents, width_percent ) {
 }
 
 function dbBar( container_name, db, width_percent ) {
-	let MINVALUE = -20 ;
-	let MAXVALUE = 0 ;
+	let MINVALUE = MAX_DB ;
+	let MAXVALUE = MIN_DB ;
 
 	let canvas = getCanvas( container_name, "_dbBarCanvas", width_percent ) ;
 	let ctx = canvas.getContext("2d") ;
@@ -337,10 +264,16 @@ function progressBar( container_name, percent, width_percent ){
 
 
 function velocityBar( container_name, velocity, width_percent ) {
-	let MAXVALUE = 100;
-	let MINVALUE = 0 ;
+    needleBar( container_name, velocity, width_percent, 0, 100, "_velocityBarCanvas") ;
+}
 
-	let canvas = getCanvas( container_name, "_velocityBarCanvas", width_percent ) ;
+function rpsecBar( container_name, rpsec, width_percent ) {
+    needleBar( container_name, velocity, width_percent, 0, 2, "_rpsecyBarCanvas") ; 
+}
+
+function needleBar( container_name, velocity, width_percent, minvalue, maxvalue, canvas_suffix) {
+
+	let canvas = getCanvas( container_name, canvas_suffix, width_percent ) ;
 	let ctx = canvas.getContext("2d") ;
 	let cw = canvas.width ;
 	let ch = canvas.height ;
@@ -363,7 +296,7 @@ function velocityBar( container_name, velocity, width_percent ) {
 	ctx.lineTo( cw/2, ch*0.8 )
 	ctx.stroke() ;
 	
-	needle_pos = cw*(velocity-MINVALUE)/(MAXVALUE-MINVALUE);
+	needle_pos = cw*(velocity-minvalue)/(maxvalue-minvalue);
 	ctx.beginPath() ;
 	ctx.fillStyle = meter_green_color ;
 	ctx.fillRect( cw/2, 0, needle_pos-cw/2, ch*0.8 ) ;
@@ -651,6 +584,7 @@ function currentPage(){
 }
 
 // Cached tunelib >>> add expiration date?
+//>>>> replace with standard cache?????
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){

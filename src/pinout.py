@@ -56,7 +56,7 @@ class PinoutParser:
             pinout_data = fileops.read_json(source)
         else:
             raise RuntimeError(
-                "PinoutParser neither filename nor list received"
+                "PinoutParser neither filename nor list received, no pinout files in /data"
             )
         self.description = ""
         self.parse(pinout_data)

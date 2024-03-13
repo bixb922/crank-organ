@@ -142,19 +142,21 @@ password</div>
 <div class="middlediv">Debug/test settings</div>
    
 	<input id="webserver_cache" name="webserver_cache" type="checkbox" oninput="markField('webserver_cache')"/>
-	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily:</label>
+	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily</label>
 	
 	<br>
 	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds = 5 minutes seems appropriate.  No decimals, integer only:</label>	<input id="max_age" name="max_age" type="text" size="6"  oninput="markField('max_age')"/>
-
-
-
     <br>
-    <input type="checkbox" name="microphone" id="mic_test_mode" value="mic_test_mode" oninput="markField('mic_test_mode')">
+
+    <input type="checkbox" name="mic_test_mode" id="mic_test_mode" value="mic_test_mode" oninput="markField('mic_test_mode')">
     <label for="mic_test_mode">Debug mode for microphone. Generates  some signals to test tuning mode:</label>
-    
     <br>
-	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode' )">Save debug settings</button>
+    
+    <input type="checkbox" id="mic_store_signal" value="mic_store_signal" oninput="markField('mic_store_signal')">
+    <label for="mic_store_signal">Store microphone signal and FFT on flash when tuning</label>
+    <br>
+    
+	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode','mic_store_signal' )">Save debug settings</button>
 
 <div class="middlediv">Server (optional)</div>
    

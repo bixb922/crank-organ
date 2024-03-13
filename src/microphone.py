@@ -4,7 +4,6 @@
 
 import sys
 import time
-import fft_arrays as fft_module
 
 _implementation = sys.implementation.name
 if _implementation == "micropython":
@@ -22,17 +21,16 @@ else:
     class gc:
         def collect():
             pass
-    
-    
+
+
 from math import sin, pi
 
 import random
 import array
 
+import fft_arrays as fft_module
 import frequency
-
 import midi
-
 from config import config
 from pinout import gpio
 
@@ -44,12 +42,10 @@ from pinout import gpio
 _BUFFER_SIZE = const(1024)
 
 
-
 class Microphone:
     def __init__(self, gpio_microphone_pin, mic_test_mode):
         # Allocate memory as a first step to ensure availability
         gc.collect()
-        #>>>TRY WITH "f" instead of "i"
         self.adc_signal = array.array("i", (0 for _ in range(_BUFFER_SIZE)))
         # Allocate memory for zero crossing/signal processing module
         
@@ -57,10 +53,8 @@ class Microphone:
             self.adc_device = ADC(
                 Pin(gpio_microphone_pin, Pin.IN), atten=ADC.ATTN_11DB
             )
-            print(">>>> ADC CONFIGURED, gen signal", mic_test_mode)
         else:
             self.adc_device = None
-            print(">>>NO MICROPHONE CONFIGURED; GENERATE SIGNAL", mic_test_mode)
         
     def _sample_adc(self, midi_note):
         if self.adc_device:
@@ -68,7 +62,6 @@ class Microphone:
         return self._generate_signal(midi_note)
     
     def _sample_microphone(self,midi_note):
-        print(">>> sample microphone")
         # Get the time between samples
         step = frequency.compute_time_step_usec( midi_note.frequency()  )
         # Calculate delay needed in loop below. The magic number
@@ -96,17 +89,18 @@ class Microphone:
         freq = midi_note.frequency()
         r = random.random()
         # Show some frequencies in red or out of range
-        if r<0.2:
-            freq = freq*1.03
-        elif r>0.8:
-            freq = freq/1.03
-        if r < 0.05:
-            freq = freq*1.5
-        elif r >0.95:
-            freq = freq/1.5
+        if False:
+            if r<0.2:
+                freq = freq*1.03
+            elif r>0.8:
+                freq = freq/1.03
+            if r < 0.05:
+                freq = freq*1.1
+            elif r >0.95:
+                freq = freq/1.1
         # Introduce some random in samples per period
         # to mimic real frequency variations
-        spp = 8 + (random.random()-0.3)
+        spp = frequency.SAMPLES_PER_PERIOD + (random.random()-0.3)
         step = 1/freq/spp
         duration = n * step
         # Check that step doesn't hit maximum sampling rate
@@ -135,13 +129,12 @@ class Microphone:
             #self.adc_signal[i]=int(sin(_TWO_PI*step*1*i*freq+angle)*amp*0.40+2048) 
         return duration, self.adc_signal
 
-    def frequency( self, midi_note ):
+    def frequency( self, midi_note, save_result ):
         duration, signal = self._sample_adc( midi_note )
         # for now, no amplitude.
-        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note )
+        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, save_result )
 
         return freq, amplitude, duration
-
 
 microphone = Microphone( gpio.microphone_pin, config.cfg["mic_test_mode"] )
 
@@ -151,7 +144,7 @@ if __name__ == "__main__":
     notelist.extend([_ for _ in range(61,88)])
     #notelist = [46]
     # test _sample_adc signal time
-    # >>>> DISABLED
+    # >>>> TEST DISABLED because fft_arrays is now only for 1024 byte signal (optimised)
     if False:
         sumdiff = 0
         microphone = Microphone(9,False)
@@ -183,8 +176,7 @@ if __name__ == "__main__":
         note_name = str(note)
         generated_freq = note.frequency()
         t0 = time.ticks_ms()
-        freq, amplitude, duration = microphone.frequency(note)
-        #>>>> pending: store last
+        freq, amplitude, duration = microphone.frequency(note, False)
         dt = time.ticks_diff(time.ticks_ms(),t0)
         if freq:
             error = note.cents(freq)
@@ -201,21 +193,23 @@ if __name__ == "__main__":
         print("")
     print(f"Average error  {sum_error/len(notelist):4.2f} cents, max error  {max_error:4.2f} cents. Frequency {not_detected=}")
 
-# Best output
-#    *Bb2(46)
-#    duration=0.5493 expected=0.5489 diff=0.1% sumdiff=0.000443995
+# With SAMPLES_PER_PERIOD =6:
+#    >>> generate signal step=0.001288 rate=776 duration=1.32 samples=1024 periods=153.7 nominal frequency=116.5409
+#    search peak fft from 110=83.38363Hz to 215=162.9771Hz nominal_freq=116.5409  amplitude=462.8514 duration=1.319204
+#    HowLong Process signal, FFT and get frequency 171 ms
+#    find_max maxsignal=111783.5 avgsignal=4588.394 maxsignal/avgsignal=24.36223
+#    *Bb2(46) measured freq=116.6 nominal freq=116.5 error=0.7 cents
 #    ....
-#    *Eb6(87)
-#    duration=0.0524 expected=0.0512 diff=2.4% sumdiff=0.0237669
-# Diferencias son < 3.5%.
-# sumdiff es la suma (sin abs) de todas las diferencias como cifra de mérito (segundos)
+#    >>> generate signal step=0.000129 rate=7728 duration=0.13 samples=1024 periods=164.9 nominal frequency=1244.508
+#    search peak fft from 118=890.5138Hz to 231=1743.294Hz nominal_freq=1244.508  amplitude=469.4492 duration=0.1325078
+#    HowLong Process signal, FFT and get frequency 168 ms
+#    find_max maxsignal=125255.6 avgsignal=5036.325 maxsignal/avgsignal=24.87044
+#    *Eb6(87) measured freq=1244.8 nominal freq=1244.5 error=0.3 cents
+#
+#    Average error  0.03 cents, max error  1.12 cents. Frequency not_detected=0
 
-# Performance (jan 2024)
-#    HowLong generate signal 123 ms
-#    HowLong normalize 34 ms
-#    HowLong lowpass 20 ms
-#    HowLong autocorrelate 58 ms
-#    HowLong zcr.frequency 3 ms
-# Example:
-#    *Eb6(87)   estimated=1244.51 freq=1244.34 error=-0.24 cents zeros=18 processing 240 msec
-#    Average error  -0.11 cents, max error  0.29
+# With SAMPLES_PER_PERIOD=5:
+# Average error  -0.10 cents, max error  0.75 cents. Frequency not_detected=0
+
+# With SAMPLES_PER_PERIOD=4:
+# Average error  73.34 cents, max error  568.96 cents. Frequency not_detected=0

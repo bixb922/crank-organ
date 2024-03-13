@@ -55,21 +55,24 @@ HEADERLIST = [
 NOT_FOUND_MARK = chr(126) + "(not found) "
 
 class TuneManager:
-    def __init__(self, tunelib_folder, tunelib_json):
+    def __init__(self, tunelib_folder, tunelib_filename):
         self.tunelib_folder = tunelib_folder
-        self.tunelib_json = tunelib_json
+        self.tunelib_filename = tunelib_filename
         self.logger = getLogger(__name__)        
         self.tunelib_progress = "Tunelib update not started"
         self.sync_task = None
+        # Create tunelib if no backup
+        self.read_tunelib()
         self.logger.debug(f"init ok")
 
         
     def read_tunelib(self):
         try:
-            tunelib = fileops.read_json(self.tunelib_json)
+            tunelib = fileops.read_json(self.tunelib_filename)
         except OSError as e:
-            self.logger.exc(e, f"tunelib {self.tunelib_json} could not be opened")
+            self.logger.exc(e, f"tunelib {self.tunelib_filename} could not be opened, creating empty tunelib")
             tunelib = {}
+            self._write_tunelib_json( tunelib )
         return tunelib
     
     def get_info_by_id(self, tuneid):
@@ -94,12 +97,6 @@ class TuneManager:
         ]
         del tunelib
         return autoplay
-
-    #def get_tunelib(self):
-    #    tunelib = self.read_tunelib()
-    #    # Update count of times a tune has played, and send tunelib.
-    #    self._update_history_count(tunelib)
-    #    return tunelib
 
     def _get_file_attr(self, fn):
         filename = self.tunelib_folder + fn
@@ -280,7 +277,7 @@ class TuneManager:
         return key, fn
 
     def _write_tunelib_json(self, tunelib):
-        fileops.write_json(tunelib, self.tunelib_json, keep_backup=True)
+        fileops.write_json(tunelib, self.tunelib_filename, keep_backup=True)
 
     def save(self, update):
         # Called from tunelibedit.html with dictionary of changed

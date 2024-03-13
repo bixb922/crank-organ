@@ -19,7 +19,7 @@ from tachometer import crank
 CANCELLED = const("cancelled")
 ENDED = const("ended")
 PLAYING = const("playing")
-# Can also be "waiting", "file not found", others
+# Can also be "waiting", "file not found", others.
 
 
 class MIDIPlayerProgress:
@@ -48,7 +48,7 @@ class MIDIPlayer:
         self.logger = getLogger(__name__)
         self.time_played_us = 0
         self.progress = MIDIPlayerProgress()
-        # Channel map has current program number for each
+        # Channel map has the current program number for each
         # channel
         self.channelmap = bytearray(16)
         # Register event when cranking starts (0 msec after start)
@@ -118,8 +118,9 @@ class MIDIPlayer:
         # Percussion channels use the fixed "virtual" DRUM_PROGRAM number
         # Channel map uses program numbers 0 to 127.
         # The Note class needs program numbers 1 to 128,
-        # and DRUM_PROGRAM==129 for the special program used in channel 10
-        # +1 gets added in midi_event_to_note
+        # and DRUM_PROGRAM==129 for the "special" program used in channel 10
+        # +1 gets added in midi_event_to_note (129 is not MIDI standard, just an
+        # internal convention)
         self.channelmap[10] = midi.DRUM_PROGRAM - 1
 
     def _midi_event_to_note(self, midi_event):
@@ -129,16 +130,18 @@ class MIDIPlayer:
         )
 
     async def _play(self, midi_file):
-        # Open MIDI file takes about 50 millisec on a ESP32-S3 at 240 Mhz, do it before
+        # Open MIDI file takes about 50 millisec on a ESP32-S3 at 240 Mhz, 
+        # do it before
         # starting the loop.
         # With 4 to 8 MB RAM, there is enough to have large buffer.
-        # But no need to read the full file to memory
+        # But there is no need to read the full file to memory
         midifile = umidiparser.MidiFile(midi_file, buffer_size=5000)
 
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
         playing_started_at = time.ticks_us()
         midi_time = 0
-        # plist = [] # >>>> DEBUG
+        # plist = [] # >>>> DEBUG: allows to test if playing time has
+        # no significant deviations
 
         for midi_event in midifile:
             # midi_time is the calculated MIDI time since the start of the MIDI file
@@ -175,7 +178,7 @@ class MIDIPlayer:
             self._process_midi(midi_event)
 
     def _process_midi(self, midi_event):
-        # Process note off event (or note on velocity 0)
+        # Process note off event (equivalent to note on, velocity 0)
         if midi_event.status == umidiparser.NOTE_OFF or (
             midi_event.status == umidiparser.NOTE_ON
             and midi_event.velocity == 0
@@ -208,11 +211,14 @@ class MIDIPlayer:
             return round(midi_event_delta_us / tmeter_vel)
 
         # Turning too slow or stopped, wait until crank turning
+        # and return the waiting time. MIDI time is then delayed
+        # by the same amount than the time waiting for the crank to turn
+        # again, so playing can resume without a hitch.
         self.logger.debug("waiting for crank to turn")
         start_wait = time.ticks_us()
         solenoid.all_notes_off()
         await self.crank_start_event.wait()
         return time.ticks_diff(time.ticks_us(), start_wait)
 
-
+# Singleton instance of player:
 player = MIDIPlayer()

@@ -95,9 +95,7 @@ function updateNoteInfo( notelist ) {
 	htmlById("tuningbody", st) ;
 	
 	let amplistdb = note["amplistdb"] ;
-    console.log("note=", note) ;
-    console.log("note[amplistdb]=", note["amplistdb"] );
-	textById("ampcaption", "Amplitud (" + min_db + " a "+ max_db +" dB)" );
+	textById("ampcaption", "Amplitud (" + MIN_DB + " a "+ MAX_DB +" dB)" );
 	let sa = "" ;
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
 		sa += `<tr>
@@ -123,8 +121,6 @@ function updateNoteInfo( notelist ) {
 			  color = midnight_green ;
 		  }
 
-		  let c = scale_cents( centslist[j] ) ;
-		  //lrBarGraph( elename, c, color, scale_divisions_cents, 100 ) ;
 		  centsBar( elename, cents, 80 ) ;
 		  doctext.innerText = Math.round(cents) ;
         }

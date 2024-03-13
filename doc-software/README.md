@@ -20,7 +20,7 @@ Please post an github issue for any question you might have. Please star the git
 * Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments.
 * This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
-
+* MIDI files can be updated via WiFi with drag and drop or via USB with a command line interface.
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
@@ -35,7 +35,7 @@ The home page has the main menu and shows detailed battery use information.
 
 ![home page](homepage1.jpg) 
 
-![home page](homepage2.jpg)
+![home page](homepage_battery.jpg)
 
 This diagram shows page navigation.
 The page top has a left arrow to navigate up one level.
@@ -112,7 +112,7 @@ Tapping on a tune adds that tune to the bottom of the current setlist, i.e. queu
 
 ![queued tune](tunelist_waiting.jpg)
 
-If a tune is playing, progress is shown with a progress bar next to the tune name. "Waiting" means that the tune is waiting for the crank to turn in order to start.
+If a tune is playing, progress is shown with a progress bar next to the tune name. 0% means that the tune is waiting for the crank to turn (or pressing the touch pad) in order to start.
 
 ![playing tune on tune list page](tunelist_1_playing.jpg)
 
@@ -212,7 +212,7 @@ Actions such as "sound a note" or "repetition tests" are queued if you press the
 
 ## All notes page
 
-![tuning all notes page](tuning.jpg)
+![tuning all notes page](notelist.jpg)
 
 This page shows all defined MIDI notes. Frequency and amplitude bar graph only have a meaning if there is a working microphone connected.
 
@@ -229,11 +229,15 @@ Tapping the underscored MIDI note name/number will take you to the note page.
 ## The note page
 This page aids intonating and tuning one note.
 
+![note page](note.jpg)
+
 The "Tune" button will sound that note. You can use your own tuner, or if a microphone is installed, the tuning and amplitude is stored and shown. While the note sounds, several samples are taken and shown separately. If there is much difference for each frequency or amplitude measurements, adjustments can be made to that pipe.
 
 The "Note test" button will sound that note.
 
 The "Repetition test" button will make a repetition test increasing speed until reaching a 30ms on/30ms off cycle.
+
+
 
 # History page
 The history page will show all dates a tune has been played, and a list of all tunes played that date. There is a button to purge older history, if you should wish that.
@@ -304,6 +308,7 @@ Before copying tunes to the microcontroller, it is best to have the time set by 
 ## Update MIDI files with WiFi
 * On a Mac, install Filezilla. Enter the host name, for example ```organillo.local``` in FileZilla.  You now can drag and drop files to the tunelib folder.
 * On Windows, search internet for "How to connect to FTP servers in Windows" with Windows Explorer.
+
 
 ## Update MIDI files with USB and mpremote
 

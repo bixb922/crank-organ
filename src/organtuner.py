@@ -2,7 +2,6 @@
 # MIT License
 # Handles response to notelist.html and note.html pages (tuning support)
 
-
 import os
 import array
 from time import ticks_ms, ticks_diff, ticks_us
@@ -24,6 +23,7 @@ import midi
 from battery import battery
 import fileops
 from microphone import microphone
+import frequency
 
 _TUNING_ITERATIONS = const(3)
 
@@ -115,12 +115,11 @@ class OrganTuner:
             await asyncio.sleep_ms(500)
 
     def clear_tuning(self):
-        global organtuner
         try:
             os.remove(config.ORGANTUNER_JSON)
         except OSError:
             pass
-        #>>>>microphone.zcr.clear_stored_signals()
+        frequency.clear_stored_signals()
         # Recreate organtuner.json
         self._get_stored_tuning()
         self.logger.info("Stored tuning and stored signals removed")
@@ -185,6 +184,7 @@ class OrganTuner:
                 d["name"] = str(midi_note)
                 d["centslist"] = []
                 d["amplist"] = []
+                d["amplistdb"] = []
                 d["pinname"] = solenoid.get_pin_name(midi_note)
                 self.stored_tuning[hash(midi_note)] = d
             fileops.write_json(
@@ -245,6 +245,7 @@ class OrganTuner:
 
             
     async def _get_note_pitch(self, midi_note):
+        store_signal = config.cfg.get("mic_store_signal", False)
         freqlist = []
         amplist = []
         solenoid.note_on(midi_note)
@@ -252,12 +253,14 @@ class OrganTuner:
         await asyncio.sleep_ms(300)
         try:
             for iteration in range(_TUNING_ITERATIONS):
+                store_this = (store_signal and iteration==0)
+                # Save signal only for iteration 0
                 try:
                     (
                         frequency,
                         amplitude,
                         duration,
-                    ) = microphone.frequency(midi_note)
+                    ) = microphone.frequency(midi_note, store_this)
                 except ValueError:
                     frequency = None
                     amplitude = 0
@@ -278,7 +281,7 @@ class OrganTuner:
                     )
                 await asyncio.sleep_ms(10)  # yield, previous code was CPU bound
             # Store last sample in flash
-            #>>>>microphone.zcr.store_last()
+
         except Exception as e:
             self.logger.exc(e, "Exception in _get_note_pitch")
         finally:

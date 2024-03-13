@@ -4,13 +4,20 @@
 
 import time
 startup_time = time.ticks_ms()
-import machine
+class MeasureTime:
+    def __init__(self, title ):
+        self.title = title
+    def __enter__( self ):
+        self.t0 = time.ticks_ms()
+        return self
+    def __exit__( self, exc_type, exc_val, exc_traceback ):
+        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
+        print(f"\tMeasureTime {self.title} time={self.time_msec} msec" )
+
 import gc
 import sys
 import os
 import asyncio
-import network
-import json
 
 # Create data folder if not there
 # Data that changes in time is stored here: battery info
@@ -21,100 +28,44 @@ try:
 except OSError:
     pass
 
-gc.collect()
-last_alloc = gc.mem_alloc()
-lastt = time.ticks_ms()
-#print("initial allocation", last_alloc)
-def reportmem(s):
-    return # NO REPORT MEM
-    global last_alloc, lastt
-    size = 0
-    #try:
-    #    size = os.stat("software/mpy/"+s+".mpy")[6]
-    #except OSError:
-    #        size = 0
-    gc.collect()
-    alloc = gc.mem_alloc()
-    newt = time.ticks_ms()
-    dt = time.ticks_diff(newt,lastt)
-    print(s,alloc-last_alloc,"bytes", "alloc",alloc,"time:", dt)
-    last_alloc = alloc
-    lastt = newt
-    
-    
- #Startup time con hard reset.
- #9 seg con todo en software/mpy, ese folder de primero en sys.path
- #5 seg con sys.path=['.frozen', '/lib'] y similar con ["/lib", ".frozen"]
- #5 seg con sys.path=['.frozen', '/lib'] y sin archivos de respaldo en /data
- #=> 5 segundos hasta desde boot hasta clap (medido incluso antes de ntptime)
+# Startup < 4 sec when in flash, less if frozen.
 import scheduler
-reportmem("scheduler")
 from timezone import timezone
-reportmem("timezone")
 from minilog import getLogger
 timezone.setLogger(getLogger)
-reportmem("minilog")
-
- 
-import compiledate
-import fileops  # 3
-reportmem("fileops")
-from config import config  # 5
-reportmem("config")
-import wifimanager  # 6
-reportmem("wifimanager")
-import mcp23017  # 0
-reportmem("mcp23017")
-import midi  # 0
-reportmem("midi")
-import pinout  # 9
-reportmem("pinout")
+from config import config
 from led import led
-reportmem("led")
+# Start wifimanager as early as possible, so the connections are
+# in progress while doing the rest of the imports
+import wifimanager 
 led.starting(0)
-from solenoid import solenoid  # 10
-reportmem("solenoid")
+from solenoid import solenoid 
 led.starting(1)
-import battery  # 12
-reportmem("battery")
-#>>>import zcr  # 0
-#>>>reportmem("zcr")
-import organtuner  # 14
-reportmem("organtuner")
-import touchpad  # 6
-reportmem("touchpad")
-import tachometer  # 10
-reportmem("tachometer")
-import history  # 6
-reportmem("history")
-import tunemanager  # 9
-reportmem("tunemanager")
 led.starting(2)
-import umidiparser  # 1
-reportmem("umidiparser")
-from player import player  # 17
-reportmem("player")
-from setlist import setlist  # 20
-reportmem("setlist")
+from setlist import setlist
 led.set_setlist(setlist)
 led.starting(3)
-from microdot_asyncio import Microdot
-reportmem("microdot")
-import webserver  # 26
-reportmem("webserver")
-import poweroff  # 28
-reportmem("poweroff")
+import webserver
+import poweroff
 
 try:
     import mcserver
-    reportmem("mcserver")
 except ImportError:
     # No impact if mcserver not present.
     pass
 
 _logger = getLogger(__name__)
-_logger.debug("imports done")
-
+# to install aioprof:
+# mpremote mip install https://gitlab.com/alelec/aioprof/-/raw/main/aioprof.py
+# to install aiorepl:
+# mpremote mip install aiorepl
+try:
+    # >>> for debugging and testing, only if present.
+    import aiorepl
+    repl = asyncio.create_task(aiorepl.task())
+    print("aiorepl enabled")
+except:
+    pass
 
 # Global asyncio exception handler
 def _handle_exception(loop, context):
@@ -126,11 +77,13 @@ def _handle_exception(loop, context):
     sys.exit()  # Drastic: terminate/reinit
 
 
-# Global background garbage collector. Use scheduler
+# Global background garbage collector. 
+# Use the scheduler
 # to avoid interfering with the high priority task: the MIDI player
 async def background_garbage_collector():
     # With MicroPython 1.21 and later, gc.collect() is not critical anymore
-    # But I'll still keep the code.
+    # But I'll still keep the code. Now gc.collect() duration depends on
+    # RAM allocated and not total RAM size.
     while True:
         await asyncio.sleep_ms(2000)
         # gc is best if not delayed more than a few seconds
@@ -140,7 +93,7 @@ async def background_garbage_collector():
             ):
                 gc.collect()
         except RuntimeError:
-            # IF timeout, collect garbage anyhow
+            # If RequestSlice times out, collect garbage anyhow
             # No good to accumulate pending gc
             gc.collect()
 
@@ -170,7 +123,16 @@ async def background_garbage_collector():
 #            iterations_per_sec = iterations/dt*1000
 #            print(f"max async block {max_async_block} it/sec {iterations_per_sec:.0f} {dt=}")
 
-
+async def report_profile():
+    # >>> report profile for debugging
+    import aioprof
+    aioprof.inject()
+    print("aioprof enabled")
+    while True:
+        await asyncio.sleep(30)
+        aioprof.report()
+        
+        
 async def signal_ready():
     # Tell user system ready
     await asyncio.sleep_ms(100)
@@ -192,6 +154,7 @@ async def main():
         webserver.run_webserver(),
         background_garbage_collector(),
         signal_ready(),
+        report_profile(),
         # idle() # to measure async response
     )
 

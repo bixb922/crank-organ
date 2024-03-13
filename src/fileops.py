@@ -6,6 +6,17 @@ import asyncio
 import errno
 import os
 
+import time
+class MeasureTime: #>>>> perhaps leave in scheduler?
+    def __init__(self, title ):
+        self.title = title
+    def __enter__( self ):
+        self.t0 = time.ticks_ms()
+        return self
+    def __exit__( self, exc_type, exc_val, exc_traceback ):
+        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
+        print(f"\tMeasureTime {self.title} time={self.time_msec} msec" )
+
 import scheduler
 
 KEEP_OLD_VERSIONS = 3
@@ -23,14 +34,14 @@ def backup(filename):
 
     if not file_exists(filename):
         return
+    # Make a daily backup
     backup_filename = f"{filename}-{timezone.now_ymd()}"
     if not file_exists(backup_filename):
         os.rename(filename, backup_filename)
 
     # Purging old backup files doesn't need to be done
-    # immediately
+    # immediately, do it but a bit later...
     asyncio.create_task(delete_old_versions(filename))
-
 
 def file_exists(filename):
     try:
