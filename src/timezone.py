@@ -122,7 +122,6 @@ class TimeZone:
         
         from config import config
         url = "http://worldtimeapi.org/api/timezone/" + config.cfg["tzidentifier"]
-        print(">>>>>>>>>>>UPDATE TIME ZONE CALL WORLDTIMEAPI<<<<<<<<", url )
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:

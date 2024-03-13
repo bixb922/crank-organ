@@ -4,15 +4,6 @@
 
 import time
 startup_time = time.ticks_ms()
-class MeasureTime:
-    def __init__(self, title ):
-        self.title = title
-    def __enter__( self ):
-        self.t0 = time.ticks_ms()
-        return self
-    def __exit__( self, exc_type, exc_val, exc_traceback ):
-        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
-        print(f"\tMeasureTime {self.title} time={self.time_msec} msec" )
 
 import gc
 import sys
@@ -60,7 +51,7 @@ _logger = getLogger(__name__)
 # to install aiorepl:
 # mpremote mip install aiorepl
 try:
-    # >>> for debugging and testing, only if present.
+    # For debugging and testing, enable only if present.
     import aiorepl
     repl = asyncio.create_task(aiorepl.task())
     print("aiorepl enabled")

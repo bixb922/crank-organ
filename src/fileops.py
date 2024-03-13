@@ -7,15 +7,6 @@ import errno
 import os
 
 import time
-class MeasureTime: #>>>> perhaps leave in scheduler?
-    def __init__(self, title ):
-        self.title = title
-    def __enter__( self ):
-        self.t0 = time.ticks_ms()
-        return self
-    def __exit__( self, exc_type, exc_val, exc_traceback ):
-        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
-        print(f"\tMeasureTime {self.title} time={self.time_msec} msec" )
 
 import scheduler
 

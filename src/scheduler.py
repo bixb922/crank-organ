@@ -166,6 +166,21 @@ def is_playback_mode():
 def complement_progress(progress):
     progress["play_mode"] = playback_enabled
 
+# Class to measure time of a group of statements, use:
+# with MeasureTime("description") as m:
+#       statements
+#       statements
+# Time is available in m.time_msec
+class MeasureTime:
+    def __init__(self, title ):
+        self.title = title
+    def __enter__( self ):
+        self.t0 = time.ticks_ms()
+        return self
+    def __exit__( self, exc_type, exc_val, exc_traceback ):
+        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
+        print(f"\tMeasureTime {self.title} {self.time_msec} msec" )
+
 
 _tasklist = []
 _run_always_flag = True
