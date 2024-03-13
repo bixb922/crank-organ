@@ -629,7 +629,7 @@ once you configure your microcontroller, you should backup relevant files:
 * /data/config.json (encrypted passwords, WiFi and general configuration). 
 * /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information). This is necessary only if you change the standard configuration.
 * /data/pinout.txt (although this file is very easy to restore using the MIDI configuration page)
-* /data/history.db (if you are interested in conserving the history of when tunes have played)
+* /data/history.json (if you are interested in conserving the history of when tunes have played)
 
 Copy with FileZilla or mpremote to your PC. You also can print the configuration forms with the browser, to have backup on paper, but that will need to reenter the data if the files get lost.
 

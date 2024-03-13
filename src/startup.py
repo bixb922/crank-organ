@@ -115,7 +115,7 @@ async def background_garbage_collector():
 #            print(f"max async block {max_async_block} it/sec {iterations_per_sec:.0f} {dt=}")
 
 async def report_profile():
-    # >>> report profile for debugging
+    # Report profile every 30 seconds for debugging/optimizing
     import aioprof
     aioprof.inject()
     print("aioprof enabled")
