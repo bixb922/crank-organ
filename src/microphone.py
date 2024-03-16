@@ -33,19 +33,12 @@ import midi
 from config import config
 from pinout import gpio
 
-# Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz
-# so 1024 samples gathers about 12 msec of data at maximum rate.
-# To get enough periods of the signal, the sampling has
-# to be slowed down. This allows to process more periods, resulting
-# in more precision. 
-_BUFFER_SIZE = const(1024)
-
-
 class Microphone:
     def __init__(self, gpio_microphone_pin, mic_test_mode):
         # Allocate memory as a first step to ensure availability
         gc.collect()
-        self.adc_signal = array.array("i", (0 for _ in range(_BUFFER_SIZE)))
+        self.buffer_size = fft_module.BUFFER_SIZE
+        self.adc_signal = array.array("i", (0 for _ in range(self.buffer_size)))
         # Allocate memory for zero crossing/signal processing module
         
         if gpio_microphone_pin and not mic_test_mode:
@@ -103,7 +96,8 @@ class Microphone:
         duration = n * step
         # Check that step doesn't hit maximum sampling rate
         assert step > 1/30_000
-        print(f">>> generate signal {step=:.6f} rate={1/step:.0f} {duration=:.2f} samples={n} periods={duration*freq:.1f} nominal frequency={freq}")
+        freq_step = 1/duration
+        print(f">>> generate signal {step=:.4f}sec {freq_step=:.1f}Hz rate={1/step:.0f}samples/sec {duration=:.2f}sec samples={n} periods={duration*freq:.1f} nominal frequency={freq}Hz")
         # Amplitude from 500 to 2000. Emulate a 12 bit ADC with
         # values oscillating around 2048, so with that amplitude
         # values may go from 48 to 4048 (and can go from 0 to 4095)
@@ -141,24 +135,23 @@ if __name__ == "__main__":
     notelist = [46,48,51,53,55,56,58,60]
     notelist.extend([_ for _ in range(61,88)])
     #notelist = [46]
-    # test _sample_adc signal time
-    # >>>> TEST DISABLED because fft_arrays is now only for 1024 byte signal (optimised)
-    if False:
-        sumdiff = 0
-        microphone = Microphone(9,False)
-        total0 = time.ticks_ms()
+# test _sample_adc signal time
+    sumdiff = 0
+    microphone = Microphone(9,False)
+    total0 = time.ticks_ms()
 
-        for note_number in notelist:
-            note = midi.Note(0,note_number)
-            note_name = str(note)
-            duration, _ = microphone._sample_adc(note)
-            freq = note.frequency()
-            step = round(1/freq/8*1_000_000)
-            expected = step*_BUFFER_SIZE/1_000_000
-            sumdiff += (duration-expected)
-            print(f"{note_name} {duration=:.4f} planned duration={expected:.4f} diff={(duration-expected)/expected*100:.1f}% {sumdiff=}")
-        total1 = time.ticks_ms()
-        print(f"Total time to acquire samples {time.ticks_diff(total1,total0)} (no processing)")
+    for note_number in notelist:
+        note = midi.Note(0,note_number)
+        note_name = str(note)
+        duration, _ = microphone._sample_adc(note)
+        freq = note.frequency()
+        step = round(1/freq/frequency.SAMPLES_PER_PERIOD*1_000_000)
+        expected = step*microphone.buffer_size/1_000_000
+        sumdiff += (duration-expected)
+        assert abs(expected-duration)<0.01
+        print(f"{note_name} {duration=:.4f} planned duration={expected:.4f} diff={(duration-expected)/expected*100:.1f}% {sumdiff=}")
+    total1 = time.ticks_ms()
+    print(f"Total time to acquire one set samples {time.ticks_diff(total1,total0)} (no processing)")
 
 
     # No GPIO pin, generated microphone signal
@@ -191,16 +184,16 @@ if __name__ == "__main__":
         print("")
     print(f"Average error  {sum_error/len(notelist):4.2f} cents, max error  {max_error:4.2f} cents. Frequency {not_detected=}")
 
-# With SAMPLES_PER_PERIOD =6:
+# With SAMPLES_PER_PERIOD =6 and BUFFER_SIZE=1024:
 #    >>> generate signal step=0.001288 rate=776 duration=1.32 samples=1024 periods=153.7 nominal frequency=116.5409
 #    search peak fft from 110=83.38363Hz to 215=162.9771Hz nominal_freq=116.5409  amplitude=462.8514 duration=1.319204
-#    HowLong Process signal, FFT and get frequency 171 ms
+#    MeasureTime Process signal, FFT and get frequency 171 ms
 #    find_max maxsignal=111783.5 avgsignal=4588.394 maxsignal/avgsignal=24.36223
 #    *Bb2(46) measured freq=116.6 nominal freq=116.5 error=0.7 cents
 #    ....
 #    >>> generate signal step=0.000129 rate=7728 duration=0.13 samples=1024 periods=164.9 nominal frequency=1244.508
 #    search peak fft from 118=890.5138Hz to 231=1743.294Hz nominal_freq=1244.508  amplitude=469.4492 duration=0.1325078
-#    HowLong Process signal, FFT and get frequency 168 ms
+#    MeasureTime Process signal, FFT and get frequency 168 ms
 #    find_max maxsignal=125255.6 avgsignal=5036.325 maxsignal/avgsignal=24.87044
 #    *Eb6(87) measured freq=1244.8 nominal freq=1244.5 error=0.3 cents
 #
@@ -211,3 +204,5 @@ if __name__ == "__main__":
 
 # With SAMPLES_PER_PERIOD=4:
 # Average error  73.34 cents, max error  568.96 cents. Frequency not_detected=0
+
+# With BUFFER_SIZE=512 max error about 2 cents

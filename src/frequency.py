@@ -1,27 +1,40 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+
 import time
 import os
 
-# Must be clearly > 2, these is the number of samples per period
-# of the nominal frequency. 
+import scheduler
+
+# Accepted frequency range: if the nominal frequency is f,
+# the frequencies between 
+# f/ACCEPTED_FREQUENCY_RANGE and f*ACCEPTED_FREQUENCY_RANGE
+# are detected
+# 1.2 is about 3 semitones up and 3 semitones down (more exactly 3.2 semitones).
+ACCEPTED_FREQUENCY_RANGE = 1.2
+
+# SAMPLES_PER_PERIOD:
 # Smaller means less error in computation of frequency
 # But 5 or smaller means that higher armonics may distort the FFT
 # because they may show up as noise...
 # So the 3rd armonic should at least always show up.
-# 3rd armonic = 2.5 times the fundamental. Because of Nyquist
+# 3rd armonic = 2.5 times the fundamental in Hz. Because of Nyquist Theorem,
 # the fundamental needs > 2 samples per period, so 2.5*2 = 5 as the
 # smallest value for SAMPLES_PER_PERIOD if the 3rd harmonic is strong.
-SAMPLES_PER_PERIOD = 6
+# (If the 3rd harmonic is strong and if it's left out of the spectrum,
+# it interferes and shows up as a second or third peak around the
+# fundamental, causing an erroneus interpretation of the maximum)
+# i.e. SAMPLES_PER_PERIOD has to be > 5.
+# If much larger, there will be a certain loss of precision, since the
+# buffer size is fixed and the frequency resolution of the spectrum is
+# 1/duration = 1/nominal_frequency/SAMPLES_PER_PERIOD
+# With SAMPLES_PER_PERIOD=6, there is a margin of 6/5=1.2 for higher frequencies
+# without the 3rd harmonic to cause errors. 1.2 is about 2**(3.2/12)
+# so if the note is about 3 semitones higher than expected, the result
+# is unsafe.
+SAMPLES_PER_PERIOD = 5*ACCEPTED_FREQUENCY_RANGE
 
-class HowLong:
-    def __init__( self, title ):
-        self.title = title
-    def __enter__( self ):
-        self.t0 = time.ticks_ms()
-        return self
-    def __exit__( self, exc_type, exc_val, exc_traceback ):
-        dt = time.ticks_diff( time.ticks_ms(), self.t0 )
-        print(f"HowLong {self.title} {dt} ms" )
-    
+
 def vertex( x1, y1, x2, y2, x3, y3 ):
     denom = (x1 - x2) * (x1 - x3) * (x2 - x3)
     A = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom
@@ -56,7 +69,7 @@ def get_peak( abs_fft ):
 
 
 def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_result ):
-    with HowLong("Process signal, FFT and get frequency"):
+    with scheduler.MeasureTime("Process signal, FFT and get frequency"):
         signal_len=len(signal)
         amplitude = compute_amplitude(signal)
         time_step = duration/signal_len
@@ -64,16 +77,16 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
         if save_result:
             save( signal, duration, midi_note, time_step, "signal")
 
-        # 1.4 is a factor of about 6 semitones up and 6 semitones down.
+        # Search in a range of some semitones around the fundamental.
         # In this range there is no harmonic expected, so find_max needs to
-        # find the only peak there is.
-        # This spans half an octave up and half an octave down to search
-        # for the peak frequency.
-        # If the note is 6 semitones out of tune
+        # find the only peak there is. (Harmonics are at least 1 octave away).
+        # If the note is more semitones out of tune
         # there is something seriously wrong..... so it doesn't make
         # much sense to search in a larger range.
-        from_position = round(nominal_freq/1.4/freq_step)
-        to_position = round(nominal_freq*1.4/freq_step)
+        # This value is also in line with the sampling rate,
+        # see comment where SAMPLES_PER_SEC is defined.
+        from_position = round(nominal_freq/ACCEPTED_FREQUENCY_RANGE/freq_step)
+        to_position = round(nominal_freq*ACCEPTED_FREQUENCY_RANGE/freq_step)
         print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
         result = fft_module.fft(signal, True)
 

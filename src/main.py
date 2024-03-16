@@ -1,3 +1,6 @@
+# (c) 2023 Hermann Paul von Borries
+# MIT License
+
 #print("Go!")
 # First thing: turn on led
 import machine

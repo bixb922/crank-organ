@@ -10,18 +10,15 @@ if sys.implementation.name != "micropython":
         def native(f):
             return f
     
-class HowLong:
-    def __init__( self, title ):
-        self.title = title
-    def __enter__( self ):
-        self.t0 = time.ticks_ms()
-        return self
-    def __exit__( self, exc_type, exc_val, exc_traceback ):
-        dt = time.ticks_diff( time.ticks_ms(), self.t0 )
-        print(f"HowLong {self.title} {dt} ms" )
+
+# Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz
+# so 1024 samples gathers about 12 msec of data at maximum rate.
+# To get enough periods of the signal, the sampling has
+# to be slowed down. This allows to process more periods, resulting
+# in more precision. 
 
 BUFFER_SIZE = const(1024)
-# No complex arrays in Python... :-( must use lists...
+# No complex arrays use list
 exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
 
 # Surprisingly, the list is a bit faster than the array...
