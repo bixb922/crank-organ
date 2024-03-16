@@ -217,7 +217,6 @@ function updateBatteryInfo( battery ) {
     textById("solenoids_on", format_secHHMM( battery["solenoids_on"] )) ;
 
 
-	//>>>barGraph( "batterygraph", 1-used_proportion, sap_green, 10, "left", 80 );
 	progressBar( "batterygraph", 100-used_percentage, 80 );
 }
 

@@ -3,14 +3,9 @@
 # Handles response to notelist.html and note.html pages (tuning support)
 
 import os
-import array
-from time import ticks_ms, ticks_diff, ticks_us
-import gc
 import asyncio
-from machine import Pin, ADC
-from math import sin, log10
+from math import log10
 
-import random
 if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")

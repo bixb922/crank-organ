@@ -48,15 +48,20 @@ MAX_AGE = (
 # notelist.html note.html, pinout.html: disable play mode
 # tunelibedit, diag, history, config: no change
 
-PAGE_ENABLES_PLAYBACK = {
+PAGE_SETS_PLAYBACK = {
+    # Pages that set playback mode
     "index.html": True,
     "tunelist.html": True,
     "play.html": True,
+    # Pages that reset playback mode
     "notelist.html": False,
     "note.html": False,
     "pinout.html": False,
+    # Plus: ftp sets playback to false
     # Rest of pages are neutral wr to playback
+    # Setlist only operates in playback mode
 }
+
 
 # @app.before_request
 # def func_before_req( request ):
@@ -160,10 +165,11 @@ async def static_files(request, filepath):
 
     register_activity(request)
 
-    # Playback mode depends on page last loaded
-    pb = PAGE_ENABLES_PLAYBACK.get(filepath, None)
+    # Playback mode depends on pages loaded
+    pb = PAGE_SETS_PLAYBACK.get(filepath, None)
     if pb is not None:
         scheduler.set_playback_mode(pb)
+        
     filename = STATIC_FOLDER + filepath
     if not fileops.file_exists(filename):
         _logger.info(f"{filename} not found")
@@ -656,7 +662,7 @@ async def delete_history(request, days):
     return simple_response("ok")
 
 
-# >>>> CATCHALL HANDLER FOR NOW
+# Catchall handler to debug possible errors at html level
 @app.get('/<path:path>')
 def catch_all(request, path):
     _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))

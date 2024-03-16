@@ -3,7 +3,6 @@
 # Plays MIDI files using the umidiparser module
 import time
 import asyncio
-import json
 import errno
 
 import umidiparser

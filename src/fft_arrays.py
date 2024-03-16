@@ -1,11 +1,11 @@
 import sys
-from math import sin, pi, atan2
+from math import sin
 import time
-import array
 import math
 
 if sys.implementation.name != "micropython":
-    const = lambda x: x
+    def const(x):
+        return x
     class micropython:
         def native(f):
             return f
@@ -23,9 +23,10 @@ class HowLong:
 BUFFER_SIZE = const(1024)
 # No complex arrays in Python... :-( must use lists...
 exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
-#hann_table = array.array("f",  (sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)))
+
 # Surprisingly, the list is a bit faster than the array...
 hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
+
 #void _fft(cplx buf[], cplx out[], int n, int step)
 # about 2 or 3 ms can be shaved off if n is not passed as parameter
 # and by using BUFFER_SIZE constant instead.

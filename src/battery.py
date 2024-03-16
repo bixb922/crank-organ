@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) 20200 Hermann Paul von Borries
 # MIT License
 # Tallies battery usage
 import asyncio
@@ -129,7 +129,8 @@ class Battery:
             # Update battery info on flash to keep tally
             # of usage. The webserver does not read this file,
             # but uses get_info() from memory.
-            # Be nice and ask for a time slice.
+            # Be nice and ask for a time slice. Updating a file
+            # in flash usually takes 20 or 30 msec but may go up to 190 msec
             try:
                 async with scheduler.RequestSlice("battery", 200, 10_000):
                     self._write_battery_info()

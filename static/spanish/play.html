@@ -115,9 +115,7 @@ async function updateProgress( progress ) {
 		htmlById("tuneinfo", s) ;
         
 		textById("progress", "...") ;
-		//>>>barGraph( "timebar", 0, midnight_green, 10, "left", 60 ) ;
 		progressBar( "timebar", 0, 60 ) ;
-		//>>>document.getElementById("timebar").innerText = "" ;
 	}
 	else {
 		let tune = tunelib[current_tuneid] ;

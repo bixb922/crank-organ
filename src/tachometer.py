@@ -128,7 +128,7 @@ class Crank:
         
     def register_event(self,when_ms):
         # Can register one event for each time only.
-        if not when_ms in self.events:
+        if when_ms not in self.events:
         # Register an event to be set "when_ms" milliseconds after
         # the crank starts to turn.
             self.events[when_ms] = asyncio.Event()
@@ -140,7 +140,6 @@ class Crank:
     async def _crank_monitor_process(self):
         # This connects the tachometer sensor with the event that
         # starts a new tune in setlist
-        last_rpsec = 0
         # Turning hasn't started
         time_when_turning_started = None
         some_pulses = int(4*HIGHER_THRESHOLD_RPSEC/PULSES_PER_REV)
@@ -215,7 +214,6 @@ crank = Crank(gpio.tachometer_pin)
 
 if __name__ == "__main__":
     from random import random
-    import neopixel
     # Test
     # Replace tachometer with simulated one
     crank = Crank(5)

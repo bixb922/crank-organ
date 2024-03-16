@@ -63,7 +63,7 @@ class TuneManager:
         self.sync_task = None
         # Create tunelib if no backup
         self.read_tunelib()
-        self.logger.debug(f"init ok")
+        self.logger.debug("init ok")
 
         
     def read_tunelib(self):

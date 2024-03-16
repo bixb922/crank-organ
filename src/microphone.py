@@ -7,7 +7,6 @@ import time
 
 _implementation = sys.implementation.name
 if _implementation == "micropython":
-    import os
     from time import ticks_ms, ticks_diff, ticks_us
     import gc
     from machine import Pin, ADC
@@ -73,7 +72,6 @@ class Microphone:
         read = self.adc_device.read
         read()
         t0 = time.ticks_us()
-        sumdiff = 0
         for i in range(n):
             time_end = time.ticks_add( ticks_us(), delay )
             self.adc_signal[i] = read()

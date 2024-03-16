@@ -136,7 +136,6 @@ function updateNoteInfo( notelist ) {
 		let doctext = document.getElementById( elename + "_text" );
         if( ampdb != null ){
             docele.style.visibility = "visible" ;
-            //>>>barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 100 );
 			dbBar( elename, ampdb, 80 ) ;
 			doctext.innerText = Math.round( ampdb ) ;
         }

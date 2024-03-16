@@ -16,7 +16,7 @@ class HistoryManager:
     def __init__(self,filename):
         self.filename = filename
         self.logger = getLogger(__name__)
-        self.logger.debug(f"init done")
+        self.logger.debug("init done")
         # Check if history is present, create empty if no backup
         self._read_hlist()
 
@@ -33,6 +33,7 @@ class HistoryManager:
     
     def add_entry( self, tuneid, percentage, requested ):     
         hlist = self._read_hlist()
+        # >>> append battery usage also?
         hlist.append((tuneid, timezone.now_timestamp(), percentage, requested ))
         # Write with backup
         fileops.write_json(hlist, self.filename)
@@ -45,7 +46,6 @@ class HistoryManager:
             yield tuneid, ft, percentage, requested
 
     def delete_old(self, days):
-        #>>>>Test pending!!!!!!!
         # purge history
         if days < 0:
             raise ValueError("Days must be >= 0")

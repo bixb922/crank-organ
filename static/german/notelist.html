@@ -105,7 +105,6 @@ function updateNoteList( notelist ) {
         docele = document.getElementById( elename ) ;
         if( ampdb != null ){
           docele.style.visibility = "visible" ;
-		  //>>>barGraph( elename, scale_db( ampdb ), sap_green, scale_divisions_db, "right", 20 );
 		  dbBar( elename, ampdb, 15 ) ;
         }
         else {

@@ -143,7 +143,7 @@ class TimeZone:
         # Result is in seconds
         new_offset = dst_offset + raw_offset
         new_abbreviation = resp.get("abbreviation", "")
-        self.tz["offset_sec"] = dst_offset + raw_offset
+        self.tz["offset_sec"] = new_offset
         self.tz["abbreviation"] = new_abbreviation
         # Store for future reboots. Store always to avoid
         # frequent refresh

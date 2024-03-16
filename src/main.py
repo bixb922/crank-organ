@@ -12,7 +12,10 @@ led.write()
 # 20mA x 5V = 0.1W
 machine.freq(240_000_000)
 
-import os
+import os       # noqa
+import sys      # noqa
+import errno    # noqa
+
 # Mount with more appropriate file system parameters
 # lookahead must increase to offset for the size of the flash.
 # Optimal value of lookahead is the number of blocks of the flash/8
@@ -25,11 +28,8 @@ os.umount("/")
 readsize = 1024
 progsize = 128
 lookahead = 512
-os.mount(os.VfsLfs2(bdev,readsize=readsize,progsize=progsize,lookahead=lookahead),"/")
+os.mount(os.VfsLfs2(bdev,readsize=readsize,progsize=progsize,lookahead=lookahead),"/") # noqa
 print(f"VfsLfs2 mounted with {readsize=}, {progsize=}, {lookahead=}")
-
-import sys
-import errno
 
 # Path element order makes a difference of 1.6 sec in startup time
 sys.path = [ ".frozen", "/lib"]

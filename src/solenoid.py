@@ -153,7 +153,7 @@ class Solenoid:
         if self.solenoid_on_msec[midi_note] == 0:
             self.solenoid_on_msec[midi_note] = now
             # Compute how many notes are on
-            # >>> IMPLEMENTAR CON CONTADOR?
+            # It's not a good idea to implement this with a counter only
             polyphony = sum(1 for x in self.solenoid_on_msec.values() if x != 0)
             if polyphony > self.max_polyphony:
                 # This could lead to battery overload, record to log at end of tune

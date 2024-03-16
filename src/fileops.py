@@ -6,8 +6,6 @@ import asyncio
 import errno
 import os
 
-import time
-
 import scheduler
 
 KEEP_OLD_VERSIONS = 3

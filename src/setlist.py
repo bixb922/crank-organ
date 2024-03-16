@@ -86,7 +86,9 @@ class Setlist:
 
             # If tuner or test mode are active, don't
             # interfere playing music. Reloading the
-            # page restores control.
+            # page restores control. Playback mode is activated
+            # when navigating to play.html or tunelist.html and
+            # disactivated with other pages.
             if not scheduler.is_playback_mode():
                 self.logger.debug("Not in play mode")
                 continue

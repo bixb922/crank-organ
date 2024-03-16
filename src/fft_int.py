@@ -10,10 +10,7 @@
 # ptr8 is pointer to a unsigned byte
 # Functions may have up to four arguments???
 #
-import sys
-from math import sin, cos, pi, sqrt, atan2
-import math
-import time
+from math import  cos, pi, sqrt
 import array
 
 # This viper code cannot run with CPython
@@ -153,8 +150,8 @@ def fft(data, hann_windowing=False):
     if n>BUFFER_SIZE:
         raise ValueError
     print(__name__, "fft", n)
-    # >>> if data is an array.array of "i" then
-    # >>> the data array can be used as buf_real instead of allocating one.
+    # If data is an array.array of "i" then
+    # the input array could be used as buf_real instead of allocating one.
     array_copy( data, buf_real, n )
     if hann_windowing:
         apply_hann_windowing( buf_real, n, cos_table )

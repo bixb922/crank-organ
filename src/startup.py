@@ -36,8 +36,8 @@ led.starting(2)
 from setlist import setlist
 led.set_setlist(setlist)
 led.starting(3)
-import webserver
-import poweroff
+import webserver    
+
 
 try:
     import mcserver
@@ -55,7 +55,7 @@ try:
     import aiorepl
     repl = asyncio.create_task(aiorepl.task())
     print("aiorepl enabled")
-except:
+except ImportError:
     pass
 
 # Global asyncio exception handler
@@ -116,7 +116,10 @@ async def background_garbage_collector():
 
 async def report_profile():
     # Report profile every 30 seconds for debugging/optimizing
-    import aioprof
+    try:
+        import aioprof
+    except ImportError:
+        return
     aioprof.inject()
     print("aioprof enabled")
     while True:
