@@ -45,7 +45,6 @@ flowchart LR
     H[main menu]
     H --> |Crank organ button| T[tune list page]
     T --> |Performance button| P[Performance control page]
-    P --> | <- back button, top left corner | T
     H --> |Tuner button| NL[Note list page]
     NL --> |Click on note name/MIDI number| NN[Note page]
     H --> |History button| HI[History page]
@@ -61,7 +60,9 @@ It's best to navigate the application using the buttons and the back button on t
 
 The home page is by default the menu page, but the configuration allows to define the tune list or the performance page as "home" page.
 
-While music is playing, try to stay on the tune list and the performance page. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages.
+While music is playing, try to stay on the tune list and the performance page. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages. Other pages may interfere with playing music.
+
+While using the tuning pages (note list and note page), playing back music is disabled. Navigating back to tune list and play pages enables playing back music again.
 
 
 ## The page header
@@ -89,7 +90,8 @@ If the browser looses the connection to the server, the broken heart symbol &#x1
 
 The "Battery" section shows more information about the computed state of the battery than the page header. 
 
-The correct calculation of power remaining depends on the "battery_watts_hour" parameter in the config.json file. Be sure to press "Battery counters set to zero" after recharging the battery.
+Be sure to press "Battery counters set to zero" after recharging the battery.
+
 
 
 
@@ -497,13 +499,20 @@ Leave the username blank. Enter the configuration password and press accept.
 
 ## Power management settings
 
-Configure the battery capacity, in watts-hour. You get the watts-hour by multiplying the battery voltage by the milliampere-hours figure (mAh) figure of the battery. Some manufacturers will publish the watts-hour figure.
+Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (i.e. shortened a bit) if the maximum is exceeded.
 
-Example: a AA battery is rated at 2000mAh, that is 2 Ah (ampere-hours. The battery pack has 10 batteries delivering 1.2V each, for a total of 12V. The capacity is 12V*2Ah = 24 watt-hours.
+USB power pack heartbeat: Some USB power packs need some current every now and then to remain turned on. This option will activate a random solenoid to achieve a minimal consumption.
 
-Another example: a USB battery pack is rated at 10000mAh = 10 Ah. Although the battery pack delivers 5V, lithium batteries are 3.3V, so the capacity is 3.3V*10Ah = 33 watt-hours.
+The battery capacity is configurated with the following steps:
+* Charge battery fully and insert
+* Press "Reset battery counters to zero" on index page 
+* Play the organ until the battery reaches zero, i.e. until the battery fully discharges. 
+* Recharge battery fully, insert and _before_ setting counters to zero, press "Battery calibration". Enter 0 (i.e. battery empty) and press ok.
+* Repeat these steps a second time to ensure best results.
 
-Configure the solenoid resistance (default: 90 Ohms).
+Battery capacity will be automatically calculated from now on. This process is necessary only once.
+
+If the battery has a % charge indicator, the % can be entered every now and then, this is an alternative way to calibrate the battery.
 
 ## Time zone
 When connected to a router or cell phone hot spot, the software uses ntptime (network time protocol) to acquire the UTC time, and then it queries worldtimeapi.org once a day for the time zone offset and DST offset. Once that is done, the time zone offset is stored in flash for the next refresh, that takes place at most once a day.
@@ -519,6 +528,8 @@ Before copying tunes to the microcontroller, it is best to have the time set by 
 Go through the rest and change what you may need, use save button to save to the microcontroller. Most parameters are there just to explain how the software works.
 
 The sections are:
+* Automatic playback. This option makes sense if a crank motor is installed. The setlist will be played with the indicated time between tunes.
+
 * Crank settings. Necessary to change when a crank speed sensor is installed (still under development).
 
 The rest of the sections is even less likely to require change:
@@ -693,9 +704,9 @@ Most code, especially the MIDI file parser, has been tested extensively, althoug
 
 The following features need more testing or development:
 
-* Microphone for tuning. It works well, but I have not included a way to aid setting the sensitivity of the microphone. Microphones have a volume setting. If set for high, signal is distorted but that does not impair frequency detection, but intensity cannot be measured. Microphones with automatic volume control are ok to measure tuning, but will not measure volume.
-
 * Sensor for crank speed to influence playback speed. Pending to test and for fine adjustments.
+
+The microphone option for tuning has now been tested and updated.
 
 # Troubleshooting
 If you added tunes to the tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and changes recognized.
