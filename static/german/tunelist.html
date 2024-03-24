@@ -194,12 +194,7 @@ async function getProgress() {
         if( progress == undefined ){
             showPopup( "", "Information über Fortschritt nicht verfügbar");
         }
-        if(     progress == undefined || progress["status"] == "playing"){
-		  await sleep_ms( 2_000 ) ; // safer would be 10_000
-        }
-        else{
-            await sleep_ms( 2_000 ) ;
-        }
+        await sleep_ms( 2_000 );
 	}
 }
 

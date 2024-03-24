@@ -66,7 +66,9 @@ class Setlist:
         # If the crank is not turning, wait....
         self.start_event.clear()
         self.waiting_for_start_tune_event = True
+        self.logger.debug(">>> set waiting_for_start_tune_event")
         await self.start_event.wait()
+        self.logger.debug(">>> reset waiting_for_start_tune_event")
         self.waiting_for_start_tune_event = False
 
     def is_waiting(self):
@@ -78,11 +80,23 @@ class Setlist:
         self.load()
 
         while True:
-            # Ensure loop will always yield
+            # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
 
-            # Wait for user to start tune
-            await self.wait_for_start()
+            if config.cfg.get("automatic_playback", False):
+                t = config.cfg.get("automatic_delay", 0)
+                self.logger.debug(f">>>automatic playback {t} sec")
+                if t == 0:
+                    # A time between about 30 seconds to 15 minutes
+                    t = randrange(30, 900)
+                self.logger.debug(f"Wait for {t} seconds to start next tune")
+                await asyncio.sleep(t)
+                if len(self.current_setlist) == 0:
+                    self.shuffle_all_tunes()
+            else:
+                # No automatic playback, wait for user to start tune
+                self.logger.debug(">>>wait for start")
+                await self.wait_for_start()
 
             # If tuner or test mode are active, don't
             # interfere playing music. Reloading the
@@ -102,18 +116,13 @@ class Setlist:
             # Get top tune and play
             tuneid = self.current_setlist.pop(0)
 
-            # Play tune in separate task
-
             self.logger.info(f"play tune will start {tuneid=}")
+            # Play tune in isolated task
             self.player_task = asyncio.create_task(
                 player.play_tune(tuneid, tuneid in self.tune_requests)
             )
-            try:
-                await self.player_task
-            except Exception as e: 
-                # Don't let player exceptions stop the setlist task.
-                # Player should have handled/reported the exception
-                self.logger.exc( repr(e), "Unhandled exception in player_task")
+            await self.player_task
+            # Record that this task has ended and isn't available anymore
             self.player_task = None
 
             # Clean up tune_requests, delete all
@@ -125,8 +134,8 @@ class Setlist:
 
             self.logger.info("play_tune ended")
 
-            # Wait for the crank to cease turning
-            # after a tune has played before proceeding to next tune.
+            # Wait for the crank to cease turning after
+            # a tune has played before proceeding to next tune.
             await crank.stop_turning_event.wait()
    
 

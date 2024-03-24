@@ -392,6 +392,9 @@ async function updateHeader() {
 		// A page might have no battery time element in the header
 		return ;
 	}
+    // Get the normal background color of the header div
+    let elements = document.getElementsByClassName("headerdiv");
+    let normal_background = elements[0].style.backgroundColor ;
     // Wait a bit for other requests, than show battery
     // info on a freshly loaded page.
 	await sleep_ms( 1_000 );
@@ -399,22 +402,26 @@ async function updateHeader() {
 		let battery = await fetch_json( "/battery" ) ;
         let batteryText = "" ;
 		if( battery["low"] ) {
-			// Low battery emoji on BlanchedAlmond background
-			batteryText = "<span style='background-color:#FFEBCD'>&#x1faab;</span>" ;
+			// Low battery emoji on white background
+			batteryText = "<span style='background-color:white'>&#x1faab;</span>" ;
+            // Change background color if low
+            header_background = meter_red_color ;
 		}
 		else {
 			// Normal green battery emoji on white background
 			batteryText = "<span style='background-color:white'>&#x1f50b;</span>" ;
+            header_background = normal_background;
 		}
-        batteryText += "&nbsp;" + Math.round( 100-battery["percent_used"] ) + "%&nbsp;";
-		batteryText += format_secHHMM( battery["time_remaining"] ) ;
+        elements = document.getElementsByClassName("headerdiv");
+        for (var i = 0; i < elements.length; i++) {
+            // Should be only one headerdiv, but this covers all
+            elements[i].style.backgroundColor = header_background;
+        } 
 
-        if( battery["capacity"] != "no_battery" ){
-            htmlById( "header_time", batteryText ) ;
-        }
-        else {
-            htmlById( "header_time", "" );
-        }
+        batteryText += "&nbsp;" + Math.round( battery["percent_remaining"] ) + "%&nbsp;";
+		batteryText += format_secHHMM( battery["remaining_seconds"] ) ;
+
+        htmlById( "header_time", batteryText ) ;
         // Battery info gets updated once a minute.
         // Refresh display about twice a minute, that's more than enough 
         // since battery info changes slowly.

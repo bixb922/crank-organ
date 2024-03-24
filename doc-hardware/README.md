@@ -398,7 +398,7 @@ There are many options for batteries. I´ll describe here a battery pack based o
 * Male/female 12V plug
 * (and a AA Battery charger)
 
-Please use a fuse. A short circuit may cause fire and injury.
+Please use a fuse.  Use an appropriate BMS with protections for rechargeable batteries. A short circuit or overcharging may cause injury or fire.
 
 It's safest to connect this way:
 

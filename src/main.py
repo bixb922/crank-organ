@@ -40,6 +40,7 @@ try:
     open("/software/mpy").close()
 except OSError as e:
     if e.errno == errno.EISDIR:
+        # This order allows to override frozen modules
         sys.path = ["/software/mpy",  ".frozen", "/lib" ]
 
 import startup # noqa

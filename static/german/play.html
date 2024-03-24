@@ -78,12 +78,7 @@ async function getProgress() {
         }
 
         await updateProgress( progress );
-        if( progress == undefined || progress["status"] == "playing"){
-		  await sleep_ms( 2_000 ) ; // >>>safer would be 10_000
-        }
-        else{
-            await sleep_ms( 2_000 ) ;
-        }
+		await sleep_ms( 2_000 ) ;
 	}
 }
 

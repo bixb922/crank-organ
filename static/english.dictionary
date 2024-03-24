@@ -13,16 +13,17 @@ status_text = "cancelado"|status_text = "cancelled"
 
 *index.html
 >Drehorgel|>Crank organ
-<td>Uso</td>|<td>Used</td>
->Capacidad|>Capacity
 >Bater&iacute;a|>Battery
 >Tiempo operaci&oacute;n|>Time powered on
 >Tiempo tocando<|>Time playing<
 >Tiempo remanente|>Remaining time
+>Alcanza para<|>Enough for<
+>melodías<|>tunes<
 >Tiempo solenoides energizados<|>Time solenoids energized<
 >Puesto en cero<|>Set to zero<
 <td>Remanente</td>|<td>Remaining</td>
 Poner contadores en cero|Set battery counters to zero
+Calibrar indicación batería|Calibrate battery indicators
 Editar tunelib|Edit tunelib
 Diagnóstico|System info
 Organillo|Crank organ
@@ -33,6 +34,10 @@ Afinador|Tuner
 Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Battery counters set to zero"
 "Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|"FTP started. Reboot to stop. Connect with FileZilla or Windows Explorer"
+"Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"|"Enter current charge level of battery, 100=full, 0=empty, reset=delete calibation data. This is used to show battery level"
+"Nivel debe estar entre 0 y 100"|"Level must be between 0 and 100"
+"Nivel debe ser numérico"|"Level must be numeric"
+"Nivel de batería registrado"|"Battery level registered"
 
 *tunelist.html
 Deshabilitado por afinador, pinout|Disabled by tuner, pinout test

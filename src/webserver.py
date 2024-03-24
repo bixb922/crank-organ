@@ -350,6 +350,10 @@ async def battery_zero(request):
     battery.set_to_zero()
     return battery.get_info()
 
+@app.route("/record_battery_level",methods=["GET", "POST"])
+async def record_battery_level(request):
+    battery.record_level( request.json["level"]  )
+    return battery.get_info()
 
 @app.route("/errorlog")
 async def show_log(request):

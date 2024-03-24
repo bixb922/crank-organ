@@ -12,6 +12,7 @@ import ubinascii
 from minilog import getLogger
 import fileops
 
+# One logger for both Config and PasswordManager
 _logger = getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
@@ -35,7 +36,7 @@ class Config:
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data/"
         self.HISTORY_JSON = "data/history.json"
-        
+        self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
 
         # minilog folder defined in minilog module, not here
 
@@ -76,32 +77,37 @@ class Config:
             "ap_ip": "192.168.144.1",
             "ap_max_idle": 120,
             "idle_deepsleep_minutes": 15,
-            "battery_watt_hours": 24,
-            "solenoid_watts": 1.6,
-            "fixed_watts": 0.6,
             "battery_heartbeat_duration": 0,
             "battery_heartbeat_period": 0,
             "max_polyphony": 9,
             "touchpad_big_change": 20000,
             "tzidentifier": "America/Santiago",
             "initial_page": "index",
+            
             "webserver_cache": True,
             # Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds
             "max_age": 300,
+            
             "mic_test_mode": False,
             "mic_signal_low": -18,
             "mic_store_signal": False,
+            
             "servernode": "192.168.100.19:8080",
             "serverpassword": "password3",
+            
+            "automatic_delay": 30,
+            "automatic_playback": False,
         }
-        # Fill in all missing fields from fallback
+        # Populate missing keys from fallback
         for k, v in fallback.items():
             if k not in self.cfg:
+                _logger.debug(f"Adding configuration key {k}")
                 self.cfg[k] = v
-        # Alert for incorrect items
+        # Delete surplus keys
         for k in self.cfg.keys():
             if k not in fallback:
-                _logger.info(f"Incorrect item in config.json: {k}")
+                del self.cfg[k]
+                _logger.debug(f"key {k} is not needed, now deleted")
 
         # Encrypted passwords, if not done already
         if password_manager._encrypt_all_passwords(self.cfg):
@@ -169,6 +175,7 @@ class Config:
                 "max_polyphony",
                 "battery_heartbeat_duration",
                 "battery_heartbeat_period",
+                "automatic_delay",
             ):
                 try:
                     newconfig[k] = int(v)
@@ -176,9 +183,6 @@ class Config:
                     return f"Error: {k} is not an integer"
 
             elif k in (
-                "solenoid_watts",
-                "fixed_watts",
-                "battery_watt_hours",
                 "mic_signal_low",
             ):
                 try:

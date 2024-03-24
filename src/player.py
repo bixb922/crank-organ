@@ -100,12 +100,18 @@ class MIDIPlayer:
                 self.logger.exc(e, "Exception adding history")
             scheduler.run_always()
             battery.start_heartbeat()
-            battery.add_msec_playing(self.time_played_us / 1_000_000)
+            battery.end_of_tune(self.time_played_us / 1_000_000)
 
             # The channelmap contains the current program for each channel
 
     def _insert_history(self, tuneid, time_played_us, duration, requested):
-        percentage_played = round(time_played_us / 1000 / duration * 100)
+        if duration > 0:
+            percentage_played = round(time_played_us / 1000 / duration * 100)
+        else:
+            # Avoid division by 0
+            self.logger.info(f"MIDI file {tuneid} has duration 0")
+            percentage_played = 0
+            
         self.logger.debug(
             f"add history {tuneid} {time_played_us=} {duration=}  {percentage_played=}"
         )
@@ -200,12 +206,7 @@ class MIDIPlayer:
         return self.progress.get(self.time_played_us)
 
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
-        if not crank.is_installed():
-            return midi_event_delta_us
-        
-        # Transforms midi_event_delta in a time difference
-        # according to tachometer speed
-        if crank.is_turning():
+        if not crank.is_installed() or crank.is_turning():
             tmeter_vel = crank.get_normalized_rpsec()
             return round(midi_event_delta_us / tmeter_vel)
 

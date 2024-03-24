@@ -51,7 +51,8 @@ class Microphone:
     def _sample_adc(self, midi_note):
         if self.adc_device:
             return self._sample_microphone(midi_note)
-        return self._generate_signal(midi_note)
+        signal =  self._generate_signal(midi_note)
+        return signal
     
     def _sample_microphone(self,midi_note):
         # Get the time between samples
@@ -77,27 +78,28 @@ class Microphone:
         n = len(self.adc_signal)
         
         # Simulate a signal wave for testing
-        freq = midi_note.frequency()
+        nominal_freq = midi_note.frequency()
         r = random.random()
         # Show some frequencies in red or out of range
-        if False:
-            if r<0.2:
-                freq = freq*1.03
+        freq = nominal_freq
+        if True:#>>>__name__ != "__main__":
+            if r<0.05:
+                freq = nominal_freq*1.18
+            elif r>0.95:
+                freq = nominal_freq/1.18
+            elif r<0.2:
+                freq = nominal_freq*1.03
             elif r>0.8:
-                freq = freq/1.03
-            if r < 0.05:
-                freq = freq*1.1
-            elif r >0.95:
-                freq = freq/1.1
+                freq = nominal_freq/1.03
         # Introduce some random in samples per period
-        # to mimic real frequency variations
-        spp = frequency.SAMPLES_PER_PERIOD + (random.random()-0.3)
+        # to compensate possible aliasing effects
+        spp = frequency.SAMPLES_PER_PERIOD + random.uniform(-0.05,0.05)
         step = 1/freq/spp
         duration = n * step
         # Check that step doesn't hit maximum sampling rate
         assert step > 1/30_000
         freq_step = 1/duration
-        print(f">>> generate signal {step=:.4f}sec {freq_step=:.1f}Hz rate={1/step:.0f}samples/sec {duration=:.2f}sec samples={n} periods={duration*freq:.1f} nominal frequency={freq}Hz")
+        print(f">>> generate signal {step=:.4f}sec {freq_step=:.1f}Hz rate={1/step:.0f}samples/sec {duration=:.2f}sec samples={n} periods={duration*freq:.1f} nominal frequency={nominal_freq:.1f}Hz real frequency={freq:.1f}Hz")
         # Amplitude from 500 to 2000. Emulate a 12 bit ADC with
         # values oscillating around 2048, so with that amplitude
         # values may go from 48 to 4048 (and can go from 0 to 4095)
@@ -131,6 +133,16 @@ class Microphone:
 microphone = Microphone( gpio.microphone_pin, config.cfg["mic_test_mode"] )
 
 if __name__ == "__main__":
+    print(f"BUFFER_SIZE={microphone.buffer_size} SAMPLES_PER_PERIOD={frequency.SAMPLES_PER_PERIOD:.2f} {frequency.PLUS_MINUS_SEMITONES=} {frequency.ACCEPTED_FREQUENCY_RANGE=:.3f}")
+    import os
+    import scheduler
+    os.umount("/")
+    readsize = 1024
+    progsize = 128
+    lookahead = 512
+    os.mount( os.VfsLfs2( bdev,readsize=readsize,progsize=progsize,lookahead=lookahead ),"/") # noqa
+    print(f"VfsLfs2 mounted with {readsize=}, {progsize=}, {lookahead=}")
+
     # Test timing of ADC read.
     notelist = [46,48,51,53,55,56,58,60]
     notelist.extend([_ for _ in range(61,88)])
@@ -138,25 +150,41 @@ if __name__ == "__main__":
 # test _sample_adc signal time
     sumdiff = 0
     microphone = Microphone(9,False)
-    total0 = time.ticks_ms()
+    sampling_time = 0
 
     for note_number in notelist:
         note = midi.Note(0,note_number)
-        note_name = str(note)
-        duration, _ = microphone._sample_adc(note)
         freq = note.frequency()
         step = round(1/freq/frequency.SAMPLES_PER_PERIOD*1_000_000)
         expected = step*microphone.buffer_size/1_000_000
-        sumdiff += (duration-expected)
-        assert abs(expected-duration)<0.01
-        print(f"{note_name} {duration=:.4f} planned duration={expected:.4f} diff={(duration-expected)/expected*100:.1f}% {sumdiff=}")
-    total1 = time.ticks_ms()
-    print(f"Total time to acquire one set samples {time.ticks_diff(total1,total0)} (no processing)")
+        note_name = str(note)
+        if False:
+            duration, _ = microphone._sample_adc(note)
+            sumdiff += (duration-expected)
+            assert abs(expected-duration)<0.01
+            print(f"{note_name} {duration=:.4f} planned duration={expected:.4f} diff={(duration-expected)/expected*100:.1f}% {sumdiff=}")
+        else:
+            duration = step/1_000_000 * microphone.buffer_size
+            print(f"{note_name} {duration=:.4f}")
+        sampling_time += duration*1000
+    print(f"Total time to acquire one set samples {sampling_time} msec (no processing)")
 
-
-    # No GPIO pin, generated microphone signal
     # Test with generated signals
     microphone = Microphone(None,True)
+
+    # Measure processing time
+    midi_note = midi.Note(0,100)
+    duration, signal = microphone._sample_adc( midi_note )
+    with scheduler.MeasureTime("Signal processing, FFT, get_peak") as m1:
+        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, False )
+    processing_time = m1.time_msec*len(notelist)
+    with scheduler.MeasureTime("Signal processing, FFT, get_peak, store") as m2:
+        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, True )
+    signal_store_time = m2.time_msec*len(notelist)
+    print(f"Processing time, one note={m1.time_msec}msec all notes={processing_time}msec.  One note with store={m2.time_msec}msec all notes={signal_store_time}msec. Sampling time all notes={sampling_time}msec\n\n")
+
+    
+    # No GPIO pin, generated microphone signal
     sum_error = 0
     max_error = 0
     sum_error2 = 0
@@ -166,9 +194,7 @@ if __name__ == "__main__":
         note = midi.Note(0,note_number)
         note_name = str(note)
         generated_freq = note.frequency()
-        t0 = time.ticks_ms()
         freq, amplitude, duration = microphone.frequency(note, False)
-        dt = time.ticks_diff(time.ticks_ms(),t0)
         if freq:
             error = note.cents(freq)
             print(f"{note} measured freq={freq:.1f} nominal freq={note.frequency():.1f} error={error:.1f} cents")
@@ -182,27 +208,32 @@ if __name__ == "__main__":
             print("No frequency detected")
             not_detected+=1
         print("")
-    print(f"Average error  {sum_error/len(notelist):4.2f} cents, max error  {max_error:4.2f} cents. Frequency {not_detected=}")
-
-# With SAMPLES_PER_PERIOD =6 and BUFFER_SIZE=1024:
-#    >>> generate signal step=0.001288 rate=776 duration=1.32 samples=1024 periods=153.7 nominal frequency=116.5409
-#    search peak fft from 110=83.38363Hz to 215=162.9771Hz nominal_freq=116.5409  amplitude=462.8514 duration=1.319204
-#    MeasureTime Process signal, FFT and get frequency 171 ms
-#    find_max maxsignal=111783.5 avgsignal=4588.394 maxsignal/avgsignal=24.36223
-#    *Bb2(46) measured freq=116.6 nominal freq=116.5 error=0.7 cents
-#    ....
-#    >>> generate signal step=0.000129 rate=7728 duration=0.13 samples=1024 periods=164.9 nominal frequency=1244.508
-#    search peak fft from 118=890.5138Hz to 231=1743.294Hz nominal_freq=1244.508  amplitude=469.4492 duration=0.1325078
-#    MeasureTime Process signal, FFT and get frequency 168 ms
-#    find_max maxsignal=125255.6 avgsignal=5036.325 maxsignal/avgsignal=24.87044
-#    *Eb6(87) measured freq=1244.8 nominal freq=1244.5 error=0.3 cents
-#
-#    Average error  0.03 cents, max error  1.12 cents. Frequency not_detected=0
-
-# With SAMPLES_PER_PERIOD=5:
-# Average error  -0.10 cents, max error  0.75 cents. Frequency not_detected=0
-
-# With SAMPLES_PER_PERIOD=4:
-# Average error  73.34 cents, max error  568.96 cents. Frequency not_detected=0
+    print(f"BUFFER_SIZE={microphone.buffer_size} SAMPLES_PER_PERIOD={frequency.SAMPLES_PER_PERIOD:.2f} {frequency.PLUS_MINUS_SEMITONES=} {frequency.ACCEPTED_FREQUENCY_RANGE=:.3f}")
+    storing_only = signal_store_time-processing_time
+    
+    print(f"Average error  {sum_error/len(notelist):4.2f} cents, max error  {max_error:4.2f} cents, Frequency {not_detected=} times, {processing_time=} msec, total one pass={sampling_time+processing_time:.0f} msec, one pass storing only={storing_only:.0f} msec")
 
 # With BUFFER_SIZE=512 max error about 2 cents
+
+# BUFFER_SIZE=1024 SAMPLES_PER_PERIOD=7.14 PLUS_MINUS_SEMITONES=3
+# Average error  0.10 cents, max error  0.85 cents. Frequency not_detected=0 processing_time=5915 msec total one pass=19863 msec one pass storing only=22820
+# (Max error varies between 0.9 and 1.2 cents)
+# 3 passes means 20*3+22=82 seconds = 1 minute 20 seconds for 35 notes.
+
+# BUFFER_SIZE=1024 SAMPLES_PER_PERIOD=8
+# Average error  -0.16 cents, max error  1.30 cents. Frequency not_detected=0 processing_time=5950 msec total one pass=18390 msec (no storing)
+
+# BUFFER_SIZE=1024 SAMPLES_PER_PERIOD=8.4
+# Average error  -0.02 cents, max error  1.37 cents. Frequency not_detected=0 processing_time=5950 msec total one pass=17798 msec one pass storing only=22015
+
+# BUFFER_SIZE=1024 SAMPLES_PER_PERIOD=9.0
+# Average error  -0.22 cents, max error  1.31 cents. Frequency not_detected=0 processing_time=5915 msec total one pass=16969 msec one pass with storing=40804
+
+# BUFFER_SIZE=2048 SAMPLES_PER_PERIOD=15
+#Average error  -0.06 cents, max error  0.88 cents. Frequency not_detected=0 processing_time=11130 msec total one pass=24401.04 msec (no storing)
+
+# BUFFER_SIZE=2048 SAMPLES_PER_PERIOD=18
+# Average error  -0.19 cents, max error  0.96 cents. Frequency not_detected=0 processing_time=11060 msec total one pass=22115 msec (no storing)
+
+# BUFFER_SIZE=2048 SAMPLES_PER_PERIOD=24
+# Exceeds viable sampling rate

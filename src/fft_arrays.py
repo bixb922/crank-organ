@@ -6,6 +6,7 @@ import math
 if sys.implementation.name != "micropython":
     def const(x):
         return x
+    # Make micropython decorator a no-op
     class micropython:
         def native(f):
             return f
@@ -17,8 +18,9 @@ if sys.implementation.name != "micropython":
 # to be slowed down. This allows to process more periods, resulting
 # in more precision. 
 
-BUFFER_SIZE = const(1024)
-# No complex arrays use list
+BUFFER_SIZE = const(1024) 
+
+# No complex arrays, use list
 exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
 
 # Surprisingly, the list is a bit faster than the array...
@@ -30,15 +32,15 @@ hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
 
 
 @micropython.native
-def _fft( buf, bufoffset, out, outoffset, n, step):
-    et = exptable
+def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
+    et = exptable # Make twiddle factor table local, it's faster
 #	if (step < n) {
 #		_fft(out, buf, n, step * 2);
 #		_fft(out + step, buf + step, n, step * 2);
     if step < n:
         step2 = step*2
-        _fft(out, outoffset, buf, bufoffset, n, step2)
-        _fft(out, outoffset+step, buf, bufoffset+step, n, step2)
+        _fft_recursive(out, outoffset, buf, bufoffset, n, step2)
+        _fft_recursive(out, outoffset+step, buf, bufoffset+step, n, step2)
         #multiple = BUFFER_SIZE//n # only allow n == BUFFER_SIZE
 #		for (int i = 0; i < n; i += 2 * step) {
         for i in range(0,n,step2):
@@ -70,12 +72,11 @@ def fft(signal, hann_windowing=False):
         ht = hann_table
         signal = [ signal[i]*ht[i] for i in range(BUFFER_SIZE) ]
     out = list(signal)
-    _fft( signal, 0, out, 0, len(signal), 1 )
+    _fft_recursive( signal, 0, out, 0, len(signal), 1 )
     return signal
 
 
-# return magnitude of fft between two positions
+# return magnitude of a slice of the fft
 @micropython.native
 def fft_abs( data, from_position, to_position ):
     return [ abs(data[i]) for i in range(from_position, to_position) ]
-

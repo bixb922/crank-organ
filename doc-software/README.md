@@ -672,7 +672,7 @@ The application is programmed in MicroPython using the asyncio model to coordina
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
 
-Frequency detection is done with the zero crossing algorithm (See zcr.py). The algorithm is fast and quite precise. To guard against noise, autocorrelation of the signal is done and the strongest part of the autocorrelation is used. With closed (bourdon) pipes, the harmonics can be quite strong and overtones can distort the zero crossings severely.
+Frequency detection is done with the FFT algorithm, interpolating the maximum with a second order polynomial to get the vertex.
 
 MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, best use the latest version.
 

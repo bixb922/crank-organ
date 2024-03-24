@@ -1,6 +1,8 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-
+#>>> pending
+# >>> record battery usage
+# >>> record rating
 import time
 
 if __name__ == "__main__":

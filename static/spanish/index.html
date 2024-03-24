@@ -130,22 +130,20 @@
 <div class="middlediv">Bater&iacute;a</div>
 <table>
 	<tbody>
-		<tr>
-			<td>Uso</td><td id="use"></td><td>[Wh]</td>
+		<tr><td>Tiempo remanente</td><td id="remaining_seconds"></td><td>[hh:mm]</td></tr>
+        <tr>
+			<td>Alcanza para</td><td id="tunes_remaining"></td>
+            <td>melodías</td>
 		</tr>
 		<tr>
-			<td>Capacidad</td><td id="capacity"></td><td>[Wh]</td>
-		</tr>
-		<tr>
-			<td>Tiempo operaci&oacute;n</td><td id="time"></td><td>[hh:mm]</td>
+			<td>Tiempo operaci&oacute;n</td><td id="operating_seconds"></td><td>[hh:mm]</td>
 		</tr>
         <tr>
-			<td>Tiempo tocando</td><td id="time_playing"></td><td>[hh:mm]</td>
+			<td>Tiempo tocando</td><td id="playing_seconds"></td><td>[hh:mm]</td>
 		</tr>
         <tr>
-			<td>Tiempo solenoides energizados</td><td id="solenoids_on"></td><td>[hh:mm]</td>
+			<td>Tiempo solenoides energizados</td><td id="solenoid_on_seconds"></td><td>[hh:mm]</td>
 		</tr>
-		<tr><td>Tiempo remanente</td><td id="time_remaining"></td><td>[hh:mm]</td></tr>
         <tr><td>Puesto en cero</td><td id="date_zero"></td><td></td></tr>
     </tbody>
 </table>
@@ -164,6 +162,9 @@
 
 <button type="button" onclick="battery_zero()" id="resetBatteryButton">
 	Poner contadores en cero
+</button>
+<button type="button" onclick="battery_level()" id="batteryLevelButton">
+	Calibrar indicación batería
 </button>
 
 
@@ -203,26 +204,49 @@ async function getBatteryInfo( ) {
 
 function updateBatteryInfo( battery ) {
 	// Needed for /battery and /battery_zero
-	textById("use", Math.round( battery["use"]*10 )/10) ;
-	var used_percentage = battery["use"] / battery["capacity"]*100 ;
-	textById("percent_remaining", "" +  Math.round( 100-used_percentage ) + "%") ;
-	textById("capacity", battery["capacity"]) ;
-	textById("time",  
-				format_secHHMM( battery["time"] )) ;
-	textById("time_remaining", 
-				format_secHHMM( battery["time_remaining"] )) ;
-	textById("time_playing", 
-				format_secHHMM( battery["time_playing"] )) ;
+    percent_remaining = Math.round(battery["percent_remaining"]);
+	textById("tunes_remaining", Math.floor(battery["tunes_remaining"])  ) ;
+	textById("remaining_seconds", 
+				format_secHHMM( battery["remaining_seconds"] )) ;
+	textById("operating_seconds",  
+				format_secHHMM( battery["operating_seconds"] )) ;
+	textById("playing_seconds", 
+				format_secHHMM( battery["playing_seconds"] )) ;
     textById("date_zero", battery["date_zero"] ) ;
-    textById("solenoids_on", format_secHHMM( battery["solenoids_on"] )) ;
+    textById("solenoid_on_seconds", format_secHHMM( battery["solenoid_on_seconds"] )) ;
 
-
-	progressBar( "batterygraph", 100-used_percentage, 80 );
+	textById("percent_remaining", "" + percent_remaining + "%") ;
+	progressBar( "batterygraph", percent_remaining, 80 );
 }
 
 async function battery_zero() {
 	showPopup( "resetBatteryButton", "Contadores batería en cero");
 	updateBatteryInfo( await fetch_json( "/battery_zero" ) ) ;
+}
+    
+async function battery_level(){
+    let level = window.prompt("Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración", "")
+    if( level == "" || level == " " || level == null ) {
+        return ;
+    }
+    let i = 0 ;
+    if( level != "reset" ){
+        if( isNaN(level) ){
+            window.alert("Nivel debe ser numérico") ;
+            return ;
+        }
+        i = parseInt(level) ;
+        if( !( 0 <= i && i <= 100)){
+            window.alert("Nivel debe estar entre 0 y 100") ;
+            return ;
+        }
+    }
+    else{
+        i = "reset" ;
+    }
+    level_json = {"level": i } ;
+    await fetch_json( "/record_battery_level", level_json) ;
+	showPopup( "batteryLevelButton", "Nivel de batería registrado");
 }
 
 async function startFTP(){

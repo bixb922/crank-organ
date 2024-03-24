@@ -14,16 +14,17 @@ status_text = "cancelado"|status_text = "gestrichen"
 
 *index.html
 >Drehorgel|>Drehorgel
-<td>Uso</td>|<td>Gebraucht</td>
->Capacidad|>Kapazität
 >Bater&iacute;a|>Batterie
 >Tiempo operaci&oacute;n|>Zeit operativ
 >Tiempo tocando<|>Zeit Musikwiedergabe<
 >Tiempo remanente|>Verbleibende Zeit
+>Alcanza para<|>Reicht für<
+>melodías<|>Melodien<
 >Tiempo solenoides energizados<|>Zeit Ventile an<
 >Puesto en cero<|>Auf Null gesetzt<
 <td>Remanente</td>|<td>Verbleibend</td>
 Poner contadores en cero|Setze Batteriezähler auf Null
+Calibrar indicación batería|Batterieanzeige eichen
 Editar tunelib|Tunelib bearbeiten
 Diagnóstico|Systeminformation
 Organillo|Drehorgel
@@ -32,7 +33,13 @@ Config. general|Allgemeine Konfiguration
 Configuración MIDI|MIDI configuration
 Afinador|Stimmgerät
 Teclado bluetooth|Bluetooth keyboard
-"Contadores batería en cero"|"Batteriezähler aof Null""FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
+"Contadores batería en cero"|"Batteriezähler auf Null"
+"Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|∫"FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
+"Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"|"Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"
+"Nivel debe estar entre 0 y 100"|"Level muss zwischen 0 und 100 liegen"
+"Nivel debe ser numérico"|"Level muss eine Zahl sein"
+"Nivel de batería registrado"|"Registiert!"
+
 
 *tunelist.html
 Deshabilitado por afinador, pinout|Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe

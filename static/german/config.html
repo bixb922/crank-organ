@@ -73,19 +73,6 @@ password</div>
     <label for="max_polyphony">Maximum polyphony allowed. If more than this number of solenoids are on simultaneously, the oldest note is turned off to protect batteries. Integer only:</label>
 	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')"/>
 	<br>
-
-	<label for="battery_watt_hours">Watt-hours (Wh) capacity of the battery. Wh = mAh * Volts / 1000. For example: Ten 2000mAh NiMH AA batteries at 1.2V = 2000*1.2*10/1000 = 24 Wh. For example: three 3000 mAh Lithium batteries at 3.3V = 3000*3.3*3/1000=30 Wh. Decimal point allowed:</label>
-	<input id="battery_watt_hours" name="battery_watt_hours" type="text" size="4" oninput="markField('battery_watt_hours')"/>
-	<br>
-    
-	<label for="solenoid_watts">Solenoid power consumption in Watts. For example for solenoids at 12V with a resistance of 90 Ohms, power=12V*12V/90Ohms  = 1.6 Watts. Decimal point allowed</label>
-	<input id="solenoid_watts" name="solenoid_watts" type="text" size="4" oninput="markField('solenoid_watts')"/>&nbsp;W.
-	<br>
-    
-    <label for="fixed_watts">Fixed power consumption of microcontroller and power converter, in Watts. For example: the microcontroller comsumes 60mA average at 5V = 0.060A*5V = 0.3W. Decimal point allowed:</label>
-	<input id="fixed_watts" name="fixed_watts" type="text" size="4" oninput="markField('fixed_watts')"/>&nbsp;W.
-	<br>
-
 	
 	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, i.e. ifnot playing music, no web activity. Turn power off then on to restore.  No decimals, integer only:</label>
 	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3" oninput="markField('idle_deepsleep_minutes')"/>&nbsp;minutes.
@@ -105,10 +92,18 @@ password</div>
     <br>
     
     
-	<button type="button" onclick="save('max_polyphony', 'battery_watt_hours','idle_deepsleep_minutes','ap_max_idle', 'fixed_watts', 'solenoid_watts', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
+	<button type="button" onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
 
 <div class="middlediv">Other parameters</div>
+    <input id="automatic_playback" name="automatic_playback" type="checkbox" oninput="markField('automatic_playback')"/>
+	<label for="automatic_playback">Play one tune after the other automatically, with a delay</label>
+	<br>
+    <label>Delay between one tune and the next if automatic playback is selected. Random time if zero. In seconds, integer only:</label>
+    <input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')"/>
+    <br>
+    <br>
+    
     Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
 	<input id="tzidentifier" name="tzidentifier" type="text" size="20" oninput="markField('tzidentifier')"/>
     <br>
@@ -137,7 +132,7 @@ password</div>
 	<br>
     
 	
-	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
+	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low', 'automatic_delay', 'automatic_playback' )">Save other parameters</button>
     
 <div class="middlediv">Debug/test settings</div>
    
@@ -314,7 +309,7 @@ function markField( id ){
     d.style.backgroundColor = cream ;
 }
 function clearMark( id ){
-    if( ["initial_page", "webserver_cache", "mic_test_mode", "password_required"].includes(id) ){
+    if( ["initial_page", "webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id) ){
         return ;
     }
     document.getElementById( id ).style.backgroundColor = "#ffffff" ;

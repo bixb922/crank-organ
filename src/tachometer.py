@@ -29,6 +29,7 @@ LOWER_THRESHOLD_RPSEC = 0.5
 HIGHER_THRESHOLD_RPSEC = 0.7
 # "Normal" speed, when MIDI speed == real speed
 NORMAL_RPSEC = const(1.2)
+
 # Maximum expected RPM. This limit should be never achieved in practice.
 # Interrupts will be lost if exceeded, this value is used for debouncing.
 MAX_EXPECTED_RPSEC = const(3)
@@ -53,10 +54,10 @@ class TachoDriver:
     def __init__(self,tachometer_pin):
         self.tachometer_pin = tachometer_pin
             
-        self.rpsec = NORMAL_RPSEC
+        self.rpsec:float = NORMAL_RPSEC
         # Start with a high value
-        self.avgdt = 10_000
-        self.last_irq_time = ticks_ms()
+        self.avgdt:float = 10_000
+        self.last_irq_time:int = ticks_ms()
         self.dt = 10_000 # >>>>>DEBUG >>>>>>>>>>>>>>>
         self.irq_pointer = 0
         self.irq_buffer = array("i", (0 for _ in range(IRQ_BUFFER_SIZE)))
@@ -81,7 +82,7 @@ class TachoDriver:
             # Store the time this interrupt occurred 
             # and the time since the the previous interrupt
             self.last_irq_time = t
-            self.dt = dt #>>>>> store dt for DEBUG only
+            self.dt:int = dt #>>>>> store dt for DEBUG only
             p = self.irq_pointer
             self.irq_buffer[p] = dt
             self.irq_pointer = (p+1)%IRQ_BUFFER_SIZE
@@ -90,17 +91,21 @@ class TachoDriver:
         debug_buffer_pointer = (debug_buffer_pointer+1)%len(debug_buffer)
 
         
-    def get_rpsec(self):
-        dt_since_last_irq = ticks_diff(ticks_ms(),self.last_irq_time)
-        # >>>> debug, avgdt can be local variable
-        self.avgdt = sum(self.irq_buffer)/IRQ_BUFFER_SIZE
-        if self.avgdt>dt_since_last_irq:
-            return FACTOR/self.avgdt
-        # No interrupts have arrived (tacho slowing down)
-        # Use time since last interrupt to calculate revolutions per second
-        # as best prediction of what is happening...
-        return FACTOR/dt_since_last_irq
-    
+    def get_rpsec(self)->int:
+        if self.is_installed():
+            dt_since_last_irq = ticks_diff(ticks_ms(),self.last_irq_time)
+            # >>>> debug, avgdt can be local variable
+            self.avgdt = sum(self.irq_buffer)/IRQ_BUFFER_SIZE
+            if self.avgdt>dt_since_last_irq:
+                return FACTOR/self.avgdt
+            # No interrupts have arrived (tacho slowing down)
+            # Use time since last interrupt to calculate revolutions per second
+            # as best prediction of what is happening...
+            return FACTOR/dt_since_last_irq
+
+        return NORMAL_RPSEC
+        
+
     def is_installed(self):
         return bool(self.tachometer_pin)
 
@@ -126,7 +131,7 @@ class Crank:
         self.crank_monitor_task = asyncio.create_task(self._crank_monitor_process())
         self.logger.debug("init ok")
         
-    def register_event(self,when_ms):
+    def register_event(self,when_ms)->asyncio.Event:
         # Can register one event for each time only.
         if when_ms not in self.events:
         # Register an event to be set "when_ms" milliseconds after
@@ -176,18 +181,18 @@ class Crank:
             for ev in self.events.values():
                 ev.clear()
 
-    def is_turning(self):
+    def is_turning(self)->bool:
         return self.start_turning_event.is_set()
 
-    def is_installed(self):
+    def is_installed(self)->bool:
         return self.td.is_installed()
 
-    def get_normalized_rpsec(self):
+    def get_normalized_rpsec(self)->float:
         # Used in player.py to delay/hasten music
         # depending on crank speed
         return self.td.get_rpsec() * self.velocity_multiplier
         
-    def set_velocity(self,ui_vel):
+    def set_velocity(self,ui_vel:float):
         # Velocity is a superimposed manual control via UI to alter the "normal"
         # playback speed. Crank._ui_velocity is the velocity as set by the ui
         # (50=normal, 0=lowest, 100=highest).
