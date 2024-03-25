@@ -2,12 +2,12 @@
 # MIT License
 # Crank rotation speed sensor. Still in testing phase.
 
-import asyncio
 import micropython
+
+import asyncio
 from time import ticks_ms, ticks_diff
 from machine import Pin
 from array import array
-
 
 if __name__ == "__main__":
     import sys
@@ -19,7 +19,7 @@ from pinout import gpio
 # Number of pulses (1 pulse = off + on) per revolution
 # If optical stripes = number of stripes*2
 # since the IRQ is fired both for rising and falling edge
-PULSES_PER_REV = const(32)
+PULSES_PER_REV = const(32) 
 # Less than these minimum means "stopped" or "not turning"
 
 # Factor to convert the milliseconds stored to revolutions per second (rpsec)
@@ -28,7 +28,7 @@ FACTOR = 1000/PULSES_PER_REV
 LOWER_THRESHOLD_RPSEC = 0.5
 HIGHER_THRESHOLD_RPSEC = 0.7
 # "Normal" speed, when MIDI speed == real speed
-NORMAL_RPSEC = const(1.2)
+NORMAL_RPSEC:float = const(1.2)
 
 # Maximum expected RPM. This limit should be never achieved in practice.
 # Interrupts will be lost if exceeded, this value is used for debouncing.
@@ -91,7 +91,7 @@ class TachoDriver:
         debug_buffer_pointer = (debug_buffer_pointer+1)%len(debug_buffer)
 
         
-    def get_rpsec(self)->int:
+    def get_rpsec(self)->float:
         if self.is_installed():
             dt_since_last_irq = ticks_diff(ticks_ms(),self.last_irq_time)
             # >>>> debug, avgdt can be local variable
@@ -143,6 +143,8 @@ class Crank:
         await self.stop_turning_event.wait()
     
     async def _crank_monitor_process(self):
+        if not self.is_installed():
+            return
         # This connects the tachometer sensor with the event that
         # starts a new tune in setlist
         # Turning hasn't started
@@ -164,6 +166,7 @@ class Crank:
                 time_since_start = ticks_diff(ticks_ms(),time_when_turning_started)
                 for when_ms,ev in self.events.items():
                     if time_since_start>=when_ms and not ev.is_set():
+                        self.logger.info("rpsec crank incremented - start")
                         ev.set()
                         self.stop_turning_event.clear()
                         

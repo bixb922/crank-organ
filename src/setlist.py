@@ -85,17 +85,17 @@ class Setlist:
 
             if config.cfg.get("automatic_playback", False):
                 t = config.cfg.get("automatic_delay", 0)
-                self.logger.debug(f">>>automatic playback {t} sec")
+                self.logger.info(f">>>automatic playback {t} sec")
                 if t == 0:
                     # A time between about 30 seconds to 15 minutes
                     t = randrange(30, 900)
-                self.logger.debug(f"Wait for {t} seconds to start next tune")
+                self.logger.info(f"Wait for {t} seconds to start next tune")
                 await asyncio.sleep(t)
                 if len(self.current_setlist) == 0:
                     self.shuffle_all_tunes()
             else:
                 # No automatic playback, wait for user to start tune
-                self.logger.debug(">>>wait for start")
+                self.logger.info(">>>wait for start (touch/crank/button)")
                 await self.wait_for_start()
 
             # If tuner or test mode are active, don't

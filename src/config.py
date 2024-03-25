@@ -7,8 +7,6 @@ import time
 import os
 import network
 import ubinascii
-
-
 from minilog import getLogger
 import fileops
 
@@ -19,6 +17,7 @@ NO_PASSWORD = "*" * 15
 
 class Config:
     def __init__(self):
+
         self.cfg = {}
 
         # Data file/folder names used in the software
@@ -51,7 +50,6 @@ class Config:
         # Read config.json
         try:
             self.cfg = fileops.read_json(self.CONFIG_JSON)
-
         except Exception as e:
             _logger.exc(
                 e,
@@ -99,6 +97,7 @@ class Config:
             "automatic_playback": False,
         }
         # Populate missing keys from fallback
+
         for k, v in fallback.items():
             if k not in self.cfg:
                 _logger.debug(f"Adding configuration key {k}")
@@ -122,10 +121,10 @@ class Config:
         ).decode()
 
         _logger.debug(
-            f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}"
+            f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}" 
         )
 
-    def get_config(self):
+    def get_config(self)->dict:
         # Get copy of complete configuration, to be
         # sent to client (except passwords)
 
@@ -137,7 +136,7 @@ class Config:
         c["serverpassword"] = NO_PASSWORD
         return c
 
-    def get_int(self, item, default=None):
+    def get_int(self, item, default=None)->int|None:
         # Return configuration item as integer, apply default if error
         n = self.cfg.get(item, default)
         if n is None:
@@ -148,7 +147,7 @@ class Config:
             _logger.error(f"Config.json item {item} not an integer")
             return default
 
-    def get_float(self, item, default=None):
+    def get_float(self, item, default=None)->float|None:
         # Return configuration item as floating point
         n = self.cfg.get(item, default)
         if n is None:
@@ -161,7 +160,7 @@ class Config:
             )
             return default
 
-    def save(self, newconfig):
+    def save(self, newconfig)->str:
         # Save new configuration, validate before storing
         # Authentication is already done by webserver.py
         # Validate data received from config.html
@@ -234,7 +233,7 @@ PASSWORD_PREFIX = "@encrypted_"
 
 class PasswordManager:
     # Password are stored encrypted in config.cfg
-    def _get_key(self):
+    def _get_key(self)->bytes:
         from esp32 import NVS
 
         nvs = NVS("drehorgel")
@@ -250,7 +249,7 @@ class PasswordManager:
             nvs.set_blob("aeskey", key)
         return key
 
-    def _encrypt_password(self, password):
+    def _encrypt_password(self, password)->str:
         if not isinstance(password, str):
             raise ValueError("Can't encrypt object that isn't str")
         if password.startswith(PASSWORD_PREFIX):
@@ -278,7 +277,7 @@ class PasswordManager:
 
         return PASSWORD_PREFIX + ubinascii.hexlify(c).decode()
 
-    def _decrypt_password(self, c):
+    def _decrypt_password(self, c)->str:
         if not isinstance(c, str):
             raise ValueError("Can't decrypt object that isn't str")
         if not c.startswith(PASSWORD_PREFIX):
@@ -297,7 +296,7 @@ class PasswordManager:
 
         return pass_encoded.decode()
 
-    def _encrypt_all_passwords(self, cfg):
+    def _encrypt_all_passwords(self, cfg)->bool:
         # encrypts passwords in config.json if not yet encrypted
         # Save changes to flash
         changed = False
@@ -313,7 +312,7 @@ class PasswordManager:
         return changed
 
     # Public methods
-    def get_password(self, pwdname):
+    def get_password(self, pwdname)->str:
         # Used here and by webserver for http authentication
         pwd = config.cfg[pwdname]
         return self._decrypt_password(pwd)

@@ -280,7 +280,7 @@ async function topSetList(pos) {
 }
 
 async function set_velocity( increment ) {
-	oldvel = last_progress_seen["velocity"];
+	let oldvel = last_progress_seen["velocity"];
 	if( oldvel === undefined || oldvel === null ) {
 		return ;
 	}
