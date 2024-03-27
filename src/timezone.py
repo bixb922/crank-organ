@@ -79,14 +79,11 @@ class TimeZone:
             retry_time = 70_000 # ntp servers don't like frequent retries...
 
     async def _update_time_zone(self):
+        ft = self.now_ymd()
+        if ft < self.tz["next_refresh"]:
+            # Don't ask every day
+            return
         for _ in range(RETRIES):
-            ft = self.now_ymd()
-            if ft < "2010":
-                # ntptime has not run, no network available...
-                return
-            if ft < self.tz["next_refresh"]:
-                # Don't ask every day
-                return
             try:
                 # If network is working, response takes 350 msec
                 # Using RequestSlice is really not relevant since
@@ -97,19 +94,18 @@ class TimeZone:
                 return
             except asyncio.TimeoutError as e:
                 # RequestSlice signaled busy, try later
-                sys.print_exception(e)
+                self.logger.info("RequestSlice timeout waiting for time zone server")
                 pass
             except OSError as e:
                 # e.errno == -202 No network connection
                 # e.errno == 118 EHOSTUNREACH
                 # Retry
-                sys.print_exception(e)
+               self.logger.info(f"Exception calling get_time_zone {e}")
                 pass
             except Exception as e:
-                self._log_exception(
+                self.logger.exc(
                     e, "unrecoverable exception in get time zone"
                 )
-                sys.print_exception(e)
                 return
             self.logger.info("error in get time zone, retry")
             await asyncio.sleep_ms(10_000)
@@ -128,8 +124,7 @@ class TimeZone:
                     return
                 resp = await response.json()
         if "error" in resp:
-            self.tz["offset_sec"] = 0
-            self.tz["abbreviation"] = resp["error"]
+            self.logger.error(f"Error in get_time_zone: {resp}")
             return
 
         # Get offsets to compute net offset
@@ -148,7 +143,7 @@ class TimeZone:
         # Store for future reboots. Store always to avoid
         # frequent refresh
         self.write_timezone_file()
-        self.logger.info("Timezone updated")
+        self.logger.info("Timezone info updated")
             
 
     def _get_next_refresh_date(self):
