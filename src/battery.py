@@ -1,10 +1,10 @@
 # (c) 20200 Hermann Paul von Borries
 # MIT License
 # Tallies battery usage
-
+# >>> show "-" if no estimation can be done
+# >>> show remaining tunes instead of remaining time
 import asyncio
 import time
-import json
 import os
 
 from minilog import getLogger
@@ -43,13 +43,14 @@ class Battery:
         fallback = {
             "operating_seconds": 0,          # time operating (time with power on), in seconds 
             "playing_seconds": 0,  # time playing music, in seconds
-            "remaining_seconds": 0,  # calculated time until battery is empty, seconds 
             "solenoid_on_seconds": 0,  # Time that solenoids were on, in seconds
-            "percent_remaining": 100, # estimated with coefficients
             "tunes_played": 0,      # Number of tunes played
-            "tunes_remaining": 0,   # Estimation of how many tunes can still be played with this battery charge
-            "low": False,       # True/False, compares percent used with low battery level
             "date_zero": "0000-00-00", # Datetime when set to zero
+            # These are estimated:
+            "remaining_seconds": None,  # calculated time until battery is empty, seconds 
+            "percent_remaining": None, # estimated with coefficients
+            "tunes_remaining": None,   # Estimation of how many tunes can still be played with this battery charge
+            "low": None,       # True/False, compares percent used with low battery level
         }
         for k, v in fallback.items():
             if k not in self.battery_info:
@@ -88,14 +89,6 @@ class Battery:
                 pass
 
     def _write_battery_info(self):
-        #>>>> TEMPORARY CODE FOR CLEANUP OF BATTERY.JSON
-        for k in ["use", "capacity", "time", "time_playing", "time_remaining", "solenoids_on", "solenoids_on_seconds", "percent_used"]:
-            # It's "solenoid_on_seconds", without s
-            try:
-                del self.battery_info[k]
-            except KeyError:
-                pass
-            
         fileops.write_json(
             self.battery_info, self.battery_json_filename, keep_backup=False
         )
@@ -104,14 +97,13 @@ class Battery:
         self.logger.info(f"{self.battery_info}, now setting to zero")
         self.battery_info["operating_seconds"] = 0
         self.battery_info["playing_seconds"] = 0
-        self.battery_info["tunes_remaining"] = self.estimate_tunes_remaining()
-        # No info of pace yet, estimate 4 minutes per tune
-        self.battery_info["remaining_seconds"] = self.battery_info["tunes_remaining"] * 4*60
         self.battery_info["solenoid_on_seconds"] = 0
-        self.battery_info["percent_remaining"] = 100
         self.battery_info["tunes_played"] = 0
 
-        self.battery_info["low"] = False
+        self.battery_info["percent_remaining"] = None
+        self.battery_info["tunes_remaining"] = None
+        self.battery_info["remaining_seconds"] = None
+        self.battery_info["low"] = None
         self.battery_info["date_zero"] = timezone.now_ymdhm()
         self.last_update = time.ticks_ms()
         self.update_calculations()
@@ -123,19 +115,12 @@ class Battery:
         self.battery_info["operating_seconds"] += time.ticks_diff(now, self.last_update) / 1000
         # Get time solenoids were "on", convert ms to seconds
         self.battery_info["solenoid_on_seconds"] += solenoid.get_sum_msec_solenoids_on_and_zero() / 1000
+        
         # Estimate remaining time and tunes
         self.battery_info["percent_remaining"] = self.estimate_percent_remaining()
         self.battery_info["tunes_remaining"] = self.estimate_tunes_remaining()
-        percent_used = 100 - self.battery_info["percent_remaining"]
-
-        # Extrapolate at current pace if at least tune played and some energy consumed.
-        if percent_used > 0.5 and self.battery_info["tunes_played"] > 0:
-            self.battery_info["remaining_seconds"] = (
-                self.battery_info["operating_seconds"]/percent_used*100 )
-
-        # A Very Simple Battery Low
-        self.battery_info["low"] = (
-            self.battery_info["percent_remaining"] < _BATTERY_LOW_PERCENT )
+        self.battery_info["remaining_seconds"] = self.estimate_operating_seconds_remaining()
+        self.battery_info["low"] = self.estimate_low()
         self.last_update = now
 
     def get_info(self):
@@ -206,13 +191,21 @@ class Battery:
             bcj = fileops.read_json(self.battery_calibration_filename)
         except (OSError, ValueError):
             bcj = []
+        # >>> Transition while there are missing columns
         for row in bcj:
             while len(row)<6:
                 row.append(0)
         return bcj
 
     def get_coefficients(self):
+        # Start with some defaults
+
+        self.calibrated = False
         bcj = self.read_calibration_data()
+        if len(bcj) == 0:
+            self.logger.debug("Can't calibrate: no calibration data")
+            return
+        
         # xdata: first column must be all 1 to get beta[0]
         # Add x1=0, x2=0 y=100 as known point (i.e. with
         # no use, level is 100%)
@@ -226,64 +219,73 @@ class Battery:
         X = Matrix().setElements( xdata )
         y = Matrix().setElements( [ydata] )
         self.coefficients =  linear_regression( X, y ).elements[0]
-
-
-#        # >>>>Fit linear equation tunes = beta[0] + beta[1]*level
-#        xdata = [[1],[100]]
-#        ydata = [0]
-#        for _, _, _, level, tunes, _ in bcj:
-#            ydata.append( tunes )
-#            xdata[0].append( 1 )
-#            xdata[1].append( level )
-#        X = Matrix().setElements( xdata )
-#        y = Matrix().setElements( [ydata] )
-#        beta =  linear_regression( X, y ).elements[0]
-#        # Tune capacity occurs when battery level reaches 0
-#        # so tune capacity is beta[0] + beta[1]*0 == beta[0]
-#        self.tune_capacity = beta[0]
-#        self.logger.debug(f"Coefficients calculated, level coefficients: {self.coefficients=}, tune capacity: {self.tune_capacity:.1f}")
-        self.tune_capacity = 0
-        if len(bcj) == 0:
-            return
+        # Force "battery full" level to 100
+        # If it's outside this range, then the estimation is not
+        # very good
+        if 95 <= self.coefficients[0] <= 105:
+            self.coefficients[0] = 100
+        else:
+            self.logger.info("Estimation coefficient[0] is not near 100, battery usage prediction may be off")
         
         # Get estimation for tune capacity of full battery using
         # the latest row in bcj, sort by operating seconds 
         #>>>Transition while there are elements with playing_seconds == 0
         bcj = [ row for row in bcj if row[5] != 0 ]
+        tunes_played = 0
         bcj.sort(key=lambda x:x[2])
-        print(f"get_coefficient {bcj[-1]=}")
-        _, operating_seconds, solenoid_on_seconds, _, tunes_played, playing_seconds = bcj[-1]
+        _, _, solenoid_on_seconds, _, tunes_played, playing_seconds = bcj[-1]
         if tunes_played == 0:
+            self.logger.debug("Can't calibrate: tunes played == 0")
             return
         # Calculate solenoid_on_seconds and playing_seconds average per tune:
         sos_per_tune = solenoid_on_seconds/tunes_played
-        ps_per_tune = playing_seconds/tunes_played
+        self.seconds_per_tune = playing_seconds/tunes_played
         # Suppose for the estimation that the time between 
         # one tune and the next is 120 seconds
-        sec_for_tune = ps_per_tune + 120
+        sec_for_tune = self.seconds_per_tune + 120
 
         # Estimate the number of tunes that can be played on full charge
         # by solving beta0 +beta1*sos_per_tune*tunes + beta2*sec_for_tune = 0
         beta = self.coefficients
         divisor = beta[1]*sos_per_tune + beta[2]*sec_for_tune
         if divisor == 0:
+            self.logger.debug("Can't calibrate: divisor == 0")
             return
         self.tune_capacity = -beta[0]/divisor
-        
-        self.logger.debug(f"Coefficients calculated: {self.coefficients=}, tune capacity: {self.tune_capacity}")
+        self.calibrated = True
+        self.logger.debug(f"Calibration coefficients: {self.coefficients=}, tune capacity: {self.tune_capacity}")
 
-    def estimate_percent_remaining(self):
-        beta = self.coefficients
-        estimate = (beta[0] 
-                    + beta[1]*self.battery_info["operating_seconds"] 
-                    + beta[2]*self.battery_info["solenoid_on_seconds"])
-        return max(min(estimate,100),0)
+    def estimate_percent_remaining(self)->None|float:
+        if self.calibrated:
+            beta = self.coefficients
+            estimate = (beta[0] 
+                        + beta[1]*self.battery_info["operating_seconds"] 
+                        + beta[2]*self.battery_info["solenoid_on_seconds"])
+            return max(min(estimate,100),0)
     
-    def estimate_tunes_remaining(self):
-        # Must be called after updating self.battery_info["percent_remaining"]
-        return self.tune_capacity*self.battery_info["percent_remaining"]/100
+    def estimate_tunes_remaining(self)->None|float:
+        if self.calibrated:
+            # Must be called after updating self.battery_info["percent_remaining"]
+            return self.tune_capacity*self.battery_info["percent_remaining"]/100
 
+    def estimate_operating_seconds_remaining(self)->None|float:
+        if self.calibrated:
+            # Estimate average time a tune takes, including the
+            # pause between tunes.
+            if self.battery_info["tunes_played"] <= 3:
+                # If few tunes since battery zero: 
+                # estimate 2 minutes between tunes.
+                total_per_tune = self.seconds_per_tune + 120
+            else:
+                # If many tunes already played with this
+                # battery charge, estimate time based on current use
+                total_per_tune = self.battery_info["operating_seconds"]/self.battery_info["tunes_played"]
+            return self.estimate_tunes_remaining()*total_per_tune
     
+    def estimate_low(self)->None|bool:
+        if self.calibrated:
+            self.battery_info["low"] = self.estimate_percent_remaining() < _BATTERY_LOW_PERCENT
+
 battery = Battery(
     config.BATTERY_JSON,
     config.BATTERY_CALIBRATION_JSON,

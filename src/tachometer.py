@@ -1,9 +1,6 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Crank rotation speed sensor. Still in testing phase.
-
-import micropython
-
 import asyncio
 from time import ticks_ms, ticks_diff
 from machine import Pin
@@ -28,7 +25,7 @@ FACTOR = 1000/PULSES_PER_REV
 LOWER_THRESHOLD_RPSEC = 0.5
 HIGHER_THRESHOLD_RPSEC = 0.7
 # "Normal" speed, when MIDI speed == real speed
-NORMAL_RPSEC:float = const(1.2)
+NORMAL_RPSEC = const(1.2)
 
 # Maximum expected RPM. This limit should be never achieved in practice.
 # Interrupts will be lost if exceeded, this value is used for debouncing.
@@ -217,7 +214,7 @@ class Crank:
         progress["rpsec"] = self.td.get_rpsec()
         progress["is_turning"] = self.is_turning()
         progress["normalized_rpsec"] = self.get_normalized_rpsec()
-        
+        progress["tacho_installed"] = self.is_installed()
 crank = Crank(gpio.tachometer_pin)
 
 if __name__ == "__main__":

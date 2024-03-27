@@ -149,5 +149,4 @@ _baselogger = BaseLogger()
 # logger = getLogger( __name __ )
 def getLogger(module):
     logger = Logger(module, _baselogger)
-    #>>>logger.debug("getLogger")
     return logger

@@ -20,6 +20,7 @@ status_text = "cancelado"|status_text = "gestrichen"
 >Tiempo remanente|>Verbleibende Zeit
 >Alcanza para<|>Reicht für<
 >melodías<|>Melodien<
+>Melodías tocadas<|>Gespielte Melodien<
 >Tiempo solenoides energizados<|>Zeit Ventile an<
 >Puesto en cero<|>Auf Null gesetzt<
 <td>Remanente</td>|<td>Verbleibend</td>

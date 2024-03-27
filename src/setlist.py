@@ -57,19 +57,32 @@ class Setlist:
         # Called by webserver if start button on performance page is pressed
         self.start_event.set()
 
-    def wait_for_start(self):
+    async def wait_for_start(self, timeout_seconds=None):
 
         # For TouchPad and Web: Clear to get rid of previous value. 
         # TouchPad and Web must set this event starting now. Previous set event
         # are disregarded.
         # For crank: if the crank is turning, this event will be set very shortly.
         # If the crank is not turning, wait....
+        timeout_task = None
+        timeout_triggered = False
+        async def on_timeout():
+            nonlocal timeout_triggered, timeout_task, timeout_seconds
+            await asyncio.sleep( timeout_seconds )
+            self.start_event.set()
+            timeout_triggered = True
+            timeout_task = None
+
+        if timeout_seconds:
+            timeout_task = asyncio.create_task( on_timeout() )
+
         self.start_event.clear()
         self.waiting_for_start_tune_event = True
-        self.logger.debug(">>> set waiting_for_start_tune_event")
         await self.start_event.wait()
-        self.logger.debug(">>> reset waiting_for_start_tune_event")
         self.waiting_for_start_tune_event = False
+        if timeout_task:
+            timeout_task.cancel()
+        return timeout_triggered
 
     def is_waiting(self):
         return self.waiting_for_start_tune_event
@@ -83,20 +96,17 @@ class Setlist:
             # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
 
+            timeout_seconds = None
             if config.cfg.get("automatic_playback", False):
-                t = config.cfg.get("automatic_delay", 0)
-                self.logger.info(f">>>automatic playback {t} sec")
-                if t == 0:
+                timeout_seconds = config.cfg.get("automatic_delay", 0)
+                if timeout_seconds <= 0:
                     # A time between about 30 seconds to 15 minutes
-                    t = randrange(30, 900)
-                self.logger.info(f"Wait for {t} seconds to start next tune")
-                await asyncio.sleep(t)
+                    timeout_seconds = randrange(30, 900)
                 if len(self.current_setlist) == 0:
                     self.shuffle_all_tunes()
-            else:
-                # No automatic playback, wait for user to start tune
-                self.logger.info(">>>wait for start (touch/crank/button)")
-                await self.wait_for_start()
+                self.logger.debug(f"Automatic playback after {timeout_seconds} seconds")
+ 
+            await self.wait_for_start(timeout_seconds)
 
             # If tuner or test mode are active, don't
             # interfere playing music. Reloading the

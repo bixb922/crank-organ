@@ -92,7 +92,6 @@ class Config:
             
             "servernode": "192.168.100.19:8080",
             "serverpassword": "password3",
-            
             "automatic_delay": 30,
             "automatic_playback": False,
         }
@@ -290,6 +289,7 @@ class PasswordManager:
         if len(pass_buffer) < 10:
             raise ValueError("Could not decrypt password, wrong length")
         if pass_buffer[4:8] != b"salt":
+        #>>> THIS ERROR IS UNRECOVERABLE! MAKE IT RECOVERABLE?
             raise ValueError("Could not decrypt password, wrong key")
         # pass_buffer[8] has the length of the encoded password.
         pass_encoded = pass_buffer[9 : 9 + pass_buffer[8]]

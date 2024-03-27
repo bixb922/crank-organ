@@ -142,6 +142,9 @@
 			<td>Zeit Musikwiedergabe</td><td id="playing_seconds"></td><td>[hh:mm]</td>
 		</tr>
         <tr>
+			<td>Gespielte Melodien</td><td id="tunes_played"></td><td>[melodías]</td>
+		</tr>
+        <tr>
 			<td>Zeit Ventile an</td><td id="solenoid_on_seconds"></td><td>[hh:mm]</td>
 		</tr>
         <tr><td>Auf Null gesetzt</td><td id="date_zero"></td><td></td></tr>
@@ -149,7 +152,7 @@
 </table>
 <table style="width:100%">
 	<tbody>
-        <tr>
+        <tr id="batterygraph_row">
             <td>Verbleibend</td>
             <td id="percent_remaining"></td>
         </tr>
@@ -204,8 +207,23 @@ async function getBatteryInfo( ) {
 
 function updateBatteryInfo( battery ) {
 	// Needed for /battery and /battery_zero
-    percent_remaining = Math.round(battery["percent_remaining"]);
-	textById("tunes_remaining", Math.floor(battery["tunes_remaining"])  ) ;
+	if( is_no_number(battery["percent_remaining"])){
+		// Calibration not done, show dash and hide battery graph
+		textById("percent_remaining", "-" ) ;
+		document.getElementById("batterygraph_row").style.display = "none" ;
+	}
+	else{
+		let percent_remaining = Math.round(battery["percent_remaining"]) ;
+		textById("percent_remaining", "" + percent_remaining + "%") ;
+		progressBar( "batterygraph", percent_remaining, 80 );
+	}
+	let tr = battery["tunes_remaining"]
+	if( is_no_number(tr)){
+		textById("tunes_remaining", "-" ) ;
+	}
+	else {
+		textById("tunes_remaining", Math.floor(tr)  ) ;
+	}
 	textById("remaining_seconds", 
 				format_secHHMM( battery["remaining_seconds"] )) ;
 	textById("operating_seconds",  
@@ -214,9 +232,7 @@ function updateBatteryInfo( battery ) {
 				format_secHHMM( battery["playing_seconds"] )) ;
     textById("date_zero", battery["date_zero"] ) ;
     textById("solenoid_on_seconds", format_secHHMM( battery["solenoid_on_seconds"] )) ;
-
-	textById("percent_remaining", "" + percent_remaining + "%") ;
-	progressBar( "batterygraph", percent_remaining, 80 );
+	textById("tunes_played", battery["tunes_played"]) ;
 }
 
 async function battery_zero() {

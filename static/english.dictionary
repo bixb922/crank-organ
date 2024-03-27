@@ -19,6 +19,7 @@ status_text = "cancelado"|status_text = "cancelled"
 >Tiempo remanente|>Remaining time
 >Alcanza para<|>Enough for<
 >melodías<|>tunes<
+>Melodías tocadas<|>Tunes played<
 >Tiempo solenoides energizados<|>Time solenoids energized<
 >Puesto en cero<|>Set to zero<
 <td>Remanente</td>|<td>Remaining</td>

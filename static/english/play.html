@@ -41,17 +41,17 @@
     <p>        
     Set playback speed:
     <br>
-    <a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
-    <span id="velocityText"></span><span id="velocityGraph"></span>
-    <a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
+	<a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
+	<span id="velocityText"></span><span id="velocityGraph"></span>
+	<a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
 
-    <p>
-		<span id="crankInfo">
+	<p>
+	<span id="crankInfo">
 			<span id="turning">Turning</span>
 			<span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
 			<span id="rpsecGraph"></span>
-		</span>
-    </p>
+	</span>
+	</p>
 
 <!-- <div style="width:100%;display:flex;justify-content:center;"> -->
 <!-- <img src="" style="width:75%;margin:auto;" id="funny"> -->
@@ -159,7 +159,6 @@ async function updateProgress( progress ) {
 		status_text = make_status_text( progress["status"], percent ) ;
 		textById("progress", status_text) ;
 		
-		//>>>>barGraph( "timebar", percent/100, midnight_green, 10, "left", 60 ) ;
 		progressBar( "timebar", percent, 60 );
 	}
 	let setlist = progress["setlist"] ;
@@ -202,7 +201,6 @@ async function updateProgress( progress ) {
     
 
 	// Always update velocity and RPS
-    //>>>barGraph( "velocityGraph", progress["velocity"]/100, light_gold, 10, "left", 60 ) ;
 	vel = progress["velocity"]
 	velocityBar( "velocityGraph", vel, 60 ) ;
 	textById("velocityText",  Math.round( vel*10 )/10 );
@@ -218,8 +216,9 @@ async function updateProgress( progress ) {
 		rg = 100 ;
 	}
 	
-	let rt = Math.round( progress["rpsec"]*10)/10 ;
-	if( rt != 0){
+	
+	if( progress["tacho_installed"] ){
+		let rt = Math.round( progress["rpsec"]*10)/10 ;
 		document.getElementById("crankInfo").style.display = "" ;
 		if( progress["is_turning"] ) {
 			textById("turning", "Turning")
@@ -231,7 +230,7 @@ async function updateProgress( progress ) {
 		barGraph( "rpsecGraph", rg/100, sap_green, 10, "left", 50 ) ;
 	}
 	else {
-		document.getElementById("crankInfo").style.display = "None" ;
+		document.getElementById("crankInfo").style.display = "none" ;	
 	}
 }
 

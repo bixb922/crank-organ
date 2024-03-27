@@ -24,8 +24,14 @@ meter_red_color = "#C36922";
 meter_grey = "#e8e8e8" ;
 progress_color = "#3EA8A3" ; 
 
+function is_no_number( n ){
+	return n == null || n == undefined || isNaN(n) ;
+}
 
 function format02i( n ) {
+	if( is_no_number(n)){
+		return "-"
+	};
     // to be used in formatMilliMMSS and format_secHHMM
 	let ss = "" + Math.round( n );
 	if( ss.length == 1 ) {
@@ -33,14 +39,20 @@ function format02i( n ) {
 	} 
 	return ss ;
 }
-	
+
 function formatMilliMMSS( msec ){
+	if( is_no_number(msec)){
+		return "-"
+	};
 	let t = msec / 1_000 ;
 	let ss = format02i( t%60 ) ;
 	return "" + Math.floor(t/60) + ":" + ss ;
 }
 
 function format_secHHMM( sec ) {
+	if( is_no_number(sec)){
+		return "-"
+	};
 	let t = sec/60 ;
 	let mm = format02i( t%60 );
 	return "" + Math.floor(t/60) + ":" + mm ;
@@ -400,27 +412,30 @@ async function updateHeader() {
 	await sleep_ms( 1_000 );
 	while( true ) {
 		let battery = await fetch_json( "/battery" ) ;
-        let batteryText = "" ;
-		if( battery["low"] ) {
-			// Low battery emoji on white background
-			batteryText = "<span style='background-color:white'>&#x1faab;</span>" ;
-            // Change background color if low
-            header_background = meter_red_color ;
-		}
-		else {
-			// Normal green battery emoji on white background
-			batteryText = "<span style='background-color:white'>&#x1f50b;</span>" ;
-            header_background = normal_background;
-		}
-        elements = document.getElementsByClassName("headerdiv");
-        for (var i = 0; i < elements.length; i++) {
-            // Should be only one headerdiv, but this covers all
-            elements[i].style.backgroundColor = header_background;
-        } 
+		let batteryText = "" ;
+		// Check if calibration done. percent_remaining is a number
+		// only if calibration done, as are "low" and "remaining_seconds"
 
-        batteryText += "&nbsp;" + Math.round( battery["percent_remaining"] ) + "%&nbsp;";
-		batteryText += format_secHHMM( battery["remaining_seconds"] ) ;
-
+		if( !is_no_number(battery["percent_remaining"])){
+			if( battery["low"] ) {
+				// Low battery emoji on white background
+				batteryText = "<span style='background-color:white'>&#x1faab;</span>" ;
+				// Change background color if low
+				header_background = meter_red_color ;
+			}
+			else {
+				// Normal green battery emoji on white background
+				batteryText = "<span style='background-color:white'>&#x1f50b;</span>" ;
+				header_background = normal_background;
+			}
+			elements = document.getElementsByClassName("headerdiv");
+			for (var i = 0; i < elements.length; i++) {
+				// Should be only one headerdiv, but this covers all
+				elements[i].style.backgroundColor = header_background;
+			} 
+			batteryText += "&nbsp;" + Math.round( battery["percent_remaining"] ) + "%&nbsp;";
+			batteryText += format_secHHMM( battery["remaining_seconds"] ) ;
+		}
         htmlById( "header_time", batteryText ) ;
         // Battery info gets updated once a minute.
         // Refresh display about twice a minute, that's more than enough 
@@ -481,6 +496,9 @@ function textById( id, newText ) {
 	else if( newText === false ){
 		formattedNewText = "❌" ;
         }
+	else if( newText == undefined || newText == null ){
+		formattedNewText = "-" ;
+	}
 	else {
 		formattedNewText = formatIfNumber( newText ) ;
 	}

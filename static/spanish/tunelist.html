@@ -283,6 +283,9 @@ function updateProgress( progress ) {
         d.innerHTML = newtitle ;
        if( tuneid == playing_tuneid ) {
 			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
+            if( isNaN(percent)){
+                percent = 0 ;
+            }
 		  	textById("progresstime",  Math.round(percent)+"% " );
 			progressBar( "progressbar", percent, 20 );
 	   }
