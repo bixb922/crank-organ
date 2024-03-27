@@ -66,7 +66,6 @@ function getResourceFromURL(){
 	}
 	else {
 		let r = path.slice(-1)[0]; // get last element as "resource"
-        console.log("getResourceFromUrl", r, r.includes("html"), r.includes("json") ) ;
         if( r.includes("html") + r.includes("json") != 0 ){
             r = "" ;   
         }
@@ -415,7 +414,6 @@ async function updateHeader() {
 		let batteryText = "" ;
 		// Check if calibration done. percent_remaining is a number
 		// only if calibration done, as are "low" and "remaining_seconds"
-
 		if( !is_no_number(battery["percent_remaining"])){
 			if( battery["low"] ) {
 				// Low battery emoji on white background
@@ -502,8 +500,7 @@ function textById( id, newText ) {
 	else {
 		formattedNewText = formatIfNumber( newText ) ;
 	}
-    // console.log("text by id",id, formattedNewText ) ;
-	document.getElementById(id).innerText = formattedNewText ;
+  	document.getElementById(id).innerText = formattedNewText ;
 }
 
 function htmlById( id, htmlText ) {
@@ -523,7 +520,6 @@ function htmlByIdIgnoreErrors( id, htmlText ){
 function setAllTextById( json_result ) {
     // Set DOM elements by ID with matching key in json_result.
 	for( const [key, value] of Object.entries(json_result)) {
-        console.log("setAlLText", key );
 		textById( key, value );
 	}
 }
@@ -613,7 +609,7 @@ function currentPage(){
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){
-        console.log("getting data from net") ;
+        console.log("getting tunelib from net") ;
 		let tunelib = await fetch_json( "/data/tunelib.json" );
         let history = await fetch_json( "/data/history.json" )
         for(i in history){

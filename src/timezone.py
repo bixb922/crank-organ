@@ -29,7 +29,8 @@ class TimeZone:
         self.timezone_task_active = False
         try:
             self.tz = fileops.read_json(TZFILE)
-        except (OSError, ValueError):
+        except (OSError, ValueError) as e:
+            print(f"timezone - Could not read timezone.json: {e}")
             pass
         # No logger yet, timezone is prerrequisite for minilog
         self.logger = None
@@ -100,7 +101,7 @@ class TimeZone:
                 # e.errno == -202 No network connection
                 # e.errno == 118 EHOSTUNREACH
                 # Retry
-               self.logger.info(f"Exception calling get_time_zone {e}")
+                self.logger.info(f"Exception calling get_time_zone {e}")
                 pass
             except Exception as e:
                 self.logger.exc(

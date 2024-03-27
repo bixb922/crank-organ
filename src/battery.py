@@ -46,7 +46,7 @@ class Battery:
             "solenoid_on_seconds": 0,  # Time that solenoids were on, in seconds
             "tunes_played": 0,      # Number of tunes played
             "date_zero": "0000-00-00", # Datetime when set to zero
-            # These are estimated:
+            # These magnitudes are estimated:
             "remaining_seconds": None,  # calculated time until battery is empty, seconds 
             "percent_remaining": None, # estimated with coefficients
             "tunes_remaining": None,   # Estimation of how many tunes can still be played with this battery charge
@@ -72,7 +72,6 @@ class Battery:
         self.get_coefficients()
         
         while True:
-            await asyncio.sleep(_UPDATE_EVERY_SECONDS)
             self.update_calculations()
 
             # Update battery info on flash to keep tally
@@ -88,12 +87,14 @@ class Battery:
                 # Try writing next time
                 pass
 
-    def _write_battery_info(self):
+            await asyncio.sleep(_UPDATE_EVERY_SECONDS)
+
+    def _write_battery_info(self)->None:
         fileops.write_json(
             self.battery_info, self.battery_json_filename, keep_backup=False
         )
 
-    def set_to_zero(self):
+    def set_to_zero(self)->None:
         self.logger.info(f"{self.battery_info}, now setting to zero")
         self.battery_info["operating_seconds"] = 0
         self.battery_info["playing_seconds"] = 0
@@ -110,7 +111,7 @@ class Battery:
 
         self._write_battery_info()
 
-    def update_calculations(self):
+    def update_calculations(self)->None:
         now = time.ticks_ms()
         self.battery_info["operating_seconds"] += time.ticks_diff(now, self.last_update) / 1000
         # Get time solenoids were "on", convert ms to seconds
@@ -123,10 +124,10 @@ class Battery:
         self.battery_info["low"] = self.estimate_low()
         self.last_update = now
 
-    def get_info(self):
+    def get_info(self)->dict:
         return self.battery_info
 
-    async def _heartbeat_process(self):
+    async def _heartbeat_process(self)->None:
         heartbeat_period = config.get_int("battery_heartbeat_period", 0)
         heartbeat_duration = config.get_int("battery_heartbeat_duration", 0)
         if heartbeat_period == 0 or heartbeat_duration == 0:
@@ -149,17 +150,17 @@ class Battery:
             # Wait a bit before starting
             await asyncio.sleep_ms(heartbeat_period)
 
-    def start_heartbeat(self):
+    def start_heartbeat(self)->None:
         self.make_heartbeat = True
 
-    def end_heartbeat(self):
+    def end_heartbeat(self)->None:
         self.make_heartbeat = False
 
-    def end_of_tune(self, seconds):
+    def end_of_tune(self, seconds)->None:
         self.battery_info["playing_seconds"] += seconds
         self.battery_info["tunes_played"] += 1
 
-    def record_level(self, level):
+    def record_level(self, level)->None:
         # Level: 100=battery full
         #          0=battery empty
         #          reset=delete calibration, new calbration, new coefficients
@@ -186,7 +187,7 @@ class Battery:
         fileops.write_json(bcj, self.battery_calibration_filename, keep_backup=False)
 
       
-    def read_calibration_data(self):
+    def read_calibration_data(self)->dict:
         try:
             bcj = fileops.read_json(self.battery_calibration_filename)
         except (OSError, ValueError):
@@ -197,7 +198,7 @@ class Battery:
                 row.append(0)
         return bcj
 
-    def get_coefficients(self):
+    def get_coefficients(self)->None:
         # Start with some defaults
 
         self.calibrated = False
@@ -284,7 +285,7 @@ class Battery:
     
     def estimate_low(self)->None|bool:
         if self.calibrated:
-            self.battery_info["low"] = self.estimate_percent_remaining() < _BATTERY_LOW_PERCENT
+            return self.estimate_percent_remaining() < _BATTERY_LOW_PERCENT
 
 battery = Battery(
     config.BATTERY_JSON,
