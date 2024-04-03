@@ -65,8 +65,16 @@ def _handle_exception(loop, context):
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
     solenoid.all_notes_off()
-    sys.exit()  # Drastic: terminate/reinit
+    # >>> consider starting FTP and remain waiting.
+    # >>> cancel all asyncio tasks?
+    last_resort()
 
+def last_resort():
+    print("unrecoverable error, starting uftpd...")
+    # let's hope the wifi is up at this point...
+    import uftpd
+    while True:
+        time.sleep(1000)
 
 # Global background garbage collector. 
 # Use the scheduler
@@ -88,32 +96,6 @@ async def background_garbage_collector():
             # No good to accumulate pending gc
             gc.collect()
 
-
-# idle() measures asyncio responsiveness.
-# async def idle():
-#    import time
-#    max_iterations = 0
-#    while True:
-#        max_async_block = 0
-#        t0 = time.ticks_ms()
-#        t1 = t0
-#        iterations = 0
-#        while True:
-#            await asyncio.sleep_ms(0)
-#            t = time.ticks_ms()
-#            dt = time.ticks_diff( t, t1 )
-#            max_async_block = max( dt, max_async_block )
-#            if time.ticks_diff( t, t0 ) > 1000:
-#                # Loop for about 1 second
-#                break
-#            t1 = t
-#            iterations += 1
-#        dt = time.ticks_diff( t, t0 )
-#        max_iterations = max( iterations, max_iterations )
-#        if max_async_block >= 0:
-#            iterations_per_sec = iterations/dt*1000
-#            print(f"max async block {max_async_block} it/sec {iterations_per_sec:.0f} {dt=}")
-
 async def report_profile():
     # Report profile every 30 seconds for debugging/optimizing
     try:
@@ -134,7 +116,6 @@ async def signal_ready():
     led.off()
     dt = time.ticks_diff(time.ticks_ms(), startup_time)
     print(f"Total startup time (without main, until asyncio ready) {dt} msec")
-
 
 async def main():
     #  Establish global exception handler for asyncio

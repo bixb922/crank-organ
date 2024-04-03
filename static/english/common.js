@@ -604,25 +604,14 @@ function currentPage(){
     return path.split("/").pop();
 }
 
-// Cached tunelib >>> add expiration date?
-//>>>> replace with standard cache?????
+// Cached tunelib >>> add expiration date??
+// >>> poll for changes with a hash? date/size?
+// >>> refresh while not playing music?
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){
         console.log("getting tunelib from net") ;
 		let tunelib = await fetch_json( "/data/tunelib.json" );
-        let history = await fetch_json( "/data/history.json" )
-        for(i in history){
-            histitem = history[i];
-            tuneid = histitem[0];
-            tune = tunelib[tuneid];
-            if( tune == undefined || tune == null ){
-                continue ;
-            }
-            if( histitem[2] > 90){
-                tune[TLCOL_HISTORY] += 1 ;
-            }   
-        }
         sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
 		return tunelib ;
 	}

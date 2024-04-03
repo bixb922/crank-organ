@@ -1,8 +1,7 @@
 # (c) 20200 Hermann Paul von Borries
 # MIT License
 # Tallies battery usage
-# >>> show "-" if no estimation can be done
-# >>> show remaining tunes instead of remaining time
+
 import asyncio
 import time
 import os

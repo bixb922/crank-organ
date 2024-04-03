@@ -5,6 +5,7 @@ import time
 
 import ntptime
 import asyncio
+import machine
 
 import scheduler
 import aiohttp
@@ -55,7 +56,7 @@ class TimeZone:
         self.timezone_task_active = False
 
     async def _get_ntp_time(self):
-        if time.localtime()[0] >= 2023:
+        if time.localtime()[0] >= 2024:
             # Time already set
             return
         # Retry a few times.
@@ -63,10 +64,19 @@ class TimeZone:
         for _ in range(RETRIES):
             try:
                 async with scheduler.RequestSlice("ntptime", 1000):
-                    # settime is not async, will block
+                    # ntptime.settime is not async, will block
                     # Can't do this with worldtimeapi, should not call frequently
                     ntptime.settime()
-                return
+                    # Prepare a tuple as argument for RTC
+                    timestamp_local = time.time() + self.tz["offset_sec"]
+                    t = time.localtime(timestamp_local)
+                    # year, month, day, weekday, hour, minute, second, subsecond
+                    localt = (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0)
+                    # Set this as the local time, to be returned
+                    # by time.localtime() and friends.
+                    rtc = machine.RTC()
+                    rtc.datetime(localt)
+                return 
             except (asyncio.TimeoutError, OSError) as e:
                 self.logger.info(f"Recoverable ntptime exception {repr(e)}")
                 # RequestSlice did not give slice, retry later
@@ -158,7 +168,8 @@ class TimeZone:
         self.tz["next_refresh"] = f"{t[0]}-{t[1]:02d}-{t[2]+1:02d}"
 
     def now_timestamp(self):
-        return time.time() + self.tz["offset_sec"]
+        # time.time() is already in local time, no need to add offset
+        return time.time() 
     
     def now(self):
         t = time.localtime(self.now_timestamp())

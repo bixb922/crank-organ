@@ -62,8 +62,8 @@ class TuneManager:
         self.tunelib_progress = "Tunelib update not started"
         self.sync_task = None
         # Create tunelib if no backup
-        self.read_tunelib()
-        self.logger.debug("init ok")
+        t = self.read_tunelib()
+        self.logger.debug(f"init ok, {len(t)} tunes in {tunelib_filename}")
 
         
     def read_tunelib(self):

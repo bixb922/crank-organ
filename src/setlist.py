@@ -212,7 +212,7 @@ class Setlist:
         except (OSError, ValueError):  # No setlist.
             self.clear()
 
-        self.logger.debug(f"Setlist loaded {self.current_setlist=}")
+        self.logger.debug(f"Setlist loaded {len(self.current_setlist)} elements")
 
     def clear(self):
         self.current_setlist = []

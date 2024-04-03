@@ -604,25 +604,17 @@ function currentPage(){
     return path.split("/").pop();
 }
 
-// Cached tunelib >>> add expiration date?
-//>>>> replace with standard cache?????
+// Cached tunelib >>> add expiration date??
+// >>> poll for changes with a hash? date/size?
+// >>> refresh while not playing music?
+// >>> store timestamp in session storage and refresh if old?
+// >>>serving tunelib.json takes 9msec on server, 
+// 500-3000 msec end-to-end
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){
         console.log("getting tunelib from net") ;
 		let tunelib = await fetch_json( "/data/tunelib.json" );
-        let history = await fetch_json( "/data/history.json" )
-        for(i in history){
-            histitem = history[i];
-            tuneid = histitem[0];
-            tune = tunelib[tuneid];
-            if( tune == undefined || tune == null ){
-                continue ;
-            }
-            if( histitem[2] > 90){
-                tune[TLCOL_HISTORY] += 1 ;
-            }   
-        }
         sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
 		return tunelib ;
 	}
@@ -632,6 +624,7 @@ function drop_tunelib(){
 	// call from tunelibedit
 	sessionStorage.removeItem( "tunelib" );
 }
+
 function pageUp(pagename){
     from = document.referrer;
     if( from == undefined || from.includes("/static/"+pagename+".html") || pagename == undefined ){

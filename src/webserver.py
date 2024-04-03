@@ -2,7 +2,8 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-
+# >>> check design of caching
+# tunelib.json serves in 13 ms
 import os
 import sys
 import gc
@@ -62,25 +63,17 @@ PAGE_SETS_PLAYBACK = {
     # Setlist only operates in playback mode
 }
 
-
-# @app.before_request
-# def func_before_req( request ):
-#    pass
-
-
-# @app.after_request
-# def func_after_req( response ):
-#    dt = time.ticks_diff( time.ticks_ms(), r.g.t0 )
-#    print(f"request ended  {r.method=} {r.url=} {dt} msec")
-#    return response
+# Shows webserver processing time (total time is much higher)
+@app.before_request
+def func_before_req( request ):
+    request.g.t0 = time.ticks_ms()
 
 
-def _file_exists(filename):
-    try:
-        os.stat(filename)
-        return True
-    except OSError:
-        return False
+@app.after_request
+def func_after_req( request, response ):
+    dt = time.ticks_diff( time.ticks_ms(), request.g.t0 )
+    _logger.debug(f"{request.method} {request.url} {response.status_code}, {dt} msec")
+    return response
 
 
 # Information active clients
@@ -164,7 +157,6 @@ async def static_files(request, filepath):
             return "Safari not supported, use Chrome or Firefox"
 
     register_activity(request)
-
     # Playback mode depends on pages loaded
     pb = PAGE_SETS_PLAYBACK.get(filepath, None)
     if pb is not None:
@@ -625,7 +617,11 @@ async def static_favicon(request):
 
 @app.route("/revoke_credentials")
 async def revoke_credentials(request):
-    return {}, 401
+    # >>> if uncommented, credentials will be revoked
+    # after authorizing
+    #return {}, 401
+    _logger.debug("Revoking credentials disabled")
+    return {}
 
 
 # Tunelib editor
@@ -685,10 +681,7 @@ async def run_webserver():
     _logger = getLogger(__name__)
 
     DATA_FOLDER = "data/"
-    if _file_exists("software/static/"):
-        STATIC_FOLDER = "software/static/"
-    else:
-        STATIC_FOLDER = "static/"
+    STATIC_FOLDER = "software/static/"
 
     # Configure file cache for browser
     if not config.cfg.get("webserver_cache", True):
@@ -698,7 +691,7 @@ async def run_webserver():
         MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
 
     _logger.debug(f"{USE_CACHE=} {MAX_AGE=:,} sec")
-    await app.start_server(host="0.0.0.0", port=80, debug=False)
+    await app.start_server(host="0.0.0.0", port=80 )
 
 
 async def shutdown():
