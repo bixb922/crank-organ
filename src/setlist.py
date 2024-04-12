@@ -48,7 +48,7 @@ class Setlist:
 
         
         self.setlist_task = asyncio.create_task(self._setlist_process())
-        self.shuffle_task = asyncio.create_task(self._shuffle_process())
+        self.shuffle_task = asyncio.create_task(self._double_click_process())
         self.player_task = None
 
         self.logger.debug("init ok")
@@ -103,7 +103,7 @@ class Setlist:
                 if timeout_seconds <= 0:
                     # A time between about 30 seconds to 15 minutes
                     timeout_seconds = randrange(30, 900)
-                if len(self.current_setlist) == 0:
+                if self.isempty():
                     self.shuffle_all_tunes()
                 self.logger.debug(f"Automatic playback after {timeout_seconds} seconds")
  
@@ -120,7 +120,7 @@ class Setlist:
 
             # User signalled start of tune
             # Do we have a setlist?
-            if len(self.current_setlist) == 0:
+            if self.isempty():
                 # No setlist, do nothing
                 continue
 
@@ -150,7 +150,7 @@ class Setlist:
             await crank.stop_turning_event.wait()
    
 
-    async def _shuffle_process(self):
+    async def _double_click_process(self):
         # Process to wait for a shuffle event:
         #       long time turning crank
         #       double touch of touch pad
@@ -159,8 +159,10 @@ class Setlist:
         while True:
             self.shuffle_event.clear()
             await self.shuffle_event.wait()
-            if len(self.current_setlist) == 0:
+            if self.isempty():
                 self.shuffle_all_tunes()
+            else:
+                self.stop_tune()
             await asyncio.sleep_ms(100)
                 
 
@@ -186,7 +188,7 @@ class Setlist:
 
     def stop_tune(self):
         if (
-            len(self.current_setlist) > 0
+            not self.isempty()
             and player.get_progress()["tune"] == self.current_setlist[0]
         ):
             # Delete from top of setlist
