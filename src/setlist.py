@@ -39,7 +39,6 @@ class Setlist:
         # Event to know when bored turning the crank and nothing happens
         self.shuffle_event = crank.register_event(3000)
         # Make touch button double click to the same as cranking a lot of time
-        # >>> make double click do both "next" and "shuffle all"
         self.touch_button.register_double_event(self.shuffle_event)
                 
         # Dictionary of tune requests: key=tuneid, data=spectator name
