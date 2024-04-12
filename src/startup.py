@@ -65,7 +65,6 @@ def _handle_exception(loop, context):
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
     solenoid.all_notes_off()
-    # >>> consider starting FTP and remain waiting.
     # >>> cancel all asyncio tasks?
     last_resort()
 

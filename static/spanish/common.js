@@ -638,3 +638,16 @@ function pageUp(pagename){
         window.location.href = "/static/" + pagename + ".html" ;
     }
 }
+function make_tune_title( tuneid, title ){
+	return title + `&nbsp;<a onclick='register_comment( "${title}", "${tuneid}" )'>&#x1F4DD;</a>`;
+}
+
+async function register_comment(title, tuneid){
+	comment = prompt("Ingrese comentario para: " + title);
+	if( comment != null ){
+		j = { "tuneid": tuneid, "comment": comment };
+		await fetch_json( "/register_comment", j );
+		drop_tunelib() ;
+	}
+	showPopup("", "Información actualizada");
+}

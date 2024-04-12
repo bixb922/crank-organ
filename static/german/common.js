@@ -607,6 +607,9 @@ function currentPage(){
 // Cached tunelib >>> add expiration date??
 // >>> poll for changes with a hash? date/size?
 // >>> refresh while not playing music?
+// >>> store timestamp in session storage and refresh if old?
+// >>>serving tunelib.json takes 9msec on server, 
+// 500-3000 msec end-to-end
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){
@@ -621,6 +624,7 @@ function drop_tunelib(){
 	// call from tunelibedit
 	sessionStorage.removeItem( "tunelib" );
 }
+
 function pageUp(pagename){
     from = document.referrer;
     if( from == undefined || from.includes("/static/"+pagename+".html") || pagename == undefined ){
@@ -633,4 +637,17 @@ function pageUp(pagename){
         // Came from other page, navigate to this page
         window.location.href = "/static/" + pagename + ".html" ;
     }
+}
+function make_tune_title( tuneid, title ){
+	return title + `&nbsp;<a onclick='register_comment( "${title}", "${tuneid}" )'>&#x1F4DD;</a>`;
+}
+
+async function register_comment(title, tuneid){
+	comment = prompt("Kommentar für: " + title);
+	if( comment != null ){
+		j = { "tuneid": tuneid, "comment": comment };
+		await fetch_json( "/register_comment", j );
+		drop_tunelib() ;
+	}
+	showPopup("", "Kommentar gespeichert");
 }

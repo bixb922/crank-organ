@@ -34,6 +34,7 @@
 <button type="button" onclick="clearSetList()">Setlist löschen</button>
 <button type="button" onclick="shuffleSetList()">Setlist mischen</button>
 <button type="button" onclick="shuffleAllTunes()">Alle Melodien mischen</button>
+<button type="button" onclick="history()">Historia</button>
 
 <div class="middlediv">Temposteuerung</div>
 
@@ -324,6 +325,9 @@ async function backSetList() {
 	await updateProgress( progress ) ;
 }
 
+function history(){
+	window.location.href = "/static/history.html" ;
+}
 
 // Get tune list and refresh every few seconds
 getProgress() ;

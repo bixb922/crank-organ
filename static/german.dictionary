@@ -10,7 +10,8 @@
 "fin"|"Ende"
 esperando"|erwartet Start"
 status_text = "cancelado"|status_text = "gestrichen"
-
+"Ingrese comentario para: "|"Kommentar für: "
+"Información actualizada"|"Kommentar gespeichert"
 
 *index.html
 >Drehorgel|>Drehorgel

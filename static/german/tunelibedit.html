@@ -36,7 +36,6 @@ When pressing the save button, you may be asked for the password of the microcon
 
 
 async function getTuneList( ) {
-    // >>> REVISAR!!!
     wfu = document.getElementById( "wait_for_update" ) ;
     wfu.innerHTML +=  "Checking for new files, updating...<br>" ;
 	let resp = await fetch_json( "/start_tunelib_sync" ) ;
@@ -152,6 +151,7 @@ async function save( ){
     if( resp["result"] == "ok"){
         showPopup("saveButton", "Tunelib updated on flash" ) ;
     }
+    drop_tunelib() ;
 }
 
     
@@ -173,6 +173,6 @@ function sortTunelist( tunelist){
 
 // remove cached copy of tunelib
 drop_tunelib() ;
-// fill from with tunelib
+// fill with fresh tunelib
 getTuneList() ;
 </script>

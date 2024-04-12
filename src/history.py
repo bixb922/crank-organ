@@ -1,6 +1,5 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-# >>> record rating?
 import time
 
 if __name__ == "__main__":
@@ -34,7 +33,7 @@ class HistoryManager:
     
     def add_entry( self, tuneid, percentage, requested ):     
         hlist = self._read_hlist()
-        # >>> append battery usage also?
+
         hlist.append((tuneid, timezone.now_timestamp(), percentage, requested ))
         # Write with backup
         fileops.write_json(hlist, self.filename)

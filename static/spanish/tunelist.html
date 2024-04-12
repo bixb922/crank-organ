@@ -78,10 +78,9 @@ function searchTable() {
 </body>
 
 <script>
+//>>> HOVER OR CLICK SHOWS TLCOL_INFO FIELD ENTIRELY SOBRE INFO MUEsTRA TODO EL CAMPO
 
-// Tnis page needs tunelib as a list, mainly to
-// facilitate sorting. Store in global
-// variable, will be refreshed on reload of page.
+// keep sorted list in global page context
 let tunelist = [] ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
@@ -138,6 +137,7 @@ function fillBody( ) {
 	for( i in tunelist ) {
         let tune = tunelist[i];
         let tuneid = tune[TLCOL_ID];
+        let rating = tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
 		let row = `<tr> 
 			 <td id='${tuneid}.title'>
 				<a onclick='queueTune("${tuneid}")'
@@ -152,7 +152,7 @@ function fillBody( ) {
               <td align="right">${tune[TLCOL_HISTORY]}</td>
 		      <td>${trunc(tune[TLCOL_INFO],10)}</td>
 		      <td>${tune[TLCOL_DATEADDED]}</td>
-		      <td>${tune[TLCOL_RATING]}</td>
+		      <td>${rating}</td>
 		      </tr>`;
         s += row;
 	}
@@ -240,8 +240,9 @@ function updateProgress( progress ) {
     document.getElementById("play_mode").style.display = pm ;
     
     
-	const queue_img = "&#127775;"; // Glowing Star
-
+	//const queue_img = "&#127775;"; // Glowing Star
+    //const queue_img = "&#x1F9FA;" ; // Basket
+    const queue_img = "&#x1F381"; // wrapped gift
 	let playing_tuneid = progress["tune"] ;
     let setlist = progress["setlist"] ;
     let tune_requests = progress["tune_requests"] ;

@@ -9,7 +9,8 @@
 "fin"|"end"
 esperando"|waiting"
 status_text = "cancelado"|status_text = "cancelled"
-
+"Ingrese comentario para: "|"Enter comment for: "
+"Información actualizada"|"Information updated"
 
 *index.html
 >Drehorgel|>Crank organ

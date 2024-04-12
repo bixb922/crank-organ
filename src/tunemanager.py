@@ -315,9 +315,23 @@ class TuneManager:
                 title = tune[TLCOL_TITLE]
             else:
                 title = "(not found)"
-            hist.append([title, date, percentage, requested])
+            hist.append([title, date, percentage, requested, tuneid])
         del tunelib
         return hist
  
-                
+    def register_comment( self, tuneid, comment ):
+
+        tunelib = self.read_tunelib()
+        tune = tunelib[tuneid]
+        if comment in ("*","**","***", "****","*****"):
+            tune[TLCOL_RATING] = comment
+        else:
+            tune_info = tune[TLCOL_INFO].strip()
+            if len(tune_info)>0:
+                if tune_info[-1] != ".":
+                    tune_info += ". "
+            tune[TLCOL_INFO] = tune_info + comment
+        self._write_tunelib_json( tunelib )
+        del tunelib
+
 tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON)

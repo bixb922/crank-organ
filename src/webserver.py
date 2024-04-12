@@ -3,7 +3,8 @@
 # Webserver module, serves all http requests.
 
 # >>> check design of caching
-# tunelib.json serves in 13 ms
+# >>>tunelib.json serves in 13 ms
+# >>> add export as .tsv for spreadsheet
 import os
 import sys
 import gc
@@ -200,7 +201,8 @@ async def process_get_progress(request):
     return get_progress(request)
 
 
-@app.route("/queue_tune/<tune>", methods=["GET", "POST"])
+@app.route("/queue_tune/<tune>", methods=("GET", "POST"))
+#>>> POST ONLY??
 async def queue_tune(request, tune):
     # Queue tune to setlist
     setlist.queue_tune(tune)
@@ -342,7 +344,8 @@ async def battery_zero(request):
     battery.set_to_zero()
     return battery.get_info()
 
-@app.route("/record_battery_level",methods=["GET", "POST"])
+@app.route("/record_battery_level", methods=("GET", "POST"))
+#>>>POST ONLY???
 async def record_battery_level(request):
     battery.record_level( request.json["level"]  )
     return battery.get_info()
@@ -661,6 +664,11 @@ async def delete_history(request, days):
     history.delete_old(days)
     return simple_response("ok")
 
+@app.post( "/register_comment")
+async def register_comment(request):
+    data = request.json
+    tunemanager.register_comment( data["tuneid"], data["comment"])
+    return simple_response("ok")
 
 # Catchall handler to debug possible errors at html level
 @app.get('/<path:path>')
