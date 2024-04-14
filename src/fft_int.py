@@ -1,14 +1,3 @@
-# Viper:
-# pointer arithmetic
-# int = builtins.int
-# x:int can only be assigned a int. use int() if other type
-# array("h") does not raise overflow error when assigning
-# (unlike C python)
-# no overflow (like C)
-# no bounds checking (like C)
-# ptr16 is pointer to a unsigned int.
-# ptr8 is pointer to a unsigned byte
-# Functions may have up to four arguments???
 #
 from math import  cos, pi, sqrt
 import array
