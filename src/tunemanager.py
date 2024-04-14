@@ -323,7 +323,7 @@ class TuneManager:
 
         tunelib = self.read_tunelib()
         tune = tunelib[tuneid]
-        if comment in ("*","**","***", "****","*****"):
+        if comment in ("*","**","***"):
             tune[TLCOL_RATING] = comment
         else:
             tune_info = tune[TLCOL_INFO].strip()

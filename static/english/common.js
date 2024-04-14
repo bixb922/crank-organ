@@ -604,12 +604,9 @@ function currentPage(){
     return path.split("/").pop();
 }
 
-// Cached tunelib >>> add expiration date??
-// >>> poll for changes with a hash? date/size?
-// >>> refresh while not playing music?
-// >>> store timestamp in session storage and refresh if old?
-// >>>serving tunelib.json takes 9msec on server, 
-// 500-3000 msec end-to-end
+// Get tunelib.json and cache in tab storage for fast access
+// drop_tunelib() is called when the tunelib is changed
+// by the user.
 async function get_tunelib() {
 	let data = sessionStorage.getItem( "tunelib" );
 	if( data == null || data == undefined || data == "undefined"){
@@ -620,8 +617,9 @@ async function get_tunelib() {
 	}
 	return JSON.parse( data ) ;
 }
+// Drop tunelib, next time get_tunelib() is called
+// data will be retrieved again from server
 function drop_tunelib(){
-	// call from tunelibedit
 	sessionStorage.removeItem( "tunelib" );
 }
 

@@ -3,8 +3,22 @@
 # Webserver module, serves all http requests.
 
 # >>> check design of caching
-# >>>tunelib.json serves in 13 ms
+# >>> battery: doesn't matter, can be 1-2 per minute
+# >>> progress: don't cache, its transient and HAS to
+# be polled to show progress, i.e. the UI decides
+# when to update.
+# >>> tunelib: now ok
+# >>> organtuner. Might be optimized with eTag but
+# >>> eTag is ignored for HTTP 1.0. Could implement
+# >>> eTag manually, but the server would have to be
+# >>> asked anyhow and there is not mucn else to do
+# >>> to pass the time...
+#
 # >>> add export as .tsv for spreadsheet
+# >>>hover/click on TLCOL_INFO show data. 
+#>>>emoji for register_comments, hover TLCOL_INFO
+#>>>title of tune: show clickable with <a> style
+
 import os
 import sys
 import gc

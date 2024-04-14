@@ -56,27 +56,6 @@ function compare( a, b ){
     return 0;
 }
 
-function compareOld( a, b ){
-    // >>> the result is not very readable... delete?
-    // a and b are tuples, element [1] is date of format "yyyy-mm-hh hh:mm"
-    // order descending on date and ascending on time
-    asplit = a[1].split(" ") ;
-    bsplit = b[1].split(" ") ;
-    if( asplit[0] < bsplit[0] ) {
-        return 1 ;
-    }
-    else if( asplit[0] == bsplit[0] ){
-        if( asplit[1] > bsplit[1] ){
-            return 1 ;
-           }
-        else {
-            return -1 ;
-        }
-    }
-    else{
-        return -1 ; 
-    }
-}
 
 async function getHistory( ) {
 	

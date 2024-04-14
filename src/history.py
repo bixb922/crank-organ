@@ -2,11 +2,6 @@
 # MIT License
 import time
 
-if __name__ == "__main__":
-    # >>> debug
-    import sys
-    sys.path.append("software/mpy")
-    
 from config import config
 from timezone import timezone
 from minilog import getLogger

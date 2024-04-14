@@ -118,9 +118,11 @@ function fillHeader( ){
         let h = "";
         if( j == sortColumn ){
             if( direction > 0 ){
+                // up arrow to show sorting order
                 h = "&#x2191;" ;
             }
             else{
+                // down arrow to show sorting order
                 h = "&#x2193;" ;
             }
         }
@@ -137,6 +139,7 @@ function fillBody( ) {
 	for( i in tunelist ) {
         let tune = tunelist[i];
         let tuneid = tune[TLCOL_ID];
+        // Replace * with star for output
         let rating = tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
 		let row = `<tr> 
 			 <td id='${tuneid}.title'>
@@ -242,7 +245,7 @@ function updateProgress( progress ) {
     
 	//const queue_img = "&#127775;"; // Glowing Star
     //const queue_img = "&#x1F9FA;" ; // Basket
-    const queue_img = "&#x1F381"; // wrapped gift
+    const queue_img = "&#x23F3"; // Hourglass
 	let playing_tuneid = progress["tune"] ;
     let setlist = progress["setlist"] ;
     let tune_requests = progress["tune_requests"] ;

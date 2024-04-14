@@ -65,7 +65,8 @@ def _handle_exception(loop, context):
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
     solenoid.all_notes_off()
-    # >>> cancel all asyncio tasks?
+    # >>> cancel all asyncio tasks? needs registering...??
+    # >>>time.sleep() will stop the asyncio loop anyhow...
     last_resort()
 
 def last_resort():
@@ -128,8 +129,7 @@ async def main():
         webserver.run_webserver(),
         background_garbage_collector(),
         signal_ready(),
-        report_profile(),
-        # idle() # to measure async response
+        report_profile()
     )
 
 
