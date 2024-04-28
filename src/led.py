@@ -6,6 +6,8 @@
 import asyncio
 import neopixel
 import machine
+#>>> flash led light blue while there is no setlist
+#>>> feedback for button: always white
 
 # if __name__ == "__main__":
 #    sys.path.append("software/mpy")
@@ -77,14 +79,25 @@ class BlinkingLed:
     def set_setlist(self,setlist):
         # This avoids doing late import
         self.setlist = setlist
+        self_setlist_process = asyncio.create_task( self.setlist_blinker() )
         
+    async def setlist_blinker(self):
+        # Blink light blue-green while setlist is empty
+        while True:
+            if self.setlist.isempty():
+                self.on( (0,LOW,MEDIUM) )
+                await asyncio.sleep_ms(40) 
+            self.off()
+            # Period different from other blinks, so interference will be low
+            # Use number based on the best random number: 37.
+            await asyncio.sleep_ms(3700)
+            
     def touch_start(self):
         color = (LOW,LOW,LOW)
-        if self.setlist and self.setlist.isempty():
-            color = (LOW,MEDIUM,STRONG)
         self.on(color)
 
     def ack(self):
+        # Acknowledge some action, such as reboot.
         self._blink_background(
             (
                 (0, 0, MEDIUM),
@@ -94,7 +107,7 @@ class BlinkingLed:
                 (MEDIUM, 0, MEDIUM),
                 (MEDIUM, MEDIUM, 0),
             ),
-            timeon=100,
+            timeon=200,
             timeoff=10,
             repeat=2,
         )
@@ -110,7 +123,7 @@ class BlinkingLed:
         )
 
     def short_problem(self):
-        self._blink_background((STRONG, MEDIUM, 0), repeat=1, timeon=100)
+        self._blink_background((STRONG, MEDIUM, 0), repeat=1, timeon=150)
 
     def severe(self):
         # Magenta on, no blink

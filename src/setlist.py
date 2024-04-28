@@ -36,8 +36,10 @@ class Setlist:
         # Make touch button release do the same as start turning crank
         self.touch_button.register_up_event(self.start_event)
         
-        # Event to know when bored turning the crank and nothing happens
+        # Event to know when bored turning the crank and nothing happens,
+        # 3000 milliseconds after turning crank
         self.shuffle_event = crank.register_event(3000)
+        
         # Make touch button double click to the same as cranking a lot of time
         self.touch_button.register_double_event(self.shuffle_event)
                 
