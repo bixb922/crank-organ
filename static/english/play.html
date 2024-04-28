@@ -173,7 +173,7 @@ async function updateProgress( progress ) {
 		s += "<tr>" ;
 		s += "<td>" + (i+1) + "</td>" ;
 		s += "<td>" + pls[TLCOL_TITLE] + "</td>" ;
-		
+		// emojis are up-arrow, down-arrow, "top" and wastebasket
 		let b1 = "<td><a onclick='upSetList  ("+i+")' style='cursor:pointer'>&#128316;</a></td>"; // Up arrow
 		let b2 = "<td><a onclick='downSetList ("+i+")' style='cursor:pointer'>&#128317;</a></td>" ; // Down arrow
 		let b3 = "<td><a onclick='topSetList("+i+")' style='cursor:pointer'>&#128285;</a></td>" ; // Arrow Top
