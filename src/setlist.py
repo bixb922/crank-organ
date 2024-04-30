@@ -155,15 +155,15 @@ class Setlist:
         # Process to wait for a shuffle event:
         #       long time turning crank
         #       double touch of touch pad
-        # Web interface "shuffle all" button calls 
-        # shuffle_all_tunes directly, no checking of empty setlist.
+        # However: Web interface calls "shuffle all" directly
+        # and shuffles all again, even when setlist is not empty.
         while True:
+            #>>> THIS MEANS THAT IN TACHOMETER.PY shuffle_event is
+            #>>> set several times...?
             self.shuffle_event.clear()
             await self.shuffle_event.wait()
             if self.isempty():
                 self.shuffle_all_tunes()
-            else:
-                self.stop_tune()
             await asyncio.sleep_ms(100)
                 
 

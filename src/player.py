@@ -55,7 +55,8 @@ class MIDIPlayer:
         # during playback.
         self.crank_start_event = crank.register_event(0)
         self.logger.debug("init ok")
-
+        self.follow_crank = False
+        
     async def play_tune(self, tuneid, requested):
         try:
             self.time_played_us = 0
@@ -203,13 +204,23 @@ class MIDIPlayer:
         # umidiparser handles set tempo meta event.
 
     def get_progress(self):
-        return self.progress.get(self.time_played_us)
+        p = self.progress.get(self.time_played_us)
+        p["tempo_follows_crank"] = self.follow_crank
+        return p
 
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
         if not crank.is_installed() or crank.is_turning():
-            tmeter_vel = crank.get_normalized_rpsec()
+            if self.follow_crank:
+                # Change playback speed with UI settings and crank rpsec
+                tmeter_vel = crank.get_normalized_rpsec()
+            else:
+                tmeter_vel = 1
+            # Avoid division by 0
+            if tmeter_vel == 0:
+                tmeter_vel = 1
+    
             return round(midi_event_delta_us / tmeter_vel)
-
+        
         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
@@ -220,5 +231,9 @@ class MIDIPlayer:
         await self.crank_start_event.wait()
         return time.ticks_diff(time.ticks_us(), start_wait)
 
+    def tempo_follows_crank( self, v ):
+        self.follow_crank = v
+        self.logger.debug(f">>>{self.follow_crank=}")
+        
 # Singleton instance of player:
 player = MIDIPlayer()

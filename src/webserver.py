@@ -358,8 +358,7 @@ async def battery_zero(request):
     battery.set_to_zero()
     return battery.get_info()
 
-@app.route("/record_battery_level", methods=("GET", "POST"))
-#>>>POST ONLY???
+@app.post("/record_battery_level")
 async def record_battery_level(request):
     battery.record_level( request.json["level"]  )
     return battery.get_info()
@@ -614,7 +613,7 @@ async def test_mcp(request):
     return simple_response("ok")
 
 
-@app.route("/test_gpio")
+@app.post("/test_gpio")
 async def test_gpio(request):
     data = request.json
     await pinout.test.web_test_gpio(int(data["pin"]))
@@ -682,6 +681,12 @@ async def delete_history(request, days):
 async def register_comment(request):
     data = request.json
     tunemanager.register_comment( data["tuneid"], data["comment"])
+    return simple_response("ok")
+
+@app.post( "/tempo_follows_crank" )
+async def tempo_follows_crank( request ):
+    data = request.json
+    player.tempo_follows_crank( data["tempo_follows_crank"] )
     return simple_response("ok")
 
 # Catchall handler to debug possible errors at html level

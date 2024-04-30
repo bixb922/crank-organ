@@ -13,6 +13,7 @@ from led import led
 from solenoid import solenoid
 import scheduler
 import fileops
+from tachometer import crank
 from timezone import timezone
 from matrix import Matrix, linear_regression
 
@@ -139,9 +140,14 @@ class Battery:
 
         while True:
             while self.make_heartbeat:
-                print(".", end="")
-                led.heartbeat()
-                await solenoid.play_random_note(heartbeat_duration)
+                # Don't play heartbeat if crank is turning
+                # If crank not installed: heartbeat always
+                # If crank is installed: heartbeat only when crank not turning
+                if not crank.is_installed() or (crank.is_installed() and not crank.is_turning()):
+                    print(".", end="")
+                    led.heartbeat()
+                    await solenoid.play_random_note(heartbeat_duration)
+                    self.logger.debug(f"Playing random note for {heartbeat_duration=}")
                 await asyncio.sleep_ms(heartbeat_period)
 
             while not self.make_heartbeat:

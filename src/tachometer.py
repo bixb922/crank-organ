@@ -25,8 +25,8 @@ FACTOR = 1000/PULSES_PER_REV
 
 # Less than these minimum means "stopped" or "not turning"
 # The two values give the detection a hysteresis.
-LOWER_THRESHOLD_RPSEC = 0.5  # < than this, the crank is *not turning*
-HIGHER_THRESHOLD_RPSEC = 0.7 # > than this, the crank is *turning*
+LOWER_THRESHOLD_RPSEC = 0.3  # less than this value means the crank is *not turning*
+HIGHER_THRESHOLD_RPSEC = 0.7 # greater than this value means the crank is *turning*
 
 # "Normal" speed, when MIDI speed == real speed
 # >>Make normal_rpsec a config parameter
@@ -52,9 +52,9 @@ IRQ_BUFFER_SIZE = 4
 # dominating the calculation.
 SLOW_DOWN_FACTOR = 1.2
 
-# for debugging>>>>>
-debug_buffer = array("i",(0 for _ in range(1000)))
-debug_buffer_pointer = 0
+# for debugging, see: getrawdata
+#debug_buffer = array("i",(0 for _ in range(1000)))
+#debug_buffer_pointer = 0
 
 class TachoDriver:
     # The TachoDriver gets interrupts from the pin connected
@@ -88,10 +88,10 @@ class TachoDriver:
     
     @micropython.native
     def pin_irq(self,pin):
-        global debug_buffer, debug_buffer_pointer
+        # global debug_buffer, debug_buffer_pointer
         # Process interrupt request (IRQ) from tachometer pin
         t = ticks_ms()
-        dt = ticks_diff(t,self.last_irq_time)
+        dt = ticks_diff(t, self.last_irq_time)
         # Discard very frequent interrupts for debouncing.
         if dt>MINIMUM_MSEC_BETWEEN_IRQ:
             # Store the time this interrupt occurred 
@@ -101,16 +101,17 @@ class TachoDriver:
             p = self.irq_pointer
             self.irq_buffer[p] = dt
             self.irq_pointer = (p+1)%IRQ_BUFFER_SIZE
-        # DEBUG>>>>, remove debug_buffer after debugging
-        # without these two, pin_irq takes about 21 microseconds
+        # pin_irq takes about 21 microseconds without @micropython.native
         # and 15 microseconds with the @micropython.native decorator
+
+        # DEBUG>>>>, remove debug_buffer after debugging
         #debug_buffer[debug_buffer_pointer] = dt
         #debug_buffer_pointer = (debug_buffer_pointer+1)%len(debug_buffer)
-
+        
         
     def get_rpsec(self)->float:
         if self.is_installed():
-            dt_since_last_irq = ticks_diff(ticks_ms(),self.last_irq_time)
+            dt_since_last_irq = ticks_diff( ticks_ms(), self.last_irq_time)
             # >>>> debug, avgdt can be local variable
             # Calculate average time between interrupts
             self.avgdt = sum(self.irq_buffer)/IRQ_BUFFER_SIZE
@@ -157,7 +158,7 @@ class Crank:
         
         # A task to monitor the crank and generate the events
         self.crank_monitor_task = asyncio.create_task(self._crank_monitor_process())
-        self.logger.debug("init ok")
+        self.logger.debug("crank init ok")
         
     def register_event(self,when_ms)->asyncio.Event:
         # Can register one event for each time only.
@@ -185,7 +186,8 @@ class Crank:
             # Wait for crank to start turning
             while self.td.get_rpsec()<HIGHER_THRESHOLD_RPSEC:
                 await asyncio.sleep_ms(50)
-            self.logger.debug("Crank now turning")    
+                #print(f" waiting for crank turning {self.td.get_rpsec()=}" )
+            self.logger.debug("---------> Crank now turning")    
             # Guard against spurious events, wait for some pulses
             await asyncio.sleep_ms(some_pulses)
             
@@ -195,9 +197,10 @@ class Crank:
             while self.td.get_rpsec()>LOWER_THRESHOLD_RPSEC:
                 await asyncio.sleep_ms(100)
                 time_since_start = ticks_diff(ticks_ms(),time_when_turning_started)
+                #print(f"crank is turning {self.td.get_rpsec()=}, processing events, time left {max_time_to_monitor-time_since_start} msec {time_since_start=} {max_time_to_monitor=}" )
                 for when_ms,ev in self.events.items():
                     if time_since_start>=when_ms and not ev.is_set():
-                        self.logger.debug("rpsec crank incremented - start")
+                        self.logger.debug(f"---------> rpsec crank turning - set event at {when_ms=} {self.td.get_rpsec()=}")
                         ev.set()
                         self.stop_turning_event.clear()
                         
@@ -209,7 +212,9 @@ class Crank:
             # Wait until crank stops turning
             while self.td.get_rpsec()>LOWER_THRESHOLD_RPSEC:
                 await asyncio.sleep_ms(100)
-            self.logger.debug("Crank now stopped")
+                #print(f"crank is turning {self.td.get_rpsec()=}" )
+
+            self.logger.debug(f"---------> Crank now stopped {self.td.get_rpsec()=}")
             
             # Crank stopped turning, set/clear events.
             self.stop_turning_event.set()
@@ -251,15 +256,12 @@ class Crank:
         progress["is_turning"] = self.is_turning()
         progress["normalized_rpsec"] = self.get_normalized_rpsec()
         progress["tacho_installed"] = self.is_installed()
-        
+
 crank = Crank(gpio.tachometer_pin)
 
 if __name__ == "__main__":
-    # Crank test. Run this program as main program to activate.
+    # Crank test
     from random import random
-    # Test
-    # Replace tachometer with simulated one
-    crank = Crank(5)
     td = crank.td
     
     # Test irq service time
@@ -304,7 +306,8 @@ if __name__ == "__main__":
             overht = "Y" if rpsec > HIGHER_THRESHOLD_RPSEC else " "
             stopped = "Y" if crank.stop_turning_event.is_set() else " "
             tdlast = ticks_diff(ticks_ms(),td.last_irq_time)
-            print(f"rpsec={td.get_rpsec():2.1f} {cit} {start=} {stable=} {bored=} {stopped=} {overlt=} {overht=} {td.dt=:4d} {td.avgdt=:4.0f}")
+            #print(f"rpsec={td.get_rpsec():2.1f} {cit} {start=} {stable=} {bored=} {stopped=} {overlt=} {overht=} {td.dt=:4d} {td.avgdt=:4.0f}")
+            print(f"{rpsec:5.2f} {'*'*round(rpsec*80)}")
             await asyncio.sleep_ms(100)
 
             

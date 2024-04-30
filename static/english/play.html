@@ -10,7 +10,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp('tunelist')">&#11013;</a>
+        <a onclick="pageUp()">&#11013;</a>
 	</span>
     <b>&nbsp;&nbsp;&nbsp;Current tune</b>
 	<span class="headerright" id="header_time"></span>
@@ -34,25 +34,25 @@
 <button type="button" onclick="clearSetList()">Clear setlist</button>
 <button type="button" onclick="shuffleSetList()">Shuffle setlist</button>
 <button type="button" onclick="shuffleAllTunes()">Shuffle all tunes</button>
-<button type="button" onclick="history()">Historia</button>
+<button type="button" onclick="go_history()">Historia</button>
 
 <div class="middlediv">Tempo control</div>
-
-
-    <p>        
     Set playback speed:
     <br>
 	<a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
 	<span id="velocityText"></span><span id="velocityGraph"></span>
 	<a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
 
-	<p>
+	<br>
 	<span id="crankInfo">
-			<span id="turning">Turning</span>
-			<span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
-			<span id="rpsecGraph"></span>
+        <br>
+        <input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">Tempo follows crank speed/button>
+        <br>
+        <span id="turning">Turning</span>
+        <span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
+        <span id="rpsecGraph"></span>
 	</span>
-	</p>
+	
 
 <!-- <div style="width:100%;display:flex;justify-content:center;"> -->
 <!-- <img src="" style="width:75%;margin:auto;" id="funny"> -->
@@ -199,8 +199,6 @@ async function updateProgress( progress ) {
 	}
 	htmlById("setlist", s ) ;
 
-    
-
 	// Always update velocity and RPS
 	vel = progress["velocity"]
 	velocityBar( "velocityGraph", vel, 60 ) ;
@@ -229,6 +227,9 @@ async function updateProgress( progress ) {
 		}
 		textById("rpsecText", "" + rt) ;
 		barGraph( "rpsecGraph", rg/100, sap_green, 10, "left", 50 ) ;
+        
+        f = document.getElementById("tempo_follows_crank");
+        f.checked = progress["tempo_follows_crank"] ;
 	}
 	else {
 		document.getElementById("crankInfo").style.display = "none" ;	
@@ -324,8 +325,14 @@ async function backSetList() {
     progress = await check_cancelled() ;
 	await updateProgress( progress ) ;
 }
+    
+async function tempo_follows_crank(){
+    f = document.getElementById("tempo_follows_crank");
+    data = { "tempo_follows_crank": f.checked };
+    await fetch_json( "/tempo_follows_crank", data );
+}
 
-function history(){
+function go_history(){
 	window.location.href = "/static/history.html" ;
 }
 

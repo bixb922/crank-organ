@@ -151,7 +151,6 @@ async function save( ){
     if( resp["result"] == "ok"){
         showPopup("saveButton", "Tunelib updated on flash" ) ;
     }
-    drop_tunelib() ;
 }
 
     
@@ -173,6 +172,6 @@ function sortTunelist( tunelist){
 
 // remove cached copy of tunelib
 drop_tunelib() ;
-// fill with fresh tunelib
+// fill from with tunelib
 getTuneList() ;
 </script>

@@ -104,6 +104,7 @@ Ajuste velocidad|Set playback speed
 "Girando"|"Turning"
 "No gira"|"Not turning"
 rev/seg|rev/sec
+Tempo sigue manivela<|Tempo follows crank speed
 # In the javascript code:
 "T&iacute;tulo"|"Title"
 "G&eacute;nero"|"Genre"

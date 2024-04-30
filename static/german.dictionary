@@ -105,6 +105,7 @@ Ajuste velocidad|Rückgabegeschwindingkeit
 "Girando"|"Dreht"
 "No gira"|"Dreht nicht"
 rev/seg|Umdrehungen/Sekunde
+Tempo sigue manivela<|Drehgeschwindingkeit beeinflusst Tempo<
 # In the javascript code:
 "T&iacute;tulo"|"Titel"
 "G&eacute;nero"|"Genre"
