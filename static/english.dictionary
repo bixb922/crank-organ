@@ -9,8 +9,6 @@
 "fin"|"end"
 esperando"|waiting"
 status_text = "cancelado"|status_text = "cancelled"
-"Ingrese comentario para: "|"Enter comment for: "
-"Información actualizada"|"Information updated"
 
 *index.html
 >Drehorgel|>Crank organ
@@ -31,11 +29,12 @@ Diagnóstico|System info
 Organillo|Crank organ
 Historia|History
 Config. general|General configuration
-Configuración MIDI|MIDI configuration
+Configuración pins/MIDI|Pin and MIDI configuration
 Afinador|Tuner
 Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Battery counters set to zero"
 "Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|"FTP started. Reboot to stop. Connect with FileZilla or Windows Explorer"
+"Partió FTP."|"FTP started"
 "Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"|"Enter current charge level of battery, 100=full, 0=empty, reset=delete calibation data. This is used to show battery level"
 "Nivel debe estar entre 0 y 100"|"Level must be between 0 and 100"
 "Nivel debe ser numérico"|"Level must be numeric"
@@ -54,11 +53,12 @@ B&uacute;squeda|Search
 "Hist"|"Hist"
 "Info"|"Info"
 "Fecha"|"date"
-"Pts"|"Rtng"
+"Pts"|"Rating"
 "actualizando setlist"|"updating setlist"
 "No hay información de avance disponible"|"No progress information available"
 
 *keyboard.html
+no está en uso|nicht in Benutzung
 Nombre Bluetooth|Bluetooth name
 Aviso Bluetooth|Advertising
 Conectado|Connected
@@ -98,13 +98,14 @@ Melodía actual|Current tune
 >Borrar setlist<|>Clear setlist<
 >Desordenar setlist<|>Shuffle setlist<
 >Desordenar todos<|>Shuffle all tunes<
+>Historia<|>History<
 Control tempo|Tempo control
 Ajuste velocidad|Set playback speed
 >Girando|>Turning
 "Girando"|"Turning"
 "No gira"|"Not turning"
 rev/seg|rev/sec
-Tempo sigue manivela<|Tempo follows crank speed
+>Tempo sigue manivela<|>Tempo follows crank speed
 # In the javascript code:
 "T&iacute;tulo"|"Title"
 "G&eacute;nero"|"Genre"
@@ -112,9 +113,13 @@ Tempo sigue manivela<|Tempo follows crank speed
 "Duraci&oacute;n"|"Duration"
 "A&ntilde;o"|"Year"
 "Info"|"Info"
+"Puntos"|"Rating"
+"Letra"|"Lyrics"
 "Guardado"|"Saved"
 "No guardado, error"|"Not saved, error"
 "No hay información de avance disponible"|"No progress information available"
+"Mostrar setlist"|"Show setlist"
+"Mostrar letra"|"Show lyrics"
 
 *diag.html
 >Descripción<|>Description<
@@ -154,5 +159,6 @@ Pedido|Request
 Si historia más antigua que|When older than
 días,|days,
 Borrar|delete
-
-
+truncada"|purged"
+"Información actualizada"|"Information updated"
+"Ingrese comentario o puntaje *, ***,*** para: "|"Enter comment or rating *, **, *** for:"

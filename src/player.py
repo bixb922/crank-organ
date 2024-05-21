@@ -14,10 +14,12 @@ import midi
 from battery import battery
 from history import history
 from tachometer import crank
+from config import config
 
-CANCELLED = const("cancelled")
-ENDED = const("ended")
-PLAYING = const("playing")
+CANCELLED = const("cancelled") # type: ignore
+ENDED = const("ended") # type: ignore
+PLAYING = const("playing") # type: ignore
+
 # Can also be "waiting", "file not found", others.
 
 
@@ -54,19 +56,22 @@ class MIDIPlayer:
         # This is used to know when to restart if cranking stops
         # during playback.
         self.crank_start_event = crank.register_event(0)
+        # Default startup value for tempo follows crank
+        self.follow_crank = config.cfg.get("tempo_follows_crank", False )
         self.logger.debug("init ok")
-        self.follow_crank = False
         
-    async def play_tune(self, tuneid, requested):
+    async def play_tune(self, tuneid, requested ):
         try:
             self.time_played_us = 0
             battery.end_heartbeat()
+
             duration = 1
             # get_info_by_id could fail in case tunelib
             # has not been correctly updated
             midi_file, duration = tunemanager.get_info_by_id(tuneid)
             solenoid.all_notes_off()
             self.progress.tune_started(tuneid)
+
             self._reset_channelmap()
             self.logger.info(f"Starting tune {tuneid} {midi_file}")
 
@@ -117,6 +122,8 @@ class MIDIPlayer:
             f"add history {tuneid} {time_played_us=} {duration=}  {percentage_played=}"
         )
         history.add_entry(tuneid, percentage_played, requested)
+        if percentage_played > 95:
+            tunemanager.add_one_to_history( tuneid )
 
     def _reset_channelmap(self):
         for i in range(len(self.channelmap)):
@@ -233,7 +240,6 @@ class MIDIPlayer:
 
     def tempo_follows_crank( self, v ):
         self.follow_crank = v
-        self.logger.debug(f">>>{self.follow_crank=}")
         
 # Singleton instance of player:
 player = MIDIPlayer()

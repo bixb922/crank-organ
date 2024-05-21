@@ -30,6 +30,18 @@ When pressing the save button, you may be asked for the password of the microcon
 <br>
 <b>Reload page after saving to refresh information.</b>
 <div class="footerdiv"></div>
+
+<-- https://www.w3schools.com/howto/howto_css_modals.asp -->
+<div id="modalLyrics" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeLyrics()">&times;</span>
+      <br>
+      <textarea id="lyricsText" rows="30"></textarea>
+      <br>
+      <button onclick="saveLyrics()">Save</button>
+    </div>
+  
+  </div>
 </body>
 
 <script>
@@ -61,7 +73,7 @@ async function getTuneList( ) {
 
 let changed_fields = [] ;
 function updateForm( tunelist ){
-	let tableheader = ["Title", "Genre", "Author", "Year", "Autoplay", "Rating", "Info", "Duration", "Date&nbsp;added", "Filename", "Size", "Clear row"] ;
+	let tableheader = ["Title", "Genre", "Author", "Year", "Autoplay", "Rating", "Info","Lyrics", "Duration", "Date&nbsp;added", "Filename", "Size", "Clear row"] ;
 
 	let s = "<thead><tr>" ;
 	for (let  j = 0 ; j < tableheader.length ; j++ ){
@@ -91,6 +103,7 @@ function updateForm( tunelist ){
         ${makeBox(tune[TLCOL_ID],'rating',6,tune[TLCOL_RATING])}
     </td>
     <td>${makeBox(tune[TLCOL_ID],'info',20,tune[TLCOL_INFO])}</td>
+    <td><button class='smallbutton' onclick='editLyrics("${tune[TLCOL_ID]}")'>L</button></td>
     <td align="right">${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
     <td>${tune[TLCOL_DATEADDED]}</td>
     <td>${tune[TLCOL_FILENAME]}</td> 
@@ -169,6 +182,45 @@ function sortTunelist( tunelist){
  
     tunelist.sort( compareFn );
 }
+let currentTuneid = "";
+async function editLyrics(tuneid){
+    let modal = document.getElementById( "modalLyrics" );
+    let lyricsText = document.getElementById( "lyricsText" );
+    currentTuneid = tuneid ;
+    lyricsText.cols = Math.round(window.innerWidth/12) ;
+    lyricsText.rows = Math.round(window.innerHeight/5);
+    lyricsText.value = await get_lyrics( currentTuneid ) ;
+    modal.style.display = "block";
+
+    return ;
+}
+
+async function closeLyrics(){
+    let modal = document.getElementById( "modalLyrics" );
+ 
+    modal.style.display = "none";
+    currentTuneid = "" ;
+}
+
+async function saveLyrics(){
+    if( currentTuneid == ""){
+        alert("No current tuneid, cannot save");
+        closeLyrics();
+    }
+    let modal = document.getElementById( "modalLyrics" );
+    let lyricsText = document.getElementById("lyricsText");
+    ly = lyricsText.value;
+    let data = {"tuneid": currentTuneid, "lyrics": ly };
+    let resp = await fetch_json( "/save_lyrics", data );
+    if( resp["result"] == "ok"){
+        closeLyrics() ;
+        showPopup("", "Lyrics saved" ) ;
+    }
+    // clear lyrics cache
+    drop_lyrics() ;
+    return ;
+}
+
 
 // remove cached copy of tunelib
 drop_tunelib() ;

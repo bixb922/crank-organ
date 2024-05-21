@@ -10,8 +10,6 @@
 "fin"|"Ende"
 esperando"|erwartet Start"
 status_text = "cancelado"|status_text = "gestrichen"
-"Ingrese comentario para: "|"Kommentar für: "
-"Información actualizada"|"Kommentar gespeichert"
 
 *index.html
 >Drehorgel|>Drehorgel
@@ -32,11 +30,12 @@ Diagnóstico|Systeminformation
 Organillo|Drehorgel
 Historia|Verlauf
 Config. general|Allgemeine Konfiguration
-Configuración MIDI|MIDI configuration
+Configuración pins/MIDI|Pin und MIDI Konfiguration
 Afinador|Stimmgerät
 Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Batteriezähler auf Null"
 "Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|∫"FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
+"Partió FTP."|"FTP gestarted"
 "Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"|"Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"
 "Nivel debe estar entre 0 y 100"|"Level muss zwischen 0 und 100 liegen"
 "Nivel debe ser numérico"|"Level muss eine Zahl sein"
@@ -56,11 +55,12 @@ B&uacute;squeda|Suche
 "Hist"|"Wiedergaben"
 "Info"|"Info"
 "Fecha"|"Datum"
-"Pts"|"Punkte"
+"Pts"|"Bewertung"
 "actualizando setlist"|"Setlist wird aktualisiert"
 "No hay información de avance disponible"|"Information über Fortschritt nicht verfügbar"
 
 *keyboard.html
+
 Nombre Bluetooth|Bluetooth name
 Aviso Bluetooth|Advertising
 Conectado|Connected
@@ -99,6 +99,7 @@ Melodía actual|Jetzige Melodie
 >Borrar setlist<|>Setlist löschen<
 >Desordenar setlist<|>Setlist mischen<
 >Desordenar todos<|>Alle Melodien mischen<
+>Historia<|>Verlauf<
 Control tempo|Temposteuerung
 Ajuste velocidad|Rückgabegeschwindingkeit
 >Girando|>Dreht
@@ -113,9 +114,13 @@ Tempo sigue manivela<|Drehgeschwindingkeit beeinflusst Tempo<
 "Duraci&oacute;n"|"Länge"
 "A&ntilde;o"|"Jahr"
 "Info"|"Info"
+"Puntos"|"Bewertung"
+ "Letra"|"Liedtext"
 "Guardado"|"Gespeichert"
 "No guardado, error"|"Nicht gespeichert, Fehler aufgetreten"
 "No hay información de avance disponible"|"Information über Fortschritt nicht verfügbar"
+"Mostrar setlist"|"Setlist anzeigen"
+"Mostrar letra"|"Liedtext anzeigen"
 
 *diag.html
 >Descripción<|>Beschreibung<
@@ -155,5 +160,7 @@ Pedido|Wunsch
 Si historia más antigua que|Wenn älter als
 días,|Tage,
 Borrar|Löschen
-
+truncada"|gelöscht"
+"Información actualizada"|"Information aktualisiert"
+"Ingrese comentario o puntaje *, ***,*** para: "|"Schreib Kommentar oder Bewertung *, **, *** für:"
 

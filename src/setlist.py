@@ -31,25 +31,31 @@ class Setlist:
         # Register start event for tachometer and touch button
         # Webserver calls start_tune, instead of registering event
         # but all "start tune" methods converge on setting self.start_event
-        # 500 ms == crank turns are already stable
-        self.start_event = crank.register_event(500)
+        
+        # 50 ms after start: crank turns are already stable
+        self.start_event = crank.register_event(50)
         # Make touch button release do the same as start turning crank
         self.touch_button.register_up_event(self.start_event)
-        
-        # Event to know when bored turning the crank and nothing happens,
-        # 3000 milliseconds after turning crank
+
+         # Event to know when bored turning the crank and nothing happens,
+        # (losing patience takes 3 seconds?)
         self.shuffle_event = crank.register_event(3000)
-        
-        # Make touch button double click to the same as cranking a lot of time
+
+        # Make touch button double click to the same as cranking a lot of time 
         self.touch_button.register_double_event(self.shuffle_event)
-                
+
+        # Register another event to use touchpad to cancel tune
+        self.cancel_tune_event = asyncio.Event()
+        self.touch_button.register_up_event(self.cancel_tune_event)
+    
         # Dictionary of tune requests: key=tuneid, data=spectator name
         # Will ony be used if mcserver module is present.
         self.tune_requests = {}
 
         
         self.setlist_task = asyncio.create_task(self._setlist_process())
-        self.shuffle_task = asyncio.create_task(self._double_click_process())
+        self.shuffle_task = asyncio.create_task(self._shuffle_all_process())
+        self.touchdown_task = asyncio.create_task(self._touchdown_process())
         self.player_task = None
 
         self.logger.debug("init ok")
@@ -58,7 +64,7 @@ class Setlist:
     def start_tune(self):
         # Called by webserver if start button on performance page is pressed
         self.start_event.set()
-
+    
     async def wait_for_start(self, timeout_seconds=None):
 
         # For TouchPad and Web: Clear to get rid of previous value. 
@@ -100,14 +106,20 @@ class Setlist:
 
             timeout_seconds = None
             if config.cfg.get("automatic_playback", False):
+                # If in automatic playback mode, get the delay
+                # and make tune start after the delay, no other
+                # user action necessary.
                 timeout_seconds = config.cfg.get("automatic_delay", 0)
                 if timeout_seconds <= 0:
-                    # A time between about 30 seconds to 15 minutes
-                    timeout_seconds = randrange(30, 900)
-                if self.isempty():
+                    # A random time between about 30 seconds 
+                    # to -timeout_seconds 
+                    timeout_seconds = randrange(30, max(-timeout_seconds, 35))
+                if self.no_tunes():
+                    # In automatic playback mode, shuffle
+                    # automatically if setlist empty.
                     self.shuffle_all_tunes()
                 self.logger.debug(f"Automatic playback after {timeout_seconds} seconds")
- 
+            
             await self.wait_for_start(timeout_seconds)
 
             # If tuner or test mode are active, don't
@@ -122,18 +134,23 @@ class Setlist:
             # User signalled start of tune
             # Do we have a setlist?
             if self.isempty():
+                self.logger.debug("No setlist, do nothing")
                 # No setlist, do nothing
                 continue
 
             # Get top tune and play
             tuneid = self.current_setlist.pop(0)
 
-            self.logger.info(f"play tune will start {tuneid=}")
-            # Play tune in isolated task
-            self.player_task = asyncio.create_task(
+            self.logger.info(f"play_tune will start {tuneid=} {tuneid in self.tune_requests=}")
+            
+            # Cancel any pending touchdown cancel events before starting
+            self.cancel_tune_event.clear()
+            # Play tune. Create task because we may need to cancel it on request 
+            self.player_task = asyncio.create_task( 
                 player.play_tune(tuneid, tuneid in self.tune_requests)
             )
-            await self.player_task
+            await self.player_task 
+            self.logger.debug("play_tune task ended")
             # Record that this task has ended and isn't available anymore
             self.player_task = None
 
@@ -151,21 +168,40 @@ class Setlist:
             await crank.stop_turning_event.wait()
    
 
-    async def _double_click_process(self):
-        # Process to wait for a shuffle event:
-        #       long time turning crank
-        #       double touch of touch pad
-        # However: Web interface calls "shuffle all" directly
-        # and shuffles all again, even when setlist is not empty.
+    async def _shuffle_all_process(self):
+        # This proces tests if setlist empty and
+        # crank turns a long time, or the touchpad is
+        # pressed twice. If so, all tunes are shuffled.
+        
+        # Note that the shuffle event is triggered
+        # every time the crank starts, but since
+        # there is a test for "no tunes", that 
+        # does not lead to a problem-
         while True:
-            #>>> THIS MEANS THAT IN TACHOMETER.PY shuffle_event is
-            #>>> set several times...?
             self.shuffle_event.clear()
             await self.shuffle_event.wait()
-            if self.isempty():
+            if self.no_tunes():
                 self.shuffle_all_tunes()
             await asyncio.sleep_ms(100)
-                
+
+    async def _touchdown_process(self):
+        # Process to detect touchpad up.
+        # Will cancel a tune if detected while playing a tune.
+        # Touchpad up to start a tune is handled
+        # in self.wait_for_tune()
+        # The cancel_tune_event is set by touchpad.py
+        # and is cleared just before starting to play a tun
+        # and here.
+
+        while True:
+            await self.cancel_tune_event.wait()
+            # Check if event is still set, may have been cleared
+            # when the player task starts
+            if self.cancel_tune_event.is_set() and self.player_task:
+                self.logger.debug("_touchdown_process calling stop_tune")
+                self.stop_tune()
+            self.cancel_tune_event.clear()
+            await asyncio.sleep_ms(300)         
 
     # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
     def queue_tune(self, tuneid):
@@ -285,6 +321,11 @@ class Setlist:
         return progress
     
     def isempty(self):
+        # Setlist empty?
         return len(self.current_setlist) == 0
     
+    def no_tunes(self):
+        # No setlist and nothing playing nor about to play
+        return self.isempty() and self.player_task == None
+
 setlist = Setlist()

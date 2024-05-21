@@ -6,8 +6,6 @@
 import asyncio
 import neopixel
 import machine
-#>>> flash led light blue while there is no setlist
-#>>> feedback for button: always white
 
 # if __name__ == "__main__":
 #    sys.path.append("software/mpy")
@@ -16,11 +14,11 @@ from pinout import gpio
 from minilog import getLogger
 
 # 1=lowest, 255=highest
-VERY_LOW = const(4)
-LOW = const(8)
-MEDIUM = 32
-STRONG = const(128)
-VERY_STRONG = const(255)
+VERY_LOW = const(4) # type:ignore
+LOW = const(8) # type:ignore
+MEDIUM = const(32) # type:ignore
+STRONG = const(128)  # type:ignore
+VERY_STRONG = const(255) # type:ignore
 
 
 class BlinkingLed:
@@ -79,7 +77,7 @@ class BlinkingLed:
     def set_setlist(self,setlist):
         # This avoids doing late import
         self.setlist = setlist
-        self_setlist_process = asyncio.create_task( self.setlist_blinker() )
+        self.setlist_process = asyncio.create_task( self.setlist_blinker() )
         
     async def setlist_blinker(self):
         # Blink light blue-green while setlist is empty

@@ -2,6 +2,10 @@
 # MIT License
 # Tallies battery usage
 
+
+# >>> see battery off problem.
+
+
 import asyncio
 import time
 import os
@@ -17,12 +21,12 @@ from tachometer import crank
 from timezone import timezone
 from matrix import Matrix, linear_regression
 
-_UPDATE_EVERY_SECONDS = const(60)  # update readings every 60 seconds
+# update readings every 60 seconds
+_UPDATE_EVERY_SECONDS = const(60)  # type:ignore
 
 
 # Battery low limit
-_BATTERY_LOW_PERCENT = 10
-
+_BATTERY_LOW_PERCENT = const(10) # type:ignore
 
 class Battery:
     def __init__(
@@ -197,10 +201,7 @@ class Battery:
             bcj = fileops.read_json(self.battery_calibration_filename)
         except (OSError, ValueError):
             bcj = []
-        # >>> Transition while there are missing columns
-        for row in bcj:
-            while len(row)<6:
-                row.append(0)
+
         return bcj
 
     def get_coefficients(self)->None:
@@ -235,8 +236,6 @@ class Battery:
         
         # Get estimation for tune capacity of full battery using
         # the latest row in bcj, sort by operating seconds 
-        #>>>Transition while there are elements with playing_seconds == 0
-        bcj = [ row for row in bcj if row[5] != 0 ]
         tunes_played = 0
         bcj.sort(key=lambda x:x[2])
         _, _, solenoid_on_seconds, _, tunes_played, playing_seconds = bcj[-1]

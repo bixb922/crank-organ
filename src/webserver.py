@@ -11,13 +11,10 @@
 # >>> organtuner. Might be optimized with eTag but
 # >>> eTag is ignored for HTTP 1.0. Could implement
 # >>> eTag manually, but the server would have to be
-# >>> asked anyhow and there is not mucn else to do
-# >>> to pass the time...
+# >>> asked anyhow and there is not much else to do
+# >>> during tuning.
 #
-# >>> add export as .tsv for spreadsheet
-# >>>hover/click on TLCOL_INFO show data. 
-#>>>emoji for register_comments, hover TLCOL_INFO
-#>>>title of tune: show clickable with <a> style
+# >>> add tunelib export as .tsv for spreadsheet. to clipboard.
 
 import os
 import sys
@@ -199,7 +196,6 @@ async def send_data_file(request, filepath):
 
     return send_file(filename, max_age=0)
 
-
 def get_progress(request):
     register_activity(request)
     progress = player.get_progress()
@@ -215,8 +211,7 @@ async def process_get_progress(request):
     return get_progress(request)
 
 
-@app.route("/queue_tune/<tune>", methods=("GET", "POST"))
-#>>> POST ONLY??
+@app.post("/queue_tune/<tune>")
 async def queue_tune(request, tune):
     # Queue tune to setlist
     setlist.queue_tune(tune)
@@ -478,9 +473,9 @@ async def get_wifi_status(request):
 
 
 # Play page web requests
-@app.route("/set_velocity/<int:vel>")
-async def set_velocity(request, vel):
-    crank.set_velocity(vel)
+@app.route("/set_velocity_relative/<int:change>")
+async def set_velocity_relative(request, change):
+    crank.set_velocity_relative(change)
     return get_progress(request)
 
 
@@ -666,11 +661,14 @@ async def save_tunelib(request):
     return simple_response("ok")
 
 
-@app.route("/get_history")
-async def get_history(request):
-    h = tunemanager.get_history()
-    return h
+@app.post("/save_lyrics")
+async def save_lyrics( request ): 
+    if response := check_authorization(request):
+        return response
 
+    data = request.json
+    tunemanager.save_lyrics( data["tuneid"], data["lyrics"])
+    return simple_response("ok")
 
 @app.route("/delete_history/<int:days>")
 async def delete_history(request, days):

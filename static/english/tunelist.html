@@ -43,7 +43,14 @@ function searchTable() {
 	// Declare variables
 
 	let input = document.getElementById("searchInput");
-	let filter = input.value.toUpperCase();
+    text = input.value ;
+    text = text.replace("*","⭐" );
+    text = text.replace("*","⭐" );
+    text = text.replace("*","⭐" );
+    if( text != input.innerText ){
+        input.value = text ;
+    }
+	let filter = normalizaTildes( input.value.toUpperCase() );
 	let table = document.getElementById("tunelisttable");
 	let tr = table.getElementsByTagName("tr");
 
@@ -78,13 +85,11 @@ function searchTable() {
 </body>
 
 <script>
-//>>> HOVER OR CLICK SHOWS TLCOL_INFO FIELD ENTIRELY SOBRE INFO MUEsTRA TODO EL CAMPO
-
 // keep sorted list in global page context
 let tunelist = [] ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
-let header = ["Title", "Genre", "Author", "", "Year", "Hist", "Info", "date", "Rtng"] ;
+let header = ["Title", "Genre", "Author", "", "Year", "Hist", "Info", "date", "Rating"] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
@@ -112,7 +117,7 @@ async function setTuneList( ) {
 
 function fillHeader( ){
 
-	let header = ["Title", "Genre", "Author", "m:ss", "Year", "Hist", "Info", "date", "Rtng"] ;
+	let header = ["Title", "Genre", "Author", "m:ss", "Year", "Hist", "Info", "date", "Rating"] ;
 	let s = "<tr>" ;
 	for (let  j = 0 ; j < header.length ; j++ ){
         let h = "";
@@ -139,12 +144,10 @@ function fillBody( ) {
 	for( i in tunelist ) {
         let tune = tunelist[i];
         let tuneid = tune[TLCOL_ID];
-        // Replace * with star for output
-        let rating = tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
 		let row = `<tr> 
-			 <td id='${tuneid}.title'>
+			 <td id='${tuneid}.title' style='cursor:pointer;text-decoration:underline;'>
 				<a onclick='queueTune("${tuneid}")'
-					style='cursor:pointer'
+					style='cursor:pointer;'
 					id='t${tuneid}'
 				>${tune[TLCOL_TITLE]}</a>
 			  </td>
@@ -153,9 +156,11 @@ function fillBody( ) {
 		      <td>${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
 		      <td>${tune[TLCOL_YEAR]}</td>
               <td align="right">${tune[TLCOL_HISTORY]}</td>
-		      <td>${trunc(tune[TLCOL_INFO],10)}</td>
+		      <td style='cursor:pointer;text-decoration:underline;'>
+                <a onclick='showFullInfo("${tuneid}")'>${trunc(tune[TLCOL_INFO],10)}</a>
+              </td>
 		      <td>${tune[TLCOL_DATEADDED]}</td>
-		      <td>${rating}</td>
+		      <td>${get_rating(tune)}</td>
 		      </tr>`;
         s += row;
 	}
@@ -333,6 +338,14 @@ function trunc( text, n ){
     }
     return text.substring(0,n-3) + "...";
 }
+async function showFullInfo(tuneid){
+    let tunelib = await get_tunelib() ;
+    let tune = tunelib[tuneid] ;
+    let info = tune[TLCOL_INFO] ;
+    showPopup( "", info ) ;
+}
+
+
 // setTuneList will call getProgress the first time, 
 // and getProgress will continue refreshing...
 setTuneList() ;

@@ -12,9 +12,11 @@ class HistoryManager:
         self.filename = filename
         self.logger = getLogger(__name__)
         self.logger.debug("init done")
-        # Check if history is present, create empty if no backup
-        self._read_hlist()
+        # Check if history is present, create empty if not
+        if not fileops.file_exists( filename ):
+            fileops.write_json( [], filename )
 
+    # No "get history" method, browser reads history.json directly
     def _read_hlist(self):
         try:
             hlist = fileops.read_json(self.filename)
@@ -29,7 +31,9 @@ class HistoryManager:
     def add_entry( self, tuneid, percentage, requested ):     
         hlist = self._read_hlist()
 
-        hlist.append((tuneid, timezone.now_timestamp(), percentage, requested ))
+        # use 1/0 instead of true/false to save space
+        # use timestamp instead of full ascii date to save space
+        hlist.append((tuneid, timezone.now_timestamp(), percentage, 1 if requested else 0 ))
         # Write with backup
         fileops.write_json(hlist, self.filename)
 

@@ -308,7 +308,7 @@ class PinoutList:
             # <name> is the name itself, example 20_note_Carl_Frei.json
             # where 20 is the number of notes and Carl_Frei is the name.
             if re.match(pattern, fn):
-                filename = self.pinout_folder + fn
+                filename = self.pinout_folder + "/" + fn
                 # the value is the description, get that
                 # only when needed
                 self.pinout_files[filename] = ""
@@ -317,6 +317,7 @@ class PinoutList:
             print("Error: no pinout files found in /data")
 
     def _read_pinout_txt(self):
+        # >>> change to json? leave in config?
         try:
             with open(self.pinout_txt_filename) as file:
                 # Return filename of nn_xxxxx.json with pinout info

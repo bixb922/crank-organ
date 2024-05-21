@@ -58,34 +58,42 @@ function compare( a, b ){
 
 
 async function getHistory( ) {
-	
-	let histlist = await fetch_json( "/get_history" ) ;
+	let histlist = await fetch_json( "/data/history.json" ) ;
     histlist.sort( compareFn=compare ) ;
 	let s = "" ;
-    previous_date = "";
+    let previous_date = "";
 	for( i in histlist ) {
         let hist_element = histlist[i]; 
-        // 0 title
-        // 1 date and time
+        // 0 tuneid
+        // 1 date in seconds since 2000/1/1 (ESP32 epoch)
         // 2 percentage
-        // 3 requested by user
-        // 4 tuneid
-        tsplit = hist_element[1].split(" ");
-        date = tsplit[0] ;
-        time = tsplit[1] ;
-        // Make row with date when date changes
+        // 3 requested by user (true/false)
+
+        // Convert date from seconds in ESP32 epoch to string
+        // date: yyyy-mm-dd, time: hh:mm
+        let d = new Date(946_684_800_000); // ESP32 epoch start
+        d.setUTCSeconds( hist_element[1] );
+        let datetime = d.toISOString() ; // e.g. 2024-05-13T08:40:49.000Z
+        let tsplit = datetime.split("T");
+        let date = tsplit[0] ;
+        let time = tsplit[1].substring(0,5) ;
+
+        // Insert separator row with date when date changes
         if( date != previous_date) {
             s += `<tr>
             <td colspan="3"><b>${date}</b></td>
             <tr>` ;
         };
         previous_date = date ;
+
+        // Mark if tune has been requested via web site
         let user_request = "" ;
         if( hist_element[3] ) {
             // user request
             user_request = "&#x2714;" ; // check mark
         }
-        let tt = make_tune_title(  hist_element[4], hist_element[0]);
+        // Get title (if still in tunelib...)
+        let tt = await make_tune_title( hist_element[0] );
 		s += `<tr> 
 			   <td>${time}</td>
 			   <td>${tt}</td>
@@ -97,13 +105,51 @@ async function getHistory( ) {
 }
 
 async function deleteHistory(){
+    // Purge old elements from history
 	days = parseInt( document.getElementById("days").value );
 	resp = await fetch_json( "/delete_history/" + days ) ;
     if( resp["result"] == "ok"){
-	   window.location.href = "/static/history.html" ;
+
+       showPopup("", "History purged" ); //>>>add to translation
+       await sleep_ms(1000);
+       window.location.reload() ;
     }
 }
 
+async function make_tune_title( tuneid ){
+	let tunelib = await get_tunelib();
+	let tune = tunelib[tuneid];
+	if( tune != undefined ){
+		let title = tune[TLCOL_TITLE] ;
+        let text = title ;
+		let info = tune[TLCOL_INFO] ;
+		if( info != "" ){
+			text += " (" + info  + ")";
+		}
+		info = get_rating(tune) ;
+		if( info != "" ){
+			text += " " + info ;
+		}
+        // append link to "add comment/rating"
+        text += `&nbsp;<a onclick='register_comment( "${title}", "${tuneid}" )'>&#x1F4DD;</a>`;
+        return text;
+	}
+    // Sorry if tune is not in tunelib anymore...
+    return `(melodía borrada de tunelib) ${tuneid}` ;
+}
+
+
+async function register_comment(title, tuneid){
+	comment = prompt("Enter comment or rating *, **, *** for:" + title);
+	if( comment != null ){
+		j = { "tuneid": tuneid, "comment": comment };
+		await fetch_json( "/register_comment", j );
+		drop_tunelib() ;
+        showPopup("", "Information updated"); //>>> add to translaation
+        await sleep_ms(1000);
+        window.location.reload() ;
+    }
+}
 
 getHistory() ;
 </script>

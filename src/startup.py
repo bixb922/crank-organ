@@ -10,16 +10,16 @@ import sys
 import os
 import asyncio
 
-# Create data folder if not there
+# Create folders if not there
 # Data that changes in time is stored here: battery info
 # setlist, logs, timezone information, pinout information. Create before importing minilog, config, battery, timezone.
-try:
-    os.mkdir("data")
-    os.mkdir("tunelib")
-except OSError:
-    pass
+import fileops
+fileops.make_folder( "/data")
+fileops.make_folder( "/lyrics" )
+fileops.make_folder( "/signals" )
+fileops.make_folder( "/tunelib")
 
-# Startup < 4 sec when in flash, less if frozen.
+# Startup about 4.5 sec when in flash, less if frozen.
 import scheduler
 from timezone import timezone
 from minilog import getLogger
@@ -65,8 +65,6 @@ def _handle_exception(loop, context):
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
     solenoid.all_notes_off()
-    # >>> cancel all asyncio tasks? needs registering...??
-    # >>>time.sleep() will stop the asyncio loop anyhow...
     last_resort()
 
 def last_resort():
@@ -74,6 +72,7 @@ def last_resort():
     # let's hope the wifi is up at this point...
     import uftpd
     while True:
+        # Asyncio does not run anymore during "last resort"
         time.sleep(1000)
 
 # Global background garbage collector. 
@@ -131,6 +130,5 @@ async def main():
         signal_ready(),
         report_profile()
     )
-
 
 asyncio.run(main())

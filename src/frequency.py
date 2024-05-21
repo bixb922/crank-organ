@@ -1,15 +1,15 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 
-import time
 import os
 from math import sqrt
 
 import scheduler
+import fileops
 
-SIGNAL_FOLDER = const("/signals")
-RAW_FILE_PREFIX = const("raw")
-FFT_FILE_PREFIX = const("fft")
+SIGNAL_FOLDER = const("/signals") # type:ignore
+RAW_FILE_PREFIX = const("raw") # type:ignore
+FFT_FILE_PREFIX = const("fft") # type:ignore
 # Indicate the range around the nominal frequency to be detected
 # PLUS_MINUS_SEMITONES=3 means 3 semitones down and 3 semitones up from
 # the nominal frequency are measured. Outside that range will give no reading.
@@ -115,10 +115,6 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
 
 def save( signal, duration, midi_note, step, prefix ):
     # Save a signal, can be raw or FFT in /signals folder 
-    try:
-        os.mkdir(SIGNAL_FOLDER)
-    except OSError:
-        pass
     filename = f"{SIGNAL_FOLDER}/{prefix}{midi_note.midi_number}.tsv"
     if prefix == FFT_FILE_PREFIX:
         units = "Hz"

@@ -350,11 +350,11 @@ async function fetch_json( url, post_data ){
 
 	if( !response.ok ){
 		// Response not ok will abort and notify error to user.
-        status = response.status ;
+        let rstatus = response.status ;
         response_html = await response.text() ; 
         response_text = response_html.replace(/<[^>]*>/g, ' ');
-        console.log("Error response", status, "url", url, "response", response, "text", response_text ) ;
-        alert( `Server error ${status} ${response_text}` ) ;
+        console.log("Error response", rstatus, "url", url, "response", response, "text", response_text ) ;
+        alert( `Server error ${rstatus} ${response_text}` ) ;
         return ;
 	}
 
@@ -538,7 +538,8 @@ TLCOL_DATEADDED = 9 ;
 TLCOL_RATING = 10 ;
 TLCOL_SIZE = 11 ;
 TLCOL_HISTORY = 12 ;
-TLCOL_COLUMNS = 13 ;
+TLCOL_RFU = 13 ;
+TLCOL_COLUMNS = 14 ;
 
 
 async function showPopup(id_where, show_text) {
@@ -604,23 +605,47 @@ function currentPage(){
     return path.split("/").pop();
 }
 
-// Get tunelib.json and cache in tab storage for fast access
-// drop_tunelib() is called when the tunelib is changed
-// by the user.
-async function get_tunelib() {
-	let data = sessionStorage.getItem( "tunelib" );
+// Cache a json file 
+async function cache_json( path ) {
+	let data = sessionStorage.getItem( path );
 	if( data == null || data == undefined || data == "undefined"){
-        console.log("getting tunelib from net") ;
-		let tunelib = await fetch_json( "/data/tunelib.json" );
-        sessionStorage.setItem( "tunelib", JSON.stringify( tunelib ) ) ;
+        console.log("getting json from net for cache:", path ) ;
+		let tunelib = await fetch_json( path );
+        sessionStorage.setItem( path, JSON.stringify( tunelib ) ) ;
 		return tunelib ;
 	}
 	return JSON.parse( data ) ;
 }
+
+// Drop cached json, next time cache_json() is called
+// data will be retrieved again from server
+function drop_cache( path ){
+	sessionStorage.removeItem( path );
+}
+
+// Get tunelib.json and cache in tab storage for fast access
+// drop_tunelib() is called when the tunelib is changed
+// by the user.
+async function get_tunelib() {
+	return await cache_json( "/data/tunelib.json" ) ;
+}
+
 // Drop tunelib, next time get_tunelib() is called
 // data will be retrieved again from server
 function drop_tunelib(){
-	sessionStorage.removeItem( "tunelib" );
+	drop_cache( "/data/tunelib.json" ) ;
+}
+
+async function get_lyrics( tuneid ) {
+	data = await cache_json( "/data/lyrics.json" ) ;
+	lyrics = data[tuneid] ;
+	if( lyrics == undefined ){
+		return "";
+	}
+	return lyrics ;
+}
+function drop_lyrics() {
+	drop_cache( "/data/lyrics.json" );
 }
 
 function pageUp(pagename){
@@ -636,16 +661,8 @@ function pageUp(pagename){
         window.location.href = "/static/" + pagename + ".html" ;
     }
 }
-function make_tune_title( tuneid, title ){
-	return title + `&nbsp;<a onclick='register_comment( "${title}", "${tuneid}" )'>&#x1F4DD;</a>`;
-}
 
-async function register_comment(title, tuneid){
-	comment = prompt("Enter comment for: " + title);
-	if( comment != null ){
-		j = { "tuneid": tuneid, "comment": comment };
-		await fetch_json( "/register_comment", j );
-		drop_tunelib() ;
-	}
-	showPopup("", "Information updated");
+
+function get_rating( tune ){
+	return tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
 }

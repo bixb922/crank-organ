@@ -14,6 +14,7 @@ import fileops
 _logger = getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
+_DEFAULT_PASSWORD = const("drehorgel") # type:ignore
 
 class Config:
     def __init__(self):
@@ -25,7 +26,7 @@ class Config:
         if fileops.file_exists("/sd"):
             self.TUNELIB_FOLDER = "/sd/tunelib/"
         else:
-            self.TUNELIB_FOLDER = "/tunelib/"
+            self.TUNELIB_FOLDER = "tunelib/"
         
         self.TUNELIB_JSON = "data/tunelib.json"
 
@@ -33,9 +34,10 @@ class Config:
         self.ORGANTUNER_JSON = "data/organtuner.json"
         self.SETLIST_JSON = "data/setlist.json"
         self.PINOUT_TXT = "data/pinout.txt"
-        self.PINOUT_FOLDER = "data/"
+        self.PINOUT_FOLDER = "data"
         self.HISTORY_JSON = "data/history.json"
         self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
+        self.LYRICS_JSON = "data/lyrics.json"
 
         # minilog folder defined in minilog module, not here
 
@@ -70,7 +72,7 @@ class Config:
             "password1": "password1",
             "access_point2": "wifi_SSID_2",
             "password2": "password2",
-            "ap_password": "drehorgel",
+            "ap_password": _DEFAULT_PASSWORD,
             "password_required": False,
             "ap_ip": "192.168.144.1",
             "ap_max_idle": 120,
@@ -94,6 +96,13 @@ class Config:
             "serverpassword": "password3",
             "automatic_delay": 30,
             "automatic_playback": False,
+            "tempo_follows_crank": False,
+            "pulses_per_revolution": 24,
+            "lower_threshold_rpsec": 0.4,
+            "higher_threshold_rpsec": 0.7,
+            "normal_rpsec": 1.2,
+            "max_expected_rpsec": 3
+
         }
         # Populate missing keys from fallback
 
@@ -182,6 +191,11 @@ class Config:
 
             elif k in (
                 "mic_signal_low",
+                "pulses_per_revolution",
+                "lower_threshold_rpsec",
+                "higher_threshold_rpsec",
+                "normal_rpsec",
+                "max_expected_rpsec"
             ):
                 try:
                     newconfig[k] = float(v)
@@ -235,7 +249,7 @@ class PasswordManager:
     def _get_key(self)->bytes:
         from esp32 import NVS
 
-        nvs = NVS("drehorgel")
+        nvs = NVS(_DEFAULT_PASSWORD)
         key = bytearray(16)
         try:
             nb = 0
@@ -286,11 +300,16 @@ class PasswordManager:
         from ucryptolib import aes
 
         pass_buffer = aes(self._get_key(), 1).decrypt(c)
+        # If error, return phony password instead of
+        # raising an error. Raising an error will abort the
+        # software, better to continue with default password
+        # to maximize access to software.
         if len(pass_buffer) < 10:
-            raise ValueError("Could not decrypt password, wrong length")
+            _logger.error("Could not decrypt password, wrong length")
+            return _DEFAULT_PASSWORD
         if pass_buffer[4:8] != b"salt":
-        #>>> THIS ERROR IS UNRECOVERABLE! MAKE IT RECOVERABLE?
-            raise ValueError("Could not decrypt password, wrong key")
+            _logger.error("Could not decrypt password, wrong key")
+            return _DEFAULT_PASSWORD
         # pass_buffer[8] has the length of the encoded password.
         pass_encoded = pass_buffer[9 : 9 + pass_buffer[8]]
 

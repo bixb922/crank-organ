@@ -20,19 +20,14 @@ DOUBLE_TOUCH_TIME = const(1000)
 
 class TouchButton:
     def __init__(self, gpio_pin):
-        # Only release event, no touch event
-        # Events are defined by registering a asyncio.Event()
-        # These events get "set" by this module but not cleared.
-        # These events can be set by other modules too, to implement
-        # "wait for any of these causes", for example crank starts turning,
-        # touchpad or web page button.
-        ignore = asyncio.Event()
+        # The TouchButton allows to register a list
+        # of asyncio.Events() por action (up, down, double down)
         # Hand goes up from touchpad:
-        self.up_event = ignore
+        self.up_events = []
         # Hand goes down on touchpad:
-        self.down_event = ignore
+        self.down_events = []
         # Two down events in succesion (like a "double click"):
-        self.double_event = ignore
+        self.double_events = []
         # Sensitivity of touchpad: size of change to cause an event
         self.big_change = int(config.get_int("touchpad_big_change", 10000))
         
@@ -45,17 +40,24 @@ class TouchButton:
 
     def register_up_event(self, ev):
         # Event when lifting hand up leaving touch pad
-        self.up_event = ev
+        if ev not in self.up_events:
+            self.up_events.append(ev)
     
     def register_down_event(self,ev):
-        # Not used?
+        # Not used by now.
         # Event when putting hand down on touch pad
-        self.down_event = ev
+        if ev not in self.down_events:
+            self.down_events.append(ev)
     
     def register_double_event(self,ev):
         # Event when twice down in a row (similar to double-click on PC but slower)
-        self.double_event = ev
-        
+        if ev not in self.double_events:
+            self.double_events.append(ev) 
+
+    def set_events(self, event_list):
+        for ev in event_list:
+            ev.set()
+
     async def tp_process(self):
         # At startup, wait a bit before reacting and for touchpad reading to settle
         await asyncio.sleep(1)
@@ -71,13 +73,13 @@ class TouchButton:
             if tpval-tpval_ant<-self.big_change:
                 led.touch_flash()
                 # Touch end: set event to publish this
-                self.up_event.set()
+                self.set_events( self.up_events )
                 # Keep time of last 2 touch events
                 previous_up = last_up
                 last_up = time.ticks_ms()
                 # See if this is a "double touch"
                 if time.ticks_diff(last_up,previous_up)<DOUBLE_TOUCH_TIME:
-                    self.double_event.set()
+                    self.set_events( self.double_events )
                     # 3 touch down in a row will yield 2 double events...
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms(MSEC_SETTLE)
@@ -85,8 +87,7 @@ class TouchButton:
             elif tpval-tpval_ant>self.big_change:
                 # Touch down: show led, activate event, wait for signal to settle
                 led.touch_start()
-                self.down_event.set()
-                print("TOUCH DOWN")
+                self.set_events( self.down_events )
                 await asyncio.sleep_ms(MSEC_SETTLE)
                 
             tpval_ant = tpval

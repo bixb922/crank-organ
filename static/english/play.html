@@ -23,31 +23,42 @@
 	<tbody id="tuneinfo">
 	</tbody>
 </table>
-<div class="middlediv">Setlist</div>
+<button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Mostrar letra</button>
+<span id="setlist_span">
+	<div class="middlediv">Setlist</div>
 
-<table>
-	<tbody id="setlist">
-	</tbody>
-</table>
-<button type="button" onclick="saveSetList()">Save setlist</button><span id="saved"></span>
-<button type="button" onclick="loadSetList()">Load setlist</button>
-<button type="button" onclick="clearSetList()">Clear setlist</button>
-<button type="button" onclick="shuffleSetList()">Shuffle setlist</button>
-<button type="button" onclick="shuffleAllTunes()">Shuffle all tunes</button>
-<button type="button" onclick="go_history()">Historia</button>
-
+	<table>
+		<tbody id="setlist">
+		</tbody>
+	</table>
+	<button type="button" onclick="saveSetList()">Save setlist</button><span id="saved"></span>
+	<button type="button" onclick="loadSetList()">Load setlist</button>
+	<button type="button" onclick="clearSetList()">Clear setlist</button>
+	<button type="button" onclick="shuffleSetList()">Shuffle setlist</button>
+	<button type="button" onclick="shuffleAllTunes()">Shuffle all tunes</button>
+	<button type="button" onclick="go_history()">History</button>
+</span>
+<span id="lyrics_span" style="display:none">
+	<div class="middlediv">Letra</div>
+	Columnas: <a onclick="setColumns(1)">1️⃣</a>&nbsp;<a onclick="setColumns(2)">2️⃣</a>
+	<table>
+		<tbody>
+			<tr><td id="col1"></td><td id="col2"></td></tr>
+		</tbody>
+	</table>
+</span>
 <div class="middlediv">Tempo control</div>
     Set playback speed:
     <br>
-	<a onclick="set_velocity(-10)" style="cursor:pointer">&#9194;&nbsp;</a>
+	<a onclick="set_velocity(-5)" style="cursor:pointer">&#9194;&nbsp;</a>
 	<span id="velocityText"></span><span id="velocityGraph"></span>
-	<a onclick="set_velocity(10)" style="cursor:pointer">&nbsp;&#9193;</a>
-
+	<a onclick="set_velocity(5)" style="cursor:pointer">&nbsp;&#9193;</a>
 	<br>
 	<span id="crankInfo">
-        <br>
+		<br>
         <input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">Tempo follows crank speed/button>
         <br>
+		<br>
         <span id="turning">Turning</span>
         <span id="rpsecText">nnn</span>&nbsp;rev/sec&nbsp;
         <span id="rpsecGraph"></span>
@@ -70,7 +81,8 @@
 
 // Tune list with titles and attributes gets loaded in memory
 let last_progress_seen = {} ;
-
+let columns = 1;
+let current_tuneid = "" ;
 async function getProgress() {	
 	while( true ) {
         progress = await fetch_json ( "/get_progress" ) ;
@@ -87,6 +99,7 @@ async function updateProgress( progress ) {
     if( progress == undefined ){
         return ;
     }
+	console.log("updateProgress", progress );
     // Get tunelib with local cache
     let tunelib = await get_tunelib() ;
 	last_progress_seen = progress ;
@@ -97,11 +110,12 @@ async function updateProgress( progress ) {
     }
     document.getElementById("play_mode").style.display = pm ;
 	// Update tune info only if tune is playing
-	let current_tuneid = progress["tune"] ;
+	current_tuneid = progress["tune"] ;
     let tune_requests = progress["tune_requests"] ;
     if( tune_requests == undefined ){
         tune_requests = {} ;
     }
+	let toggle_button = document.getElementById("toggleSetlistLyricsButton") ;
     let s = "" ;
 	if( current_tuneid === null ) {
 		// No tune playing
@@ -112,10 +126,15 @@ async function updateProgress( progress ) {
         
 		textById("progress", "...") ;
 		progressBar( "timebar", 0, 60 ) ;
+		toggle_button.style.display = "none" ;
+		let col1 = document.getElementById( "col1") ;
+    	col1.innerText ="" ;
+		// Make sure to show setlist controls if no tune
+		toggleSetlistLyrics( "setlist" ) ;
 	}
 	else {
 		let tune = tunelib[current_tuneid] ;
-		let header = ["Title", "Genre","Author", "Duration","Year", "Info" ] ;
+		let header = ["Title", "Genre","Author", "Duration","Year", "Info", "Rating", "Lyrics" ] ;
         let s = "" ;
         let spectator_name = tune_requests[current_tuneid];
         if( spectator_name != undefined ){
@@ -149,11 +168,25 @@ async function updateProgress( progress ) {
             <tr><td>${header[5]}</td>
 		        <td>${tune[TLCOL_INFO]}</td>
             </tr>
-            <tr><td id='progress'></td>
+            <tr><td>${header[6]}</td>
+		        <td>${get_rating(tune)}</td>
+            </tr>
+			<tr><td id='progress'></td>
 		         <td id='timebar'></td>
             </tr>`;
-			
+
 		htmlById("tuneinfo", s) ;
+		let lyrics = await formatLyrics() ;
+		if( lyrics == "" ){
+			// No lyrics, no toggle button and setlist controls only
+			// If lyrics were showing, switch to setlist
+			toggleSetlistLyrics( "setlist" );
+			toggle_button.style.display = "none";
+		}
+		else{
+			// There are lyrics: show button to toggle setlist/lyrics
+			toggle_button.style.display = "" ;
+		}
 		
 		// Update progress bar every second, first call
 		let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
@@ -189,6 +222,7 @@ async function updateProgress( progress ) {
 		}
 		s += b1 + b2 + b3 + b4;
         
+
         // show spectator name, if any
         let sn = tune_requests[tuneid] ;
         if( sn != undefined ){
@@ -200,21 +234,16 @@ async function updateProgress( progress ) {
 	htmlById("setlist", s ) ;
 
 	// Always update velocity and RPS
-	vel = progress["velocity"]
+	let vel = progress["velocity"];
 	velocityBar( "velocityGraph", vel, 60 ) ;
-	textById("velocityText",  Math.round( vel*10 )/10 );
+	let velmult = progress["tempo_multiplier"] ;
+	let velText = "" ;
+	if( !isNaN(velmult)){
+		veltext = "" + Math.round( velmult*10 )/10 + "x " ;
+	}
+	textById("velocityText", veltext );
 	let rpsec = progress["rpsec"] ;
-    
-    // Actual crank velocity
-	// rpsec 0.5 to 2 is translated to 0-100 scale
-	let rg = Math.round( (rpsec-0.5)*(100/1.5) ) ;
-	if ( rg < 0 ) {
-		rg = 0 ;
-	}
-	else if( rg > 100 ) {
-		rg = 100 ;
-	}
-	
+
 	
 	if( progress["tacho_installed"] ){
 		let rt = Math.round( progress["rpsec"]*10)/10 ;
@@ -226,6 +255,15 @@ async function updateProgress( progress ) {
 			textById("turning", "Not turning")
 		}
 		textById("rpsecText", "" + rt) ;
+
+		let rg = Math.round( (rpsec-0.5)*(100/1.5) ) ;
+		if ( rg < 0 ) {
+			rg = 0 ;
+		}
+		else if( rg > 100 ) {
+			rg = 100 ;
+		}
+
 		barGraph( "rpsecGraph", rg/100, sap_green, 10, "left", 50 ) ;
         
         f = document.getElementById("tempo_follows_crank");
@@ -281,18 +319,7 @@ async function topSetList(pos) {
 }
 
 async function set_velocity( increment ) {
-	let oldvel = last_progress_seen["velocity"];
-	if( oldvel === undefined || oldvel === null ) {
-		return ;
-	}
-	newvel = oldvel + increment ;
-	if( newvel <= 0 ) {
-		newvel = 0 ;
-	}
-	else if( newvel > 100 ) {
-		newvel = 100 ;
-	}
-	await updateProgress( await fetch_json( "/set_velocity/" + newvel ) );
+	await updateProgress( await fetch_json( "/set_velocity_relative/" + increment ) );
 }
 
 async function check_cancelled( progress ) {
@@ -336,6 +363,54 @@ function go_history(){
 	window.location.href = "/static/history.html" ;
 }
 
+function toggleSetlistLyrics( what ){
+	let setlist_span =  document.getElementById( "setlist_span") ;
+	let lyrics_span =  document.getElementById( "lyrics_span") ;
+	let toggle_button = document.getElementById( "toggleSetlistLyricsButton" ) ;
+	if( setlist_span.style.display == "none" || what == "setlist" ){
+		setlist_span.style.display = "";
+		lyrics_span.style.display = "none" ;
+		toggle_button.innerText = "Show lyrics" ;
+	}
+	else{
+
+		setlist_span.style.display = "none";
+		lyrics_span.style.display = "" ;
+		toggle_button.innerText = "Show setlist" ;
+	}
+}
+
+async function setColumns(c){
+	columns = c ;
+	await formatLyrics() ;
+}
+async function formatLyrics(){
+	let col1 = document.getElementById( "col1") ;
+	let col2 = document.getElementById( "col2") ;
+	let lyrics = await get_lyrics( current_tuneid ) ;
+	console.log("Format lyrics for columns=", columns );
+	if( columns == 1){
+		col1.innerText = lyrics ;
+		col1.colSpan = 2 ;
+		col2.innerText = "";
+	}
+	else{
+		i = Math.round(lyrics.length/2) ;
+		while( i < lyrics.length ){
+			if( lyrics.substring(i,i+1) == "\n"){
+				break ;
+			}
+			i = i + 1 ;
+		}
+		console.log("format lyrics split", i, "of", lyrics.length) ;
+		l1 = lyrics.substring(0,i+1);
+		l2 = lyrics.substring(i);
+		col1.innerText = l1 ;
+		col1.colSpan = 1 ;
+		col2.innerText = l2;
+
+	}
+}
 // Get tune list and refresh every few seconds
 getProgress() ;
 

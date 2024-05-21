@@ -8,7 +8,7 @@ import os
 
 import scheduler
 
-KEEP_OLD_VERSIONS = 3
+KEEP_OLD_VERSIONS = const(2) # type:ignore
 
 
 def backup(filename):
@@ -89,3 +89,10 @@ def find_latest_backup(filename):
     if len(matched_files) == 0:
         raise OSError(errno.ENOENT)
     return matched_files[-1]
+
+def make_folder( folder ):
+    # Create folder if not there
+    try:
+        os.mkdir( folder )
+    except OSError:
+        pass

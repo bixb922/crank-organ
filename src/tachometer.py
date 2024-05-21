@@ -1,3 +1,15 @@
+#>>> si tempo sigue manivela, las RPSEC en paginaplay.html siempre son 1.2
+#>>> pero si tempo no sigue manivela, RPSEC refleja la realidad.
+#>>>>???? REVISAR SI ES ASI????
+
+# >>> tempo follows crank: closely/loosely
+# 
+# >>> get tachosample
+# >>> check  or assert if LOWER_THR < HIGHER_THR < NORMAL_RPSEC
+
+# 
+# If crank is not installed, rpsec should be 0, not NORMAL_RPSEC
+
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Crank rotation speed sensor. Still in testing phase.
@@ -13,46 +25,53 @@ if __name__ == "__main__":
     
 from minilog import getLogger
 from pinout import gpio
+from config import config
 
 # Number of pulses (1 pulse = off + on) per revolution
-# If optical = number of holes or stripes*2
-# since the IRQ is fired both for rising and falling edge
-# >>>> make pulses per rev a config parameter
-PULSES_PER_REV = const(24) 
+PULSES_PER_REV = config.get_int("pulses_per_rev", 24) 
 
 # Factor to convert the milliseconds stored to revolutions per second (rpsec)
 FACTOR = 1000/PULSES_PER_REV
 
 # Less than these minimum means "stopped" or "not turning"
 # The two values give the detection a hysteresis.
-LOWER_THRESHOLD_RPSEC = 0.3  # less than this value means the crank is *not turning*
-HIGHER_THRESHOLD_RPSEC = 0.7 # greater than this value means the crank is *turning*
+LOWER_THRESHOLD_RPSEC = config.get_float( "lower_threshold_rpsec", 0.3)
+HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec", 0.7) # greater than this value means the crank is *turning*
 
-# "Normal" speed, when MIDI speed == real speed
-# >>Make normal_rpsec a config parameter
-NORMAL_RPSEC = const(1.2)
-# >>> make "follow crank" vs "fixed speed" a play.html parameter
+# "Normal" turning speed, when MIDI speed == real speed
+NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
 
 
 # Maximum expected RPM. This limit should be never achieved in practice.
 # Interrupts will be lost if exceeded, this value is used for debouncing.
-MAX_EXPECTED_RPSEC = const(3)
+# The lower the value, the better the protection against bouncing (noise)
+MAX_EXPECTED_RPSEC = config.get_float("max_expected_rpsec", 4)
+
 # Time for signal to settle on transitions (for debouncing)
 # This is actually a time during which the interrupts are disregarded.
-# and is counted from the first interrupt of a bouncing sequence.
+# and is counted from the first interrupt, ignoring the
+# following bouncing oscillations for this time
+# If MAX_EXPECTED_RPSEC is 4 and PULSES_PER_REV is 12,
+# then MINIMUM_MSEC_BETWEEN_IRQ is about 21 milliseconds,
+# i.e. after the first interrupt, no new interrupts will be
+# counted for 21 milliseconds.
 MINIMUM_MSEC_BETWEEN_IRQ = int(1000/MAX_EXPECTED_RPSEC/PULSES_PER_REV)
 
 # Size of buffer of stored periods
-IRQ_BUFFER_SIZE = 4
+# Store one entire revolution. That smoothens out
+# irregularities of the counting wheel nicely.
+IRQ_BUFFER_SIZE = PULSES_PER_REV
 
 # When the crank slows down, then there are less interrupts
 # until there are none, and the interrupts do not show what is
 # happening. If the time since last interrupt is > than the past average
 # by the SLOW_DOWN_FACTOR, then the "time since last interrupt" is
 # dominating the calculation.
-SLOW_DOWN_FACTOR = 1.2
+# Slow down factor > 2 means that one missed interrupt is not counted
+# as "slowing down".
+SLOW_DOWN_FACTOR = 2.5
 
-# for debugging, see: getrawdata
+# for debugging
 #debug_buffer = array("i",(0 for _ in range(1000)))
 #debug_buffer_pointer = 0
 
@@ -67,60 +86,78 @@ class TachoDriver:
         self.rpsec = NORMAL_RPSEC
         # avgdt is the average difference time between
         # interrupts Start with a high value
-        self.avgdt = 10_000
         # Last time a interrupt was detected
         self.last_irq_time = ticks_ms()
-        # dt is for debug >>>
-        self.dt = 10_000 
+        # dt and avgdt is stored for debug only 
+        #self.avgdt = 10_000
+        #self.dt = 10_000 
         # Initialize circular irq_buffer. Times between interrupts are
         # stored here
         self.irq_pointer = 0
-        self.irq_buffer = array("i", (0 for _ in range(IRQ_BUFFER_SIZE)))
+        # Initialize with a high value, meaning "crank does not turn"
+        self.irq_buffer = array("i", (10_000 for _ in range(IRQ_BUFFER_SIZE)))
 
         # No tachometer pin defined
         if not self.tachometer_pin:
             return
         
-        # Hook irq routine to buffer
+        # In case there is a exception in the IRQ routine.
         micropython.alloc_emergency_exception_buf(100)
         tachometer_device = Pin(tachometer_pin,Pin.IN)
-        tachometer_device.irq( trigger=Pin.IRQ_RISING+Pin.IRQ_FALLING,handler=self.pin_irq)
+        # Better check only IRQ_RISING and not IRQ_RISING|IRQ_FALLING, 
+        # because having both may distort the result
+        tachometer_device.irq( trigger=Pin.IRQ_RISING, handler=self.pin_irq)
     
     @micropython.native
-    def pin_irq(self,pin):
-        # global debug_buffer, debug_buffer_pointer
+    def pin_irq(self,_):
+        #global debug_buffer, debug_buffer_pointer
         # Process interrupt request (IRQ) from tachometer pin
         t = ticks_ms()
         dt = ticks_diff(t, self.last_irq_time)
         # Discard very frequent interrupts for debouncing.
-        if dt>MINIMUM_MSEC_BETWEEN_IRQ:
+        if dt > MINIMUM_MSEC_BETWEEN_IRQ:
             # Store the time this interrupt occurred 
             # and the time since the the previous interrupt
             self.last_irq_time = t
-            self.dt = dt #>>>>> store dt for DEBUG only, it's not necessary
+            #self.dt = dt #store dt for DEBUG only, it's not necessary
             p = self.irq_pointer
             self.irq_buffer[p] = dt
             self.irq_pointer = (p+1)%IRQ_BUFFER_SIZE
         # pin_irq takes about 21 microseconds without @micropython.native
         # and 15 microseconds with the @micropython.native decorator
 
-        # DEBUG>>>>, remove debug_buffer after debugging
-        #debug_buffer[debug_buffer_pointer] = dt
-        #debug_buffer_pointer = (debug_buffer_pointer+1)%len(debug_buffer)
-        
+            # for debugging
+            #if debug_buffer_pointer < len(debug_buffer):
+            #    debug_buffer[debug_buffer_pointer] = dt
+            #    debug_buffer_pointer += 1
         
     def get_rpsec(self)->float:
         if self.is_installed():
-            dt_since_last_irq = ticks_diff( ticks_ms(), self.last_irq_time)
-            # >>>> debug, avgdt can be local variable
+            # Store debug buffer when full
+            # from timezone import timezone
+            # global debug_buffer, debug_buffer_pointer
+            # print(f"{debug_buffer_pointer=} {len(debug_buffer)=}")
+            # if debug_buffer_pointer == len(debug_buffer):
+            #     debug_buffer_pointer += 1
+            #     now = timezone.now_ymdhms()
+            #     with open(f"tachosample{now}.tsv", "w") as file:
+            #         file.write("\n")
+            #         for k in debug_buffer:
+            #             file.write(f"\t{k}\n")
+            #         print("tachosample.tsv written")
+
+        
             # Calculate average time between interrupts
-            self.avgdt = sum(self.irq_buffer)/IRQ_BUFFER_SIZE
+            # in milliseconds. 
+            avgdt = max(sum(self.irq_buffer)/IRQ_BUFFER_SIZE,1)
+            dt_since_last_irq = ticks_diff( ticks_ms(), self.last_irq_time)
+            # self.avgdt = avgdt # for debugging
             # If the time since the last interrupt is much larger than the
             # average, then the turning must be slowing down
-            if dt_since_last_irq<self.avgdt*SLOW_DOWN_FACTOR:
+            if dt_since_last_irq < avgdt*SLOW_DOWN_FACTOR:
                 # avgdt is used to calculate rpsec, smoothing out
                 # minor variations of the crank speed.
-                return FACTOR/self.avgdt
+                return FACTOR/avgdt
             # Less interrupts or no interrupts have arrived lately,
             # that means: crank slowing down
             # Use time since last interrupt to calculate revolutions per second
@@ -141,7 +178,7 @@ class Crank:
     def __init__(self,tachometer_pin):
         self.logger = getLogger(__name__)
 
-        # Set UI reference to 50, halfway from 0 to 100.
+        # Set UI setting of velocity to 50, halfway from 0 to 100.
         self.set_velocity(50)
         # Initialize tachometer driver
         self.td = TachoDriver(tachometer_pin)
@@ -230,8 +267,13 @@ class Crank:
     def get_normalized_rpsec(self):
         # Used in player.py to delay/hasten music
         # depending on crank speed
-        return self.td.get_rpsec() * self.velocity_multiplier
+        return self.td.get_rpsec() * self.tempo_multiplier / NORMAL_RPSEC
         
+    def set_velocity_relative( self, change):
+        # Change velocity settings relative to current setting
+        ui_vel = min(max(self.ui_velocity+change,0),100)
+        self.set_velocity( ui_vel )
+
     def set_velocity(self,ui_vel):
         # Velocity is a superimposed manual control via UI to alter the "normal"
         # playback speed. Crank._ui_velocity is the velocity as set by the ui
@@ -239,14 +281,15 @@ class Crank:
 
         self.ui_velocity = ui_vel
         # The UI sets _ui_velocity to a value from 0 and 100, normal=50.
-        # _ui_velocity is a multiplier, 1=normal, 2=double speed, 0.5=half speed
+        # For easier use this value from 0 to 100 is changed
+        # to a multiplier for the MIDI tempo from 0.5 to 2
+        # (half tempo to double tempo).
+        # tempo_multiplier is a multiplier, 1=normal, 2=double speed, 0.5=half speed
         # f(0) => 0.5
         # f(50) => 1
         # f(100) => 2
         # Calculate the multiplier needed by get_normalized_rpsec
-        self.velocity_multiplier = (
-            ui_vel * ui_vel / 10000 + ui_vel / 200 + 0.5
-        ) / NORMAL_RPSEC
+        self.tempo_multiplier = ui_vel * ui_vel / 10000 + ui_vel / 200 + 0.5
 
 
     def complement_progress(self,progress):
@@ -256,6 +299,8 @@ class Crank:
         progress["is_turning"] = self.is_turning()
         progress["normalized_rpsec"] = self.get_normalized_rpsec()
         progress["tacho_installed"] = self.is_installed()
+        progress["tempo_multiplier"] = self.tempo_multiplier
+        return progress
 
 crank = Crank(gpio.tachometer_pin)
 
@@ -278,6 +323,7 @@ if __name__ == "__main__":
         # show and record unprocessed irq data
         #genirq_task = asyncio.create_task(genirq(td))
         print("main started")
+        # Must uncomment debug_buffer above
         while debug_buffer_pointer < len(debug_buffer)-2:
             await asyncio.sleep_ms(500)
             p = debug_buffer_pointer/len(debug_buffer)*100
@@ -292,7 +338,7 @@ if __name__ == "__main__":
     async def testcrank():
         #genirq_task = asyncio.create_task(genirq(td))
         start_ev = crank.register_event( 0 )
-        stable_ev = crank.register_event( 500 )
+        stable_ev = crank.register_event( 50 )
         bored_ev = crank.register_event( 3000 )
         while True:
             cit = "       "
@@ -306,7 +352,7 @@ if __name__ == "__main__":
             overht = "Y" if rpsec > HIGHER_THRESHOLD_RPSEC else " "
             stopped = "Y" if crank.stop_turning_event.is_set() else " "
             tdlast = ticks_diff(ticks_ms(),td.last_irq_time)
-            #print(f"rpsec={td.get_rpsec():2.1f} {cit} {start=} {stable=} {bored=} {stopped=} {overlt=} {overht=} {td.dt=:4d} {td.avgdt=:4.0f}")
+            print(f"rpsec={td.get_rpsec():2.1f} {cit} {start=} {stable=} {bored=} {stopped=} {overlt=} {overht=} {td.dt=:4d} {td.avgdt=:4.0f}")
             print(f"{rpsec:5.2f} {'*'*round(rpsec*80)}")
             await asyncio.sleep_ms(100)
 

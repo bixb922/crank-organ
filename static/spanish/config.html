@@ -94,14 +94,34 @@ password</div>
     
 	<button type="button" onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
-
-<div class="middlediv">Other parameters</div>
-    <input id="automatic_playback" name="automatic_playback" type="checkbox" oninput="markField('automatic_playback')"/>
+<div class="middlediv">Crank and tune play parameters</div>
+	<input id="automatic_playback" name="automatic_playback" type="checkbox" oninput="markField('automatic_playback')"/>
 	<label for="automatic_playback">Play one tune after the other automatically, with a delay</label>
 	<br>
-    <label>Delay between one tune and the next if automatic playback is selected. Random time if zero. In seconds, integer only:</label>
-    <input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')"/>
-    <br>
+	<label>Delay between one tune and the next if automatic playback is selected. Random time if zero. In seconds, integer only:</label>
+	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')"/>
+	<br>
+	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
+	<label for="tempo_follows_crank">Tempo follows crank, setting at startup. Checked means that the playback tempo varies with the crank speed</label>
+	<br>
+	<label for="pulses_per_revolution">Pulses per revolution(rising+falling edge) of crank revolution sensor. It's the number of pulses the crank sensor gives for each revolution.</label>
+	<input id="pulses_per_revolution" type="text" size="4" oninput="markField('pulses_per_revolution')">
+	<br>
+	<label for="lower_threshold_rpsec">Low threshold: to detect crank is still turning. When lower than this speed, the crank is considered as 'not turning anymore'. in revolutions per second:</label>
+	<input id="lower_threshold_rpsec" type="text" size="4" oninput="markField('lower_threshold_rpsec')">
+	<br>
+	<label for="higher_threshold_rpsec">High threshold: to detect crank starts turning. When higher than this speed, the crank is considered to have started turning, in revolutions per second:</label>
+	<input id="higher_threshold_rpsec" type="text" size="4" oninput="markField('higher_threshold_rpsec')">
+	<br>
+	<label for="normal_rpsec">Normal value of crank speed. If tempo follows crank, this is the speed where the tempo is the recorded tempo in the MIDI file, in revolutions per second:</label>
+	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
+	<br>
+	<label for="max_expected_rpsec">Maximum value expected for crank speed. This is used for debouncing the signal, should be the highest expected speed. The lower the better the debouncing, in revolutions per second:</label>
+	<input id="max_expected_rpsec" type="text" size="4" oninput="markField('max_expected_rpsec')">
+	<br>
+	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','max_expected_rpsec','automatic_delay', 'automatic_playback' )">Save play tune parameters</button>
+
+<div class="middlediv">Other parameters</div>
     <br>
     
     Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
@@ -132,7 +152,7 @@ password</div>
 	<br>
     
 	
-	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low', 'automatic_delay', 'automatic_playback' )">Save other parameters</button>
+	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
     
 <div class="middlediv">Debug/test settings</div>
    
