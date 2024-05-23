@@ -17,7 +17,7 @@ status_text = "cancelado"|status_text = "cancelled"
 >Tiempo tocando<|>Time playing<
 >Tiempo remanente|>Remaining time
 >Alcanza para<|>Enough for<
->melodías<|>tunes<
+[melodías]|[tunes]
 >Melodías tocadas<|>Tunes played<
 >Tiempo solenoides energizados<|>Time solenoids energized<
 >Puesto en cero<|>Set to zero<
@@ -93,6 +93,8 @@ Melodía actual|Current tune
 >Partir|>Start
 >Al comienzo|>To beginning
 >Próximo|>Next
+>Letra|>Lyrics
+>Setlist|>Setlist
 >Guardar setlist<|>Save setlist<
 >Cargar setlist<|>Load setlist<
 >Borrar setlist<|>Clear setlist<
@@ -120,6 +122,7 @@ rev/seg|rev/sec
 "No hay información de avance disponible"|"No progress information available"
 "Mostrar setlist"|"Show setlist"
 "Mostrar letra"|"Show lyrics"
+>Mostrar letra<|>Show lyrics<
 
 *diag.html
 >Descripción<|>Description<

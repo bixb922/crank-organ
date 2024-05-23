@@ -27,7 +27,7 @@
 			</td>
 			<td>
 				<img src="/static/crank.jpg" width=100>
-                <span id="serverinfo"><br>
+                <span id="serverinfo" style="display:none"><br>
                     <a href="" id="serverlink">Server link</a>
                 </span>
 			</td>
@@ -133,7 +133,7 @@
 		<tr><td>Verbleibende Zeit</td><td id="remaining_seconds"></td><td>[hh:mm]</td></tr>
         <tr>
 			<td>Reicht für</td><td id="tunes_remaining"></td>
-            <td>Melodien</td>
+            <td>[Melodien]</td>
 		</tr>
 		<tr>
 			<td>Zeit operativ</td><td id="operating_seconds"></td><td>[hh:mm]</td>
@@ -142,7 +142,7 @@
 			<td>Zeit Musikwiedergabe</td><td id="playing_seconds"></td><td>[hh:mm]</td>
 		</tr>
         <tr>
-			<td>Gespielte Melodien</td><td id="tunes_played"></td><td>[melodías]</td>
+			<td>Gespielte Melodien</td><td id="tunes_played"></td><td>[Melodien]</td>
 		</tr>
         <tr>
 			<td>Zeit Ventile an</td><td id="solenoid_on_seconds"></td><td>[hh:mm]</td>
@@ -270,7 +270,7 @@ async function startFTP(){
     await revoke_credentials();
     if( resp["result"] == "ok" ){
         showPopup( "ftpButton", "FTP gestarted" );
-        textById( "ftpResult", ∫"FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen.");
+        textById( "ftpResult", "FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen.");
     } 
 }
 getPageData() ; 

@@ -23,7 +23,7 @@
 	<tbody id="tuneinfo">
 	</tbody>
 </table>
-<button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Mostrar letra</button>
+<button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Show lyrics</button>
 <span id="setlist_span">
 	<div class="middlediv">Setlist</div>
 
@@ -39,8 +39,7 @@
 	<button type="button" onclick="go_history()">History</button>
 </span>
 <span id="lyrics_span" style="display:none">
-	<div class="middlediv">Letra</div>
-	Columnas: <a onclick="setColumns(1)">1️⃣</a>&nbsp;<a onclick="setColumns(2)">2️⃣</a>
+	<div class="middlediv">Lyrics <a onclick="setColumns(1)">1️⃣</a>&nbsp;<a onclick="setColumns(2)">2️⃣</a></div>
 	<table>
 		<tbody>
 			<tr><td id="col1"></td><td id="col2"></td></tr>
@@ -152,26 +151,37 @@ async function updateProgress( progress ) {
                 <button onclick = 'startTune()'>Start</button>
                 <button onclick = 'backSetList()'>To beginning </button>
                 <button onclick = 'stopTuneSetList()'>Next </button></td>
-            </tr>
-            <tr><td>${header[1]}</td>
+            </tr>`;
+		if( tune[TLCOL_GENRE] != ""){
+            s += `<tr><td>${header[1]}</td>
                 <td>${tune[TLCOL_GENRE]}</td>
-            </tr>
-            <tr><td>${header[2]}</td>
+            </tr>`;
+		}
+		if( tune[TLCOL_AUTHOR] != ""){
+            s += `<tr><td>${header[2]}</td>
 		        <td>${tune[TLCOL_AUTHOR]}</td>
-            </tr>
-            <tr><td>${header[3]}</td>
+            </tr>`;
+		}
+		s += `<tr><td>${header[3]}</td>
 		        <td>${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
-            </tr> 
-            <tr><td>${header[4]}</td>
+            </tr>`; 
+		if( tune[TLCOL_YEAR] != ""){
+            s += `<tr><td>${header[4]}</td>
 		        <td>${tune[TLCOL_YEAR]}</td>
-            </tr>
-            <tr><td>${header[5]}</td>
+            </tr>`;
+		}
+		if( tune[TLCOL_INFO] != ""){
+            s += `<tr><td>${header[5]}</td>
 		        <td>${tune[TLCOL_INFO]}</td>
-            </tr>
-            <tr><td>${header[6]}</td>
+            </tr>`;
+		}
+		let rating = get_rating(tune);
+		if( rating != ""){
+            s += `<tr><td>${header[6]}</td>
 		        <td>${get_rating(tune)}</td>
-            </tr>
-			<tr><td id='progress'></td>
+            </tr>`;
+		}
+		s += `<tr><td id='progress'></td>
 		         <td id='timebar'></td>
             </tr>`;
 

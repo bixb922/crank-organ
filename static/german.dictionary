@@ -18,7 +18,7 @@ status_text = "cancelado"|status_text = "gestrichen"
 >Tiempo tocando<|>Zeit Musikwiedergabe<
 >Tiempo remanente|>Verbleibende Zeit
 >Alcanza para<|>Reicht für<
->melodías<|>Melodien<
+[melodías]|[Melodien]
 >Melodías tocadas<|>Gespielte Melodien<
 >Tiempo solenoides energizados<|>Zeit Ventile an<
 >Puesto en cero<|>Auf Null gesetzt<
@@ -34,7 +34,7 @@ Configuración pins/MIDI|Pin und MIDI Konfiguration
 Afinador|Stimmgerät
 Teclado bluetooth|Bluetooth keyboard
 "Contadores batería en cero"|"Batteriezähler auf Null"
-"Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|∫"FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
+"Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"|"FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."
 "Partió FTP."|"FTP gestarted"
 "Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"|"Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"
 "Nivel debe estar entre 0 y 100"|"Level muss zwischen 0 und 100 liegen"
@@ -60,7 +60,7 @@ B&uacute;squeda|Suche
 "No hay información de avance disponible"|"Information über Fortschritt nicht verfügbar"
 
 *keyboard.html
-
+page not available|page not available
 Nombre Bluetooth|Bluetooth name
 Aviso Bluetooth|Advertising
 Conectado|Connected
@@ -93,6 +93,8 @@ Deshabilitado por afinador, pinout|Stimmgerät oder Pinout test aktiv, keine Mus
 Melodía actual|Jetzige Melodie
 >Partir|>Start
 >Al comienzo|>Zum Anfang
+>Letra|>Liedtext
+>Setlist|>Setlist
 >Próximo|>Nächster
 >Guardar setlist<|>Setlist speichern<
 >Cargar setlist<|>Setlist laden<
@@ -121,6 +123,7 @@ Tempo sigue manivela<|Drehgeschwindingkeit beeinflusst Tempo<
 "No hay información de avance disponible"|"Information über Fortschritt nicht verfügbar"
 "Mostrar setlist"|"Setlist anzeigen"
 "Mostrar letra"|"Liedtext anzeigen"
+>Mostrar letra<|>Liedtext anzeigen<
 
 *diag.html
 >Descripción<|>Beschreibung<

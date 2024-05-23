@@ -108,7 +108,7 @@ direntries = const(( ( '/20_note_Carl_Frei.json',  ( _f3, True, 909 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2024/02/20 17:25:50' )
+date_frozen = const( '2024/05/22 20:40:34' )
 
 sum_size = const(5809)
 files_folders = const(5)
@@ -178,6 +178,6 @@ def extract_fs( module_name, target, overwrite, silent ):
   del sys.modules[ module_name ]
  vp = _VerbosePrint( module_name, "extract", silent )
  vp.print( f"extracting files to {target}." )
- _extract_all( module.direntries, target, overwrite, vp )
+ _extract_all( direntries, target, overwrite, vp )
  return 
 extract_fs( __name__, '/data', 'always', False )

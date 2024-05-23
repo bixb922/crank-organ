@@ -158,14 +158,14 @@ class TuneManager:
         self.tunelib_progress += "Checking for new files<br>"
 
         for fn in filelist:
-            await asyncio.sleep_ms(10)
+            await asyncio.sleep_ms(1)
             key, fn = self._make_unique_hash(fn, newtunelib)
-            filename = self.tunelib_folder + fn
             if key in tunelib:
                 continue
+            filename = self.tunelib_folder + fn
             # New file detected, add to tunelib.json
             self.tunelib_progress += (
-                f"Adding {fn}, computing duration {filename}<br>"
+                f"Adding {fn}, computing duration of {filename}<br>"
             )
 
             try:
@@ -200,8 +200,8 @@ class TuneManager:
 
         self.tunelib_progress += "Checking for deleted files<br>"
 
-        for k, tune in newtunelib.items():
-            await asyncio.sleep_ms(10)
+        for  tune in newtunelib.values():
+            await asyncio.sleep_ms(1)
             # Add missing columns
             while len(tune) < TLCOL_COLUMNS:
                 tune.append("")
@@ -260,9 +260,8 @@ class TuneManager:
             key = "i" + self._compute_hash(fn)
             tune = newtunelib.get(key, None)
             if not tune or tune[TLCOL_FILENAME] == fn:
-                if not tune:
-                    print(f"new key {key=} {fn=} {tune=}")
                 return key, fn
+            
             self.logger.error("Key collision, please rename this tune:", key, fn)
             # Collision. Probability is near nil, of the 
             # order of 1/2**48

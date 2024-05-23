@@ -1,14 +1,7 @@
 #>>> si tempo sigue manivela, las RPSEC en paginaplay.html siempre son 1.2
 #>>> pero si tempo no sigue manivela, RPSEC refleja la realidad.
 #>>>>???? REVISAR SI ES ASI????
-
-# >>> tempo follows crank: closely/loosely
-# 
-# >>> get tachosample
-# >>> check  or assert if LOWER_THR < HIGHER_THR < NORMAL_RPSEC
-
-# 
-# If crank is not installed, rpsec should be 0, not NORMAL_RPSEC
+# >>>If crank is not installed, rpsec should be None, not NORMAL_RPSEC
 
 # (c) 2023 Hermann Paul von Borries
 # MIT License

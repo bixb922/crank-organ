@@ -14,7 +14,8 @@
 # >>> asked anyhow and there is not much else to do
 # >>> during tuning.
 #
-# >>> add tunelib export as .tsv for spreadsheet. to clipboard.
+# >>> add tunelib export as .tsv for spreadsheet
+# >>>not feasible to clipboard if not https.
 
 import os
 import sys
