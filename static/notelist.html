@@ -3,6 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 <body>
@@ -15,21 +16,20 @@
 </div>
 
 <script type="text/javascript" src="/static/common.js"></script>
-<button type="button" onclick="tuneAll()" id="tuneAllButton">Alle Noten stimmen</button>
+<script type="text/javascript" src="/static/translations.js"></script>
 
-<button type="button" onclick="scaleTest()" id="scaleTestButton">Notenskala</button>
-    
-<button type="button" onclick="clearTuning()" id="clearTuningButton">Gespeicherte Frequenzen löschen</button>
-
+<button type="button" onclick="tuneAll()" id="tuneAllButton">Afinar todos</button>
+<button type="button" onclick="scaleTest()" id="scaleTestButton">Escala de prueba</button>
+<button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
 <button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
 
 <div class="tableFixHead">
     <table  style="width:100%">
 		<thead>
 			<tr>
-				<th>Programm-Note</th>
-				<th colspan="2">Frequenz (cents)</th>
-				<th colspan="2">Amplitude (db)</th>
+				<th>Programa-nota</th>
+				<th colspan="2">Afinación (cents)</th>
+				<th colspan="2">Amplitud (db)</th>
 				<th>Pin</th>
 			</tr>
 		</thead>
@@ -134,6 +134,7 @@ async function scaleTest() {
     await fetch_json( "/scale_test" ) ;   
 }
 
+translate_html();
 getNoteList() ;
 
 </script>

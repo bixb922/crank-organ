@@ -27,7 +27,6 @@ TLCOL_INFO = const(8) # type:ignore
 TLCOL_DATEADDED = const(9)  # type:ignore
 TLCOL_RATING = const(1) # type:ignore
 TLCOL_SIZE = const(11)  # type:ignore
-#>>>history is not being updated?
 TLCOL_HISTORY = 12
 #>>>KEEP INDICATOR "FILE DELETED" INSTEAD OF DELETING ROW?
 #>>>values 1/0 instead of true/false

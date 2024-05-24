@@ -3,6 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 
@@ -11,22 +12,23 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
-		&nbsp;Verlauf
+		&nbsp;<span>Historia</span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<!-- html continues below javascript -->
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
 <div class="tableFixHead">
 
     <table>
         <thead>
           <tr>
-            <th>Datum</th>
-            <th>Melodie</th>
-            <th>% abgespielt</th>
-            <th>Wunsch&nbsp;</th>
+            <th>Fecha</th>
+            <th>Melodía</th>
+            <th>Avance %</th>
+            <th><span>Pedido</span>&nbsp;</th>
           </tr>
         </thead>
         <tbody id="history">
@@ -34,9 +36,9 @@
     </table>
 </div>
 <div class="middlediv"></div>
-	Wenn älter als
-	<input type="text" size="3" value="90" id="days"/>Tage,
-	<button onclick="deleteHistory()" id="purgeButton">Löschen </button>
+	Si historia más antigua que
+	<input type="text" size="3" value="90" id="days"/>días,
+	<button onclick="deleteHistory()" id="purgeButton">Borrar </button>
 <div class="footerdiv"></div>
 </body>
 
@@ -110,7 +112,7 @@ async function deleteHistory(){
 	resp = await fetch_json( "/delete_history/" + days ) ;
     if( resp["result"] == "ok"){
 
-       showPopup("", "Verlauf gelöscht" ); //>>>add to translation
+       showPopup("", "Historia truncada" ); //>>>add to translation
        await sleep_ms(1000);
        window.location.reload() ;
     }
@@ -140,16 +142,17 @@ async function make_tune_title( tuneid ){
 
 
 async function register_comment(title, tuneid){
-	comment = prompt("Schreib Kommentar oder Bewertung *, **, *** für:" + title);
+	comment = prompt(tlt("Ingrese comentario o puntaje *, ***,*** para: ") + title);
 	if( comment != null ){
 		j = { "tuneid": tuneid, "comment": comment };
 		await fetch_json( "/register_comment", j );
 		drop_tunelib() ;
-        showPopup("", "Information aktualisiert"); //>>> add to translaation
+        showPopup("", "Información actualizada"); //>>> add to translaation
         await sleep_ms(1000);
         window.location.reload() ;
     }
 }
 
+translate_html() ;
 getHistory() ;
 </script>

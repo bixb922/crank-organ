@@ -17,6 +17,9 @@
 # >>> add tunelib export as .tsv for spreadsheet
 # >>>not feasible to clipboard if not https.
 
+# >>> first time progress to clear cache
+#>>> dwscriuption in title
+
 import os
 import sys
 import gc

@@ -3,6 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 <body>
@@ -15,13 +16,19 @@
 </div>
 
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
 <button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
 <button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
 <button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetición</button>
     
 <div class="middlediv"></div>
 <table>
-	<tbody id="notebody">
+	<tbody id>
+		<tr><td>Programa-nota</td><td id="note_name"></td></tr>
+		<tr><td>Cents</td><td id="cents"></td></tr>
+		<tr><td>Amplitud</td><td id="amplitude"></td></tr>
+		<tr><td>Pin</td><td id="pin_name"></td></tr>
 	</tbody>
 </table>
 
@@ -58,28 +65,22 @@ function updateNoteInfo( notelist ) {
 	let midi = getResourceNumberFromURL() ;
 	let note = notelist[midi] ;
 	let s = "" ;
-	
-	s += "<tr><td>Programa-nota</td><td>" + note["name"] + "</td></tr>" ;
+	textById( "note_name", note["name"] ) ;
     cents = note["cents"] ;
+	s = "-" ;
     if( cents != null ){
-	   s += "<tr><td>Cents</td><td>" + Math.round(cents) + "</td></tr>" ;
+		s = Math.round(cents) ;
     }
-    else {
-        s += "<tr><td>-</td><td>-</td></tr>" ;
-    }    
-    ampdb = note["ampdb"] ;
+	textById( "note_name", s ) ;
+    let ampdb = note["ampdb"] ;
+	s = "-" ;
     if( ampdb != null ) {
-	   s += "<tr><td>Amplitud</td><td>" + Math.round(ampdb) + "</td></tr>" ;
+	   s += Math.round(ampdb) ;
     }
-    else {
-        s += "<tr><td>-</td><td>-</td></tr>" ;
-    }
-    
-    s += "<tr><td>Pin</td><td>" + note["pinname"] + "</td></tr>" ;
-	htmlById("notebody", s) ;
+	textById( "amplitude", ambdb );
+	textById( "pin_name", note["pinname"] ) ;
 
-
-	htmlById("tuningcaption", "Afinaci&oacute;n (-" + MAX_CENTS + " a " + MAX_CENTS + " cents)") ;
+	htmlById("tuningcaption", tlt("Afinación") + "(-" + MAX_CENTS + tlt(" a ") + MAX_CENTS + " cents)") ;
 	let st = "" ;
 	centslist = note["centslist"] ;
 	for( let j = 0 ; j < centslist.length ; j++ ){
@@ -95,7 +96,7 @@ function updateNoteInfo( notelist ) {
 	htmlById("tuningbody", st) ;
 	
 	let amplistdb = note["amplistdb"] ;
-	textById("ampcaption", "Amplitud (" + MIN_DB + " a "+ MAX_DB +" dB)" );
+	textById("ampcaption", tlt("Amplitud") +  "(" + MIN_DB + tlt(" a ") + MAX_DB +" dB)" );
 	let sa = "" ;
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
 		sa += `<tr>
@@ -162,6 +163,8 @@ async function soundRepetition() {
 	await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
 }
 
+translate_html();
 getNoteInfo() ;
+
 
 </script>

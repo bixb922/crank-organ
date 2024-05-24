@@ -3,6 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+    <title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 
@@ -11,13 +12,16 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;Lista de melodías
+		&nbsp;<span>Lista de melodías</span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <!-- html continues below javascript -->
+
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
 <script>
 // Function to translate characters with accent and tilde
 let   from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç", 
@@ -58,7 +62,6 @@ function searchTable() {
 	for (let i = 1; i < tr.length; i++) {
 		let txtValue = normalizaTildes( tr[i].innerText ) ;
 		if (txtValue.toUpperCase().indexOf(filter) > -1 ) {
-				//|| txtValue.indexOf("Título") == 0 ) {
 			tr[i].style.display = "";
 		} else {
 			tr[i].style.display = "none";
@@ -70,7 +73,7 @@ function searchTable() {
 
 	<input type="text" id="searchInput"
            onkeyup="searchTable()"
-           placeholder="&#128269;B&uacute;squeda"
+           placeholder="🔍Búsqueda"
            size="10"/>
 	<button id="navigateToPlayPage" type="button" onclick="navigateToPlayPage()">Actuación</button>
     
@@ -89,13 +92,10 @@ function searchTable() {
 let tunelist = [] ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
-let header = ["Título", "Género", "Autor", "", "Año", "Hist", "Info", "Fecha", "Pts"] ;
+let header = [ tlt("Título"), tlt("Género"), tlt("Autor"), "mm:ss", tlt("Año"), tlt("Hist"), tlt("Info"), tlt("Fecha"), tlt("Pts")] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
-function isUsedFromServer(){
-    return document.cookie.includes( "drehorgel=" ) ;   
-}
 // Called when loading page:
 async function setTuneList( ) {
     console.log("setTuneList cookie=", document.cookie );
@@ -117,7 +117,6 @@ async function setTuneList( ) {
 
 function fillHeader( ){
 
-	let header = ["Título", "Género", "Autor", "m:ss", "Año", "Hist", "Info", "Fecha", "Pts"] ;
 	let s = "<tr>" ;
 	for (let  j = 0 ; j < header.length ; j++ ){
         let h = "";
@@ -183,7 +182,7 @@ async function queueTune( tuneid ) {
         console.log("queueTune resp=", resp );
         spectator_name = resp["spectator_name"] ;
         while( spectator_name == "" ){
-            spectator_name = window.prompt("¿Cual es tu nombre?").trim().replace(/<\/?[^>]+(>|$)/g, "");
+            spectator_name = window.prompt("¿Cuál es tu nombre?").trim().replace(/<\/?[^>]+(>|$)/g, "");
         }
     }
 
@@ -345,8 +344,11 @@ async function showFullInfo(tuneid){
     showPopup( "", info ) ;
 }
 
+translate_html();
 
-// setTuneList will call getProgress the first time, 
-// and getProgress will continue refreshing...
+// setTuneList will call getProgress the first time,    
+// and getProgress will continue refreshing
 setTuneList() ;
+
+
 </script>

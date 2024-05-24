@@ -4,6 +4,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 <body>
@@ -12,17 +13,34 @@
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
 	</span>
-    <b>&nbsp;&nbsp;&nbsp;Melodía actual</b>
+    &nbsp;&nbsp;&nbsp;<b>Melodía actual</b>
 	<span class="headerright" id="header_time"></span>
 </div>
 
 
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
-<table>
-	<tbody id="tuneinfo">
+<table id="main_info_table">
+	<tbody>
+		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name""></td></tr>
+		<tr><td colspan="2" id="title"></td></td></tr>
+		<tr id='controlButtons'><td colspan='2'> 
+			<button onclick = 'startTune()'>Partir</button>
+			<button onclick = 'backSetList()'>Al comienzo</button>
+			<button onclick = 'stopTuneSetList()'>Próximo</button></td>
+		</tr>
+		<tr id="genre_row"><td>Género</td><td id="genre"></td></tr>
+		<tr id="author_row"><td>Autor</td><td id="author"></td></tr>
+		<tr id="duration_row"><td>Duración</td><td id="duration"></td></tr>
+		<tr id="year_row"><td>Año</td><td id="year"></td></tr>
+		<tr id="info_row"><td>Info</td><td id="info"></td></tr>
+		<tr id="rating_row"><td>Puntos</td><td id="rating"></td></tr>
+		<tr id="timebar_row"><td id="progress"></td><td id="timebar"></td></tr>
 	</tbody>
 </table>
+<span id="no_tune_span">No hay melodía en curso</span>
 <button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Mostrar letra</button>
 <span id="setlist_span">
 	<div class="middlediv">Setlist</div>
@@ -39,54 +57,49 @@
 	<button type="button" onclick="go_history()">Historia</button>
 </span>
 <span id="lyrics_span" style="display:none">
-	<div class="middlediv">Letra <a onclick="setColumns(1)">1️⃣</a>&nbsp;<a onclick="setColumns(2)">2️⃣</a></div>
+	<div class="middlediv"><span>Letra</span>&nbsp;<a onclick="setColumns(1)" id="col1_link">1️⃣</a>&nbsp;<a onclick="setColumns(2)" id="col2_link">2️⃣</a></div>
 	<table>
 		<tbody>
 			<tr><td id="col1"></td><td id="col2"></td></tr>
 		</tbody>
 	</table>
 </span>
-<div class="middlediv">Control tempo</div>
-    Ajuste velocidad:
-    <br>
-	<a onclick="set_velocity(-5)" style="cursor:pointer">&#9194;&nbsp;</a>
-	<span id="velocityText"></span><span id="velocityGraph"></span>
-	<a onclick="set_velocity(5)" style="cursor:pointer">&nbsp;&#9193;</a>
-	<br>
-	<span id="crankInfo">
+<span id="crank_span">
+	<div class="middlediv">Control tempo</div>
+		<span>Ajuste velocidad:</span>
 		<br>
-        <input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">Tempo sigue manivela</button>
-        <br>
+		<a onclick="set_velocity(-5)" style="cursor:pointer">&#9194;&nbsp;</a>
+		<span id="velocityText"></span><span id="velocityGraph"></span>
+		<a onclick="set_velocity(5)" style="cursor:pointer">&nbsp;&#9193;</a>
 		<br>
-        <span id="turning">Girando</span>
-        <span id="rpsecText">nnn</span>&nbsp;rev/seg&nbsp;
-        <span id="rpsecGraph"></span>
-	</span>
-	
+		<span id="crankInfo">
+			<br>
+			<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">Tempo sigue manivela</button>
+			<br>
+			<br>
+			<span id="turning">Girando</span>
+			<span id="rpsecText">nnn</span>&nbsp;rev/seg&nbsp;
+			<span id="rpsecGraph"></span>
+		</span>
+</span>	
 
-<!-- <div style="width:100%;display:flex;justify-content:center;"> -->
-<!-- <img src="" style="width:75%;margin:auto;" id="funny"> -->
-<!-- </div> -->
 <div style="width:100%; height:5px"></div>
 <div class="footerdiv"></div>
 
 </body>
 
 <script>
-// Load image
-//let numberOfImages = 7 ; // from m0 to m6
-//document.getElementById("funny").src = 
-//		"/static/m" + (Date.now() % numberOfImages) + ".jpg" ;
 
 // Tune list with titles and attributes gets loaded in memory
 let last_progress_seen = {} ;
 let columns = 1;
 let current_tuneid = "" ;
 async function getProgress() {	
+	sleep_ms(1) ;
 	while( true ) {
         progress = await fetch_json ( "/get_progress" ) ;
         if( progress == undefined ){
-            showPopup( "", "No hay información de avance disponible");
+            showPopup( "", tlt("No hay información de avance disponible"));
         }
 
         await updateProgress( progress );
@@ -118,10 +131,8 @@ async function updateProgress( progress ) {
     let s = "" ;
 	if( current_tuneid === null ) {
 		// No tune playing
-        s = ""
-        s += "<tr><td id='progress'></td>";
-		s += "<td id='timebar'></td></tr>" ;				
-		htmlById("tuneinfo", s) ;
+		showHideElement( "main_info_table", false );
+		showHideElement( "no_tune_span", true ) ;
         
 		textById("progress", "...") ;
 		progressBar( "timebar", 0, 60 ) ;
@@ -133,59 +144,33 @@ async function updateProgress( progress ) {
 	}
 	else {
 		let tune = tunelib[current_tuneid] ;
-		let header = ["T&iacute;tulo", "G&eacute;nero","Autor", "Duraci&oacute;n","A&ntilde;o", "Info", "Puntos", "Letra" ] ;
-        let s = "" ;
+		showHideElement( "main_info_table", true );
+		showHideElement( "no_tune_span", false ) ;
+
         let spectator_name = tune_requests[current_tuneid];
-        if( spectator_name != undefined ){
-            s += `<tr><td>Pedido por</td>
-                      <td>${spectator_name}</td>
-                  </tr>`;
-        }
+		textById( "spectator_name",  spectator_name );
+		showHideElement( "request_row", spectator_name );
 
-		// Unicode 9198 = media control skip backward
-		// Unicode 23F9 = media control "stop"
-        s += `<tr><td colspan="2">
-                <b>${tune[TLCOL_TITLE]}</b></td>
-             </tr>
-             <tr><td colspan='2'> 
-                <button onclick = 'startTune()'>Partir</button>
-                <button onclick = 'backSetList()'>Al comienzo </button>
-                <button onclick = 'stopTuneSetList()'>Próximo </button></td>
-            </tr>`;
-		if( tune[TLCOL_GENRE] != ""){
-            s += `<tr><td>${header[1]}</td>
-                <td>${tune[TLCOL_GENRE]}</td>
-            </tr>`;
-		}
-		if( tune[TLCOL_AUTHOR] != ""){
-            s += `<tr><td>${header[2]}</td>
-		        <td>${tune[TLCOL_AUTHOR]}</td>
-            </tr>`;
-		}
-		s += `<tr><td>${header[3]}</td>
-		        <td>${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
-            </tr>`; 
-		if( tune[TLCOL_YEAR] != ""){
-            s += `<tr><td>${header[4]}</td>
-		        <td>${tune[TLCOL_YEAR]}</td>
-            </tr>`;
-		}
-		if( tune[TLCOL_INFO] != ""){
-            s += `<tr><td>${header[5]}</td>
-		        <td>${tune[TLCOL_INFO]}</td>
-            </tr>`;
-		}
+		textById( "title", tune[TLCOL_TITLE]) ;
+
+		textById( "genre", tune[TLCOL_GENRE]) ;
+		showHideElement( "genre_row", tune[TLCOL_GENRE]) ;
+
+		textById( "author", tune[TLCOL_AUTHOR] ) ;
+		showHideElement( "author_row", tune[TLCOL_AUTHOR ] );
+
+		textById( "duration",formatMilliMMSS( tune[TLCOL_TIME] ));
+
+		textById( "year", tune[TLCOL_YEAR]) ;
+		showHideElement( "year_row", tune[TLCOL_YEAR]) ;
+
+		textById( "info", tune[TLCOL_INFO]) ;
+		showHideElement( "info_row", tune[TLCOL_INFO]) ;
+
 		let rating = get_rating(tune);
-		if( rating != ""){
-            s += `<tr><td>${header[6]}</td>
-		        <td>${get_rating(tune)}</td>
-            </tr>`;
-		}
-		s += `<tr><td id='progress'></td>
-		         <td id='timebar'></td>
-            </tr>`;
+		htmlById( "rating", rating) ;
+		showHideElement( "rating_row", rating ) ;
 
-		htmlById("tuneinfo", s) ;
 		let lyrics = await formatLyrics() ;
 		if( lyrics == "" ){
 			// No lyrics, no toggle button and setlist controls only
@@ -249,9 +234,9 @@ async function updateProgress( progress ) {
 	let velmult = progress["tempo_multiplier"] ;
 	let velText = "" ;
 	if( !isNaN(velmult)){
-		veltext = "" + Math.round( velmult*10 )/10 + "x " ;
+		velText = "" + Math.round( velmult*10 )/10 + "x " ;
 	}
-	textById("velocityText", veltext );
+	textById("velocityText", velText );
 	let rpsec = progress["rpsec"] ;
 
 	
@@ -282,17 +267,38 @@ async function updateProgress( progress ) {
 	else {
 		document.getElementById("crankInfo").style.display = "none" ;	
 	}
+
+	if( isUsedFromServer() ){
+		// This page is residing on drehorgel.pythonanywhere.com
+		// disable non-functional buttons (no action on this server)
+		// No progress during tunes, since mcserver is disabled during tune
+		// No 1/2 column select, may be too confusing
+		// Always show lyrics
+		document.getElementById("crank_span").style.display = "none";
+		document.getElementById("lyrics_span").style.display = "";
+		document.getElementById("setlist_span").style.display = "none";
+		document.getElementById("toggleSetlistLyricsButton").style.display = "none" ;
+		document.getElementById("col1_link").style.display = "none" ;
+		document.getElementById("col2_link").style.display = "none" ;
+		document.getElementById("timebar").style.display = "none";
+		document.getElementById("progress").style.display = "none";
+		
+		d = document.getElementById("controlButtons");
+		if( d != null && d != undefined ){
+			d.style.display = "none" ;
+		}
+
+	}
 }
 
 
 async function saveSetList() {
 	let resp = await fetch_json("/save_setlist" ) ;
 	if( resp["result"] == "ok" ) {
-		showPopup( "saved", "Guardado") ;
-	    // textById("saved", "Guardado" );
+		showPopup( "saved", tlt("Guardado")) ;
 	}	
 	else {
-		showPopup( "saved", "No guardado, error") ;
+		showPopup( "saved", tlt("No guardado, error")) ;
 	}
 }
 
@@ -398,7 +404,6 @@ async function formatLyrics(){
 	let col1 = document.getElementById( "col1") ;
 	let col2 = document.getElementById( "col2") ;
 	let lyrics = await get_lyrics( current_tuneid ) ;
-	console.log("Format lyrics for columns=", columns );
 	if( columns == 1){
 		col1.innerText = lyrics ;
 		col1.colSpan = 2 ;
@@ -412,7 +417,6 @@ async function formatLyrics(){
 			}
 			i = i + 1 ;
 		}
-		console.log("format lyrics split", i, "of", lyrics.length) ;
 		l1 = lyrics.substring(0,i+1);
 		l2 = lyrics.substring(i);
 		col1.innerText = l1 ;
@@ -421,7 +425,10 @@ async function formatLyrics(){
 
 	}
 }
-// Get tune list and refresh every few seconds
+
+
+translate_html();
 getProgress() ;
+
 
 </script>

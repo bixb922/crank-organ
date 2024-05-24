@@ -38,7 +38,6 @@ class Config:
         self.HISTORY_JSON = "data/history.json"
         self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
         self.LYRICS_JSON = "data/lyrics.json"
-
         # minilog folder defined in minilog module, not here
 
         # Get time.ticks_ms() at boot time.
@@ -81,6 +80,7 @@ class Config:
             "battery_heartbeat_period": 0,
             "max_polyphony": 9,
             "touchpad_big_change": 20000,
+
             "tzidentifier": "America/Santiago",
             "initial_page": "index",
             
@@ -108,13 +108,13 @@ class Config:
 
         for k, v in fallback.items():
             if k not in self.cfg:
-                _logger.debug(f"Adding configuration key {k}")
+                _logger.debug(f"Adding configuration key '{k}'")
                 self.cfg[k] = v
         # Delete surplus keys
         for k in self.cfg.keys():
             if k not in fallback:
                 del self.cfg[k]
-                _logger.debug(f"key {k} is not needed, now deleted")
+                _logger.debug(f"key '{k}' is not needed, now deleted")
 
         # Encrypted passwords, if not done already
         if password_manager._encrypt_all_passwords(self.cfg):
@@ -240,7 +240,6 @@ class Config:
 
         return "ok"
 
-
 PASSWORD_PREFIX = "@encrypted_"
 
 
@@ -339,7 +338,6 @@ class PasswordManager:
     # Services to verify password (called by webserver)
     def verify_password(self, password):
         return password == self.get_password("ap_password")
-
 
 password_manager = PasswordManager()
 config = Config()

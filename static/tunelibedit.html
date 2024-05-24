@@ -3,10 +3,11 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 
-<body>
+<body id="pagebody">
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
@@ -29,9 +30,10 @@
 When pressing the save button, you may be asked for the password of the microcontroller. Please leave the username blank.
 <br>
 <b>Reload page after saving to refresh information.</b>
+<br>
+<button onclick="showAsTable()">Table for copy to clipboard</button>"
 <div class="footerdiv"></div>
 
-<-- https://www.w3schools.com/howto/howto_css_modals.asp -->
 <div id="modalLyrics" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeLyrics()">&times;</span>
@@ -221,9 +223,44 @@ async function saveLyrics(){
     return ;
 }
 
+async function showAsTable(){
+    let tunelib = await get_tunelib() ;
+    s = `<table><thead><tr>
+            <td>Title</td>
+            <td>Genre</td>
+            <td>Author</td>
+            <td>Year</td>
+            <td>Rating</td>
+            <td>Info</td>
+            <td>Duration</td>
+            <td>Date added</td>
+            <td>Filename</td>
+            <td>Size</td>
+        </tr></thead>` ;
+    s += "<tbody>"
+    for( i in tunelib  ){
+        let tune = tunelib[i];
+        s += "<tr>";
+        s += `<td>${tune[TLCOL_TITLE]}</td>`;
+        s += `<td>${tune[TLCOL_GENRE]}</td>`;
+        s += `<td>${tune[TLCOL_AUTHOR]}</td>`;
+        s += `<td>${tune[TLCOL_YEAR]}</td>`;
+        s += `<td>${tune[TLCOL_RATING]}</td>`;
+        s += `<td>${tune[TLCOL_INFO]}</td>`;
+        s += `<td>${formatMilliMMSS( tune[TLCOL_TIME])}</td>`;
+        s += `<td>${tune[TLCOL_DATEADDED]}</td>`;
+        s += `<td>${tune[TLCOL_FILENAME]}</td>`;
+        s += `<td>${tune[TLCOL_SIZE]}</td>`;
+        s += "</tr>" ;
+    }
+    s += "</tbody></table>  "
+    d = document.getElementById("pagebody");
+    d.innerHTML = s ;
+}
+
 
 // remove cached copy of tunelib
 drop_tunelib() ;
-// fill from with tunelib
+// fill form with tunelib
 getTuneList() ;
 </script>

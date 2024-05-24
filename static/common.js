@@ -503,6 +503,17 @@ function textById( id, newText ) {
   	document.getElementById(id).innerText = formattedNewText ;
 }
 
+function showHideElement(id, value ){
+	let d = document.getElementById( id );
+	if( value == "" || value == null || 
+		value == undefined  || value == false ){
+		d.style.display = "none" ;
+	}
+	else {
+		d.style.display = "" ;
+	}
+}
+
 function htmlById( id, htmlText ) {
 	document.getElementById(id).innerHTML = htmlText ;
 }
@@ -665,4 +676,19 @@ function pageUp(pagename){
 
 function get_rating( tune ){
 	return tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
+}
+
+function isUsedFromServer(){
+	// True if this page resides on the drehorgel.pythonanywhere.com server
+	// (mcserver). If served from the microcontroller,
+	// there is no cookie.
+    return document.cookie.includes( "drehorgel=" ) ;   
+}
+
+function setPageTitle(description){
+	// >>>> NOT USED, NO WAY JET TO SET DESCRIPTION
+	d = document.getElementById( "pagetitle" );
+	if( d != undefined ){
+		d.innerText = description ;
+	}
 }

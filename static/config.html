@@ -2,6 +2,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
@@ -18,6 +19,8 @@
 
 <div class="middlediv">Enter password</div>
 When pressing the save button, you may be asked for the password of the microcontroller. Please leave the username blank.
+
+Configuration changes only take place after a microcontroller reset.
 
 <div class="middlediv">Change configuration
 password</div>
@@ -122,25 +125,25 @@ password</div>
 	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','max_expected_rpsec','automatic_delay', 'automatic_playback' )">Save play tune parameters</button>
 
 <div class="middlediv">Other parameters</div>
-    <br>
     
     Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
 	<input id="tzidentifier" name="tzidentifier" type="text" size="20" oninput="markField('tzidentifier')"/>
-    <br>
+    <p></p>
+
 	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address with the browser, for example: http://192.168.144.1
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')"/>
-	<br>
+	<p></p>
     
     <label for="touchpad_big_change">Touchpad responsiveness (higher=less responsive, lower=more responsive). Start with 10000.  No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6" oninput="markField('touchpad_big_change')"/>
 	<br>&nbsp;
-    <br>
+    <p></p>
     
     <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')"/>dB
 	<br>&nbsp;
-    <br>
+    <p></p>
     
     <label for="initial_page">Initial page (home page):</label>
     <br>
@@ -149,10 +152,10 @@ password</div>
     <input type="radio" name="initial_page" id="tunelist" value="tunelist" oninput="markField('tunelist')"/>Tune list page
     <br>
     <input type="radio" name="initial_page" id="play" value="play" oninput="markField('play')"/>Performance page
-	<br>
+	<p></p>
     
 	
-	<button type="button" onclick="save( 'ap_ip', 'tzidentifier', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
+	<button type="button" onclick="save(  'tzidentifier', 'ap_ip', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
     
 <div class="middlediv">Debug/test settings</div>
    
