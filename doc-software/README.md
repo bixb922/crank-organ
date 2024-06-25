@@ -650,6 +650,7 @@ The backup files in the /data folder (for example /data/tunelib.json-2023-11-10,
 
 # Recent changes
 
+Changes from Nov 2023 to March 2024:
 * Page with history of tunes played, button to purge old records.
 * More fields for tunelib: date added, rating, info, number of times played.
 * Integrated tunelib editor
@@ -675,6 +676,20 @@ The backup files in the /data folder (for example /data/tunelib.json-2023-11-10,
 * Detection of polyphony to limit battery consumption. Will flash onboard RGB red briefly when limit acts.
 * German and spanish translation of most used pages. Configuration pages are in english. 
 
+Changes from March 2024 to June 2024:
+ * New Pulse Driver module using hardware PCNT module of the ESP32S3 microprocessor for precise and low overhead crank speed measurement.
+* Configurable crank speed settings
+* Crank revolutions per second graph on diag.html page.
+* Page translation now dynamic depending on browser language preference.
+* Page title is set to the description parameter of the configuration.
+* Copy button for tunelib editor, exports tunelib info to clipoboard.
+* Lyrics support: can add lyrics in tunelib and view lyrics in performance page.
+* Info field in tunelist now clickable to see complete field.
+* Search tunelist according to rating *, **, ***
+* History now ordered on descending date.
+* Touch button can now stop current tune if one is playing, and start tune if there is none.
+* Battery level is calculated with linear regression now, may be more accurate.
+* Register rating and comments easily on history page.
 
 
 # Programming language
@@ -688,7 +703,7 @@ MicroPython version 1.22 or later is required. Since MicroPython is continually 
 
 # Credits
 
-Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microdot server, temporarily added some logging to debug my software), and Robert-hh and several others for uftpd. All these library modules are available on github:
+Credits to mcauser (MCP23017 library, no modifications), Miguel Grinberg (microdot server, temporarily added some logging to debug my software), and Robert-hh and several others for uftpd. These library modules are available on github:
 * https://github.com/mcauser/micropython-mcp23017
 * https://github.com/miguelgrinberg/microdot
 * https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD
@@ -703,20 +718,19 @@ Most code, especially the MIDI file parser, has been tested extensively, althoug
 
 The following features need more testing or development:
 
-* Sensor for crank speed to influence playback speed. Pending to test and for fine adjustments.
+* Sensor for crank speed to influence playback speed. Pending to test and for more adjustments.
 
 The microphone option for tuning has now been tested and updated.
 
 # Troubleshooting
 If you added tunes to the tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and changes recognized.
 
-
-
+Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
 
 # Restrictions
 Safari as a browser is not supported.
 
-The security  and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. I have put several safeguards in the software, such as encrypting passwords with a hidden key, controlling access via WiFi to files, etc. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB or FTP, all elements including passwords can be ultimately retrieved and new code can be installed. 
+The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I make no claim about the security against willful hacking. I have put several safeguards in the software, such as encrypting passwords with a hidden key, controlling access via WiFi to files, etc. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. When accessing the microcontroller via USB or FTP, all elements including passwords can be ultimately retrieved and new code can be installed. 
 
 Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time, since more than one client may delay notes when playing back music.
 
