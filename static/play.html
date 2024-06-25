@@ -3,9 +3,10 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title id="pagetitle"></title>
-	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
 <span id="popup" class="popuptext"></span>
@@ -17,9 +18,8 @@
 	<span class="headerright" id="header_time"></span>
 </div>
 
-
-<script type="text/javascript" src="/static/common.js"></script>
-<script type="text/javascript" src="/static/translations.js"></script>
+<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="translations.js"></script>
 
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <table id="main_info_table">
@@ -78,7 +78,7 @@
 			<br>
 			<br>
 			<span id="turning">Girando</span>
-			<span id="rpsecText">nnn</span>&nbsp;rev/seg&nbsp;
+			<span id="rpsecText">nnn</span>&nbsp;<span>rev/seg</span>&nbsp;
 			<span id="rpsecGraph"></span>
 		</span>
 </span>	
@@ -244,10 +244,10 @@ async function updateProgress( progress ) {
 		let rt = Math.round( progress["rpsec"]*10)/10 ;
 		document.getElementById("crankInfo").style.display = "" ;
 		if( progress["is_turning"] ) {
-			textById("turning", "Girando")
+			textById("turning", tlt("Girando"));
 		}
 		else {
-			textById("turning", "No gira")
+			textById("turning", tlt("No gira"));
 		}
 		textById("rpsecText", "" + rt) ;
 
@@ -376,7 +376,7 @@ async function tempo_follows_crank(){
 }
 
 function go_history(){
-	window.location.href = "/static/history.html" ;
+	window.location.href = "history.html" ;
 }
 
 function toggleSetlistLyrics( what ){
@@ -386,13 +386,13 @@ function toggleSetlistLyrics( what ){
 	if( setlist_span.style.display == "none" || what == "setlist" ){
 		setlist_span.style.display = "";
 		lyrics_span.style.display = "none" ;
-		toggle_button.innerText = "Mostrar letra" ;
+		toggle_button.innerText = tlt("Mostrar letra") ;
 	}
 	else{
 
 		setlist_span.style.display = "none";
 		lyrics_span.style.display = "" ;
-		toggle_button.innerText = "Mostrar setlist" ;
+		toggle_button.innerText = tlt("Mostrar setlist") ;
 	}
 }
 
@@ -425,8 +425,6 @@ async function formatLyrics(){
 
 	}
 }
-
-
 translate_html();
 getProgress() ;
 

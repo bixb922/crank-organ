@@ -2,23 +2,24 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title id="pagetitle"></title>
-	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
-<body>
+<body id="docbody">
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;Diagn&oacute;stico
+		&nbsp;<span>Diagnóstico</span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="/static/common.js"></script>
-<script type="text/javascript" src="/static/translations.js"></script>
-    
+<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="translations.js"></script>
+<span id="description_span">   
 <table>
     <tbody>
 		<tr><td>Descripción</td><td id="description"></td></tr>
@@ -31,7 +32,7 @@
 			</td>
 			<td>
 				<span id="logfilename"></span><br>
-				(<span id="errors_since_reboot"></span> errores)
+				(<span id="errors_since_reboot"></span>&nbsp;<span>errores)</span>
 			</td>
 		</tr>
         <tr>
@@ -56,9 +57,18 @@
 		<tr><td>Configuración solenoides</td><td id="solenoid_devices"></td></tr>
 		<tr><td>Archivos MIDI</td><td id="midi_files"></td></tr>
 		<tr><td>Carpeta música</td><td id="tunelib_folder"></td></tr>
+		<tr><td>Manivela instalada</td><td id="crank_installed"></td></tr>
+		<tr id="crankGraphButton">
+			<td>
+				<button onclick="crankGraph()">Gráfico manivela</button>
+			</td>
+			<td>
+			</td>
+		</tr>
 	</tbody>
 </table>
-	
+</span>
+<span id="wifi_span">
 <div class="middlediv">Configuración WIFI</div>
 <table>
 	<tbody id="wifiConfig">
@@ -105,7 +115,7 @@
 </table>
 
 
-<div class="middlediv">WIFI Scan</div>
+<div class="middlediv">WiFi scan</div>
 <button type="button" onclick="wifiScan()">
 	WiFi scan
 </button>
@@ -119,9 +129,13 @@
 	<tbody id="scanInfo">
 	</tbody>
 </table>
+</span>
+<span id="crank_graph_span" style="display:none">
+<div class="middlediv">Manivela</div>
+<canvas id="rpsChart"></canvas>
+</span>
 
 <div class="footerdiv"></div>
-
 </body>
 
 <script>
@@ -159,7 +173,9 @@ async function getDiagInfo( ) {
 	}
 	htmlById("solenoid_devices", sole_info);
     getWifiStatus() ;
+	showHideElement( "crankGraphButton", diag["crank_installed"]);
 }
+
 
 function showLog() {
 	window.location.href = "/errorlog" ;
@@ -171,6 +187,96 @@ async function deepSleep() {
 async function reset() {
     await fetch_json( "/reset") ;
 }
+
+function* generateNumbers(N, step) {
+  for (let i = 0; i < N; i++) yield Math.round(i*step*10)/10;
+}
+function createArray(N, step){
+	if( step == null ){
+		step = 1 ;
+	}
+	return [...generateNumbers(N, step)];
+} ;
+// console.log(createArray(10)); 
+
+async function crankGraph(){
+	showHideElement("crankGraphButton", false);
+	showHideElement("description_span", false);	
+	showHideElement("wifi_span", false);
+	showHideElement( "crank_graph_span", true);
+
+
+	// Get chart.js controlling error if not available
+	// in case there is no internet
+	let cjs = document.getElementById("chartjs");
+	if( cjs == undefined ){
+		let file_url =  "https://cdn.jsdelivr.net/npm/chart.js";
+		let scriptElement = document.createElement("script");
+		scriptElement.setAttribute("type", "text/javascript");
+		scriptElement.id = "chartjs";
+		try{
+			let response = await fetch(file_url) ;
+			scriptElement.text = await response.text() ;
+		}
+		catch(e){
+			console.log("Could not fetch chart.js", e);
+			return ;
+		}
+ 		document.body.append(scriptElement) ;
+		console.log("chartjs appended");
+	}
+
+	// Define graphs, no data
+	const rpsChartCanvas = document.getElementById("rpsChart");
+	let rpsChart = new Chart(rpsChartCanvas, {
+		type: 'bar',
+		data: {
+		labels: [],
+		datasets: [
+			{
+				label:"normal",
+				type:"line",
+				data: [],
+				borderWidth: 1,
+				borderColor: '#425B26',
+				backgroundColor: '#D0D86B',
+				pointRadius: 1,
+			},
+			{
+				label: 'rev/s',
+				data: [],
+				borderWidth: 1,
+				borderColor: '#425B26',
+				backgroundColor: '#5090E0'
+			}
+		]
+		},
+		options: {
+			aspectRatio: 1.2,// width/height
+			animation: false,
+			scales:{
+				y:{min:0, max:2.5}
+			}
+		}
+		}
+	);
+
+
+	// get data and refresh graph
+	for(;;){
+		await sleep_ms(100);
+	
+		let tdata = await fetch_json("/tacho_irq_report") ;
+		rpsChart.data.labels = tdata["timesList"];
+		rpsChart.data.datasets[1].data = tdata["rpsecList"];
+		let rpsn = Array( tdata["rpsecList"].length );
+		rpsn.fill( tdata["normal_rpsec"]) ;
+		rpsChart.data.datasets[0].data = rpsn ;
+		rpsChart.update();
+
+	}
+}
+
 
 translate_html();
 getDiagInfo();

@@ -317,7 +317,8 @@ class PinoutList:
             print("Error: no pinout files found in /data")
 
     def _read_pinout_txt(self):
-        # >>> change to json? leave in config?
+        # Better separate file than config.json. That
+        # way led pin can be read before reading config.
         try:
             with open(self.pinout_txt_filename) as file:
                 # Return filename of nn_xxxxx.json with pinout info

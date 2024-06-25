@@ -146,7 +146,7 @@ function canvasBarGraph(canvas, value, color, scale_divisions,
 }
 
 function drawNeedle( ctx, needle_pos, cw, ch ){
-	if( needle_pos < 2 ) {
+	if( needle_pos < 2 ){
 		needle_pos = 2 ;
 	}
 	if( needle_pos > cw-2 ) {
@@ -330,7 +330,7 @@ async function fetch_json( url, post_data ){
 		try {
             console.log("fetch json try", url, "post=", post_arg ) ;
             t0 = Date.now() ;  // Reports response time
-            response = {} ;
+            response = {};
 			response = await fetch( url, post_arg ) ;
 			break ;
 		}
@@ -339,7 +339,7 @@ async function fetch_json( url, post_data ){
             // In the header battery time, replace battery
             // icon and time remaining with message
             // symbols.
-			msg = "no conectado" ;
+			msg = tlt("no conectado") ;
             htmlByIdIgnoreErrors( "header_time",
                                  msg + " &#x1f494;") ;
 			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
@@ -448,16 +448,16 @@ function make_status_text( progress_status, percentage ) {
 	// Transform player status to language
     let status_text ;
 	if (progress_status === "ended") {
-		status_text = "fin" ;
+		status_text = tlt("fin") ;
 	}
 	else if(progress_status === "playing" ) {
 		status_text = "" + Math.round(percentage) + "%" ;
 	}
 	else if(progress_status === "cancelled" ) {
-		status_text = "cancelado" ;
+		status_text = tlt("cancelado") ;
 	}
     else if( progress_status == "waiting"){
-        status_text = "\u231B esperando" ;
+        status_text = "\u231B " + tlt("esperando") ;
     }
 	else {
 		status_text = progress_status ;
@@ -647,7 +647,7 @@ function drop_tunelib(){
 	drop_cache( "/data/tunelib.json" ) ;
 }
 
-async function get_lyrics( tuneid ) {
+async function get_lyrics( tuneid ){
 	data = await cache_json( "/data/lyrics.json" ) ;
 	lyrics = data[tuneid] ;
 	if( lyrics == undefined ){
@@ -661,7 +661,7 @@ function drop_lyrics() {
 
 function pageUp(pagename){
     from = document.referrer;
-    if( from == undefined || from.includes("/static/"+pagename+".html") || pagename == undefined ){
+    if( from == undefined || from.includes(pagename+".html") || pagename == undefined ){
         // to be faster: if the previous page is the "up" page, go back
         // This could lead to another page of the same name in history
         // Tough luck.
@@ -669,7 +669,7 @@ function pageUp(pagename){
     }
     else{
         // Came from other page, navigate to this page
-        window.location.href = "/static/" + pagename + ".html" ;
+        window.location.href = pagename + ".html" ;
     }
 }
 
@@ -685,10 +685,14 @@ function isUsedFromServer(){
     return document.cookie.includes( "drehorgel=" ) ;   
 }
 
-function setPageTitle(description){
-	// >>>> NOT USED, NO WAY JET TO SET DESCRIPTION
-	d = document.getElementById( "pagetitle" );
-	if( d != undefined ){
-		d.innerText = description ;
+async function setPageTitle(){
+	// Set page title
+	pt = document.getElementById( "pagetitle" );
+	if( pt == undefined || pt.innerText != "" ){
+		return ;
 	}
+	// cache description in page storage for efficiency
+	j = await cache_json("/get_description");
+	pt.innerText = j["description"] ;
 }
+setPageTitle() ;

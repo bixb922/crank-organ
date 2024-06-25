@@ -2,6 +2,7 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
@@ -10,7 +11,7 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp('notelist')">&#11013;</a>
+        <a onclick="pageUp('/static/notelist')">&#11013;</a>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -77,7 +78,7 @@ function updateNoteInfo( notelist ) {
     if( ampdb != null ) {
 	   s += Math.round(ampdb) ;
     }
-	textById( "amplitude", ambdb );
+	textById( "amplitude", ampdb );
 	textById( "pin_name", note["pinname"] ) ;
 
 	htmlById("tuningcaption", tlt("Afinación") + "(-" + MAX_CENTS + tlt(" a ") + MAX_CENTS + " cents)") ;

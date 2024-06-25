@@ -1,6 +1,6 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-
+from micropython import const
 import json
 import asyncio
 import errno
@@ -8,7 +8,7 @@ import os
 
 import scheduler
 
-KEEP_OLD_VERSIONS = const(2) # type:ignore
+KEEP_OLD_VERSIONS = const(2)
 
 
 def backup(filename):

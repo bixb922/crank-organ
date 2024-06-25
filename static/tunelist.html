@@ -2,9 +2,10 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title id="pagetitle"></title>
-	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 <body>
@@ -19,8 +20,8 @@
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <!-- html continues below javascript -->
 
-<script type="text/javascript" src="/static/common.js"></script>
-<script type="text/javascript" src="/static/translations.js"></script>
+<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="translations.js"></script>
 
 <script>
 // Function to translate characters with accent and tilde
@@ -88,6 +89,8 @@ function searchTable() {
 </body>
 
 <script>
+document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
+
 // keep sorted list in global page context
 let tunelist = [] ;
     
@@ -182,11 +185,11 @@ async function queueTune( tuneid ) {
         console.log("queueTune resp=", resp );
         spectator_name = resp["spectator_name"] ;
         while( spectator_name == "" ){
-            spectator_name = window.prompt("¿Cuál es tu nombre?").trim().replace(/<\/?[^>]+(>|$)/g, "");
+            spectator_name = window.prompt(tlt("¿Cuál es tu nombre?")).trim().replace(/<\/?[^>]+(>|$)/g, "");
         }
     }
 
-	showPopup( "t"+tuneid, "actualizando setlist");
+	showPopup( "t"+tuneid, tlt("actualizando setlist"));
     postdata = { 
         "spectator_name": spectator_name, 
         "tuneid": tuneid } ;

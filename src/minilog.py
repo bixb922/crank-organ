@@ -3,6 +3,7 @@
 # Records event log. Limits total event log size, so event logs can't
 # hog flash memory.
 # Default mode is: debug messages to console, info messages to flash.
+from micropython import const
 import sys
 import io
 import os
@@ -10,7 +11,9 @@ import re
 
 from timezone import timezone
 
-DEBUG = const(0)  # Goes only to console to make it light on CPU usage
+# DEBUG: only to console, rather fast
+# INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is immediately persistent 
+DEBUG = const(0) 
 INFO = const(1)
 ERROR = const(2)
 EXCEPTION = const(3)

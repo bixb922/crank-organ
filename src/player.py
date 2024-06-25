@@ -22,7 +22,6 @@ PLAYING = const("playing") # type: ignore
 
 # Can also be "waiting", "file not found", others.
 
-
 class MIDIPlayerProgress:
     def __init__(self):
         self.progress = {"tune": None, "playtime": 0, "status": ""}
@@ -57,7 +56,7 @@ class MIDIPlayer:
         # during playback.
         self.crank_start_event = crank.register_event(0)
         # Default startup value for tempo follows crank
-        self.follow_crank = config.cfg.get("tempo_follows_crank", False )
+        self.set_tempo_follows_crank( config.cfg.get("tempo_follows_crank", False ) )
         self.logger.debug("init ok")
         
     async def play_tune(self, tuneid, requested ):
@@ -149,7 +148,6 @@ class MIDIPlayer:
         # With 4 to 8 MB RAM, there is enough to have large buffer.
         # But there is no need to read the full file to memory
         midifile = umidiparser.MidiFile(midi_file, buffer_size=5000)
-
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
         playing_started_at = time.ticks_us()
         midi_time = 0
@@ -212,34 +210,39 @@ class MIDIPlayer:
 
     def get_progress(self):
         p = self.progress.get(self.time_played_us)
-        p["tempo_follows_crank"] = self.follow_crank
+        p["tempo_follows_crank"] = self.tempo_follows_crank
         return p
 
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
-        if not crank.is_installed() or crank.is_turning():
-            if self.follow_crank:
-                # Change playback speed with UI settings and crank rpsec
-                tmeter_vel = crank.get_normalized_rpsec()
-            else:
-                tmeter_vel = 1
-            # Avoid division by 0
-            if tmeter_vel == 0:
-                tmeter_vel = 1
-    
-            return round(midi_event_delta_us / tmeter_vel)
-        
+        if not self.tempo_follows_crank or crank.is_turning():
+            # Change playback speed with UI settings 
+            # and with crank rpsec if crank sensor is enabled
+            normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank)
+            if normalized_vel < 0.1:
+                # Avoid division by zero.
+                # Also a very slow
+                # speed is meaningless here, crank should be stopped...?
+                normalized_vel = 1
+            return round(midi_event_delta_us / normalized_vel)
+
         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
         # again, so playing can resume without a hitch.
         self.logger.debug("waiting for crank to turn")
         start_wait = time.ticks_us()
+        # Don't let a note on during wait, it may
+        # be realistical but it's not nice
         solenoid.all_notes_off()
+        # Wait for the crank to start turning
+        self.crank_start_event.clear()
         await self.crank_start_event.wait()
+        # Lengthen MIDI time by the wait
         return time.ticks_diff(time.ticks_us(), start_wait)
 
-    def tempo_follows_crank( self, v ):
-        self.follow_crank = v
+    def set_tempo_follows_crank( self, v ):
+        # If crank not installed, don't follow crank....
+        self.tempo_follows_crank = v and crank.is_installed()
         
 # Singleton instance of player:
 player = MIDIPlayer()

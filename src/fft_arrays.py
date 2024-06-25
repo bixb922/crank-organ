@@ -10,6 +10,8 @@ if sys.implementation.name != "micropython":
     class micropython:
         def native(f):
             return f
+else:
+    from micropython import const
     
 
 # Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz

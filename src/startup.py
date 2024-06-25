@@ -34,7 +34,6 @@ from solenoid import solenoid
 led.starting(1)
 led.starting(2)
 from setlist import setlist
-led.set_setlist(setlist)
 led.starting(3)
 import webserver    
 
@@ -84,6 +83,7 @@ async def background_garbage_collector():
     # RAM allocated and not total RAM size.
     while True:
         await asyncio.sleep_ms(2000)
+        # >>> GC CAN BE SPACED MORE
         # gc is best if not delayed more than a few seconds
         try:
             async with scheduler.RequestSlice(

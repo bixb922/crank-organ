@@ -2,9 +2,10 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
 	<title id="pagetitle"></title>
-	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 <body>
@@ -17,8 +18,8 @@
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="/static/common.js"></script>
-<script type="text/javascript" src="/static/translations.js"></script>
+<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="translations.js"></script>
 
 <div class="tableFixHead">
 
@@ -36,9 +37,9 @@
     </table>
 </div>
 <div class="middlediv"></div>
-	Si historia más antigua que
-	<input type="text" size="3" value="90" id="days"/>días,
-	<button onclick="deleteHistory()" id="purgeButton">Borrar </button>
+	<span>Si historia más antigua que</span>
+	<input type="text" size="3" value="90" id="days"/><span>días</span>,
+	<button onclick="deleteHistory()" id="purgeButton">Borrar</button>
 <div class="footerdiv"></div>
 </body>
 
@@ -112,7 +113,7 @@ async function deleteHistory(){
 	resp = await fetch_json( "/delete_history/" + days ) ;
     if( resp["result"] == "ok"){
 
-       showPopup("", "Historia truncada" ); //>>>add to translation
+       showPopup("", tlt("Historia truncada") ); 
        await sleep_ms(1000);
        window.location.reload() ;
     }
@@ -147,7 +148,7 @@ async function register_comment(title, tuneid){
 		j = { "tuneid": tuneid, "comment": comment };
 		await fetch_json( "/register_comment", j );
 		drop_tunelib() ;
-        showPopup("", "Información actualizada"); //>>> add to translaation
+        showPopup("", tlt("Información actualizada")); //>>> add to translaation
         await sleep_ms(1000);
         window.location.reload() ;
     }

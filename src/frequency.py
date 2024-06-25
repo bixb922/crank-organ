@@ -1,15 +1,15 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-
+from micropython import const
 import os
 from math import sqrt
 
 import scheduler
-import fileops
 
-SIGNAL_FOLDER = const("/signals") # type:ignore
-RAW_FILE_PREFIX = const("raw") # type:ignore
-FFT_FILE_PREFIX = const("fft") # type:ignore
+
+SIGNAL_FOLDER = const("/signals")
+RAW_FILE_PREFIX = const("raw")
+FFT_FILE_PREFIX = const("fft")
 # Indicate the range around the nominal frequency to be detected
 # PLUS_MINUS_SEMITONES=3 means 3 semitones down and 3 semitones up from
 # the nominal frequency are measured. Outside that range will give no reading.

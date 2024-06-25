@@ -5,7 +5,7 @@
 
 # >>> see battery off problem.
 
-
+from micropython import const
 import asyncio
 import time
 import os
@@ -112,7 +112,7 @@ class Battery:
         self.battery_info["date_zero"] = timezone.now_ymdhm()
         self.last_update = time.ticks_ms()
         self.update_calculations()
-
+    
         self._write_battery_info()
 
     def update_calculations(self)->None:

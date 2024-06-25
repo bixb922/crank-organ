@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
@@ -98,10 +99,8 @@ password</div>
 	<button type="button" onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
 <div class="middlediv">Crank and tune play parameters</div>
-	<input id="automatic_playback" name="automatic_playback" type="checkbox" oninput="markField('automatic_playback')"/>
-	<label for="automatic_playback">Play one tune after the other automatically, with a delay</label>
-	<br>
-	<label>Delay between one tune and the next if automatic playback is selected. Random time if zero. In seconds, integer only:</label>
+	<label>If zero: no automatic playback. Greater than zero: after this time the next tune is started automatically 
+		and crank sensor will be disabled. In seconds, integer only:</label>
 	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')"/>
 	<br>
 	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
@@ -122,29 +121,23 @@ password</div>
 	<label for="max_expected_rpsec">Maximum value expected for crank speed. This is used for debouncing the signal, should be the highest expected speed. The lower the better the debouncing, in revolutions per second:</label>
 	<input id="max_expected_rpsec" type="text" size="4" oninput="markField('max_expected_rpsec')">
 	<br>
-	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','max_expected_rpsec','automatic_delay', 'automatic_playback' )">Save play tune parameters</button>
+	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','max_expected_rpsec','automatic_delay' )">Save play tune parameters</button>
 
 <div class="middlediv">Other parameters</div>
     
     Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
 	<input id="tzidentifier" name="tzidentifier" type="text" size="20" oninput="markField('tzidentifier')"/>
-    <p></p>
-
+	<br>
 	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address with the browser, for example: http://192.168.144.1
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')"/>
-	<p></p>
-    
+	<br>
     <label for="touchpad_big_change">Touchpad responsiveness (higher=less responsive, lower=more responsive). Start with 10000.  No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6" oninput="markField('touchpad_big_change')"/>
-	<br>&nbsp;
-    <p></p>
-    
+	<br>
     <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')"/>dB
-	<br>&nbsp;
-    <p></p>
-    
+	<br>
     <label for="initial_page">Initial page (home page):</label>
     <br>
     <input type="radio" name="initial_page" id="index" value="index" oninput="markField('index')"/>Main menu page
@@ -152,7 +145,7 @@ password</div>
     <input type="radio" name="initial_page" id="tunelist" value="tunelist" oninput="markField('tunelist')"/>Tune list page
     <br>
     <input type="radio" name="initial_page" id="play" value="play" oninput="markField('play')"/>Performance page
-	<p></p>
+	<br>
     
 	
 	<button type="button" onclick="save(  'tzidentifier', 'ap_ip', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>

@@ -18,6 +18,8 @@ let translationDict = {
 	["updating setlist", "Setlist wird aktualisiert"],
 "afinación": // note.html notelist.html 
 	["Tuning", "Frequenz"],
+"afinación (cents)":
+	["Tuning (cents)", "Frequenzabweichung (cents)"],
 "afinador": // index.html 
 	["Tuner", "Stimmgerät"],
 "afinar": // note.html 
@@ -32,7 +34,9 @@ let translationDict = {
 	["Enough for", "Reicht für"],
 "alguien conectado": // diag.html 
 	["Someone connected", "Jemand angeschlossen"],
-"amplitud": // note.html notelist.html 
+"amplitud (db)": // note.html notelist.html 
+	["Amplitude (dB)", "Amplitude (dB)"],
+	"amplitud": // note.html notelist.html 
 	["Amplitude", "Amplitude"],
 "archivos midi": // diag.html 
 	["MIDI files", "MIDI-dateien"],
@@ -86,11 +90,9 @@ let translationDict = {
 	["Shuffle all tunes", "Alle Melodien mischen"],
 "diagnóstico": // index.html diag.html 
 	["System information", "Systeminformation"],
-"drehorgel": // index.html 
-	["Crank organ", "Drehorgel"],
 "duración": // play.html 
 	["Duration", "Länge"],
-"días,": // history.html 
+"días": // history.html 
 	["days,", "Tage,"],
 "editar tunelib": // index.html 
 	["Edit tunelib", "Tunelib bearbeiten"],
@@ -124,13 +126,15 @@ let translationDict = {
 	["Hist", "Wiedergaben"],
 "historia": // index.html play.html history.html 
 	["History", "Verlauf"],
+"historia truncada": // history.html
+    ["History purged", "Verlauf gekürzt"],
 "imagen micropython": // diag.html 
 	["MicroPython image", "MicroPython image"],
 "info": // tunelist.html play.html 
 	["Info", "Info"],
 "información actualizada": // history.html 
 	["Information updated", "Information aktualisiert"],
-"ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración": // index.html 
+"ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración": // index.html
 	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibation data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
 "ingrese comentario o puntaje *, ***,*** para: ": // history.html 
 	["Enter comment or rating *, **, *** for: ", "Schreib Kommentar oder Bewertung *, **, *** zu: "],
@@ -208,10 +212,12 @@ let translationDict = {
 	["When older than", "Wenn älter als"],
 "sonar nota": // note.html 
 	["Note test", "Notentest"],
-"status_text = cancelado": // common.js 
+"cancelado": // common.js 
 	["status_text = cancelled", "status_text = gestrichen"],
-"tdremanente/td": // index.html 
-	["tdRemaining/td", "tdVerbleibend/td"],
+"stop":
+	["Stop", "Halt"],
+"remanente": // index.html 
+	["Remaining", "Verbleibend"],
 "tempo sigue manivela": // play.html 
 	["Tempo follows crank speed", "Drehgeschwindingkeit beeinflusst Tempo"],
 "tiempo desde reboot": // diag.html 
@@ -226,8 +232,6 @@ let translationDict = {
 	["Time solenoids energized", "Zeit Ventile an"],
 "tiempo tocando": // index.html 
 	["Time playing", "Zeit Musikwiedergabe"],
-"truncada": // history.html 
-	["purged", "gelöscht"],
 "título": // tunelist.html play.html 
 	["Title", "Titel"],
 "ver log": // diag.html 
@@ -254,7 +258,8 @@ let translationDict = {
 	["Current tune", "Gegenwärtige Melodie"],
 "muestra la melodía que se esta tocando ahora ¡y tiene la letra para poder acompañar cantando!":
 	["Shows the melody now playing and the lyrics to sing along!", "Zeigt die Melodie an die gerade gespielt wird, mit Liedtext zum mitsingen!"],
-
+"fotos":
+	["Photos", "Fotos"]
 }
 
 let language = navigator.language.substring(0,2) ;

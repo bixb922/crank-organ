@@ -2,7 +2,7 @@
 # MIT License
 # Allows the MIDI player to wait letting well behaved asyncio tasks
 # execute during the times between MIDI events.
-
+from micropython import const
 import time
 import asyncio
 
@@ -17,8 +17,8 @@ _INFINITY = const(1_000_000_000)
 
 
 # If no timeout is specified, use a VERY long time
-# longer than the longest tune
-_LONG_TIME = const(3_600_000)  # 1 hour
+# longer than the longest tune, 3_600_000 = 1 hour
+_LONG_TIME = const(3_600_000)
 
 # If True, RequestSlice shows timing information.
 _DEBUG_TIMES = const(False)
@@ -164,6 +164,9 @@ def is_playback_mode():
 
 
 def complement_progress(progress):
+    # play_mode True: playback is enabled, can start midi files
+    # play_mode False: running tuner, don't start midi files
+    # because they will interfere with the MIDI files 
     progress["play_mode"] = playback_enabled
 
 # Class to measure time of a group of statements, use:

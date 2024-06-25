@@ -14,11 +14,11 @@
 # >>> asked anyhow and there is not much else to do
 # >>> during tuning.
 #
-# >>> add tunelib export as .tsv for spreadsheet
+# >>> test tunelib export as .tsv for spreadsheet
 # >>>not feasible to clipboard if not https.
 
-# >>> first time progress to clear cache
-#>>> dwscriuption in title
+# >>> first time progress to clear tab cache
+# >>> tunelist.html redo search if page is activated!
 
 import os
 import sys
@@ -200,13 +200,16 @@ async def send_data_file(request, filepath):
 
     return send_file(filename, max_age=0)
 
+@app.route("/get_description")
+def get_description(request):
+    return { "description": config.cfg.get("description")}
+
 def get_progress(request):
     register_activity(request)
     progress = player.get_progress()
     crank.complement_progress(progress)
     scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
-
     return progress
 
 
@@ -438,6 +441,7 @@ async def diag(request):
         "logfilename": _logger.get_current_log_filename(),
         "errors_since_reboot": _logger.get_error_count(),
         "compile_date": compiledate,
+        "crank_installed": crank.is_installed()
     }
     return d
 
@@ -482,6 +486,9 @@ async def set_velocity_relative(request, change):
     crank.set_velocity_relative(change)
     return get_progress(request)
 
+@app.route("/tacho_irq_report")
+def tacho_irq_report(request):
+    return crank.td.irq_report()
 
 @app.route("/top_setlist/<int:pos>")
 async def top_setlist(request, pos):
@@ -688,7 +695,7 @@ async def register_comment(request):
 @app.post( "/tempo_follows_crank" )
 async def tempo_follows_crank( request ):
     data = request.json
-    player.tempo_follows_crank( data["tempo_follows_crank"] )
+    player.set_tempo_follows_crank( data["tempo_follows_crank"] )
     return simple_response("ok")
 
 # Catchall handler to debug possible errors at html level

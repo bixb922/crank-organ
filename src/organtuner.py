@@ -1,7 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Handles response to notelist.html and note.html pages (tuning support)
-
+from micropython import const
 import os
 import asyncio
 from math import log10

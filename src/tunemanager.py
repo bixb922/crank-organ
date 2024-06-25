@@ -1,7 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Manages tune library.
-
+from micropython import const
 import os
 import asyncio
 import hashlib
@@ -15,24 +15,25 @@ import fileops
 
 # Define Tunelib Column names
 # Must be equal to common.js
-TLCOL_ID = const(0) # type:ignore
-TLCOL_TITLE = const(1) # type:ignore
-TLCOL_GENRE = const(2) # type:ignore
-TLCOL_AUTHOR = const(3) # type:ignore
-TLCOL_YEAR = const(4) # type:ignore
-TLCOL_TIME = const(5) # type:ignore
-TLCOL_FILENAME = const(6) # type:ignore
-TLCOL_AUTOPLAY = const(7)  # type:ignore
-TLCOL_INFO = const(8) # type:ignore
-TLCOL_DATEADDED = const(9)  # type:ignore
-TLCOL_RATING = const(1) # type:ignore
-TLCOL_SIZE = const(11)  # type:ignore
-TLCOL_HISTORY = 12
+TLCOL_ID = const(0) 
+TLCOL_TITLE = const(1)
+TLCOL_GENRE = const(2)
+TLCOL_AUTHOR = const(3)
+TLCOL_YEAR = const(4)
+TLCOL_TIME = const(5)
+TLCOL_FILENAME = const(6)
+TLCOL_AUTOPLAY = const(7) 
+TLCOL_INFO = const(8)
+TLCOL_DATEADDED = const(9) 
+TLCOL_RATING = const(1)
+TLCOL_SIZE = const(11) 
+TLCOL_HISTORY = const(12)
 #>>>KEEP INDICATOR "FILE DELETED" INSTEAD OF DELETING ROW?
 #>>>values 1/0 instead of true/false
 # use const()????
-TLCOL_RFU = 13
-TLCOL_COLUMNS = 14
+# >>> has lyrics indicator
+TLCOL_RFU = const(13)
+TLCOL_COLUMNS = const(14)
 
 # Must have names in same order as TLCOL, is used
 # to decode information from web form when saving tunelib.
@@ -329,6 +330,7 @@ class TuneManager:
         # file and cache it.
 
     def _sync_lyrics( self, newtunelib ):
+        # Delete all lyrics where the tune has been deleted
         all_lyrics = fileops.read_json( self.lyrics_json )
         changed = False
         for tuneid in all_lyrics.keys():

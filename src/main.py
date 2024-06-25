@@ -31,7 +31,7 @@ os.umount("/")
 readsize = 1024
 progsize = 128
 lookahead = 512
-os.mount(os.VfsLfs2(bdev,readsize=readsize,progsize=progsize,lookahead=lookahead),"/") # noqa
+os.mount(os.VfsLfs2(bdev,readsize=readsize,progsize=progsize,lookahead=lookahead),"/") # type:ignore
 print(f"VfsLfs2 mounted with {readsize=}, {progsize=}, {lookahead=}")
 
 # Path element order makes a difference of 1.6 sec in startup time

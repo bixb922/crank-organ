@@ -2,7 +2,7 @@
 # MIT License
 # Handles config.json and other configuration options
 # Also, data file names and folders are defined here.
-
+from micropython import const
 import time
 import os
 import network
@@ -14,7 +14,7 @@ import fileops
 _logger = getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
-_DEFAULT_PASSWORD = const("drehorgel") # type:ignore
+_DEFAULT_PASSWORD = const("drehorgel") 
 
 class Config:
     def __init__(self):
@@ -94,8 +94,7 @@ class Config:
             
             "servernode": "192.168.100.19:8080",
             "serverpassword": "password3",
-            "automatic_delay": 30,
-            "automatic_playback": False,
+            "automatic_delay": 0,
             "tempo_follows_crank": False,
             "pulses_per_revolution": 24,
             "lower_threshold_rpsec": 0.4,

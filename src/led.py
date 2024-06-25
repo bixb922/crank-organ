@@ -3,6 +3,7 @@
 # Blinks RGB (neopixel) LED.
 # ESP32-S3 boards may have one of these.
 #
+from micropython import const
 import asyncio
 import neopixel
 import machine
@@ -14,11 +15,11 @@ from pinout import gpio
 from minilog import getLogger
 
 # 1=lowest, 255=highest
-VERY_LOW = const(4) # type:ignore
-LOW = const(8) # type:ignore
-MEDIUM = const(32) # type:ignore
-STRONG = const(128)  # type:ignore
-VERY_STRONG = const(255) # type:ignore
+VERY_LOW = const(4)
+LOW = const(8)
+MEDIUM = const(32)
+STRONG = const(128)
+VERY_STRONG = const(255)
 
 
 class BlinkingLed:
@@ -70,26 +71,14 @@ class BlinkingLed:
             )[phase % 4]
         )
 
-    # Touch start and touch flash
-    def touch_flash(self):
-        self._blink_background((STRONG, STRONG, STRONG), repeat=1)
+    # Setlist flashes
+    def start_tune_flash(self):
+        self._blink_background((0, STRONG, 0), repeat=1)
+    def shuffle_all_flash(self):
+        self._blink_background((0, 0, STRONG), repeat=1)
+    def stop_tune_flash(self):
+        self._blink_background((MEDIUM, STRONG, 0), repeat=1)
 
-    def set_setlist(self,setlist):
-        # This avoids doing late import
-        self.setlist = setlist
-        self.setlist_process = asyncio.create_task( self.setlist_blinker() )
-        
-    async def setlist_blinker(self):
-        # Blink light blue-green while setlist is empty
-        while True:
-            if self.setlist.isempty():
-                self.on( (0,LOW,MEDIUM) )
-                await asyncio.sleep_ms(40) 
-            self.off()
-            # Period different from other blinks, so interference will be low
-            # Use number based on the best random number: 37.
-            await asyncio.sleep_ms(3700)
-            
     def touch_start(self):
         color = (LOW,LOW,LOW)
         self.on(color)
@@ -116,9 +105,7 @@ class BlinkingLed:
         self._blink_background((LOW, LOW, LOW), repeat=6, timeoff=200)
 
     def heartbeat(self):
-        self._blink_background(
-            ((0, MEDIUM, 0), (0, 0, MEDIUM)), repeat=1, timeon=100, timeoff=50
-        )
+        self._blink_background((VERY_LOW, VERY_LOW, VERY_LOW), repeat=1, timeon=50 )
 
     def short_problem(self):
         self._blink_background((STRONG, MEDIUM, 0), repeat=1, timeon=150)

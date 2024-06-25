@@ -196,7 +196,7 @@ class Solenoid:
     def init_pinout(self):
         # Called during initialization, and also from webserver when
         # changing pinout
-        # Parse pinout json to define solenoid midi to pin
+        # Parse pinout json to define solenoid midi to pin translation
         self.solenoid_def = SolenoidPins()
         # Times a solenoid is on is computed as a basis
         # to calculate battery power consumed. That needs

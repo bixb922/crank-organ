@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
 	<title id="pagetitle"></title>
 	<link rel="icon" type="image/png" href="favicon.png?a=1"/>	
 </head>
@@ -17,8 +18,8 @@
 </div>
 <div style="clear:both" height=1></div>
 
-<script type="text/javascript" src="/static/common.js"></script>
-<script type="text/javascript" src="/static/translations.js"></script>
+<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="translations.js"></script>
 
 <table>
 	<tbody>
@@ -29,7 +30,7 @@
 				</button>
 			</td>
 			<td>
-				<img src="/static/crank.jpg" width=100>
+				<img src="crank.jpg" width=100>
                 <span id="serverinfo" style="display:none"><br>
                     <a href="" id="serverlink">Server link</a>
                 </span>
@@ -42,22 +43,10 @@
 				</button>
 			</td>
 			<td>
-				<!-- <img src="/static/tuner.jpg" width=80> -->
 				<!-- wrench emoji -->
 				    <span style="font-size:36px">&#x1F527;</span>
 			</td>
         </tr>
-		<tr id="keyboard" style="display:none">
-			<td>
-				<button type="button" onclick="navigate('keyboard')" id="keyboardModeButton">
-                    Teclado bluetooth
-				</button>
-			</td>
-			<td>
-				<!--Keyboard emoji -->
-				<span style="font-size:36px">&#127929;</span>
-			</td>
-		</tr>
         <tr>
 			<td>
 				<button type="button" onclick="navigate('history')">
@@ -195,7 +184,7 @@ async function getPageData(){
    
 
 function navigate( newpage ){
-    window.location.href = "/static/" + newpage + ".html" ;
+    window.location.href = newpage + ".html" ;
 }
 
 async function getBatteryInfo( ) {
