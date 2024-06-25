@@ -263,7 +263,7 @@ if config.cfg["description"].startswith("Test"):
             ref_dt = round(FACTOR/ref_rpsec/2)
             t = Timer(0, mode=Timer.PERIODIC, period=ref_dt, callback=set_pulse)
             await asyncio.sleep_ms(5000)
-            print(f"{crank.td.get_rpsec()=:.2f} {ref_rpsec=:.2f} ")
+            print(f">>>{crank.td.get_rpsec()=:.2f} {ref_rpsec=:.2f} ")
             t.deinit()
 
     if __name__ == "__main__":
