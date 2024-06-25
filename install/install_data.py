@@ -95,22 +95,22 @@ _f2 = const(
   b'\xd0*t\x04\x83bA\x12\x0c\xfa\x05x`\xae\xbf\xdf'\
   b'ez\xb5'\
   b'')
-# /pinout.txt size=27
+# /pinout.txt size=24
 _f4 = const(
-  b'data/20_note_Car'\
-  b'l_Frei.json'\
+  b'data/35_note_cus'\
+  b'tom.json'\
   b'')
 direntries = const(( ( '/20_note_Carl_Frei.json',  ( _f3, True, 909 ) ),
  ( '/26_note_Alderman_Wright.json',  ( _f1, True, 1713 ) ),
  ( '/31_note_Raffin.json',  ( _f0, True, 1716 ) ),
  ( '/35_note_custom.json',  ( _f2, True, 1444 ) ),
- ( '/pinout.txt',  ( _f4, False, 27 ) ),
+ ( '/pinout.txt',  ( _f4, False, 24 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2024/05/24 15:51:29' )
+date_frozen = const( '2024/06/24 23:33:26' )
 
-sum_size = const(5809)
+sum_size = const(5806)
 files_folders = const(5)
 import os
 import errno
