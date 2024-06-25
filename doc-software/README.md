@@ -21,11 +21,13 @@ Please post an github issue for any question you might have. Please star the git
 * This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
 * MIDI files can be updated via WiFi with drag and drop or via USB with a command line interface.
+* Crank revolution speed sensor to start music and to influence tempo (optional).
+* Stores lyrics
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # If you want to try out the software
-To see this software in operation, you need a ESP32-S3 development board (such as a DEVKIT-C board) with at least 1 MB of RAM. You can install the software as documented here, and then connect with a browser and navigate and use all functions. 
+To see this software in operation, you need a ESP32-S3 development board (such as a ESP32-s3-DEVKITC-1 board) with at least 1 MB of RAM. You can install the software as documented here, and then connect with a browser and navigate and use all functions. 
 
 The only thing you won't be able is to hear music...
 
@@ -45,6 +47,7 @@ flowchart LR
     H[main menu]
     H --> |Crank organ button| T[tune list page]
     T --> |Performance button| P[Performance control page]
+    P --> |History button| HI[History page]
     H --> |Tuner button| NL[Note list page]
     NL --> |Click on note name/MIDI number| NN[Note page]
     H --> |History button| HI[History page]
@@ -56,9 +59,9 @@ flowchart LR
     W --> |Show log button| E[Event log]
 ```
 
-It's best to navigate the application using the buttons and the back button on the top of the page. Since pages are cached for fast response, sometimes reloading pages will update/clear information.
+It's best to navigate the application using the buttons and the back button on the top of the page. S
 
-The home page is by default the menu page, but the configuration allows to define the tune list or the performance page as "home" page.
+The home page is  menu page.
 
 While music is playing, try to stay on the tune list and the performance page. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages. Other pages may interfere with playing music.
 
@@ -74,11 +77,11 @@ Next to the battery is the % remaining (100%=battery full, 0%=battery empty) and
 
 When the battery symbol &#x1f50b; turns to &#x1faab;, then the computed battery level is low. The counters are reset  when pressing the "Battery counters set to zero" on the home page. The time is the estimated operating time remaining in hours:minutes, based on the use history.
 
-Battery use is calculated based on the power consumption parameters of the General Configuration: battery capacity, solenoid consumption, microcontroller consumption, all in Watts or Watt-hours. The solenoid consumption is then computed during the time each solenoid is on during playback.
+Battery use is calculated based on the power consumption parameters of the General Configuration: battery capacity, solenoid consumption, microcontroller consumption, all in Watts or Watt-hours. The solenoid consumption is then computed during the time each solenoid is on during playback. 
 
 Battery information is refreshed about every minute.
 
-Keep in mind that battery capacity is usually lower than what the battery manufacturer informs. For example a 5V battery pack impelemented internally with 3.3V lithium batteries shown as 10000 mAh might have 3.3*10 Wh and not 5*10 Wh. To have meaningful output with the battery indicator, you will have to calibrate the battery capacity configuration.
+Keep in mind that battery capacity is usually lower than what the battery manufacturer informs. For example a 5V battery pack impelemented internally with 3.3V lithium batteries shown as 10000 mAh might have 3.3*10 Wh and not 5*10 Wh. To have meaningful output with the battery indicator, you will have to calibrate the battery capacity configuration. Without calibration, no battery information will show. See "Battery section of main menu page" below.
 
 If the browser looses the connection to the server, the broken heart symbol &#x1f494; will come up. This usually happens if the microcontroller is turned off or out of range of the cell phone.
 
@@ -91,8 +94,6 @@ If the browser looses the connection to the server, the broken heart symbol &#x1
 The "Battery" section shows more information about the computed state of the battery than the page header. 
 
 Be sure to press "Battery counters set to zero" after recharging the battery.
-
-
 
 
 # Tune control: tune list and performance page
@@ -372,14 +373,6 @@ Go to the install folder and execute the commands: ```
 ```
 mpremote run install_software.py
 mpremote run install_data.py
-```
-Install the language, if german or spanish is desired instead of english:
-````
-mpremote run install_german.py
-```
-or
-'''
-mpremote run install_spanish.py
 ```
 
 During the installation, a list of all files installed on the microcontroller will be displayed.
@@ -674,7 +667,7 @@ The backup files in the /data folder (for example /data/tunelib.json-2023-11-10,
 * Corrected errors in detailed hardware and software documentation, schematics and images 
 * Added button on the MIDI configuration page to test the solenoid when installing the wiring.
 * Detection of polyphony to limit battery consumption. Will flash onboard RGB red briefly when limit acts.
-* German and spanish translation of many pages. Basic installation is english, can change to other language easily by installing language .py file.
+* German and spanish translation of most used pages. Configuration pages are in english. 
 
 
 
