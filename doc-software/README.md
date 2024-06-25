@@ -359,6 +359,9 @@ Install the git utility, to access github.com easily, to clone this repository t
 # Installation
 Install MicroPython on the ESP32-S3, please see micropython.org. You will have to download the "ESP32-S3 generic" .bin file and install that as per instructions on the download page with the esptool utility.
 
+At this time (June 2024), please use MicroPython version 1.22. For ESP32S3 N8R8 and N16R8 use "Generic ESP32S3 module with Octal-SPIRAM with ESP32S3". To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32
+
+
 You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html
 
 Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to the hard drive of your PC. 
@@ -395,41 +398,44 @@ To test the application with the MicroPython console use:
 ```
 mpremote exec "import main"
 ```
-You should see a startup log similar to this, with no error or exception messages:
+You should see a startup log similar to this:
 ```
-Go!
-2023-11-07 17:10:19-03 - minilog - INFO - === RESTART ===
-2023-11-07 17:10:20-03 - config - INFO - Config ESP32-S3 N16R8/grande wifi_mac=f412fae72980 hostname and AP SSID=s3n16
-2023-11-07 17:10:22-03 - wifimanager - DEBUG - _init start
-2023-11-07 17:10:22-03 - wifimanager - DEBUG - AP mode started ssid s3n16 config ('192.168.144.1', '255.255.255.0', '192.168.144.1', '192.168.144.1')
-2023-11-07 17:10:22-03 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=magus-2.4G
-2023-11-07 17:10:22-03 - wifimanager - DEBUG - init ok
-2023-11-07 17:10:23-03 - tachometer - DEBUG - init ok
-2023-11-07 17:10:23-03 - solenoid - DEBUG - start _init solenoid
-2023-11-07 17:10:23-03 - solenoid - ERROR - No I2C connected sda=11 scl=12
-2023-11-07 17:10:23-03 - solenoid - ERROR - No I2C connected sda=15 scl=16
-2023-11-07 17:10:23-03 - solenoid - DEBUG - init complete self.solenoid_def.device_info={'i2c1': 'not connected', 'i2c0': 'not connected', 'i2c1.mcp.0': 'test', 'i2c0.mcp.0': 'test'}
-2023-11-07 17:10:24-03 - tunemanager - DEBUG - init ok 160 tunes
-2023-11-07 17:10:24-03 - battery - DEBUG - init ok
-2023-11-07 17:10:25-03 - organtuner - INFO - Microphone ADC configured
-2023-11-07 17:10:26-03 - organtuner - INFO - Calibration done duration=0.056616 _TUNING_ITERATIONS=5 samples_per_sec=35325.7
-2023-11-07 17:10:26-03 - organtuner - INFO - Frequency from 88.31425 to 8831.426
-2023-11-07 17:10:26-03 - organtuner - DEBUG - init ok
-2023-11-07 17:10:26-03 - player - DEBUG - init ok
-2023-11-07 17:10:26-03 - setlist - DEBUG - init ok
-2023-11-07 17:10:27-03 - poweroff - DEBUG - init ok
-2023-11-07 17:10:27-03 - startup - DEBUG - imports done
-2023-11-07 17:10:27-03 - tunemanager - DEBUG - Tunelist history updated
-2023-11-07 17:10:27-03 - setlist - DEBUG - Setlist loaded self.current_setlist=[]
-2023-11-07 17:10:27-03 - poweroff - DEBUG - Power off monitor started
-2023-11-07 17:10:27-03 - startup - DEBUG - Starting asyncio loop
-2023-11-07 17:10:27-03 - webserver - INFO - USE_CACHE=True MAX_AGE=300 sec
-2023-11-07 17:10:28-03 - solenoid - DEBUG - clap 8
+VfsLfs2 mounted with readsize=1024, progsize=128, lookahead=512
+timezone - Could not read timezone.json: [Errno 2] ENOENT
+2024-06-25 15:26:10UTC - minilog - INFO - === RESTART ===
+2024-06-25 15:26:11UTC - config - INFO - Generating new key
+2024-06-25 15:26:11UTC - config - INFO - Passwords encrypted
+2024-06-25 15:26:11UTC - config - DEBUG - Config Your ESP32-S3 device wifi_mac=7cdfa1e8c240 hostname and AP SSID=esp32s3
+2024-06-25 15:26:11UTC - led - DEBUG - init done
+2024-06-25 15:26:12UTC - wifimanager - DEBUG - AP mode started ssid esp32s3 config ('192.168.144.1', '255.255.255.0', '192.168.144.1', '192.168.144.1')
+2024-06-25 15:26:12UTC - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
+2024-06-25 15:26:12UTC - wifimanager - DEBUG - init ok
+2024-06-25 15:26:12UTC - solenoid - DEBUG - init complete self.solenoid_def.device_info={}
+2024-06-25 15:26:12UTC - tunemanager - DEBUG - init ok, 0 tunes in data/tunelib.json
+2024-06-25 15:26:12UTC - tachometer - DEBUG - Crank sensor not enabled
+2024-06-25 15:26:12UTC - tachometer - DEBUG - crank init ok
+2024-06-25 15:26:12UTC - battery - INFO - init error loading json, rebuilding. OSError(2,)
+2024-06-25 15:26:12UTC - battery - DEBUG - init ok
+2024-06-25 15:26:12UTC - history - DEBUG - init done
+2024-06-25 15:26:13UTC - player - DEBUG - init ok
+2024-06-25 15:26:13UTC - setlist - DEBUG - init ok
+2024-06-25 15:26:13UTC - organtuner - INFO - new data/organtuner.json written
+2024-06-25 15:26:13UTC - organtuner - DEBUG - init ok
+2024-06-25 15:26:13UTC - poweroff - DEBUG - init ok
+2024-06-25 15:26:14UTC - setlist - DEBUG - Setlist loaded 0 elements
+2024-06-25 15:26:14UTC - poweroff - DEBUG - Power off monitor started
+2024-06-25 15:26:14UTC - startup - DEBUG - Starting asyncio loop
+2024-06-25 15:26:14UTC - webserver - DEBUG - USE_CACHE=True MAX_AGE=300 sec
+2024-06-25 15:26:14UTC - solenoid - DEBUG - clap 8
+Total startup time (without main, until asyncio ready) 4357 msec
+2024-06-25 15:26:15UTC - battery - DEBUG - Can't calibrate: no calibration data
+2024-06-25 15:26:27UTC - wifimanager - INFO - Status'(wifi_SSID_1 201)', could not connect to wifi_SSID_1
+2024-06-25 15:26:28UTC - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_2
 ```
 
 If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is.
 
-Now connect with WiFi. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear.
+Now connect with WiFi. Search the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. ```http://192.168.144.1``` should also work. 
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
 

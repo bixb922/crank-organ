@@ -14,7 +14,7 @@ import fileops
 _logger = getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
-_DEFAULT_PASSWORD = const("drehorgel") 
+_DEFAULT_PASSWORD = const("password") 
 
 class Config:
     def __init__(self):
@@ -68,9 +68,9 @@ class Config:
             "description": "Your ESP32-S3 device",
             "name": "esp32s3",
             "access_point1": "wifi_SSID_1",
-            "password1": "password1",
+            "password1": _DEFAULT_PASSWORD,
             "access_point2": "wifi_SSID_2",
-            "password2": "password2",
+            "password2": _DEFAULT_PASSWORD,
             "ap_password": _DEFAULT_PASSWORD,
             "password_required": False,
             "ap_ip": "192.168.144.1",
