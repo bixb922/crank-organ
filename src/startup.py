@@ -15,7 +15,6 @@ import asyncio
 # setlist, logs, timezone information, pinout information. Create before importing minilog, config, battery, timezone.
 import fileops
 fileops.make_folder( "/data")
-fileops.make_folder( "/lyrics" )
 fileops.make_folder( "/signals" )
 fileops.make_folder( "/tunelib")
 
@@ -82,8 +81,7 @@ async def background_garbage_collector():
     # But I'll still keep the code. Now gc.collect() duration depends on
     # RAM allocated and not total RAM size.
     while True:
-        await asyncio.sleep_ms(2000)
-        # >>> GC CAN BE SPACED MORE
+        await asyncio.sleep_ms(3000)
         # gc is best if not delayed more than a few seconds
         try:
             async with scheduler.RequestSlice(

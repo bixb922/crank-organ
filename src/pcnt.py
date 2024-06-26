@@ -1,7 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # A very simple MicroPython-only Pulse Counter (PCNT) driver
-# for ESP32-S3. Good for up to 100 kHz I think...
+# for ESP32-S3, for low frequencies, i.e. < 100 kHz
 
 from machine import mem32, Pin
 
@@ -18,6 +18,10 @@ def get_gpio_number( pin ):
 
 
 class ESP32S3reg:
+    # Define hardware register addresses. This driver
+    # goes directly to these addresses, bypassing
+    # MicroPython and ESP-IDF.
+
     # Base register address for PCNT registers
     PCNT_base = 0x6001_7000
     # Interrupt clear register
@@ -59,9 +63,8 @@ class ESP32S3reg:
     GPIO_FUNCy_IN_SEL_low = 0x3c
     
     def get_peripheral( self, unit, signal, channel ):
-        # Get peripheral signal number of the PCNT device,
-        # unit, signal and channel for the GPIO Matrix
-        # according to
+        # Get peripheral number of the PCNT device# in the
+        #  GPIO Matrix according to
         # Table 6-2. Peripheral Signals via GPIO Matrix 
         peripheral =  33 + unit*4 + signal*2 + channel
         assert 33 <= peripheral <= 48
@@ -78,12 +81,11 @@ class ESP32S3reg:
         assert 0 <= unit < self.PCNT_units
         # Counter register
         # ESP32-S3: Register 38.5. PCNT_Un_CNT_REG (n: 0-3) (0x0030+0x4*n)
-        # ESP32: Register 17.4. PCNT_Un_CNT_REG (n: 0­7) (0x28+0x0C*n)
         # Bits 16-31 are 0 (reserved)
         return self.PCNT_CNT_base + 4*unit
     
     def GPIO_FUNCy_IN_SEL_CFG_REG( self, unit, channel, signal ):
-        # Return address of input selection configuration register
+        # Computes address of input selection configuration register
         # for counter, channel and signal/control indicated
         # signal: 0=signal,1=control
 
@@ -104,26 +106,18 @@ def _initialize_pcnt( ):
     # Get PCNT out of reset state
     # and enable clock for PCNT in SYSTEM/DPORT register
     # If clock not set, the registers cannot be written
-    # and show 0 if attempting to write something there.s
+    # and show 0 if attempting to write something there.
     SYSTEM_PCNT_CLK_EN = 1<<10
     SYSTEM_PCNT_RST = 1<<10
-    # For ESP32, the bits have other names:
-    # DPORT_PCNT_RST = 1 << 10
-    # DPORT_PCNT_CLK_EN = 1 << 10
-    # On ESP32 the registers are called DPORT_... instead
-    # of SYSTEM_... as they are called on ESP32-S3
-    # But the bit for the PCNT is in the same position.
-
-    # See issue #12592 MicroPython GITHUB for this code.
     # Set this bit to enable PCNT clock. (R/W)
     mem32[MC.SYSTEM_PERIP_CLK_EN0_REG] |= SYSTEM_PCNT_CLK_EN
 
-    # SYSTEM_PCNT_RST Set this bit to reset PCNT. (R/W)
+    # "SYSTEM_PCNT_RST Set this bit to reset PCNT. (R/W)"
     # i.e.: Clear this bit to enable PCNT and get it out
     # of "reset" state.
     mem32[MC.SYSTEM_PERIP_RST_EN0_REG] &= ~SYSTEM_PCNT_RST
 
-    # Clear all interrupts, no interrupt handling here
+    # Clear all interrupts, no interrupt handling here,
     # for all units. Clear pending interrupts if any.
     mem32[MC.PCNT_INT_ENA_REG] = 0
     mem32[MC.PCNT_INT_CLR_REG] = 0xf
@@ -141,12 +135,12 @@ def _initialize_pcnt_unit( unit ):
     #    disable all interrupts
     #    Only glitch filter enabled with hardware default value.
     #    Reset the the register of the GPIO Matrix 
-    #    corresponding to this unit
+    #    corresponding to this PCNT unit
 
-    # Stop count: ESP-IDF pcnt_ll_stop_count(group->hal.dev, unit_id);
+    # Stop count, see ESP-IDF pcnt_ll_stop_count(group->hal.dev, unit_id);
     PCNT_CNT_PAUSE_Un = 1 << (2 * unit + 1)
     mem32[MC.PCNT_CTRL_REG] |= PCNT_CNT_PAUSE_Un
-    # Clear count: ESP-IDF pcnt_ll_clear_count(group->hal.dev, unit_id);
+    # Clear count, see ESP-IDF pcnt_ll_clear_count(group->hal.dev, unit_id);
     # Set count to zero by
     # Set and then clear "reset to zero" bit 
     PCNT_PULSE_CNT_RST_Un = (1 << (2 * unit))

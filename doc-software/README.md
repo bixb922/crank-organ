@@ -3,31 +3,31 @@
 # Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ
 
-Don't feel overwhelmed with the information presented here. Should you use this software, just install it and use it. The only configuration you need to do is to configure the WiFi router where the microcontroller needs to connect. All the rest is optional and the software will work out of the box.
+Don't feel overwhelmed with the configuration information presented here. Should you use this software, just install it and use it. The only configuration you need to do is to configure the WiFi router where the microcontroller needs to connect. All the rest is optional and the software will work out of the box.
 
-No software programming knowledge is needed to use this software. However, full source code is provided for perusal and with permission to change it, if you would like. 
+No software programming knowledge is needed to use this software. However, full source code is provided for perusal and it comes with the permission to change it, if you like. 
 
-Please post an github issue for any question you might have. Please star the github repository if this is of interest for you.
+Please post an github issue in this repository for any question you might have. Please star the github repository if this is of interest for you.
 
 # Features
 
-* Browser as user interface. Control is done with WiFi with a browser on a cell phone, tablet or PC.
+* Browser as user interface. Control is done with WiFi with a browser on a cell phone, tablet or PC. No need to install anything on the cell phone or tablet.
 * Can define a setlist or select tune by tune.
-* It's fast to establish a setlist. The setlist can be ordered, shuffled and stored. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
+* It's fast to establish a setlist. The setlist can be ordered, shuffled and stored on flash. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
 * Music is uploaded into the microcontroller via WiFi with drag and drop or via USB connnection. You can add description, author, title, year to each tune.
-* To aid tuning, playing scales and individual notes is supported. A tuner (test version) is included.
+* To aid tuning, playing scales and individual notes is supported. A tuner is included.
 * Shows remaining battery capacity on browser
-* Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments.
-* This system is highly scalable, capable of managing a vast number of pipes. Depending on the model, the microcontroller can store either 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
+* Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments, like a glockenspiel MIDI instrument.
+* This system is highly scalable, capable of managing a virtually unlimited number of pipes. Depending on the model, the microcontroller can store either about 300 or 700 MIDI files. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
 * MIDI files can be updated via WiFi with drag and drop or via USB with a command line interface.
 * Crank revolution speed sensor to start music and to influence tempo (optional).
-* Stores lyrics
+* Allows to store lyrics
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # If you want to try out the software
-To see this software in operation, you need a ESP32-S3 development board (such as a ESP32-s3-DEVKITC-1 board) with at least 1 MB of RAM. You can install the software as documented here, and then connect with a browser and navigate and use all functions. 
+To see this software in operation, you need a ESP32-S3 development board (such as a ESP32-S3-DEVKITC-1 board) with at least 1 MB of RAM. You can install the software as documented here, and then connect with a browser and navigate and use all functions. 
 
 The only thing you won't be able is to hear music...
 
@@ -59,9 +59,9 @@ flowchart LR
     W --> |Show log button| E[Event log]
 ```
 
-It's best to navigate the application using the buttons and the back button on the top of the page. S
+It's best to navigate the application using the buttons and the back button on the top of the page. 
 
-The home page is  menu page.
+The home page is the menu page.
 
 While music is playing, try to stay on the tune list and the performance page. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages. Other pages may interfere with playing music.
 
@@ -73,7 +73,7 @@ While using the tuning pages (note list and note page), playing back music is di
 
 The &#11013; symbol will go up one level in the previous diagram.
 
-Next to the battery is the % remaining (100%=battery full, 0%=battery empty) and the remaining estimated operating time in hours:minutes (21 hours 29 minutes on the example).
+If the battery has been calibrated: Next to the battery is the % remaining (100%=battery full, 0%=battery empty) and the remaining estimated operating time in hours:minutes (21 hours 29 minutes on the example).
 
 When the battery symbol &#x1f50b; turns to &#x1faab;, then the computed battery level is low. The counters are reset  when pressing the "Battery counters set to zero" on the home page. The time is the estimated operating time remaining in hours:minutes, based on the use history.
 
@@ -257,15 +257,13 @@ Editing then tunelib is best done on PC, since the page is rather wide.
 Press the "save" button at the bottom of the page to save all changes.
 
 Columns:
-* Title
-* Genre
-* Author
-* Year
+* Title, Genre, Author, Year: free text
 * Autoplay: if marked, this tune is included in the "shuffle all" function.
-* Rating
-* Info
-* Duration in minutes:seconds, calculated automatically
-* Date added, registered automatically
+* Rating: this should be *, ** or *** or be left blank. I use it to indicate how much I like this tune.
+* Info: free text. This information can also be added using the history page. I use it to keep notes on music recently played.
+* Lyrics: press the L button to add or edit lyrics for this tune. The lyrics can be recalled with the Lyrics button on the Performance page.
+* Duration in minutes: seconds, calculated automatically
+* Date added, added automatically
 * File name
 * Size: file size in bytes
 + Clean row: mark here to clear all fields of this row on save. This is used to get rid of the information about a deleted file.
@@ -283,18 +281,18 @@ The "Show log" button will show the latest event log. Look at the log if the neo
 
 If there is some problem, please post the relevant part of the log, with previous history, and the description of the situation as an issue, I'll try to help.
 
-The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote, putty, Thonny, or other tools will additionally show records of class DEBUG. Due to the overhead, these are not recorded to flash. It may be of interest to look at these detailed event logs too.
+The event log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote (or also putty, Thonny, or other tools) will additionally show records of class DEBUG. Due to the overhead, these are not recorded to flash. It may be of interest to look at these detailed event logs too.
 
 
 # The tune library
 All MIDI files to be played reside in the tunelib folder in the microcontroller. The filenames must end with .mid or .MID
 
-The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating,
+The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating.
 
 ## MIDI files
 Both MIDI file type 0 (single track) and MIDI file type 1 (multitrack) files are supported. 
 
-Note on, note off and set tempo events are interpreted for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers for certain or all MIDI notes or to specify MIDI notes for percussion channel 10. All other messages such as after touch, Meta messages such as lyrics or text and sysex messages are may be present but are ignored.
+Note on and note off will act on solenoids.  Set tempo events are interpreted for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers for certain or all MIDI notes or to specify MIDI notes for percussion channel 10. All other messages such as after touch, Meta messages such as lyrics or text and sysex messages are may be present but are ignored.
 
 Be sure to play any MIDI file at least once on your PC to see if it has a correct format.
 
@@ -304,7 +302,7 @@ There is no functionality to transpose a MIDI file. Use any MIDI file editor to 
 
 To add files, copy them from the PC to the tunelib folder on the microcontroller, then update the info with the Tunelib Editor option.
 
-To remove files, rmove them from the tunelib folder on the microcontroller, then update the info with the tunelib editor.
+To remove files, remove them from the tunelib folder on the microcontroller, then update the info with the tunelib editor.
 
 Before copying tunes to the microcontroller, it is best to have the time set by ```mpremote rtc --set```. Another option is to let the microcontroller acquire date and time from the internet. Wait about 20 seconds after reboot and check date/time on the microcontroller with the System Information button.
 
@@ -317,7 +315,7 @@ Before copying tunes to the microcontroller, it is best to have the time set by 
 
 mpremote is the standard Micropython tool to update files on the microcontroller, see https://docs.micropython.org/en/latest/reference/mpremote.html
 
-Connect the microcontroller to the USB of the PC. Use ```mpremote cp my_midi_file.mid :/tunelib/my_midi_file.mid```to copy MIDI files from the PC to the microcontroller.
+Connect the microcontroller to the USB of the PC. Use ```mpremote cp my_midi_file.mid :/tunelib/my_midi_file.mid```to copy a MIDI file from the PC to the microcontroller.
 
 ## Make uploaded MIDI files visible
 New files will be visible only once you enter the Tunelib Editor option. This will take some time, since the microcontroller scans each MIDI file entirely.
@@ -624,10 +622,9 @@ With the SD card, only about 500kb of free flash memory is necessary. The /tunel
 ## Spanish and german
 Pages for daily operation such as home page, tunelist, performance and history are available in english, spanish and german.
 
-Pages for configuration are only available in english. Since these pages are not used very frequently, please use on a PC and use the translation provided by the browser if necessary.
+Pages for configuration are only available in english. Since these pages are not used very frequently, please use those on a PC and use the translation provided by the browser if necessary.
 
-To install another language, run the provided files, either:
-```mpremote run install_spanish.py```  or ```mpremote run install_german.py```
+The language is selected according to the language preference of the browser.
 
 ## Customization crank organ photo
 You can replace the crank organ ohite of the home screen by replacing the file /static/crank.jpg. A size of 100x75 pixels may be a good size to start with. 
@@ -676,7 +673,7 @@ Changes from Nov 2023 to March 2024:
 * Detection of polyphony to limit battery consumption. Will flash onboard RGB red briefly when limit acts.
 * German and spanish translation of most used pages. Configuration pages are in english. 
 
-Changes from March 2024 to June 2024:
+Changes from March 2024 to June 2024.
  * New Pulse Driver module using hardware PCNT module of the ESP32S3 microprocessor for precise and low overhead crank speed measurement.
 * Configurable crank speed settings
 * Crank revolutions per second graph on diag.html page.

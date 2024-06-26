@@ -2,23 +2,12 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-# >>> check design of caching
-# >>> battery: doesn't matter, can be 1-2 per minute
-# >>> progress: don't cache, its transient and HAS to
-# be polled to show progress, i.e. the UI decides
-# when to update.
-# >>> tunelib: now ok
-# >>> organtuner. Might be optimized with eTag but
-# >>> eTag is ignored for HTTP 1.0. Could implement
-# >>> eTag manually, but the server would have to be
-# >>> asked anyhow and there is not much else to do
-# >>> during tuning.
-#
 # >>> test tunelib export as .tsv for spreadsheet
 # >>>not feasible to clipboard if not https.
 
-# >>> first time progress to clear tab cache
+# >>> first time progress or "reboot indicator" should clear tab cache
 # >>> tunelist.html redo search if page is activated!
+# >>> check navigation if default start page is not index
 
 import os
 import sys

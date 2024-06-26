@@ -30,8 +30,7 @@ TLCOL_SIZE = const(11)
 TLCOL_HISTORY = const(12)
 #>>>KEEP INDICATOR "FILE DELETED" INSTEAD OF DELETING ROW?
 #>>>values 1/0 instead of true/false
-# use const()????
-# >>> has lyrics indicator
+# >>> add "has lyrics" indicator
 TLCOL_RFU = const(13)
 TLCOL_COLUMNS = const(14)
 

@@ -14,7 +14,6 @@ from mcp23017 import MCP23017
 from config import config
 import midi
 import fileops
-#>>> SERVER ERROR 500 WHEN SAVING PINOUT?
 
 # ClassPinoutList
 #   manages list of possible pinouts files and holds

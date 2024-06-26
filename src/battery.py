@@ -2,9 +2,6 @@
 # MIT License
 # Tallies battery usage
 
-
-# >>> see battery off problem.
-
 from micropython import const
 import asyncio
 import time
@@ -22,11 +19,11 @@ from timezone import timezone
 from matrix import Matrix, linear_regression
 
 # update readings every 60 seconds
-_UPDATE_EVERY_SECONDS = const(60)  # type:ignore
+_UPDATE_EVERY_SECONDS = const(60) 
 
 
 # Battery low limit
-_BATTERY_LOW_PERCENT = const(10) # type:ignore
+_BATTERY_LOW_PERCENT = const(10)
 
 class Battery:
     def __init__(

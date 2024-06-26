@@ -53,7 +53,6 @@ class TachoDriver:
         last_time = ticks_ms()
         last_pulse_count = self.counter.count()
         while True:
-            # >>> why 300 ms? Seems ok...??
             await asyncio.sleep_ms(300)
             new_time = ticks_ms()
             new_pulse_count =  self.counter.count()
