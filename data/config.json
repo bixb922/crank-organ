@@ -16,7 +16,6 @@
     "normal_rpsec": 1.2, 
     "battery_heartbeat_period": 0, 
     "higher_threshold_rpsec": 0.7, 
-    "initial_page": "index", 
     "servernode": "192.168.100.19:8080", 
     "serverpassword": "", 
     "mic_signal_low": -18, 

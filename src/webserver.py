@@ -146,7 +146,7 @@ def check_authorization(request):
 # Home page
 @app.route("/")
 async def index_page(request):
-    inipage = "/static/" + config.cfg.get("initial_page", "index") + ".html"
+    inipage = "/static/index.html"
     return redirect(inipage)
 
 

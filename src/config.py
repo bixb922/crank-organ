@@ -82,7 +82,6 @@ class Config:
             "touchpad_big_change": 20000,
 
             "tzidentifier": "America/Santiago",
-            "initial_page": "index",
             
             "webserver_cache": True,
             # Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds

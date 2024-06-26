@@ -138,17 +138,9 @@ password</div>
     <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')"/>dB
 	<br>
-    <label for="initial_page">Initial page (home page):</label>
-    <br>
-    <input type="radio" name="initial_page" id="index" value="index" oninput="markField('index')"/>Main menu page
-    <br>
-    <input type="radio" name="initial_page" id="tunelist" value="tunelist" oninput="markField('tunelist')"/>Tune list page
-    <br>
-    <input type="radio" name="initial_page" id="play" value="play" oninput="markField('play')"/>Performance page
-	<br>
     
 	
-	<button type="button" onclick="save(  'tzidentifier', 'ap_ip', 'touchpad_big_change', 'initial_page', 'mic_signal_low' )">Save other parameters</button>
+	<button type="button" onclick="save(  'tzidentifier', 'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other parameters</button>
     
 <div class="middlediv">Debug/test settings</div>
    
@@ -189,13 +181,6 @@ let changed_fields = [];
 async function getCurrentConfig(){
 	let json_result = await fetch_json( "/get_config" ) ;
 	for( let [key, value] of Object.entries(json_result)) {
-        if( key  == "initial_page" ) {
-            // this is a radiobutton, "initial_page" is the name of the
-            // group. the ids are "index", "tunelist", "performance"
-            key = value ;
-            
-            value = true ;
-        }
         d = document.getElementById( key );
         if( d != null ){
             if( d.type == "checkbox" || d.type == "radio" ) {
@@ -259,10 +244,7 @@ async function save( /* argument list */) {
     let value = "" ;
 	for( var i=0; i<arguments.length; i++){
         // no need to escapeHtml description
-        if( arguments[i] == "initial_page" ){
-            value = getRadioButtonValue( arguments[i] );
-        }
-        else if( arguments[i] == "description" ){
+		if( arguments[i] == "description" ){
             value = removeSpecialHtml( getValue( arguments[i] ));
         }
         else{
@@ -325,7 +307,7 @@ function markField( id ){
     d.style.backgroundColor = cream ;
 }
 function clearMark( id ){
-    if( ["initial_page", "webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id) ){
+    if( [ "webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id) ){
         return ;
     }
     document.getElementById( id ).style.backgroundColor = "#ffffff" ;

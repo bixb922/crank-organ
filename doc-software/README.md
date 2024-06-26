@@ -23,6 +23,7 @@ Please post an github issue in this repository for any question you might have. 
 * MIDI files can be updated via WiFi with drag and drop or via USB with a command line interface.
 * Crank revolution speed sensor to start music and to influence tempo (optional).
 * Allows to store lyrics
+* Unattended operation is possible too
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
@@ -535,7 +536,24 @@ The rest of the sections is even less likely to require change:
 
 The configuration gets stored to /data/config.json in the microcontroller. Passwords are encrypted. However the ESP32-S3 does not provide the hardware to really protect the passwords in a way that can be considered highly secure.  The microcontroller should not be exposed to access from the internet, only to access in home or cell phone "hot spot" networks.
 
-## MIDI configuration
+## Crank configuration
+
+The crank can be equipped optionally with a rotary encoder to sense rotation. The software has a very efficient rotation counter, and can calculate rotation speed.
+
+When starting to turn the crank, the current MIDI file will start playing.
+
+When starting to turn the crank and no setlist has been defined, after some seconds, all tunes will be shuffled and the first tune will start to play.
+
+On the performance page, there is a option to make the tempo of the music depend on the crank revolution speed.
+
+To enable the crank:
+* Define the GPIO pin where the crank rotary encoder is connected in the "Pin/MIDi configuration" page
+* Go to the "Crank and tune play parameters" in the configuration page and set the parameters there. The number of pulses per revolution (PPR) given by the encoder. If you are builiding the encoder yourself, this is the number of positive signal edges per revolution.
+
+## Automatic playback
+There are crank organs being used with a powered bellows for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically with the indicated pause.
+
+# MIDI configuration
 
 The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
@@ -637,8 +655,16 @@ once you configure your microcontroller, you should backup relevant files:
 * /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information). This is necessary only if you change the standard configuration.
 * /data/pinout.txt (although this file is very easy to restore using the MIDI configuration page)
 * /data/history.json (if you are interested in conserving the history of when tunes have played)
+* /data/lyrics.json with the lyrics of the tunes.
 
-Copy with FileZilla or mpremote to your PC. You also can print the configuration forms with the browser, to have backup on paper, but that will need to reenter the data if the files get lost.
+These files don't need backup:
+* /data/timezone.json. This file is recreated if absent and refreshed daily. It holds the local time zone information.
+* /data/organtuner.json. This file is recreated or refreshed when tuning, and holds the last tuning.
+* /data/error_nnn_.log. These are error logs, they are interesting only if there is a problem.
+* Files in the data folder ending with a date are backups of configuration files.
+* Files in the signals folder are waveforms stored while tuning, for debugging purposes.
+
+For backup of files, copy them with FileZilla or mpremote to your PC. You also can print the configuration forms with the browser, to have backup on paper, but that will need to reenter the data if the files get lost.
 
 Also: Keep a copy of the MIDI files on your PC, or backup the tunelib folder after changes.
 
@@ -687,6 +713,7 @@ Changes from March 2024 to June 2024.
 * Touch button can now stop current tune if one is playing, and start tune if there is none.
 * Battery level is calculated with linear regression now, may be more accurate.
 * Register rating and comments easily on history page.
+* Automatic playback
 
 
 # Programming language
@@ -713,11 +740,9 @@ To ease the installation process, I have included the libraries in the repositor
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes. I have tried tested all options under many circumstances. Please report problems as github issue.
 
-The following features need more testing or development:
-
-* Sensor for crank speed to influence playback speed. Pending to test and for more adjustments.
-
 The microphone option for tuning has now been tested and updated.
+
+The crank option has now been tested. I am trying out different sensors for crank rotation and will document those when concluding tests.
 
 # Troubleshooting
 If you added tunes to the tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and changes recognized.
