@@ -60,11 +60,14 @@ To avoid that voltage drop, and to get always the correct voltage, you can use a
 If the battery supplies less than the 13V needed, you will need a "boost DC-DC converter" ("boost" means "raise the voltage"). If the battery supplies more than 13V, you will need a "buck DC-DC-converter".
 
 The characteristics of the voltage converter needed to power the solenoid valves are:
-| Name | DC-DC converter |
+
+
+| Description | DC-DC converter                                 |
+|------|-------------------------------------------------|
 | Type |  "buck" or "boost" depending on battery voltage |
 | Input voltage range | Must include the battery voltage |
-| Output voltage range | Must include the desired 13V |
-| Output current | at least 3A, up to 5A |
+| Output voltage range | Must include the desired 13V    |
+| Output current       | at least 3A, up to 5A           |
 | Variable output voltage | Yes |
 | Input voltage display | May be interesting to know battery state |
 | Voltage display | Makes life easier |
@@ -75,6 +78,8 @@ The characteristics of the voltage converter needed to power the solenoid valves
 | Anti-reverse input protection | Very desirable |
 | Used to charge batteries | No |
 
+
+
 This is how a DC-DC converter looks like:
 
 ![DC DC converter](DC_DC_converter.jpg)
@@ -82,7 +87,9 @@ This is how a DC-DC converter looks like:
 Search internet for DC-DC buck (or boost) converter with display.
 
 The characteristics of the voltage converter needed to power the electronics with 5V are:
-| Name | DC-DC converter |
+
+| Description | 5V DC-DC converter |
+|------|-------------------------------------------------|
 | Type |  buck converter |
 | Input voltage range | Must include the battery voltage |
 | Output voltage range | Fixed 5V |
@@ -168,7 +175,7 @@ DCT--negative/black-->DC5
 DCT--negative/black-->DC13
 ```
 
-This is how this looks when soldered:
+This is how this looks when connected:
 
 ![electronics](mc_and_dc_dc_converters.jpg)
 
