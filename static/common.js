@@ -90,7 +90,7 @@ function barGraph( container_name, value, color, scale_divisions, alignment, wid
 	let canvas_name = container_name + "canvas" ;
 	let canvas = document.getElementById(canvas_name) ;
 	if( canvas === null ) {
-		let cd = document.getElementById( container_name )
+		let cd = document.getElementById( container_name );
 		let w = Math.round( window.innerWidth * width_percent/100 *0.98);
 		let h = 15 ;
 		let s = '<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name + '</canvas>' ;
@@ -307,7 +307,7 @@ function needleBar( container_name, velocity, width_percent, minvalue, maxvalue,
 	ctx.lineTo( cw/2, ch*0.8 )
 	ctx.stroke() ;
 	
-	needle_pos = cw*(velocity-minvalue)/(maxvalue-minvalue);
+	let needle_pos = cw*(velocity-minvalue)/(maxvalue-minvalue);
 	ctx.beginPath() ;
 	ctx.fillStyle = meter_green_color ;
 	ctx.fillRect( cw/2, 0, needle_pos-cw/2, ch*0.8 ) ;
@@ -328,46 +328,52 @@ async function fetch_json( url, post_data ){
 	let post_arg = make_fetch_args( post_data ) ;
 	while( true ) {
 		try {
-            console.log("fetch json try", url, "post=", post_arg ) ;
             t0 = Date.now() ;  // Reports response time
             response = {};
 			response = await fetch( url, post_arg ) ;
 			break ;
 		}
 		catch( err ) {
-			console.log("fetch json failed", err, url, "ok", response.ok, "status", response.status ) ;
+			console.log("fetch json failed", err, "url=", url ) ;
             // In the header battery time, replace battery
-            // icon and time remaining with message
-            // symbols.
-			msg = tlt("no conectado") ;
+            // icon and time remaining with "network connection broken"
+            // symbol.
+			msg = "not connected" ;
             htmlByIdIgnoreErrors( "header_time",
                                  msg + " &#x1f494;") ;
 			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
 			showPopup( "", popupmsg );
 			await sleep_ms( 5_000 ) ;
 		}
+		// retry fetch forever until getting through to server
 	}
 
 	if( !response.ok ){
-		// Response not ok will abort and notify error to user.
+		// Response not ok will notify error to user and abort throwing an error
         let rstatus = response.status ;
         response_html = await response.text() ; 
         response_text = response_html.replace(/<[^>]*>/g, ' ');
         console.log("Error response", rstatus, "url", url, "response", response, "text", response_text ) ;
         alert( `Server error ${rstatus} ${response_text}` ) ;
-        return ;
+        throw new Error(`Server sent error status {response.status}`);
+		// Fetch calls and call function will abort unless
+		// there is a try/catch block.
 	}
 
     json_result = await response.json() ;    
     t = Date.now() - t0;
-	console.log("fetch_json ok response time " + url + " " + t + " msec");
+	console.log("fetch_json ", url, "response time", t, "msec");
     
-	// Return result if json does not say "alert"
-	if( json_result["alert"] === undefined ) {
-		return json_result;
+	// If there is an alert, show to user and reraise exception
+	if( json_result.alert) {
+		alert( json_result.alert ) ;
+		if(json_result.error){
+			throw new Error("Alert " + json_result.alert + " url " + url ) ;
+		}
+		// Respond_error_alert() prevents calling code to continue
+		// (except when enclosing fetch_json in try/catch)
 	}
-	alert( json_result["alert"] ) ;
-	throw new Error("Alert " + json_result["alert"] + " url " + url ) ;
+	return json_result;
 	
 }
 
@@ -414,27 +420,46 @@ async function updateHeader() {
 		let batteryText = "" ;
 		// Check if calibration done. percent_remaining is a number
 		// only if calibration done, as are "low" and "remaining_seconds"
-		if( !is_no_number(battery["percent_remaining"])){
-			if( battery["low"] ) {
-				// Low battery emoji on white background
-				batteryText = "<span style='background-color:white'>&#x1faab;</span>" ;
-				// Change background color if low
-				header_background = meter_red_color ;
-			}
-			else {
-				// Normal green battery emoji on white background
-				batteryText = "<span style='background-color:white'>&#x1f50b;</span>" ;
-				header_background = normal_background;
-			}
-			elements = document.getElementsByClassName("headerdiv");
-			for (var i = 0; i < elements.length; i++) {
-				// Should be only one headerdiv, but this covers all
-				elements[i].style.backgroundColor = header_background;
-			} 
-			batteryText += "&nbsp;" + Math.round( battery["percent_remaining"] ) + "%&nbsp;";
-			batteryText += format_secHHMM( battery["remaining_seconds"] ) ;
+		if( is_no_number(battery["percent_remaining"])){
+			// No calibration done, don't bother requesting
+			// information about battery any more
+			htmlById( "header_time", "" ) ;
+			return ;
 		}
-        htmlById( "header_time", batteryText ) ;
+		let header_time = document.getElementById( "header_time" );
+		let ht_symbol = document.getElementById ( "ht_symbol" );
+		if( !ht_symbol ){
+			let ht_symbol = document.createElement( "span" );
+			ht_symbol.id = "ht_symbol";
+			ht_symbol.style.backgroundColor = "white";
+			header_time.appendChild( ht_symbol );
+			let ht_text =  document.createElement( "ht_text" );
+			ht_text.id = "ht_text";
+			header_time.appendChild( ht_text );
+		}
+		ht_symbol = document.getElementById ( "ht_symbol" );
+		let ht_text = document.getElementById( "ht_text" );
+
+		if( battery["low"] ) {
+			// Low battery emoji on white background
+			ht_symbol.innerHTML = "&#x1faab;"; 
+			// Change background color if low
+			header_background = meter_red_color ;
+		}
+		else {
+			// Normal green battery emoji on white background
+			ht_symbol.innerHTML = "&#x1f50b;"
+			header_background = normal_background;
+		}
+		elements = document.getElementsByClassName("headerdiv");
+		for (let i = 0; i < elements.length; i++) {
+			// Should be only one headerdiv, but this covers all
+			elements[i].style.backgroundColor = header_background;
+		} 
+		ht_text.innerHTML = "&nbsp;" + Math.round( battery["percent_remaining"] ) 
+					+ "%&nbsp;" 
+					+ format_secHHMM( battery["remaining_seconds"] ) ;
+
         // Battery info gets updated once a minute.
         // Refresh display about twice a minute, that's more than enough 
         // since battery info changes slowly.
@@ -448,16 +473,16 @@ function make_status_text( progress_status, percentage ) {
 	// Transform player status to language
     let status_text ;
 	if (progress_status === "ended") {
-		status_text = tlt("fin") ;
+		status_text = "ended" ;
 	}
 	else if(progress_status === "playing" ) {
 		status_text = "" + Math.round(percentage) + "%" ;
 	}
 	else if(progress_status === "cancelled" ) {
-		status_text = tlt("cancelado") ;
+		status_text = "cancelled" ;
 	}
     else if( progress_status == "waiting"){
-        status_text = "\u231B " + tlt("esperando") ;
+        status_text = "\u231B waiting" ;
     }
 	else {
 		status_text = progress_status ;
@@ -479,6 +504,16 @@ function formatIfNumber( newText ) {
 	let formatText = newText ;
 	// Format if number. If not: leave unchanged.
 	if( /^\-?[0-9]+\.?[0-9]*$/.test(formatText) )  {
+		try{
+			let n = parseInt( newText );
+			if( 0 <= n && n <= 2100 ){
+				// don't format years
+				return newText;
+			}
+		}
+		catch{
+			// Ignore errors, go ahead ;
+		}
 	   formatText = " " + numberFormatter.format(+formatText) ;
 	}
 	return formatText ;
@@ -549,7 +584,7 @@ TLCOL_DATEADDED = 9 ;
 TLCOL_RATING = 10 ;
 TLCOL_SIZE = 11 ;
 TLCOL_HISTORY = 12 ;
-TLCOL_RFU = 13 ;
+TLCOL_LYRICS = 13 ;
 TLCOL_COLUMNS = 14 ;
 
 
@@ -597,33 +632,29 @@ async function revoke_credentials(){
 }
 
 function escapeHtml(text) {
-  var map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  
-  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    let el = document.createElement("div");
+  	el.innerText = text;
+  	return el.innerHTML
 }
 
-function removeSpecialHtml( text ){
+function removeSpecialHtmlChars( text ){
     return text.replace(/[&<>"']/g, "");
 }
+
+
 function currentPage(){
     let path = window.location.pathname;
     return path.split("/").pop();
 }
 
 // Cache a json file 
-async function cache_json( path ) {
+async function  cache_json( path ) {
 	let data = sessionStorage.getItem( path );
 	if( data == null || data == undefined || data == "undefined"){
         console.log("getting json from net for cache:", path ) ;
-		let tunelib = await fetch_json( path );
-        sessionStorage.setItem( path, JSON.stringify( tunelib ) ) ;
-		return tunelib ;
+		let json_for_cache = await fetch_json( path );
+        sessionStorage.setItem( path, JSON.stringify( json_for_cache ) ) ;
+		return json_for_cache ;
 	}
 	return JSON.parse( data ) ;
 }
@@ -661,38 +692,244 @@ function drop_lyrics() {
 
 function pageUp(pagename){
     from = document.referrer;
-    if( from == undefined || from.includes(pagename+".html") || pagename == undefined ){
+    if( from == undefined || from.includes(pagename) || pagename == undefined ){
         // to be faster: if the previous page is the "up" page, go back
         // This could lead to another page of the same name in history
         // Tough luck.
         history.back();
     }
     else{
+		let p = pagename ;
+		if( !p.endsWith(".html") ){
+			p = p + ".html";
+		}
+		if( p.indexOf("static") == -1 ){
+			p = "/static/" + p ;
+		}
         // Came from other page, navigate to this page
-        window.location.href = pagename + ".html" ;
+        window.location.href = p ;
     }
 }
 
 
 function get_rating( tune ){
-	return tune[TLCOL_RATING].replace(/\*/g, "&#x2B50;");
+	return tune[TLCOL_RATING].replace(/\*/g, "⭐"); //&#x2B50;
 }
 
 function isUsedFromServer(){
 	// True if this page resides on the drehorgel.pythonanywhere.com server
-	// (mcserver). If served from the microcontroller,
-	// there is no cookie.
-    return document.cookie.includes( "drehorgel=" ) ;   
+	// as IOT crank organ component (via mcserver)
+	let url = ""+window.location.href;
+	return url.indexOf("/iot/") != -1;
 }
 
 async function setPageTitle(){
 	// Set page title
-	pt = document.getElementById( "pagetitle" );
+	let pt = document.getElementById( "pagetitle" );
 	if( pt == undefined || pt.innerText != "" ){
 		return ;
 	}
 	// cache description in page storage for efficiency
-	j = await cache_json("/get_description");
-	pt.innerText = j["description"] ;
+	let j = await cache_json("/get_description");
+	pt.innerText = j.description ;
 }
 setPageTitle() ;
+
+
+async function commonGetProgress() {
+	let stored_boot_session = sessionStorage.getItem( "boot_session" );
+	let progress = await fetch_json( "/get_progress/" + stored_boot_session  );
+	console.log("get progress", progress );
+	if( progress.boot_session != stored_boot_session ){
+		drop_tunelib();
+		drop_lyrics();
+		sessionStorage.setItem(  "boot_session", progress.boot_session) ;
+	}
+	return progress ;
+}
+
+let programNameList = [
+    "any",
+    "Acoustic Grand Piano",
+    "Bright Acoustic Piano",
+    "Electric Grand Piano",
+    "Honky-tonk Piano",
+    "Electric Piano 1",
+    "Electric Piano 2",
+    "Harpsichord",
+    "Clavi",
+    "Celesta",
+    "Glockenspiel",
+    "Music Box",
+    "Vibraphone",
+    "Marimba",
+    "Xylophone",
+    "Tubular Bells",
+    "Dulcimer",
+    "Drawbar Organ",
+    "Percussive Organ",
+    "Rock Organ",
+    "Church Organ",
+    "Reed Organ",
+    "Accordion",
+    "Harmonica",
+    "Tango Accordion",
+    "Acoustic Guitar (nylon)",
+    "Acoustic Guitar (steel)",
+    "Electric Guitar (jazz)",
+    "Electric Guitar (clean)",
+    "Electric Guitar (muted)",
+    "Overdriven Guitar",
+    "Distortion Guitar",
+    "Guitar Harmonics",
+    "Acoustic Bass",
+    "Electric Bass (finger)",
+    "Electric Bass (pick)",
+    "Fretless Bass",
+    "Slap Bass 1",
+    "Slap Bass 2",
+    "Synth Bass 1",
+    "Synth Bass 2",
+    "Violin",
+    "Viola",
+    "Cello",
+    "Contrabass",
+    "Tremolo Strings",
+    "Pizzicato Strings",
+    "Orchestral Harp",
+    "Timpani",
+    "String Ensemble 1",
+    "String Ensemble 2",
+    "Synth Strings 1",
+    "Synth Strings 2",
+    "Choir Aahs",
+    "Voice Oohs",
+    "Synth Voice",
+    "Orchestra Hit",
+    "Trumpet",
+    "Trombone",
+    "Tuba",
+    "Muted Trumpet",
+    "French Horn",
+    "Brass Section",
+    "Synth Brass 1",
+    "Synth Brass 2",
+    "Soprano Sax",
+    "Alto Sax",
+    "Tenor Sax",
+    "Baritone Sax",
+    "Oboe",
+    "English Horn",
+    "Bassoon",
+    "Clarinet",
+    "Piccolo",
+    "Flute",
+    "Recorder",
+    "Pan Flute",
+    "Blown bottle",
+    "Shakuhachi",
+    "Whistle",
+    "Ocarina",
+    "Lead 1 (square",
+    "Lead 2 (sawtooth)",
+    "Lead 3 (calliope)",
+    "Lead 4 (chiff)",
+    "Lead 5 (charang)",
+    "Lead 6 (voice)",
+    "Lead 7 (fifths)",
+    "Lead 8 (bass + lead)",
+    "Pad 1 (new age)",
+    "Pad 2 (warm)",
+    "Pad 3 (polysynth)",
+    "Pad 4 (choir)",
+    "Pad 5 (bowed)",
+    "Pad 6 (metallic)",
+    "Pad 7 (halo)",
+    "Pad 8 (sweep)",
+    "FX 1 (rain)",
+    "FX 2 (soundtrack)",
+    "FX 3 (crystal=",
+    "FX 4 (atmosphere)",
+    "FX 5 (brightness)",
+    "FX 6 (goblins)",
+    "FX 7 (echoes)",
+    "FX 8 (sci-fi)",
+    "Sitar",
+    "Banjo",
+    "Shamisen",
+    "Koto",
+    "Kalimba",
+    "Bag pipe",
+    "Fiddle",
+    "Shanai",
+    "Tinkle Bell",
+    "Agogô",
+    "Steel Drums",
+    "Woodblock",
+    "Taiko Drum",
+    "Melodic Tom",
+    "Synth Drum",
+    "Reverse Cymbal",
+    "Guitar Fret Noise",
+    "Breath Noise",
+    "Seashore",
+    "Bird Tweet",
+    "Telephone Ring",
+    "Helicopter",
+    "Applause",
+    "Gunshot",
+    "drum"]
+// Translate program number to program name
+function program_name( program_number ){
+		if( program_number == "" ){
+			return programNameList[0];
+		}
+		try{
+			return programNameList[ parseInt( program_number )];
+		}
+		catch{
+			return "???";
+		}
+		
+	}
+
+function insertRow( body, data ){
+	let row = body.insertRow(-1);
+	for( v of data ){
+		if( v == undefined || v == null ){
+			v = "";
+		}
+		row.insertCell(-1).innerText = "" + v ;
+	}
+	return row;
+}
+
+function makeTuneTitle( tune ){
+	mic = "" ;
+	if( tune[TLCOL_LYRICS]){
+		mic = "🎤";
+	}
+	return tune[TLCOL_TITLE] + mic ;
+}
+
+// Encodes a Unicode filename so that it can be
+// added to the url, like in: /delete_file/%2Fmy%20file.txt
+function encodePath( path ){
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
+    return (
+    encodeURIComponent(path)
+      // The following creates the sequences %27 %28 %29 %2A (Note that
+      // the valid encoding of "*" is %2A, which necessitates calling
+      // toUpperCase() to properly encode). Although RFC3986 reserves "!",
+      // RFC5987 does not, so we do not need to escape it.
+      .replace(
+        /['()*]/g,
+        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+      )
+      // The following are not required for percent-encoding per RFC5987,
+      // so we can allow for a little better readability over the wire: |`^
+      .replace(/%(7C|60|5E)/g, (str, hex) =>
+        String.fromCharCode(parseInt(hex, 16)),
+      )
+  );
+}

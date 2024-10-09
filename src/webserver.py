@@ -2,21 +2,20 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-# >>> test tunelib export as .tsv for spreadsheet
-# >>>not feasible to clipboard if not https.
-
-# >>> first time progress or "reboot indicator" should clear tab cache
-# >>> tunelist.html redo search if page is activated!
-# >>> check navigation if default start page is not index
+# >>> revoke credentials on boot?
 
 import os
 import sys
 import gc
 import asyncio
 import time
-import ubinascii
+import binascii
 
-from microdot import Microdot, send_file, redirect
+
+from microdot import Microdot, send_file, redirect, Request, urldecode_bytes
+# This is for filemanager, maximum file size to upload
+Request.max_content_length = 1_000_000
+Request.max_body_length = 1_000_000
 
 from minilog import getLogger
 import scheduler
@@ -25,7 +24,7 @@ import fileops
 import pinout
 from battery import battery
 from wifimanager import wifimanager
-from solenoid import solenoid
+from solenoid import solenoids
 from compiledate import compiledate
 
 from tunemanager import tunemanager
@@ -38,35 +37,19 @@ from player import player
 from organtuner import organtuner
 from poweroff import poweroff
 from led import led
+from midi import registers, controller
+import filemanager
 
-# Testing needed
-# import soleble
 
 app = Microdot()
+_logger = getLogger(__name__)
+DATA_FOLDER = "data/"
+STATIC_FOLDER = "software/static/"
+
 
 USE_CACHE = True  # will be set by run_webserver() to value in config.json
-MAX_AGE = (
-    24 * 60 * 60
-)  # Pages are in cache for 1 day. Will be set to 0 of no cache
+MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
 
-
-# index.html, tunelist.html, play.html: enable play mode
-# notelist.html note.html, pinout.html: disable play mode
-# tunelibedit, diag, history, config: no change
-
-PAGE_SETS_PLAYBACK = {
-    # Pages that set playback mode
-    "index.html": True,
-    "tunelist.html": True,
-    "play.html": True,
-    # Pages that reset playback mode
-    "notelist.html": False,
-    "note.html": False,
-    "pinout.html": False,
-    # Plus: ftp sets playback to false
-    # Rest of pages are neutral wr to playback
-    # Setlist only operates in playback mode
-}
 
 # Shows webserver processing time (total time is much higher)
 @app.before_request
@@ -74,49 +57,46 @@ def func_before_req( request ):
     request.g.t0 = time.ticks_ms()
 
 
+# Information active clients
+# key=client IP, data=time.ticks_ms()) of last activity
+# Updated in each request
+client_activity = {}
+
 @app.after_request
 def func_after_req( request, response ):
+    client_activity[request.client_addr[0]] = time.ticks_ms()
     dt = time.ticks_diff( time.ticks_ms(), request.g.t0 )
     _logger.debug(f"{request.method} {request.url} {response.status_code}, {dt} msec")
     return response
 
 
-# Information active clients
-# key=client IP, data=time.ticks_ms()) of last activity
-client_activity = {}
-
-
-def register_activity(request):
-    client_activity[request.client_addr[0]] = time.ticks_ms()
 
 
 def is_active(since_seconds=60):
     # This is used by poweroff.py
-    try:
-        t = time.ticks_diff(
-            time.ticks_ms(), min(list(client_activity.values()))
-        )
+    if client_activity:
         # Return true if recent activity
-        return t < since_seconds * 1000
-    except ValueError:
-        # no client activity, empty list
-        pass
-    return False
+        return time.ticks_diff(
+            time.ticks_ms(), min(client_activity.values())) < since_seconds * 1000
 
 
-def simple_response(message, k=None, v=None):
-    if message == "ok":
-        resp = {"result": "ok"}
-    else:
-        resp = {"alert": message}
-    if k:
-        resp[k] = v
-    return resp
+def respond_ok():
+    # Absence of "error":False means "everything is ok"
+    return {}
+
+def respond_error_alert( alert_message ):
+    # "alert": alert_message means: show this message to user
+    # "error": True means: the browser javascript code should not
+    # continue to run since things went bad
+    # Currently no way to show alert with "error":False.
+    return { "error":True, "alert": alert_message }
 
 
 def check_authorization(request):
+    # Returns None if authenticated.
+    # Returns a microdot.Response tuple if authentication is needed
     if not config.cfg["password_required"]:
-        return
+        return 
     name = config.cfg["name"]
 
     ask_for_password = ({}, 401, {"WWW-Authenticate": f'Basic realm="{name}"'})
@@ -135,13 +115,21 @@ def check_authorization(request):
     basic, userpass = auth.split(" ")
     assert basic == "Basic", f"Basic authentication expected, got {basic}"
     # base64 information is "user:password"
-    user, password = ubinascii.a2b_base64(userpass.encode()).decode().split(":")
+    user, password = binascii.a2b_base64(userpass.encode()).decode().split(":")
     if not password_manager.verify_password(password):
         _logger.info("Web access not authorized: incorrect password")
         return ask_for_password
     # Authenticated
     return
 
+# Define own (async) decorator to check authorization
+def authorize(func):
+    async def wrapper(*args, **kwargs):
+        # args[0] is the request
+        if response := check_authorization(args[0]):
+            return response
+        return await func(*args, **kwargs)
+    return wrapper
 
 # Home page
 @app.route("/")
@@ -152,138 +140,159 @@ async def index_page(request):
 
 # File related web requests
 @app.route("/static/<filepath>")
-async def static_files(request, filepath):
+async def async_static_files(request, filepath):
+    return static_files( request, filepath )
+
+def static_files( request, path ):
     ua = request.headers.get("User-Agent")
     if ua:
         if "Chrome" not in ua and "Firefox" not in ua:
-            # Could not make run Javascript await fetch in Safari.
+            # Could not make run Javascript's "await fetch" well in Safari.
             _logger.debug(f"Browser not supported {ua}")
 
             return "Safari not supported, use Chrome or Firefox"
 
-    register_activity(request)
-    # Playback mode depends on pages loaded
-    pb = PAGE_SETS_PLAYBACK.get(filepath, None)
-    if pb is not None:
-        scheduler.set_playback_mode(pb)
-        
-    filename = STATIC_FOLDER + filepath
-    if not fileops.file_exists(filename):
-        _logger.info(f"{filename} not found")
-        return "", 404
+    filename = STATIC_FOLDER + path
+    filename_zip = filename + ".gz"
+    # Check first for uncompressed file. 
+    # Could make it easier for development since
+    # uploading a uncompressed file takes precedence.
 
-    return send_file(filename, max_age=MAX_AGE)
+    if fileops.file_exists(filename):
+        return send_file(filename, max_age=MAX_AGE)
+    
+    # File not found, perhaps a compressed version exists?
+    # In that case, add a header for the Content-type  according to file type
+    # and a header for Content-Encoding = gzip
+    if fileops.file_exists( filename_zip ):
+        # If .gz file, serve this compressed file 
+        # instead of regular file
+        # On Mac, compress with gzip, for example:
+        # gzip -9 -c -k config.html > config.html.gz
+        # See https://www.gzip.org/
+        # Content type depends on file type
+        ct = filemanager.get_mime_type( filename )
+        return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
+    _logger.info(f"static_files {filename} not found")
+    return "", 404
+
+   
 
 
 @app.route("/data/<filepath>")
 async def send_data_file(request, filepath):
-    if "config" in filepath:
-        # Config.json and it's backups not visible this way.
-        return {}, 404
 
-    register_activity(request)
     filename = DATA_FOLDER + filepath
     if not fileops.file_exists(filename):
-        _logger.info(f"{filename} not found")
+        _logger.info(f"send_data_file {filename} not found")
         return "", 404
 
     return send_file(filename, max_age=0)
 
 @app.route("/get_description")
-def get_description(request):
+def get_description(request):    
+    # Return description of this microcontroller, to be used
+    # as the title of page   
     return { "description": config.cfg.get("description")}
 
-def get_progress(request):
-    register_activity(request)
+def get_progress():
+    # Gather progress from all sources
+    # Also used by mcserver
     progress = player.get_progress()
     crank.complement_progress(progress)
     scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
+    registers.complement_progress(progress)
     return progress
 
 
-@app.route("/get_progress")
-async def process_get_progress(request):
-    return get_progress(request)
+@app.route("/get_progress/<browser_boot_session>")
+async def process_get_progress(request, browser_boot_session):
+    # Currently not using the browser_boot_session here
+    # But the javascript uses it to flush cache.
+    # If browser_boot_session is different than progress["boot_session"]
+    # then this is the first /get_progress after reboot.
+    # >>>Could be used to revoke credentials.
+    return get_progress()
 
 
 @app.post("/queue_tune/<tune>")
-async def queue_tune(request, tune):
+async def queue_tune_setlist(request, tune):
     # Queue tune to setlist
     setlist.queue_tune(tune)
-    # Wait for setlist process to catch up
-    # await asyncio.sleep_ms( 500 )
-    # return get_progress( request )
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/start_tune")
-async def go_tempo(request):
+async def start_tune_setlist(request):
     setlist.start_tune()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/stop_tune_setlist")
 async def stop_tune_setlist(request):
     setlist.stop_tune()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/back_setlist")
 async def back_setlist(request):
     setlist.to_beginning_of_tune()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/save_setlist")
 async def save_setlist(request):
     setlist.save()
-    return simple_response("ok")
+    return get_progress()
 
 
 @app.route("/load_setlist")
 async def load_setlist(request):
     setlist.load()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/clear_setlist")
 async def clear_setlist(request):
     setlist.clear()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/up_setlist/<int:pos>")
 async def up_setlist(request, pos):
     setlist.up(pos)
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/down_setlist/<int:pos>")
 async def down_setlist(request, pos):
     setlist.down(pos)
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/shuffle_set_list")
 async def shuffle_set_list(request):
     setlist.shuffle()
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/shuffle_all_tunes")
 async def shuffle_all_tunes(request):
     setlist.shuffle_all_tunes()
-    return get_progress(request)
+    return get_progress()
 
+@app.route("/shuffle_3stars")
+async def shuffle_all_tunes(request):
+    setlist.shuffle_3stars()
+    return get_progress()
 
 # Organ tuner web requests
 
 
-@app.route("/note/<int:midi_note>")
-async def note_page(request, midi_note):
-    return send_file(STATIC_FOLDER + "note.html", max_age=MAX_AGE)
-
+@app.route("/note/<int:pin_index>")
+async def note_page(request, pin_index):
+    return static_files( request, "note.html" )
 
 @app.route("/tune_all")
 async def start_tune_all(request):
@@ -292,33 +301,39 @@ async def start_tune_all(request):
     # it's not of interest to return organtuner.json
     # in these functions
     organtuner.tune_all()
-    return simple_response("ok")
+    return respond_ok()
 
 
-@app.route("/start_tuning/<int:midi_note>")
-async def start_tuning(request, midi_note):
+@app.route("/start_tuning/<int:pin_index>")
+async def start_tuning(request, pin_index):
+
     # Tune one note
-    organtuner.queue_tuning(("wait",0))
-    organtuner.queue_tuning(("tune", midi_note))
-    return simple_response("ok")
+    organtuner.queue_tuning(organtuner.wait, 1000 )
+    organtuner.queue_tuning(organtuner.update_tuning, pin_index)
+    return respond_ok()
 
 
-@app.route("/sound_note/<int:midi_note>")
-async def sound_note(request, midi_note):
-    organtuner.queue_tuning(("note_on", midi_note))
-    return simple_response("ok")
+@app.route("/sound_note/<int:pin_index>")
+async def sound_note(request, pin_index):
+    organtuner.queue_tuning(organtuner.sound_note, pin_index)
+    return respond_ok()
 
 
-@app.route("/sound_repetition/<int:midi_note>")
-async def sound_repetition(request, midi_note):
-    organtuner.queue_tuning(("note_repeat", midi_note))
-    return simple_response("ok")
+@app.route("/sound_repetition/<int:pin_index>")
+async def sound_repetition(request, pin_index):
+    organtuner.queue_tuning(organtuner.repeat_note, pin_index)
+    return respond_ok()
 
 
 @app.route("/scale_test")
 async def scale_test(request):
-    organtuner.queue_tuning(("scale_test", 0))
-    return simple_response("ok")
+    organtuner.queue_tuning(organtuner.scale_test, 0)
+    return respond_ok()
+
+@app.route("/all_pin_test")
+async def all_pin_test(request):
+    organtuner.queue_tuning(organtuner.all_pin_test, 0)
+    return respond_ok()
 
 
 @app.route("/clear_tuning")
@@ -330,14 +345,14 @@ async def clear_tuning(request):
 @app.route("/stop_tuning")
 async def stop_tuning(request):
     organtuner.stop_tuning()
-    return simple_response("ok")
+    return respond_ok()
 
 
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
 async def get_battery_status(request):
     # When playing music, /battery is good indicator of activity
-    register_activity(request)
+
     return battery.get_info()
 
 
@@ -356,28 +371,11 @@ async def record_battery_level(request):
 
 @app.route("/errorlog")
 async def show_log(request):
-    def log_generator():
-        # Format log as HTML, only last log is shown.
-        with open(_logger.get_current_log_filename()) as file:
-            yield "<!DOCTYPE html><head></head><body><title>Error log</title><body><table>"
-            while True:
-                s = file.readline()
-                if s == "":
-                    break
-                if s[0:1] == " ":
-                    # This happens for exception traceback, put traceback info in column 3
-                    yield (
-                        "<tr><td></td><td></td><td></td><td>" + s + "</td></tr>"
-                    )
-                else:
-                    yield "<tr>"
-                    for p in s.split(" - "):
-                        yield "<td>" + p + "</td>"
-                    yield "</tr>"
-        yield "</table></body>"
-
-    return log_generator(), 200, {"Content-Type": "text/html; charset=UTF-8"}
-
+    # Show current error log
+    filename = _logger.get_current_log_filename() 
+    # Must be encoded like encodeURIComponent()
+    filename = filename.replace( "/", "%2F" )
+    return redirect( "/show_file/" + filename )
 
 # diag.html web requests
 @app.route("/diag")
@@ -424,7 +422,7 @@ async def diag(request):
         "free_ram": free_ram,
         "used_ram": used_ram,
         "gc_collect_time": gc_collect_time,
-        "solenoid_devices": solenoid.get_status(),
+        "solenoid_devices": solenoids.get_status(),
         "midi_files": midi_files,
         "tunelib_folder": config.TUNELIB_FOLDER,
         "logfilename": _logger.get_current_log_filename(),
@@ -439,14 +437,14 @@ async def diag(request):
 async def reset_microcontroller(request):
     led.ack()
     asyncio.create_task(poweroff.wait_and_reset())
-    return simple_response("ok")
+    return respond_ok()
 
 
 @app.route("/deep_sleep")
 async def deep_sleep(request):
     led.ack()
     asyncio.create_task(poweroff.wait_and_power_off())
-    return simple_response("ok")
+    return respond_ok()
 
 
 @app.route("/wifi_scan")
@@ -456,14 +454,15 @@ async def wifi_scan(request):
 
 @app.route("/get_wifi_status")
 async def get_wifi_status(request):
-    register_activity(request)
+
     c = wifimanager.get_status()
+    # Add clientes with activities in the last 10 seconds
     now = time.ticks_ms()
     c["client_IPs"] = "".join(
         [
             ip + " "
             for ip in client_activity
-            if time.ticks_diff(now, client_activity[ip]) < 10_000
+            if time.ticks_diff(now, client_activity[ip]) < 30_000
         ]
     )
     return c
@@ -473,7 +472,7 @@ async def get_wifi_status(request):
 @app.route("/set_velocity_relative/<int:change>")
 async def set_velocity_relative(request, change):
     crank.set_velocity_relative(change)
-    return get_progress(request)
+    return get_progress()
 
 @app.route("/tacho_irq_report")
 def tacho_irq_report(request):
@@ -482,51 +481,28 @@ def tacho_irq_report(request):
 @app.route("/top_setlist/<int:pos>")
 async def top_setlist(request, pos):
     setlist.top(pos)
-    return get_progress(request)
+    return get_progress()
 
 
 @app.route("/drop_setlist/<int:pos>")
 async def drop_setlist(request, pos):
     setlist.drop(pos)
-    return get_progress(request)
+    return get_progress()
 
 
-# Configuration change
-
+# Changes to config.json
 
 @app.route("/get_config")
 async def get_config(request):
     return config.get_config()
 
-
 @app.post("/save_config")
+@authorize
 async def change_config(request):
-    if response := check_authorization(request):
-        return response
-
-    resp = config.save(request.json)
-    return simple_response(resp)
-
-
-@app.route("/start_ftp")
-async def start_ftp(request):
-    if response := check_authorization(request):
-        return response
-    poweroff.cancel_power_off()
-    scheduler.set_playback_mode(False)
-
-    # Run FTP in a separate thread
-    import _thread 
-
-    def uftpd_in_a_thread():
-        import uftpd # noqa
-
-        _logger.info("uftp started")
-
-    _thread.start_new_thread(uftpd_in_a_thread, ())
-
-    return simple_response("ok")
-
+    result = config.save(request.json)
+    if result:
+        return respond_error_alert(result)
+    return respond_ok()
 
 # Pinout functions
 @app.route("/pinout_list")
@@ -536,21 +512,24 @@ async def pinout_list(request):
 
 @app.route("/pinout_detail")
 async def pinout_detail(request):
-    filename = pinout.plist.get_current_pinout_filename()
-    return send_file(filename)
+    return send_file(pinout.plist.get_current_pinout_filename())
 
 
 @app.route("/get_pinout_filename")
 async def get_pinout_filename(request):
-    resp = {
+    return {
         "pinout_filename": pinout.plist.get_current_pinout_filename(),
         "pinout_description": pinout.plist.get_description(),
     }
-    return resp
+
+@app.route("/get_used_pins")
+def get_used_pins( request ):
+    return pinout.GPIOstatistics().get_used_pins()
 
 
 @app.route("/get_index_page_info")
 async def get_index_page_info(request):
+    # Information needed by index.html
     resp = await get_pinout_filename(request)
     server = config.cfg["servernode"]
     proto = ""
@@ -562,38 +541,37 @@ async def get_index_page_info(request):
                 proto = "http://"
             server = proto + server
     resp["serverlink"] = server
+
     return resp
 
 
 @app.post("/save_pinout_filename")
+@authorize
 async def save_pinout_filename(request):
-    if response := check_authorization(request):
-        return response
     data = request.json
-
     pinout.plist.set_current_pinout_filename(data["pinout_filename"])
-    solenoid.init_pinout()
-    organtuner.clear_tuning()
+    solenoids.init_pinout()
 
     # Organtuner be aware: organtuner.json may no longer
     # be valid
-    organtuner.pinout_changed()
-    return simple_response("ok")
+    organtuner.clear_tuning()
+ 
+    return respond_ok()
 
 
 @app.post("/save_pinout_detail")
+@authorize
 async def save_pinout_detail(request):
-    if response := check_authorization(request):
-        return response
     try:
         pinout.SaveNewPinout(request.json)
-        solenoid.init_pinout()
+        # SaveNewPinout class will validate and do a init of pint
         organtuner.clear_tuning()
-        _logger.debug("save_pinout_detail pinoupt.save complete")
-        return simple_response("ok")
+        solenoids.reinit()
+        _logger.debug("save_pinout_detail pinout.save complete")
+        return respond_ok()
     except RuntimeError as e:
         _logger.debug(f"save_pinout_detail exception {repr(e)}")
-        return simple_response(f"pinout not saved: {repr(e)}")
+        return respond_error_alert(f"pinout not saved: {repr(e)}")
 
 
 @app.post("/test_mcp")
@@ -605,14 +583,14 @@ async def test_mcp(request):
         int(data["mcpaddr"]),
         int(data["pin"]),
     )
-    return simple_response("ok")
+    return respond_ok()
 
 
 @app.post("/test_gpio")
 async def test_gpio(request):
     data = request.json
     await pinout.test.web_test_gpio(int(data["pin"]))
-    return simple_response("ok")
+    return respond_ok()
 
 
 # Generic requests requests: some browsers request favicon
@@ -628,9 +606,11 @@ async def static_favicon(request):
 
 @app.route("/revoke_credentials")
 async def revoke_credentials(request):
-    # >>> if uncommented, credentials will be revoked
-    # after authorizing
-    #return {}, 401
+    # >>> if return {}, 401 is uncommented, credentials will be revoked
+    # after authorizing. Should this configuration be parameter?
+    # I think it's too much hassle to authenticate for each
+    # operation, it's enough for the first, and then until reboot.
+    return {}, 401
     _logger.debug("Revoking credentials disabled")
     return {}
 
@@ -640,52 +620,155 @@ async def revoke_credentials(request):
 @app.route("/start_tunelib_sync")
 async def start_tunelib_sync(request):
     tunemanager.start_sync()
-    return simple_response("ok")
+    return respond_ok()
 
 
 # Tunelib editor
 @app.route("/tunelib_sync_progress")
 async def tunelib_sync_progress(request):
-    progress = tunemanager.sync_progress()
-    return simple_response("ok", k="progress", v=progress)
+    return {"progress":tunemanager.sync_progress()}
 
 
 #
 # Tunelib editor
 @app.post("/save_tunelib")
+@authorize
 async def save_tunelib(request):
-    if response := check_authorization(request):
-        return response
-
     tunemanager.save(request.json)
-    return simple_response("ok")
+    return respond_ok()
 
 
 @app.post("/save_lyrics")
+@authorize
 async def save_lyrics( request ): 
-    if response := check_authorization(request):
-        return response
-
     data = request.json
     tunemanager.save_lyrics( data["tuneid"], data["lyrics"])
-    return simple_response("ok")
+    return respond_ok()
 
 @app.route("/delete_history/<int:days>")
+@authorize
 async def delete_history(request, days):
     history.delete_old(days)
-    return simple_response("ok")
+    return respond_ok()
 
 @app.post( "/register_comment")
 async def register_comment(request):
+    # Register comment does not ask for password
+    # The purpose is to register rating/comment during the performance
+    # so this has to be easy to use.
     data = request.json
     tunemanager.register_comment( data["tuneid"], data["comment"])
-    return simple_response("ok")
+    return respond_ok()
 
 @app.post( "/tempo_follows_crank" )
 async def tempo_follows_crank( request ):
     data = request.json
     player.set_tempo_follows_crank( data["tempo_follows_crank"] )
-    return simple_response("ok")
+    return get_progress()
+
+@app.post( "/toggle_register")
+async def toggle_register( request ):
+    data = request.json
+    reg = registers.factory( data["name"])
+    reg.toggle()
+    return get_progress()
+
+@app.get("/list_pinout_by_midi_note")
+def list_by_midi_note( request ):
+    def sort_key( x ):
+        # Sort by
+        # program number
+        # midi_number (should not be undefined i.e. None here)
+        # register name
+        return f"{x['program_number']:5d}{x['midi_number']}{x['solepin_note']:20s}{x['register_name'] or ' ':20s}"
+
+    # Output listing of definition, ordered by midi note
+    notedef = []
+    for plist in controller.get_notedict().values():
+        for solepin, reg, midi_note in plist:
+            notedef.append( {  "program_number":midi_note.program_number, 
+                             "midi_number":midi_note.midi_number, 
+                             "midi_note": str(midi_note), 
+                             "solepin_name": solepin.name, 
+                             "solepin_note": str(solepin.midi_note), 
+                             "solepin_rank": solepin.rank, 
+                             "register_name": reg.name} )
+    notedef.sort( key=sort_key )
+                
+    return notedef
+
+
+#
+# File manager
+#
+
+def decodePath( path ):
+    return urldecode_bytes( path.encode() )
+
+@app.route("/listdir")
+@app.route("/listdir/")
+@app.route("/listdir/<path>")
+async def filemanager_listdir(request, path=""):
+    return filemanager.listdir( decodePath(path) )
+
+
+@app.post('/upload/<path_filename>')
+@authorize
+async def filemanager_upload(request, path_filename ):
+    path, filename = path_filename.split("+")
+    try:
+        return filemanager.upload( request, path, filename  )
+    except ValueError:
+        return respond_error_alert("Error, No destination folder could be assigned, unknown file type")
+
+@app.route("/download/<path>")
+async def filemanager_download(request, path):
+    # Download a file from the microcontroller to the PC
+    return filemanager.download( decodePath( path ) )
+
+@app.route("/show_file/<path>")
+async def filemanager_show_file( request, path ):
+    return filemanager.show_file( decodePath( path ) ) 
+
+@app.route("/show_midi/<path>")
+def show_midi( request, path ):
+    # Javascript will decode the path passed in the URL
+    return static_files( request, "show_midi.html" )
+
+@app.route("/get_midi_file/<path>")
+def get_midi_file( request, path ):
+    return filemanager.get_midi_file( decodePath( path )  )
+
+@app.route("/used_flash")
+async def filemanager_status(request):
+    return filemanager.status()
+
+@app.route("/delete_file/<path>")
+@authorize
+async def filemanager_delete(request, path):
+    # Delete a file
+    try:
+        filemanager.delete( decodePath( path )  )
+    except Exception as e:
+        # Probability of this happening is nil...???
+        return respond_error_alert(f"Error {e} deleting file {path}")
+    return respond_ok()
+
+@app.route("/filemanager")
+@app.route("/filemanager/")
+@app.route("/filemanager/<path>")
+async def handle_filemanager( request, path=""):
+    # Load page, javascript will handle the rest.
+    return static_files( request, "filemanager.html" )
+
+@app.route("/set_playback_disabled")
+def set_playback_enabled( request ):
+    # note.html and notelist.html disable playback
+    # so no MIDI files will be played accidentally during tuning
+    # To re-enable, reboot.
+    scheduler.set_playback_mode(False)
+    return respond_ok()
+
 
 # Catchall handler to debug possible errors at html level
 @app.get('/<path:path>')
@@ -696,24 +779,19 @@ def catch_all(request, path):
 
 @app.errorhandler(RuntimeError)
 def runtime_error(request, exception):
-    return simple_response("RuntimeError exception detected")
+    return respond_error_alert("RuntimeError exception detected")
 
+@app.errorhandler(500)
+def error500(request):
+    return respond_error_alert(f"Server error 500 {request.url=}")
 
 async def run_webserver():
     global _logger, USE_CACHE, MAX_AGE
-    global STATIC_FOLDER, DATA_FOLDER
-
-    _logger = getLogger(__name__)
-
-    DATA_FOLDER = "data/"
-    STATIC_FOLDER = "software/static/"
 
     # Configure file cache for browser
     if not config.cfg.get("webserver_cache", True):
         MAX_AGE = 0
         USE_CACHE = False
-    else:
-        MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
 
     _logger.debug(f"{USE_CACHE=} {MAX_AGE=:,} sec")
     await app.start_server(host="0.0.0.0", port=80 )

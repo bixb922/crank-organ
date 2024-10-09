@@ -18,8 +18,8 @@
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <div class="tableFixHead">
 
@@ -32,7 +32,7 @@
             <th><span>Pedido</span>&nbsp;</th>
           </tr>
         </thead>
-        <tbody id="history">
+        <tbody id="historyBody">
         </tbody>
     </table>
 </div>
@@ -45,28 +45,17 @@
 
 <script>
 
-function compare( a, b ){
-    // compare to sort in descending date order
-    // dates are in yyyy-mm-dd hh:mm format
-    datea = a[1];
-    dateb = b[1];
-    if( datea < dateb ){
-        return 1 ;
-    }
-    if( datea > dateb ){
-        return -1;
-    }
-    return 0;
-}
 
 
 async function getHistory( ) {
 	let histlist = await fetch_json( "/data/history.json" ) ;
-    histlist.sort( compareFn=compare ) ;
+    // sort by timestamp 
+    histlist.sort( (a,b)=>(b[1]-a[1]) );
 	let s = "" ;
     let previous_date = "";
-	for( i in histlist ) {
-        let hist_element = histlist[i]; 
+    let body = document.getElementById( "historyBody" );
+    body.innerText = "";
+    for( hist_element of histlist){
         // 0 tuneid
         // 1 date in seconds since 2000/1/1 (ESP32 epoch)
         // 2 percentage
@@ -83,62 +72,62 @@ async function getHistory( ) {
 
         // Insert separator row with date when date changes
         if( date != previous_date) {
-            s += `<tr>
-            <td colspan="3"><b>${date}</b></td>
-            <tr>` ;
-        };
+            let row = insertRow( body, [date]);
+            row.cells[0].colSpan = 3;
+            row.cells[0].style.fontWeight="bold";
+         };
         previous_date = date ;
 
         // Mark if tune has been requested via web site
         let user_request = "" ;
         if( hist_element[3] ) {
             // user request
-            user_request = "&#x2714;" ; // check mark
+            user_request = "✔️" ; // check mark &#x2714;
         }
         // Get title (if still in tunelib...)
         let tt = await make_tune_title( hist_element[0] );
-		s += `<tr> 
-			   <td>${time}</td>
-			   <td>${tt}</td>
-		       <td align="right">${hist_element[2]}%</td>
-			   <td>${user_request}</td>
-		      </tr>`;
-	}
-	htmlById("history", s) ;
+        let row = insertRow( body, [time, tt[0], hist_element[2], user_request]);
+        row.cells[2].style.textAlign = "right";
+        let commentIcon = document.createElement("a");
+        commentIcon.onclick = function(){register_comment(""+tt[1], ""+tt[2])};
+        commentIcon.innerHTML= "&nbsp;&#x1f4dd;" ;// non blank space, memo=📝
+        commentIcon.classList.add( "anohref" );
+        row.cells[1].appendChild( commentIcon );
+    }
 }
+
 
 async function deleteHistory(){
     // Purge old elements from history
-	days = parseInt( document.getElementById("days").value );
-	resp = await fetch_json( "/delete_history/" + days ) ;
-    if( resp["result"] == "ok"){
-
-       showPopup("", tlt("Historia truncada") ); 
-       await sleep_ms(1000);
-       window.location.reload() ;
+	let days = parseInt( document.getElementById("days").value );
+    if( !isNaN(days) ){
+        showPopup(document.getElementById("days"), "must be numeric" );
     }
+	resp = await fetch_json( "/delete_history/" + days ) ;
+    showPopup("", tlt("Historia truncada") ); 
+    await sleep_ms(1000);
+    window.location.reload() ;
 }
 
 async function make_tune_title( tuneid ){
 	let tunelib = await get_tunelib();
 	let tune = tunelib[tuneid];
 	if( tune != undefined ){
-		let title = tune[TLCOL_TITLE] ;
+		let title =  makeTuneTitle( tune );
         let text = title ;
 		let info = tune[TLCOL_INFO] ;
 		if( info != "" ){
 			text += " (" + info  + ")";
 		}
-		info = get_rating(tune) ;
-		if( info != "" ){
-			text += " " + info ;
+		let rating = get_rating(tune) ;
+		if( rating != "" ){
+			text += " " + rating ;
 		}
         // append link to "add comment/rating"
-        text += `&nbsp;<a onclick='register_comment( "${title}", "${tuneid}" )'>&#x1F4DD;</a>`;
-        return text;
+        return [text, title, tuneid];
 	}
-    // Sorry if tune is not in tunelib anymore...
-    return `(melodía borrada de tunelib) ${tuneid}` ;
+    // So sorry if tune is not in tunelib anymore... no info available
+    return [tlt("(borrado)"), "", tuneid] ;
 }
 
 
@@ -147,8 +136,9 @@ async function register_comment(title, tuneid){
 	if( comment != null ){
 		j = { "tuneid": tuneid, "comment": comment };
 		await fetch_json( "/register_comment", j );
-		drop_tunelib() ;
-        showPopup("", tlt("Información actualizada")); //>>> add to translaation
+        drop_tunelib() ;
+        showPopup("", tlt("Información actualizada")); 
+        drop_tunelib();
         await sleep_ms(1000);
         window.location.reload() ;
     }

@@ -11,7 +11,9 @@ import machine
 # if __name__ == "__main__":
 #    sys.path.append("software/mpy")
 
+# There is little gain caching the pin number
 from pinout import gpio
+# minilog is needed to get error count for blinking problems
 from minilog import getLogger
 
 # 1=lowest, 255=highest
@@ -25,39 +27,34 @@ VERY_STRONG = const(255)
 class BlinkingLed:
     def __init__(self, p):
         self.neopixel_led = None
-        if not p:
-            # No LED task is needed
-            return
+        if p:
+            self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
+            self.off()
 
-        self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
-        self.off()
-
-        self.logger = getLogger(__name__)
-        self.setlist = None # We don't know the setlist yet, too early
-        
-        self.problem_task = asyncio.create_task(self._problem_process())
-        self.logger.debug("init done")
+            self.logger = getLogger(__name__)
+            self.setlist = None # We don't know the setlist yet, too early
+            
+            self.problem_task = asyncio.create_task(self._problem_process())
+            self.logger.debug("init ok")
 
     # Simple (permanent) led on and off
     def on(self, color):
-        if not self.neopixel_led:
-            return
-        self.neopixel_led[0] = color
-        self.neopixel_led.write()
+        if self.neopixel_led:
+            self.neopixel_led[0] = color
+            self.neopixel_led.write()
 
     def off(self):
         self.on((0, 0, 0))
 
     # Problem encountered? run permanent task flashing red
     async def _problem_process(self):
-        if not self.neopixel_led:
-            return
-        while True:
-            # Problem: error or exception entry in log
-            if self.logger.get_error_count() > 0:
-                self.problem_task = self._blink_background((MEDIUM, 0, 0))
-                return
-            await asyncio.sleep_ms(1000)
+        if self.neopixel_led:
+            while True:
+                # Problem: error or exception entry in log
+                if self.logger.get_error_count() > 0:
+                    self.problem_task = self._blink_background((MEDIUM, 0, 0))
+                    return
+                await asyncio.sleep_ms(1000)
 
     # Starting phases, blue->green
     def starting(self, phase):
@@ -122,11 +119,10 @@ class BlinkingLed:
     def _blink_background(
         self, colors, repeat=1_000_000_000, timeon=50, timeoff=2000
     ):
-        if not self.neopixel_led:
-            return
-        return asyncio.create_task(
-            self._blink_process(colors, repeat, timeon, timeoff)
-        )
+        if self.neopixel_led:
+            return asyncio.create_task(
+                self._blink_process(colors, repeat, timeon, timeoff)
+            )
 
     async def _blink_process(self, colors, repeat, timeon, timeoff):
         clist = colors

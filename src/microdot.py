@@ -774,7 +774,10 @@ class Response:
         first.
         """
         if content_type is None:
-            ext = filename.split('.')[-1]
+            if compressed and filename.endswith('.gz'):
+                ext = filename[:-3].split('.')[-1]
+            else:
+                ext = filename.split('.')[-1]
             if ext in Response.types_map:
                 content_type = Response.types_map[ext]
             else:
@@ -789,6 +792,7 @@ class Response:
         if compressed:
             headers['Content-Encoding'] = compressed \
                 if isinstance(compressed, str) else 'gzip'
+
         f = stream or open(filename + file_extension, 'rb')
         return cls(body=f, status_code=status_code, headers=headers)
 

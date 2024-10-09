@@ -3,8 +3,8 @@
 # MIT License
 # Crank rotation speed sensor. Still in testing phase.
 import asyncio
-from time import ticks_ms, ticks_diff, ticks_us
-from array import array
+from time import ticks_ms, ticks_diff
+
 from machine import Pin
 
 if __name__ == "__main__":
@@ -15,6 +15,7 @@ if __name__ == "__main__":
 from minilog import getLogger
 from pinout import gpio
 from config import config
+from counter import Encoder, Counter
 
 # Number of pulses (1 pulse = off + on) per revolution
 PULSES_PER_REV = config.get_int("pulses_per_revolution", 24) 
@@ -41,28 +42,40 @@ class TachoDriver:
         self.counter = None
 
         if not tachometer_pin or automatic_playback:
-            self.logger.debug("Crank sensor not enabled")
+            self.logger.debug("Crank sensor not in configuration")
             return
-
-        pin = Pin( tachometer_pin, Pin.IN, Pin.PULL_UP )
-        self.counter = pcnt.PCNT( 0, pin )
+        # >>> may be necessary to implement Encoder too
+        # >>> but needs a second pin.
+        # >>> check if Encoder needs filter_ns
+        self.counter = Counter( 0, 
+                               Pin( tachometer_pin, Pin.IN, Pin.PULL_UP ), 
+                               direction=Counter.UP,
+                               edge=Counter.RISING+Counter.FALLING,
+                               filter_ns=20_000)
         self.counter_task = asyncio.create_task( self._sensor_process() )
-        self.logger.info("init done")
+        self.logger.info("init ok")
 
     async def _sensor_process( self ):
         last_time = ticks_ms()
-        last_pulse_count = self.counter.count()
+        last_pulse_count = self.counter.value()
+        
+        samples = []           
         while True:
             await asyncio.sleep_ms(300)
             new_time = ticks_ms()
-            new_pulse_count =  self.counter.count()
+            new_pulse_count =  self.counter.value()
             # Compute differences to get revolutions per second
             time_ms = ticks_diff( new_time, last_time )
-            # Calculate difference of modulus 2**16 counter
             pulses = new_pulse_count - last_pulse_count
-            if pulses < 0:
-                pulses += 2**16
-            self.rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            if PULSES_PER_REV < 20:
+                # Use samples only when few pulses per revolution
+                samples.append( rpsec )
+                if len(samples) > PULSES_PER_REV/2:
+                    samples.pop(0)
+                self.rpsec = sum(samples)/len(samples)
+            else:
+                self.rpsec = rpsec
             last_pulse_count = new_pulse_count
             last_time = new_time
 
@@ -131,12 +144,8 @@ class Crank:
         
     def register_event(self,when_ms)->asyncio.Event:
         # Can register one event for each time only.
-        if when_ms not in self.events:
-        # Register an event to be set "when_ms" milliseconds after
-        # the crank starts to turn.
-            self.events[when_ms] = asyncio.Event()
         # Return event if registered
-        return self.events[when_ms]
+        return self.events.setdefault( when_ms, asyncio.Event())
 
     async def _crank_monitor_process(self):
         if not self.is_installed():
@@ -200,14 +209,13 @@ class Crank:
     def is_installed(self):
         return self.td.is_installed()
 
-    def get_normalized_rpsec(self, use_crank_speed ):
+    def get_normalized_rpsec(self, tempo_follows_crank ):
         # Used in player.py to delay/hasten music
         # depending on crank speed AND UI setting
         # If no crank, UI can still change tempo!
-        cs = 1
-        if use_crank_speed:
-            cs = self.td.get_rpsec() / NORMAL_RPSEC
-        return cs * self.tempo_multiplier 
+        if tempo_follows_crank:
+            return self.td.get_rpsec() / NORMAL_RPSEC * self.tempo_multiplier 
+        return self.tempo_multiplier 
 
     def set_velocity_relative( self, change):
         # Change velocity settings relative to current setting
@@ -231,7 +239,6 @@ class Crank:
         # Calculate the multiplier needed by get_normalized_rpsec
         self.tempo_multiplier = ui_vel * ui_vel / 10000 + ui_vel / 200 + 0.5
 
-
     def complement_progress(self,progress):
         # Add crank information to progress, to be sent to the browser.
         progress["velocity"] = self.ui_velocity
@@ -241,32 +248,36 @@ class Crank:
         progress["tempo_multiplier"] = self.tempo_multiplier
         return progress
 
+# Rotary encoder to detect tempo
+# This is a potentiometer type rotary encoder,
+# not the crank revolution sensor.
+class TempoEncoder:
+    def __init__( self ):
+        self.logger = getLogger("TempoEncoder")
+        self.tempo_task = asyncio.create_task( self._tempo_process )
+        
+    async def _tempo_process(self):
+        await asyncio.sleep_ms(10) # Let general startup finish
+        rotary_tempo_mult = config.get("rotary_tempo_mult", 1)
+        if gpio.tempo_a and gpio.tempo_b and gpio.switch:
+            encoder_a = Pin( gpio.tempo_a, Pin.IN, Pin.PULL_UP )
+            encoder_b = Pin( gpio.tempo_a, Pin.IN, Pin.PULL_UP )
+            switch = Pin( gpio.switch, Pin.IN, Pin.PULL_UP )
+            encoder = Encoder( 1, filter_ns=13000, # Highest value possible
+                               phase_a=encoder_a, 
+                               phase_b=encoder_b, 
+                               phases=2)
+        else:
+            self.logger.info( "No rotary encoder defined")
+            return
+        while True:
+            # Set velocity about 10 times a second following pulse counter
+            await asyncio.sleep_ms(100)
+            if switch.value() == 0:
+                crank.set_velocity(50)
+            if (v := encoder.value()):
+                crank.set_velocity_relative( v * rotary_tempo_mult )       
 
 
 crank = Crank(gpio.tachometer_pin,config.get_int("automatic_delay", 0))
-
-# >>>> debug - for test only
-if config.cfg["description"].startswith("Test"):
-    from machine import Timer, Pin
-    from random import random
-    async def simulator():
-        last_pulse = 0
-        pin = Pin(3, Pin.OUT)
-        def set_pulse(_):
-            nonlocal last_pulse
-            pin.value(last_pulse%2)
-            last_pulse += 1
-        print(">>>>>>>>>>>>>>>>CRANK SIMULATOR ACTIVE pulses/rev=", PULSES_PER_REV)
-        while True:
-            ref_rpsec = 1.3*random() + 0.2
-            ref_dt = round(FACTOR/ref_rpsec/2)
-            t = Timer(0, mode=Timer.PERIODIC, period=ref_dt, callback=set_pulse)
-            await asyncio.sleep_ms(5000)
-            print(f">>>{crank.td.get_rpsec()=:.2f} {ref_rpsec=:.2f} ")
-            t.deinit()
-
-    if __name__ == "__main__":
-        asyncio.run( simulator() )
-    else:
-        asyncio.create_task( simulator())
 

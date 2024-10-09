@@ -4,7 +4,7 @@
 
 import asyncio
 from random import randrange
-
+import os
 import scheduler
 from config import config
 from tunemanager import tunemanager
@@ -21,14 +21,13 @@ def del_key(key, dictionary):
     if key in dictionary:
         del dictionary[key]
 
-import time
-
 
 class Setlist:
     def __init__(self):
         self.logger = getLogger(__name__)
         self.touch_button = touchpad.TouchButton(gpio.touchpad_pin)
-        self.clear()
+        self.current_setlist = [] # for now
+
         self.waiting_for_start_tune_event = False
 
         # Any of these will set self.start_event:
@@ -40,11 +39,11 @@ class Setlist:
         # 50 ms after crank start event: crank turns are already stable
         self.start_event = crank.register_event(50)
 
-         # Event to know when bored turning the crank and nothing happens,
+        # Event to know when bored turning the crank and nothing happens,
         # (losing patience takes 3 seconds?)
         self.shuffle_event = crank.register_event(3000)
 
-        # Make touch button double click to the same as cranking a lot of time 
+        # Make touch button double click to the same as cranking for a longer time
         # i.e. make it shuffle all
         self.touch_button.register_double_event(self.shuffle_event)
     
@@ -59,6 +58,14 @@ class Setlist:
         self.timeout_task = None
         self.logger.debug("init ok")
 
+
+    def _write_current_setlist( self ):
+        # Write current setlist to flash to make
+        # it persistent across reboots.
+        fileops.write_json( 
+            self.current_setlist, 
+            config.CURRENT_SETLIST_JSON,
+            keep_backup=False)
 
     # Functions related to the different ways to start a tune
     def start_tune(self):
@@ -92,8 +99,17 @@ class Setlist:
 
     # The background setlist process - wait for start and play next tune
     async def _setlist_process(self):
-        # When powered on, always load stored setlist (if any)
-        self.load()
+        # Let powerup finish
+        await asyncio.sleep_ms(10)
+        
+        # When powered on, load setlist if present
+        # First try with current setlist, if empty then
+        # try with stored setlist.
+        for filename in (config.CURRENT_SETLIST_JSON,
+                         config.STORED_SETLIST_JSON):
+            self.current_setlist = fileops.read_json( filename, default=[] )
+            if self.current_setlist:
+                break    
 
         while True:
             # Ensure this loop will always yield
@@ -110,7 +126,13 @@ class Setlist:
             # when navigating to play.html or tunelist.html and
             # disactivated with other pages.
             if not scheduler.is_playback_mode():
-                self.logger.debug("Not in play mode")
+                self.logger.debug("Not in playback mode")
+                # Could as well return, there is currently no way
+                # to return to playback mode except reboot.
+                # This is to avoid interference between MIDI files
+                # (player.py)
+                # and the tuning process (organtuner.py)
+                # No led blinks, this is not a problem... its avoiding one.
                 continue
 
             # User signalled start of tune
@@ -122,8 +144,9 @@ class Setlist:
 
             # Get top tune and play
             tuneid = self.current_setlist.pop(0)
+            self._write_current_setlist()
 
-            self.logger.info(f"play_tune will start {tuneid=} {tuneid in self.tune_requests=}")
+            self.logger.info(f"start {tuneid=}")
             led.start_tune_flash()
 
             # Play tune. Create task because we may need to cancel it on request 
@@ -131,7 +154,7 @@ class Setlist:
                 player.play_tune(tuneid, tuneid in self.tune_requests)
             )
             await self.player_task 
-            self.logger.debug("play_tune task ended")
+            
             # Record that this task has ended and isn't available anymore
             self.player_task = None
 
@@ -142,12 +165,16 @@ class Setlist:
                 if t not in self.current_setlist:
                     del_key(tuneid, self.tune_requests)
 
-            self.logger.info("play_tune ended")
+            self.logger.info(f"ended {tuneid=}")
 
             # Wait for the crank to cease turning after
             # a tune has played before proceeding to next tune.
             # If no crank, this will not cause waiting
             await crank.wait_stop_turning()
+            # If velocity has been altered by software or by
+            # encoder, reset to normal. User can change velocity
+            # before the next tune starts.
+            crank.set_velocity(50)
     
 
     async def _shuffle_all_process(self):
@@ -158,37 +185,30 @@ class Setlist:
         
         # Note that the shuffle event is triggered
         # every time the crank starts, but since
-        # there is a test for "no tunes", that 
+        # there is a test for "self.no tunes()", that 
         # does not lead to a problem
         while True:
+            await asyncio.sleep_ms(100)
             self.shuffle_event.clear()
             await self.shuffle_event.wait()
             if self.no_tunes():
                 self.shuffle_all_tunes()
-            await asyncio.sleep_ms(100)
-
+    
     async def _touchdown_process(self):
         # Process to detect touchpad up.
         # Will cancel a tune if detected while playing a tune.
         # Will start a tune while waiting for tune to start
-        touchpad_down_event = asyncio.Event()
-        self.touch_button.register_up_event( touchpad_down_event )
+        touchpad_up_event = asyncio.Event()
+        self.touch_button.register_up_event( touchpad_up_event )
         while True:
-            touchpad_down_event.clear()
-            await touchpad_down_event.wait()
+            touchpad_up_event.clear()
+            await touchpad_up_event.wait()
             # See what to do with this event
             if self.is_waiting_for_tune_start():
                 # Why did user start with touchpad?
-                # Perhaps crank not working? Disable 
-                # temporarily following crank.
                 self.logger.debug("_touchdown_process start tune")
-                player.set_tempo_follows_crank( False )
                 # And signal tune to start
                 self.start_event.set()
-            elif self.player_task:
-                # Touchpad while playing music will stop current tune
-                self.logger.debug("_touchdown_process stop tune")
-                self.stop_tune()
             else:
                 # Well, this may happen, ignore
                 self.logger.debug("_touchdown_process ignore")
@@ -202,19 +222,23 @@ class Setlist:
         # If not in setlist: add
         # If in setlist: delete
         # Each tune may be only once in setlist
-        # Each tune may be only once in setlist
         if tuneid in self.current_setlist:
             i = self.current_setlist.index(tuneid)
             del self.current_setlist[i]
             del_key(tuneid, self.tune_requests)
         else:
             self.current_setlist.append(tuneid)
+        self._write_current_setlist()
 
     def add_tune_requests(self, request_dict):
         self.tune_requests.update(request_dict)
+        changed = False
         for tuneid in request_dict.keys():
             if tuneid not in self.current_setlist:
                 self.current_setlist.append(tuneid)
+                changed = True
+        if changed:
+            self._write_current_setlist()
         # current setlist is updated separately
 
     def stop_tune(self):
@@ -225,6 +249,7 @@ class Setlist:
             # Delete from top of setlist
             tuneid = self.current_setlist[0]
             del self.current_setlist[0]
+            self._write_current_setlist()
             del_key(tuneid, self.tune_requests)
 
         # Stop current tune, if playing
@@ -233,24 +258,23 @@ class Setlist:
             led.stop_tune_flash()
 
     def save(self):
-        # Save curent setlist to flash
+        # Save current setlist to another file
         fileops.write_json(
-            self.current_setlist, config.SETLIST_JSON, keep_backup=False
+            self.current_setlist, config.STORED_SETLIST_JSON, keep_backup=False
         )
-        # spectator_list is transient, do not store
+        # >>>spectator_list is transient, do not store?
 
     def load(self):
         # Read setlist from flash
-        try:
-            self.current_setlist = fileops.read_json(config.SETLIST_JSON)
-            # _setlist_process will poll self.current_setlist periodically
-        except (OSError, ValueError):  # No setlist.
-            self.clear()
-
+        self.current_setlist = fileops.read_json(
+                config.STORED_SETLIST_JSON,
+                default=[])
+        self._write_current_setlist()
         self.logger.debug(f"Setlist loaded {len(self.current_setlist)} elements")
 
     def clear(self):
         self.current_setlist = []
+        self._write_current_setlist()
 
     def up(self, pos):
         # Move this tune one up in setlist
@@ -258,6 +282,7 @@ class Setlist:
         s = self.current_setlist[pos]
         del self.current_setlist[pos]
         self.current_setlist.insert(pos - 1, s)
+        self._write_current_setlist()
 
     def down(self, pos):
         # Move this tune one down in setlist
@@ -265,6 +290,7 @@ class Setlist:
         s = self.current_setlist[pos]
         del self.current_setlist[pos]
         self.current_setlist.insert(pos + 1, s)
+        self._write_current_setlist()
 
     def top(self, pos):
         # Move this tune to top of setlist
@@ -272,9 +298,11 @@ class Setlist:
         s = self.current_setlist[pos]
         del self.current_setlist[pos]
         self.current_setlist.insert(0, s)
+        self._write_current_setlist()
 
     def drop(self, pos):
         del self.current_setlist[pos]
+        self._write_current_setlist()
 
     def to_beginning_of_tune(self):
         # Restart current tune
@@ -283,27 +311,40 @@ class Setlist:
         if tuneid:
             self.stop_tune()
             self.current_setlist.insert(0, tuneid)
+            self._write_current_setlist()
 
     def shuffle(self):
-        # Shuffle setlist
-        setlist = self.current_setlist
-        self.clear()
-        while len(setlist) > 0:
-            i = randrange(0, len(setlist))
-            self.queue_tune(setlist[i])
-            del setlist[i]
+        # Shuffle current setlist
+        # Fisher-Yates shuffle https://en.wikipedia.org/wiki/Random_permutation
+        permutation = self.current_setlist
+        n = len(permutation)
+        for i in range(n-1):
+            j = randrange(i,n) # A random integer such that i ≤ j < n
+            # Swap the randomly picked element with permutation[i]
+            t = permutation[i]
+            permutation[i] = permutation[j]
+            permutation[j] = t
+        self._write_current_setlist()
 
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
         # Must get a deep copy of tunelib to self.current_setlist
         # if not tunemanager._tuneids will be emptied while playing....
-        self.current_setlist = list(tunemanager.get_autoplay())
+        self.current_setlist = tunemanager.get_autoplay()
         self.shuffle()
         led.shuffle_all_flash()
 
+    def shuffle_3stars(self):
+        # See shuffle_all_tunes for comments
+        self.current_setlist = tunemanager.get_autoplay_3stars()
+        self.shuffle()
+        led.shuffle_all_flash()
+
+        
     # The webserver get_progress() calls this function.
     def complement_progress(self, progress):
         progress["setlist"] = self.current_setlist
+        progress["tune_requests"] = self.tune_requests
         if self.is_waiting_for_tune_start():
             # If setlist is waiting for start, the player does not
             # know the current tune yet
@@ -313,7 +354,6 @@ class Setlist:
                 progress["tune"] = None
             progress["status"] = "waiting"
             progress["playtime"] = 0
-            progress["tune_requests"] = self.tune_requests
         return progress
     
     def isempty(self):
@@ -325,7 +365,7 @@ class Setlist:
         return self.isempty() and self.player_task == None
 
     def automatic_playback( self ):
-        # Enable automatic playback based on "automatic_delay"
+        # do the automatic playback based on "automatic_delay"
         # parameters of config.json.
 
         async def on_timeout( timeout_seconds ):

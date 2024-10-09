@@ -12,13 +12,13 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;<span>Diagnóstico</span>
+		&nbsp;<span>Sistema</span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 <span id="description_span">   
 <table>
     <tbody>
@@ -148,30 +148,28 @@ async function getWifiStatus() {
 
 
 async function wifiScan() {
-	wifiData = await fetch_json( "/wifi_scan" );
+	let wifiData = await fetch_json( "/wifi_scan" );
 
 	var s = "";
+	let scanInfo = document.getElementById( "scanInfo" );
 	for( i = 0; i < wifiData.length; i++ ) {
 		w = wifiData[i] ;
-		s += "<tr>" ;
-		s += "<td>" + w[0] + "</td>" ;
-		s += "<td>" + w[3] +  "</td>" ;
-		s += "</tr>" ;
+		insertRow( scanInfo, [ w[0], w[3] ] );
 	}
-	htmlById( "scanInfo", s ) ;
 }
 
 
 async function getDiagInfo( ) {
     // General microcontroller information
 	let diag = await fetch_json( "/diag" );
+	// Move corresponding (cobol?) fields from json to html page
 	setAllTextById( diag ); 
 	let sole_info = "" ;
-	solenoid_devices = diag["solenoid_devices"] ;
+	let solenoid_devices = diag["solenoid_devices"] ;
 	for( const [key, value] of Object.entries(solenoid_devices)) {
-		sole_info += key + ": " + value + "<br>" ;
+		sole_info += escapeHtml(key) + ": " + escapeHtml(value) + "<br>" ;
 	}
-	htmlById("solenoid_devices", sole_info);
+	htmlById("solenoid_devices", sole_info );
     getWifiStatus() ;
 	showHideElement( "crankGraphButton", diag["crank_installed"]);
 }
@@ -186,6 +184,9 @@ async function deepSleep() {
 }
 async function reset() {
     await fetch_json( "/reset") ;
+	await sleep_ms(6000);
+	// Refresh this page when the microcontroller comes back
+	window.location.href = "/static/diag.html";
 }
 
 function* generateNumbers(N, step) {
@@ -262,11 +263,10 @@ async function crankGraph(){
 	);
 
 
-	// get data and refresh graph
 	for(;;){
 		await sleep_ms(100);
 	
-		let tdata = await fetch_json("/tacho_irq_report") ;
+		let tdata = await fetch_json( "/tacho_irq_report") ;
 		rpsChart.data.labels = tdata["timesList"];
 		rpsChart.data.datasets[1].data = tdata["rpsecList"];
 		let rpsn = Array( tdata["rpsecList"].length );

@@ -6,11 +6,15 @@ from micropython import const
 import time
 import asyncio
 
-_may_run = asyncio.Event()
 _run_always_flag = True
 
 # Time that is spent waiting with precision timer.
-_RESERVED_MS = 20
+# On ESP32 and ESP32-S3, async.sleep_ms() is done
+# in clock ticks of 10 or 20 ms, so it's not precise at
+# all. Leaving a RESERVED_US waits short of this time
+# and then waits time.sleep_us() which does not yield but
+# is very precise.  
+_RESERVED_US = 20_000
 
 # Very big int, to use if all time is available to request slices
 _INFINITY = const(1_000_000_000)
@@ -23,32 +27,30 @@ _LONG_TIME = const(3_600_000)
 # If True, RequestSlice shows timing information.
 _DEBUG_TIMES = const(False)
 
-
-async def wait_and_yield_ms(for_ms):
+async def wait_and_yield_ms(for_us):
     # This function is to wait for the next MIDI event with precision,
     # and allowing another task to run if the time it needs is less
-    # than the for_ms wait time between MIDI events.
+    # than the for_us wait time between MIDI events.
     #
     # Restriction: this schedules at most one task per wait.
     # but this works well because there are few tasks and many. many MIDI events.
     global _run_always_flag
     t0 = time.ticks_us()
     _run_always_flag = False
-    if for_ms <= 0:
+    if for_us <= 0:
         return
-    if for_ms < _RESERVED_MS:
-        time.sleep_us(for_ms * 1000)
+    if for_us < _RESERVED_US:
+        time.sleep_us(for_us)
         return
-    _find_and_run_task(for_ms - _RESERVED_MS)
-    await asyncio.sleep_ms(for_ms - _RESERVED_MS)
+    _find_and_run_task(for_us - _RESERVED_US)
+    await asyncio.sleep_ms(round((for_us - _RESERVED_US)/1000))
 
     # Wait for the rest of time with more precision
     # This is much more precise (less jitter) than asyncio.sleep_ms()
     # The downside is that during time.sleep_ms() no other tasks can
-    # be scheduled, but that is ok, since this is the one and #
+    # be scheduled, but that is ok, since this is the one and only
     # high priority task.
-    duration_us = time.ticks_diff(time.ticks_us(), t0)
-    remaining_us = for_ms * 1_000 - duration_us
+    remaining_us = for_us - time.ticks_diff(time.ticks_us(), t0)
     if remaining_us > 0:
         time.sleep_us(remaining_us)
 
@@ -150,7 +152,6 @@ async def wait_for_player_inactive():
 # Enable playback: player.py/setlist.py play music
 # Disable playback: user is tuning or using pinout
 # page, don't react to "start music" requests
-# requests to play music
 playback_enabled = True
 
 
@@ -158,11 +159,10 @@ def set_playback_mode(p):
     global playback_enabled
     playback_enabled = p
 
-
 def is_playback_mode():
     return playback_enabled
 
-
+# Add more info to progress.
 def complement_progress(progress):
     # play_mode True: playback is enabled, can start midi files
     # play_mode False: running tuner, don't start midi files

@@ -25,10 +25,13 @@ _FOLDER = "data/"  # Do not define in config, minilog should be autonomous.
 # The call interface is with function getLogger and class Logger
 
 _FILE_LEVEL = INFO
-_LOG_MEMORY = const(False)
+# Normal playing = about 120 bytes of log usage.
+# 1 logfile = about 160 tunes = 8 hours of playing at 20 tunes/hr
+# Limiting number of log files and size of logfiles ensures
+# that logfiles never fill flash completely, even with a
+# runaway error
 _KEEP_FILES = const(4)
 _MAX_LOGFILE_SIZE = const(20_000)
-
 
 class BaseLogger:
     def __init__(self):
@@ -36,7 +39,7 @@ class BaseLogger:
         self.error_count = 0
         # Compute new filename for error.log
         # Find error<nnn>.log file with highest nnn
-        self.max_num = max(n for n, _ in self._filenumbers())
+        self.max_num = max((n for n, _ in self._filenumbers()),default=0)
         self.current_log_filename = self._makefilename(self.max_num)
         self.file = open(self.current_log_filename, "a")
         # logging an entry takes 150 msec, rest of __init__ is <15msec

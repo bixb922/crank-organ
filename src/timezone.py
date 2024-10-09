@@ -28,11 +28,8 @@ class TimeZone:
         }
 
         self.timezone_task_active = False
-        try:
-            self.tz = fileops.read_json(TZFILE)
-        except (OSError, ValueError) as e:
-            print(f"timezone - Could not read timezone.json: {e}")
-            pass
+        self.tz = fileops.read_json(TZFILE,
+                                    default=self.tz)
         # No logger yet, timezone is prerrequisite for minilog
         self.logger = None
 
@@ -74,8 +71,8 @@ class TimeZone:
                     localt = (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0)
                     # Set this as the local time, to be returned
                     # by time.localtime() and friends.
-                    rtc = machine.RTC()
-                    rtc.datetime(localt)
+                    machine.RTC().datetime(localt)
+
                 return 
             except (asyncio.TimeoutError, OSError) as e:
                 self.logger.info(f"Recoverable ntptime exception {repr(e)}")
@@ -128,14 +125,19 @@ class TimeZone:
     async def get_time_zone(self):
         
         from config import config
-        url = "http://worldtimeapi.org/api/timezone/" + config.cfg["tzidentifier"]
+        tzname = config.cfg.get("tzidentifier", None)
+        if tzname:
+            url = "http://worldtimeapi.org/api/timezone/" + tzname
+        else:
+            url = "http://worldtimeapi.org/api/ip"
+        
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:
                     return
                 resp = await response.json()
         if "error" in resp:
-            self.logger.error(f"Error in get_time_zone: {resp}")
+            self.logger.error(f"Error in get_time_zone({url})->{resp}")
             return
 
         # Get offsets to compute net offset

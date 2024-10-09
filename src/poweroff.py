@@ -9,7 +9,7 @@ from player import player
 from minilog import getLogger
 from config import config
 from led import led
-from solenoid import solenoid
+from solenoid import solenoids
 from setlist import setlist
 import webserver
 
@@ -21,7 +21,6 @@ class PowerManager:
         self.logger.debug("init ok")
 
     async def _power_process(self):
-        self.logger.debug("Power off monitor started")
         last_tune = None
         last_playtime = None
         idle_minutes = 0
@@ -63,9 +62,10 @@ class PowerManager:
 
     async def wait_and_power_off(self):
         setlist.stop_tune()
+        solenoids.all_notes_off()
         # Wait for web server to respond, led to flash, etc
         await asyncio.sleep_ms(1000)
-        solenoid.all_notes_off()
+        solenoids.all_notes_off()
         led.off()
         # Closest thing to self power off.
         machine.deepsleep()
@@ -74,12 +74,8 @@ class PowerManager:
         setlist.stop_tune()
         # Wait for web server to respond, led to flash, etc
         await asyncio.sleep_ms(1000)
-        solenoid.all_notes_off()
+        solenoids.all_notes_off()
         led.off()
         machine.reset()
-
-    def cancel_power_off(self):
-        self.power_task.cancel()
-
 
 poweroff = PowerManager()

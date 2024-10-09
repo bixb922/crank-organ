@@ -15,7 +15,7 @@
 	&nbsp;Configuration
 	<span class="headerright" id="header_time"></span>
 </div>
-<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="/static/common.js"></script>
 
 
 <div class="middlediv">Enter password</div>
@@ -118,14 +118,18 @@ password</div>
 	<label for="normal_rpsec">Normal value of crank speed. If tempo follows crank, this is the speed where the tempo is the recorded tempo in the MIDI file, in revolutions per second:</label>
 	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
 	<br>
-	<label for="max_expected_rpsec">Maximum value expected for crank speed. This is used for debouncing the signal, should be the highest expected speed. The lower the better the debouncing, in revolutions per second:</label>
-	<input id="max_expected_rpsec" type="text" size="4" oninput="markField('max_expected_rpsec')">
+
+	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier:</label>
+	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
 	<br>
-	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','max_expected_rpsec','automatic_delay' )">Save play tune parameters</button>
+	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','automatic_delay', 'rotary_tempo_mult' )">Save play tune parameters</button>
 
 <div class="middlediv">Other parameters</div>
     
-    Time zone identifier, such as Europe/Berlin, or America/Lima. See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers.
+	Enter the time zone identifier, such as Europe/Berlin, or America/Lima. 
+	See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers. 
+	If left blank, the time zone is computed based on the client's IP address.
+	The time zone uses the www.worltimedapi.org service once a day to update time zone information.
 	<input id="tzidentifier" name="tzidentifier" type="text" size="20" oninput="markField('tzidentifier')"/>
 	<br>
 	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address with the browser, for example: http://192.168.144.1
@@ -176,7 +180,7 @@ password</div>
 <script>
 
 // Used by mark fields
-let changed_fields = [];
+let CHANGED_FIELDS = [];
 	
 async function getCurrentConfig(){
 	let json_result = await fetch_json( "/get_config" ) ;
@@ -243,9 +247,8 @@ async function save( /* argument list */) {
     // Add al arguments of save to list
     let value = "" ;
 	for( var i=0; i<arguments.length; i++){
-        // no need to escapeHtml description
 		if( arguments[i] == "description" ){
-            value = removeSpecialHtml( getValue( arguments[i] ));
+            value = removeSpecialHtmlChars( getValue( arguments[i] ));
         }
         else{
             value = getValue( arguments[i] )
@@ -258,9 +261,7 @@ async function save( /* argument list */) {
         post_data[ arguments[i] ] = value ;
 	}
 	const resp = await fetch_json( "/save_config", post_data ) ;
-	if( resp["result"] == "ok") {
-		showPopup( "", "Configuration saved to flash" ) ;
-	}
+	showPopup( "", "Configuration saved to flash" ) ;
     await revoke_credentials();
 }
 function getValue( element_id ){
@@ -300,8 +301,8 @@ function markField( id ){
     if( id == "name") {
         hostnameChanged() ;
     }
-    if( !changed_fields.includes(id) ){
-        changed_fields.push( id );
+    if( !CHANGED_FIELDS.includes(id) ){
+        CHANGED_FIELDS.push( id );
     }
     const d = document.getElementById( id ) ;
     d.style.backgroundColor = cream ;
@@ -312,13 +313,14 @@ function clearMark( id ){
     }
     document.getElementById( id ).style.backgroundColor = "#ffffff" ;
 }
+
 function clearMarks() {
     // Reset background color of changed fields
-    for( let i in changed_fields ){
-        let id = changed_fields[i] ;
+    for( let i in CHANGED_FIELDS ){
+        let id = CHANGED_FIELDS[i] ;
         clearMark( id ) ;
     }
-    changed_fields = [] ;
+    CHANGED_FIELDS = [] ;
 }
 </script>
 </body>

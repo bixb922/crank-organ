@@ -1,13 +1,16 @@
 // Define columns of translationDict
 let languageDict = { "es": null, "en": 0, "de": 1 };
 
+// Translation keys must be in lower case
 let translationDict = {
 "[melodías]": // index.html 
 	["[tunes]", "[Melodien]"],
 "[mseg]": // diag.html 
 	["[msec]", "[msec]"],
+"(borrado)": // history.html
+	["(deleted)", "(gelöscht)"],
 "¿cuál es tu nombre?": // tunelist.html
-    ["What is your name?", "Dein Name bitte?"],
+    ["What is your name?", "Dein Name, bitte?"],
 " a ": // note.html
 	[" to ", " bis "],
 "activa": // diag.html 
@@ -16,6 +19,8 @@ let translationDict = {
 	["Performance", "Setlist"],
 "actualizando setlist": // tunelist.html 
 	["updating setlist", "Setlist wird aktualisiert"],
+"actualizar archivos":
+    ["Update files", "Dateien aktualisieren"],
 "afinación": // note.html notelist.html 
 	["Tuning", "Frequenz"],
 "afinación (cents)":
@@ -28,8 +33,6 @@ let translationDict = {
 	["Tune all", "Alle Noten stimmen"],
 "ajuste velocidad:": // play.html 
 	["Set playback speed:", "Rückgabegeschwindingkeit:"],
-"al comienzo": // play.html 
-	["To beginning", "Zum Anfang"],
 "alcanza para": // index.html 
 	["Enough for", "Reicht für"],
 "alguien conectado": // diag.html 
@@ -56,6 +59,8 @@ let translationDict = {
 	["Clear setlist", "Setlist löschen"],
 "🔍búsqueda": // tunelist.html 
 	["🔍Search", "🔍Suche"],
+"cancelado": // common.js 
+	["cancelled", "gestrichen"],
 "calibrar indicación batería": // index.html 
 	["Calibrate battery indicators", "Batterieanzeige eichen"],
 "cargar setlist": // play.html 
@@ -80,16 +85,18 @@ let translationDict = {
 	["Battery counters set to zero", "Batteriezähler auf Null"],
 "control tempo": // play.html 
 	["Tempo control", "Temposteuerung"],
+"da capo": // play.html
+	["Da capo", "Da capo"],
 "descripción": // diag.html 
 	["Description", "Beschreibung"],
 "deshabilitado por afinador, pinout": // tunelist.html play.html 
-	["Disabled by tuner, pinout test", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe"],
+	["Disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
 "desordenar setlist": // play.html 
 	["Shuffle setlist", "Setlist mischen"],
 "desordenar todos": // play.html 
 	["Shuffle all tunes", "Alle Melodien mischen"],
-"diagnóstico": // index.html diag.html 
-	["System information", "Systeminformation"],
+"desordenar ⭐⭐⭐": // play.html
+	["Shuffle ⭐⭐⭐", " ⭐⭐⭐ mischen"],
 "duración": // play.html 
 	["Duration", "Länge"],
 "días": // history.html 
@@ -114,8 +121,12 @@ let translationDict = {
 	["Free flash", "Flash frei"],
 "flash usada": // diag.html 
 	["Used flash", "flash belegt"],
+"frecuencia": // diag.html 
+	["Frequency", "Frequenz"],
 "girando": // play.html 
 	["Turning", "Dreht"],
+"gráfico manivela": // diag.html
+	["Crank RPS graph", "Drehgeschwindigkeitsdiagramm"],
 "guardado": // play.html 
 	["Saved", "Gespeichert"],
 "guardar setlist": // play.html 
@@ -135,7 +146,7 @@ let translationDict = {
 "información actualizada": // history.html 
 	["Information updated", "Information aktualisiert"],
 "ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración": // index.html
-	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibation data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
+	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibration data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
 "ingrese comentario o puntaje *, ***,*** para: ": // history.html 
 	["Enter comment or rating *, **, *** for: ", "Schreib Kommentar oder Bewertung *, **, *** zu: "],
 "ip de clientes activos (60 segundos)": // diag.html 
@@ -144,6 +155,10 @@ let translationDict = {
 	["Lyrics", "Liedtext"],
 "lista de melodías": // tunelist.html 
 	["Tune list", "Melodieliste"],
+"manivela": // diag.html
+	["Crank", "Kurbel"],
+"manivela instalada": // diag.html
+    ["Crank sensor active", "Kurbelsensor aktiv"],
 "melodía": // history.html 
 	["Tune", "Melodie"],
 "melodía actual": // play.html 
@@ -166,8 +181,6 @@ let translationDict = {
 	["Not connected", "nicht angeschlossen"],
 "no gira": // play.html 
 	["Not turning", "Dreht nicht"],
-"no guardado, error": // play.html 
-	["Not saved, error", "Nicht gespeichert, Fehler aufgetreten"],
 "no hay información de avance disponible": // tunelist.html play.html 
 	["No progress information available", "Information über Fortschritt nicht verfügbar"],
 "no hay melodía en curso": // play.html
@@ -176,20 +189,20 @@ let translationDict = {
 	["Crank organ", "Drehorgel"],
 "partir": // play.html 
 	["Start", "Start"],
-"partió ftp.": // index.html 
-	["FTP started", "FTP gestarted"],
-"partió ftp. reiniciar microcontrolador para detener. conectarse con filezilla o windows explorer": // index.html 
-	["FTP started. Reboot to stop. Connect with FileZilla or Windows Explorer", "FTP gestarted. Zum stoppen, Microcontroller aus- und wieder einschalten. Mit FileZilla o Windows Explorer anschlieẞen."],
 "pedido": // history.html 
 	["Request", "Wunsch"],
 "pedido por": // play.html
 	["Requested by", "Gewünscht von"],
 "poner contadores en cero": // index.html 
 	["Set battery counters to zero", "Setze Batteriezähler auf Null"],
-"programa-nota": // note.html notelist.html 
-	["Program-note", "Programm-Note"],
+"programa y nota": // note.html notelist.html 
+	["Program and note", "Programm und Note"],
 "próximo": // play.html 
 	["Next", "Nächster"],
+"próxima nota": // note.html
+    ["Next note", "Nächste Note"],
+"prueba pins": // notelist.html
+	["Test all pins", "Alle Pins testen"],
 "pts": // tunelist.html 
 	["Rating", "Bewertung"],
 "puesto en cero": // index.html 
@@ -200,6 +213,8 @@ let translationDict = {
 	["Free RAM", "RAM frei"],
 "ram usada": // diag.html 
 	["Used RAM", "RAM belegt"],
+"registros": // play.html 
+	["Registers", "Register"],
 "repetición": // note.html 
 	["Repetition test", "Wiederholungstest"],
 "rev/seg": // play.html 
@@ -210,10 +225,10 @@ let translationDict = {
 	["Setlist", "Setlist"],
 "si historia más antigua que": // history.html 
 	["When older than", "Wenn älter als"],
+"sistema": // index.html diag.html 
+	["System", "System"],
 "sonar nota": // note.html 
 	["Note test", "Notentest"],
-"cancelado": // common.js 
-	["status_text = cancelled", "status_text = gestrichen"],
 "stop":
 	["Stop", "Halt"],
 "remanente": // index.html 
@@ -240,26 +255,57 @@ let translationDict = {
 	["MicroPython version", "MicroPython version"],
 
 // Server translations
-"bienvenido al organillo en internet":
+"bienvenido al organillo en internet": // server index.html
 	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
-"fotos":
-    ["Fotos", "Bilder"],
-"aquí está la historia, en fotos, de la construcción del organillo":	
+"aquí está la historia, en fotos, de la construcción del organillo": // server index.html	
 	["Here is the construction log with photos", "Hier ist die Baugeschichte, mit Bildern"],
-"cómo funciona":
+"aquí están todas las melodías que hoy tiene el organillo. puedes pedir que se toque una melodía pulsando el título de la canción.":
+	["Here is the list of all tunes in the crank organ. You can tap a melody to request it to be played", "Hier ist die Melodieliste die in der Drehorgel gespeichert ist. Drück auf einen Titel damit die Melodie gespielt wird!"],
+"cómo funciona": // server index.html
 	["How does it work?", "Wie funktioniert es?"],
 "aquí se explica cómo funcion el organillo":
 	["Here is an explanation on how this crank-organ works", "Hier ist eine Beschreibung wie die Drehorgel funktioniert"],
-"melodías":
+"demostración del software":
+	["Demo of the crank organ software","Drehorgelsoftware Demo"],
+"el organillo en internet": // admin.html
+	["The crank organ on internet", "Die Drehorgel im Internet"],
+"espectadores":  // admin.html
+	["Spectators","Zuhörer"], 
+"esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre ":
+    ["Here is a demo of the crank organ software. You can see all the options, navigate the pages and test how it works. You cannot alter the configuration. Link to the open source/free software ",
+	"Hier ist eine Demo des Drehorgelsoftwares. Alle Webseiten des Softwares können angesehen werden und der Betrieb wird simuliert. Die Konfiguration kann allerdings nicht geändert werden. Link zum open source/freiem software "],
+"aquí": 
+	["here", "hier"],
+"fecha expiración (local)":  // admin.html
+	["Expiration date (local time)", "Verfallsdatum"],
+"fecha software (local)": // admin.hml
+	["Software update date","Softwareaktualisierung Datom "],
+"fecha tunelib.json (local)":  // admin.html
+	["tunelib.json date", "tunelib.json Datum"],
+"fotos": // server index.html
+	["Photos", "Fotos"],
+"imprimir": // admin.html
+	["Print","Ausdrucken"],
+"logout": // admin.html
+	["Logout", "Logout"],
+"melodías": // server index.html
 	["Tunes","Melodien"],
-"aquí están todas las melodías que hoy tiene el organillo. puedes pedir que se toque una melodía pulsando el título de la canción.":
-	["Here is the list of all tunes in the crank organ. You can tap a melody to request it to be played", "Hier ist die Melodieliste die in der Drehorgel gespeichert ist. Drück auf einen Titel damit die Melodie gespielt wird!"],
-"melodía actual":
+"nombre":  // admin.html
+	["Name", "Namen"], // server index.html
+"melodía actual":  // server index.html
 	["Current tune", "Gegenwärtige Melodie"],
-"muestra la melodía que se esta tocando ahora ¡y tiene la letra para poder acompañar cantando!":
+"muestra la melodía que se esta tocando ahora ¡y tiene la letra para poder acompañar cantando!": // server index.html
 	["Shows the melody now playing and the lyrics to sing along!", "Zeigt die Melodie an die gerade gespielt wird, mit Liedtext zum mitsingen!"],
-"fotos":
-	["Photos", "Fotos"]
+"obtener link performance": // admin.html
+	["Get performance link", "Link zur Vorführung erstellen"],
+"pedidos": // admin.html
+	["Requests","Wunsch"],
+"remanente (hh:mm:ss)": // admin.html
+	["Time remaining (hh:mm:ss)","Verbleibende Zeit (Stunden:Minuten:Sekunden)"],
+"último refresco":  // admin.html
+	["Last refresh","Letzte Aktualisierung"],
+"vigente": // admin.html
+	[ "Current", "Gültig" ],
 }
 
 let language = navigator.language.substring(0,2) ;
@@ -271,6 +317,7 @@ function verifyTranslationDict(){
 	for( k in translationDict ){
 		if( k != k.toLowerCase() ){
 			console.log("Warning: translationDict key not in lower case", k );
+			// Add lowercase version to correct this on the fly
 			translationDict[k.toLowerCase()] = translationDict[k] ;
 		}
 	}
@@ -303,10 +350,10 @@ function translate_html(){
 		}
 		let innerHTML = d.innerHTML ;
 		if( innerHTML == undefined ||  innerHTML.includes("<")){
+			// Don't try tro translate if no text or if there is a tag
 			continue ;
 		}
-        let text = d.innerText ;
-		d.innerText = tlt(text) ;
+		d.innerText = tlt(d.innerText ) ;
 	}
 }
 

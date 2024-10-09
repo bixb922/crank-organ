@@ -20,8 +20,8 @@
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <!-- html continues below javascript -->
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <script>
 // Function to translate characters with accent and tilde
@@ -69,6 +69,9 @@ function searchTable() {
 		}
 	}
 }
+// When navigating to the table ensure the search is activated with
+// whatever text is in the searchInput field.
+window.onload = searchTable;
 </script>
 <!-- Search button, placeholder includes magnifying glass -->
 
@@ -77,10 +80,12 @@ function searchTable() {
            placeholder="🔍Búsqueda"
            size="10"/>
 	<button id="navigateToPlayPage" type="button" onclick="navigateToPlayPage()">Actuación</button>
-    
+    <button id="startButton" onclick = 'startTune()'>Partir</button>
+
     <div class="tableFixHead">
       <table id="tunelisttable">
           <thead id="tunelisthead">
+            <tr id="headerRow"></tr>
           </thead>
           <tbody id="tunelistbody">
           </tbody>
@@ -92,7 +97,7 @@ function searchTable() {
 document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
 
 // keep sorted list in global page context
-let tunelist = [] ;
+let TUNELIST = [] ;
     
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let header = [ tlt("Título"), tlt("Género"), tlt("Autor"), "mm:ss", tlt("Año"), tlt("Hist"), tlt("Info"), tlt("Fecha"), tlt("Pts")] ;
@@ -104,69 +109,102 @@ async function setTuneList( ) {
     console.log("setTuneList cookie=", document.cookie );
     if( isUsedFromServer() ){
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
+        document.getElementById( "startButton").style.display = "none" ;
     }
+    // get_tunelib() will cache tunelib in tab storage
+    // so it is not costly to call get_tunelib() again
     let tunelib = await get_tunelib() ;
-    tunelist = [];
+    TUNELIST = [];
     for( const [key, tune] of Object.entries(tunelib)) {
-        tunelist.push( tune ) ;
+        TUNELIST.push( tune ) ;
     }
     sortTunelist( 0 );
     // Now update tunelist html
     updateTunelistTable( );
     
     // Refresh progress periodically
-	await getProgress() ;
+	await updateProgressEvery() ;
 }
 
 function fillHeader( ){
 
-	let s = "<tr>" ;
-	for (let  j = 0 ; j < header.length ; j++ ){
+    let headerRow = document.getElementById("headerRow");
+    headerRow.innerHTML = "";
+    for (let  z = 0 ; z < header.length ; z++ ){
+        let j = z; // need to do this for the function() closure
+        let th = document.createElement("th");
         let h = "";
         if( j == sortColumn ){
             if( direction > 0 ){
                 // up arrow to show sorting order
-                h = "&#x2191;" ;
+                h = "↑"; // &#x2191;
             }
             else{
                 // down arrow to show sorting order
-                h = "&#x2193;" ;
+                h = "↓"; // &#x2193;
             }
         }
-        h += header[j] ;
-		s += `<th onclick='changeOrder(${j})' >${h}</th>` ;
-	}
-	s += "</tr>" ;
-	htmlById( "tunelisthead", s );
+        th.innerText = h + header[j];
+        th.onclick = function() { changeOrder(j) };
+        headerRow.appendChild( th );
+    }
 }
     
 function fillBody( ) {
     let s = "";
-    
-	for( i in tunelist ) {
-        let tune = tunelist[i];
+    let tlbody = document.getElementById( "tunelistbody")
+    tlbody.innerText = "";    
+	for( i in TUNELIST ) {
+        let tune = TUNELIST[i];
         let tuneid = tune[TLCOL_ID];
-		let row = `<tr> 
-			 <td id='${tuneid}.title' style='cursor:pointer;text-decoration:underline;'>
-				<a onclick='queueTune("${tuneid}")'
-					style='cursor:pointer;'
-					id='t${tuneid}'
-				>${tune[TLCOL_TITLE]}</a>
-			  </td>
-			  <td>${tune[TLCOL_GENRE]}</td>
-			  <td>${tune[TLCOL_AUTHOR]}</td>
-		      <td>${formatMilliMMSS( tune[TLCOL_TIME] )}</td>
-		      <td>${tune[TLCOL_YEAR]}</td>
-              <td align="right">${tune[TLCOL_HISTORY]}</td>
-		      <td style='cursor:pointer;text-decoration:underline;'>
-                <a onclick='showFullInfo("${tuneid}")'>${trunc(tune[TLCOL_INFO],10)}</a>
-              </td>
-		      <td>${tune[TLCOL_DATEADDED]}</td>
-		      <td>${get_rating(tune)}</td>
-		      </tr>`;
-        s += row;
+ 
+        let row = insertRow( tlbody, ["",tune[TLCOL_GENRE],
+                tune[TLCOL_AUTHOR], formatMilliMMSS( tune[TLCOL_TIME] ),
+                tune[TLCOL_YEAR], tune[TLCOL_HISTORY],
+                "", tune[TLCOL_DATEADDED], get_rating(tune)] );
+        row.cells[0].id = `${tuneid}.title` ;
+        
+        // span "queued.tuneid" hour glass if queued and (n) queue position if queued
+        // span "playing.tuneid" music notes if playing
+        // anchor  "title.tuneid" title, clickable, bold if playing
+        // span "percentage.tuneid" percentage
+        // span "bar.tuneid" Bar graph
+        let queued = document.createElement( "span" );
+        queued.id = `queued.${tuneid}`;
+        row.cells[0].appendChild( queued );
+
+        let playing = document.createElement( "span" );
+        playing.id = `playing.${tuneid}`;
+        row.cells[0].appendChild( playing );
+
+        let titleLink = document.createElement("a");
+        titleLink.id = `title.${tuneid}`;
+        titleLink.onclick = function() { queueTune(tuneid) };
+        titleLink.innerText = makeTuneTitle( tune );
+        titleLink.style.cursor = "pointer";
+        titleLink.classList.add( "anohref" );
+        row.cells[0].appendChild( titleLink );
+
+        let percentage = document.createElement( "span" );
+        percentage.id = `percentage.${tuneid}`;
+        row.cells[0].appendChild( percentage );
+        
+        let bar = document.createElement( "span" );
+        bar.id = `bar.${tuneid}`;
+        row.cells[0].appendChild( bar );
+
+        row.cells[5].style.texyAlign = "right"; // history
+
+        let infoLink = document.createElement("a");
+        infoLink.style.cursor = "pointer";
+        infoLink.classList.add( "anohref" );
+        infoLink.onclick = function(){ showFullInfo(tuneid) };
+        infoLink.innerText = trunc(tune[TLCOL_INFO],10);
+        row.cells[6].appendChild( infoLink );
+
+        
 	}
-	htmlById("tunelistbody", s) ;
+	document.getElementById("tunelisttable").appendChild( tlbody );
 }
 
 function updateTunelistTable( ){
@@ -189,59 +227,26 @@ async function queueTune( tuneid ) {
         }
     }
 
-	showPopup( "t"+tuneid, tlt("actualizando setlist"));
+	showPopup( "title."+tuneid, tlt("actualizando setlist"));
     postdata = { 
         "spectator_name": spectator_name, 
         "tuneid": tuneid } ;
 	let progress = await fetch_json( "/queue_tune/" + tuneid, postdata ) ;
-	updateProgress( progress ) ;
+	updateThisPage( progress ) ;
 }
 
-async function getProgress() {
+async function updateProgressEvery() {
 	while( true ) {
-        let progress = await fetch_json ( "/get_progress"  ) ;
-        updateProgress( progress );
+        let progress = await commonGetProgress();
+        updateThisPage( progress );
         if( progress == undefined ){
             showPopup( "", "No hay información de avance disponible");
         }
         await sleep_ms( 2_000 );
 	}
 }
-
-function titleAndProgressBar( tune, progress ){
-    // Squares to make a progress bar
-	const black_bar = "&#9608;" ;
-	const gray_bar = "&#9617;" ; 
-    // Music note to show music playing
-	const music_note = "&#127925;" ; 
-
     
-    let t = tune[TLCOL_TIME] ;
-	if( t > 0 ){
-		percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
-	}
-	else {
-		percent = 100 ;
-	}
-	
-	let status_text = make_status_text( progress["status"], percent ) ;
-	let bar_length = 10 ;
-	let blacks = Math.round( bar_length * percent/100 ) ;
-	let grays = bar_length - blacks ;
-    let bar = "" ;
-    if( progress["playtime"] >= 0 ){
-	   bar = "<br><span>" + music_note + status_text + " " + 
-		black_bar.repeat( blacks ) + gray_bar.repeat( grays ) +
-		"</span>";
-    }
-    else {
-        bar = "<br><span>" + music_note + "</span>";
-    }
-	return bar ;
-}
-    
-    
-function updateProgress( progress ) {
+function updateThisPage( progress ) {
     if( progress == undefined ){
         return ;
     }
@@ -257,6 +262,16 @@ function updateProgress( progress ) {
     const queue_img = "&#x23F3"; // Hourglass
 	let playing_tuneid = progress["tune"] ;
     let setlist = progress["setlist"] ;
+    
+    let startButton = document.getElementById("startButton");
+    if( progress["setlist"].length > 0 && 
+        progress["status"] == "waiting"
+    ){
+        startButton.classList.remove("inactive");
+    }
+    else {
+        startButton.classList.add("inactive");
+    }
     let tune_requests = progress["tune_requests"] ;
     if( tune_requests == undefined ){
         tune_requests = {} ;
@@ -264,20 +279,26 @@ function updateProgress( progress ) {
     
     // Update all titles, reset if not in setlist,
     // mark if in setlist, mark current playing tune.
-    for( i in tunelist ){
-        let tune = tunelist[i];
+    for( i in TUNELIST ){
+        let tune = TUNELIST[i];
         let tuneid = tune[TLCOL_ID] ;
-        id = `${tuneid}.title`;
-        let d = document.getElementById( id ) ;
-        if( d == null ){
-            // Should not happen
-            console.log("Undefined element", id);
-            continue ;
-        }
-        let s = tune[TLCOL_TITLE];
+
         if( tuneid == playing_tuneid ) {
-			const music_note = "&#127925;" ; 
-			s = "<b>" + music_note + tune[TLCOL_TITLE] +  "</b><br><span id='progresstime'></span><span id='progressbar'></span>"; 
+            htmlById( `playing.${tuneid}`,  "&#127925;" ) ; //🎵 music note
+            document.getElementById( `title.${tuneid}`).style.fontWeight = "bold";
+            let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
+            if( isNaN(percent)){
+                percent = 0 ;
+            }
+		  	htmlById(`percentage.${tuneid}`,  "<br>" + Math.round(percent)+"% " );
+			progressBar( `bar.${tuneid}`, percent, 20 );
+
+        }
+        else {
+            textById( `playing.${tuneid}`, "");
+            document.getElementById( `title.${tuneid}`).style.fontWeight = "normal";
+            textById( `percentage.${tuneid}`, "");
+			textById( `bar.${tuneid}`, "" );
         }
         if( setlist.includes( tuneid ) ){
             let position = setlist.indexOf( tuneid ) ;
@@ -286,22 +307,13 @@ function updateProgress( progress ) {
             if( spectator_name != undefined ){
                 // add spectator name
                 spnam = " - " + spectator_name ;
-            }
-            s = `${queue_img}(${position+1}${spnam}) ${s}`;
+            };
+            htmlById( `queued.${tuneid}`,
+                `${queue_img}(${position+1}${escapeHtml(spnam)}) `);
         }
-        let newtitle = `<a onclick='queueTune("${tuneid}")'
-					style='cursor:pointer'
-					id='t${tuneid}'
-				>${s}</a>`;
-        d.innerHTML = newtitle ;
-       if( tuneid == playing_tuneid ) {
-			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
-            if( isNaN(percent)){
-                percent = 0 ;
-            }
-		  	textById("progresstime",  Math.round(percent)+"% " );
-			progressBar( "progressbar", percent, 20 );
-	   }
+        else {
+            textById( `queued.${tuneid}`, "" );
+        }
 	}
     return ;
 }
@@ -330,7 +342,7 @@ function sortTunelist( column ){
         sortColumn = column ;
         direction = -1 ;
     }
-    tunelist.sort( compareFn );
+    TUNELIST.sort( compareFn );
 
 }
     
@@ -347,10 +359,14 @@ async function showFullInfo(tuneid){
     showPopup( "", info ) ;
 }
 
+async function startTune() {
+    updateThisPage( await fetch_json( "/start_tune" )  );
+}
+
 translate_html();
 
-// setTuneList will call getProgress the first time,    
-// and getProgress will continue refreshing
+// setTuneList will call updateProgressEvery the first time,    
+// and updateProgressEvery will continue refreshing
 setTuneList() ;
 
 

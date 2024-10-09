@@ -15,8 +15,7 @@
 	&nbsp;Pinout and MIDI configuration
 	<span class="headerright" id="header_time"></span>
 </div>
-<script type="text/javascript" src="common.js"></script>
-    
+<script type="text/javascript" src="/static/common.js"></script>
 
 <div class="middlediv">Select template</div>
     This configuration should be needed only once, when setting up the system.
@@ -27,7 +26,7 @@
     
     <br>	
     <table>
-        <tbody id="pinout_list"></tbody>
+        <tbody id="tbodyPinoutSelection"></tbody>
     </table>
     
     <button type="button" id="savePinoutFilenameButton" onclick="savePinoutFilename()">Save scale</button>
@@ -63,13 +62,40 @@
     <br>
     Save pinout definitions to make changes permanent.
     <br>
-    The test button will activate the port (GPIO or MCP27013) several times, to see if the connection is working. Use tuner mode to tune.
+    The test button will activate the port (GPIO or MCP27013) several times, to see if the connection is working. 
     <br>
     <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
     <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
     <br>
     <table>
-        <tbody id="pinout_detail">
+        <tr>
+            <td>Used GPIO pins</td>
+            <td id="usedGPIO"></td>
+            <td>(<span id="usedGPIOcount"></span> )</td>
+        </tr>
+        <tr>
+            <td>Available GPIO pins</td>
+            <td id="availableGPIO"></td>
+            <td>(<span id="availableGPIOcount"></span> )</td>
+        </tr>
+        <tr>
+            <td>Reserved GPIO pins</td>
+            <td id="reservedGPIO"></td>
+            <td>(<span id="reservedGPIOcount"></span> )</td>
+        </tr>
+        <tr>
+            <td>Available GPIO ADC1 pins</td>
+            <td id="availableADC1"></td>
+            <td>(<span id="availableADC1count"></span> )</td>
+        </tr>
+        <tr>
+            <td>Available GPIO Touchpad pins</td>
+            <td id="availableTouchpad"></td>
+            <td>(<span id="availableTouchpadcount"></span> )</td>
+        </tr>
+    </table>
+    <table>
+        <tbody id="tbodyPinoutForm">
         </tbody>
     </table>
 
@@ -79,29 +105,32 @@ When pressing the save button, you may be asked for the password of the microcon
 <br>
 <b>  After saving pinout definitions or using the test button, reboot microcontroller.
 </b>
-		
+<br>
+<button type="button" onclick="list_pinout_by_midi_note()">List pinout by midi note</button>
+<br>
+<table id="table_list_pinout_by_midi_note" style="display:none">
+    <thead id="thead_list_pinout_by_midi_note"></thead>
+    <tbody id="tbody_list_pinout_by_midi_note"></tbody>
+</table>	
 <div class="footerdiv"></div>
 <script>
 
 async function getPinoutList(){
     let pinout_list = await fetch_json("/pinout_list" ) ;
-    let s = "";
-    for( pl in pinout_list ){
+    pinout_list.sort( (a, b) => a[0].localeCompare(b[0]) )
+    let tbody =  document.getElementById("tbodyPinoutSelection");
+    for(let  pl in pinout_list ){
         // List elements are [ filename, description ]
-        desc = pinout_list[pl][1];
-        filename =  pinout_list[pl][0];
-        s += `
-        <tr>
-        <td>
-            <input type='radio' name='pinout_list' id='${filename}' value='${filename}'
-            onchange='hidePinoutDetail()'
-            />
-        </td>
-        <td>${desc} (${filename})</td>
-        </tr>`;
+        let desc = pinout_list[pl][1];
+        let filename =  pinout_list[pl][0];
+        let row = insertFormRow( tbody, null, [
+            makeRadio( filename, "pinout_list", filename, 
+                hidePinoutDetail
+             ),
+            desc + " " + filename
+         ]);
     
     }
-    document.getElementById("pinout_list").innerHTML = s ;
     let resp = await fetch_json( "/get_pinout_filename" );
     
     selected_pinout = resp["pinout_filename"];
@@ -131,145 +160,157 @@ async function getPinoutDetail( ) {
     let midi = null ;
     let instrument = null ;
     let lasttype = null ;
-    for( let f in pinout_detail ){
-        pd = pinout_detail[f] ;
-        pdtype = pd[0];
+    let rownum = 0;
+    let lastPin = null ;
+    let tbody = document.getElementById( "tbodyPinoutForm" );
+    for( let z in pinout_detail ){
+        let f = z + ""; // for the function closures to work.
+        let pd = pinout_detail[f] ;
+        let pdtype = pd[0];
+        let id = pdtype + "." + f;
         if( pdtype == "description" ){
-           s += `<tr><td>
-            Description</td>
-             <td colspan="4">
-               <input type='text' size='20' id="description.${f}" 
-               oninput="markField('description.${f}')"
-               value='${pd[1]}' />
-             </td>
-            </tr>`;
+            let row = insertFormRow( tbody, `row_${f}_description`, [
+                "Description",
+                makeInput( `description.${f}`, 20, pd[1] )
+            ] );
+            row.colSpan = 4;
         }
         else if( pdtype == "neopixel"){
-            s += `<tr><td>
-            Neopixel pin</td>
-            <td>
-            <input type='text' size='2' id="neopixel.${f}" oninput="markField('neopixel.${f}')" 
-            value='${pd[1]}' />
-            </td></tr>`;
+            insertFormRow( tbody,`row_${f}_neopixel`, [
+                "Neopixel",
+                makeInput( `neopixel.${f}`, 3, pd[1] )
+            ] );
+            let row = insertFormRow( tbody, ``, [] );
         }
         else if( pdtype == "tachometer"){
-            s += `<tr>
-            <td>
-                Tachometer pin
-            </td>
-            <td>
-                <input type='text' size='3' id='tachometer.${f}' oninput="markField('tachometer.${f}')"   value='${pd[1]}' />
-            </td>
-            </tr>`;
+            insertFormRow( tbody,`row_${f}_tachometer`, [
+                "Tachometer pin",
+                makeInput( `tachometer.${f}`, 3, pd[1] )
+            ] );
         }
         else if( pdtype == "microphone"){
-            s += `<tr>
-            <td>
-                Microphone pin
-            </td>
-            <td>
-                <input type='text' size='3' id='microphone.${f}'  oninput="markField('microphone.${f}')" value='${pd[1]}' />
-            </td></tr>`;
+            insertFormRow( tbody,`row_${f}_microphone`, [
+                "Microphone pin",
+                makeInput( `microphone.${f}`, 3, pd[1] )
+            ] );
+            
         }
         else if( pdtype == "touchpad"){
-            s += `<tr>
-            <td>
-                Touchpad pin
-            </td>
-            <td>
-                <input type='text' size='3' id='touchpad.${f}' oninput="markField('touchpad.${f}')" value='${pd[1]}'/>
-            </td>
-            </tr>`;
+            insertFormRow( tbody,`row_${f}_touchpad`, [
+                "Touchpad pin",
+                makeInput( `touchpad.${f}`, 3, pd[1] )
+            ] );
+        }
+        else if( pdtype == "tempo" ){
+            insertFormRow( tbody,`row_${f}_tempo`, [
+                "Tempo encoder pins A and B",
+                makeInput( `tempo_a.${f}`, 3, pd[1] ),
+                makeInput( `tempo_b.${f}`, 3, pd[2] ),
+                "Switch",
+                makeInput( `tempo_s.${f}`, 3, pd[3] ),
+            ] );
+        }
+        else if( pdtype == "register"){  
+            insertFormRow( tbody,`row_${f}_register`, [
+                "Register pin",
+                makeInput( `register.${f}`, 3, pd[1] ),
+                "Name",
+                makeInput( `regname.${f}`, 10, pd[2] ),
+                makeCheckbox( `reginival.${f}`, pd[3] ),
+                "Set at startup"
+            ] );
         }
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" ){
             let title = "MCP pin" ;
             if( pdtype == "gpio.midi" ){
                title = "GPIO pin" ;
             }
-            pin = pd[1];
-            instrument = pd[2];
-            midi = pd[3];
-            rank = pd[4];
-            if( pdtype != lasttype ){
-                s += `<tr>
-                       <td>${title}</td>
-                       <td>Program number<br>or ${DRUM_PROGRAM}=drum</td>
-                       <td>MIDI note</td>
-                       <td>Rank</td>
-                       <td></td>
-                      </tr>`;
+            let pin = pd[1];
+            let instrument = pd[2];
+            let midi = pd[3];
+            let rank = pd[4];
+            let register = "" ;
+            if( pd.length >= 6  ){
+                register = pd[5];
             }
-            s += `<tr>
-            <td>
-                <input type='text' size='3' id='${pdtype}.pin.${f}' oninput="markField('${pdtype}.pin.${f}')" value='${pin}'/>
-            </td>
-            <td>
-                <input type='text' size='4' id='${pdtype}.instrument.${f}' oninput="markField('${pdtype}.instrument.${f}' )" value='${instrument}'/>
-            </td>
-            <td>
-                <input type='text' size='3'  id='${pdtype}.midi.${f}' oninput="markField('${pdtype}.midi.${f}')" onchange='showNoteName( ${f} )' value='${midi}'/>  
-                &nbsp;<span id='nn.${f}'></span>&nbsp;
-            </td>
-            <td>
-                <input type='text' size='10' id='${pdtype}.rank.${f}' oninput="markField('${pdtype}.rank.${f}')" value='${rank}'/>
-            </td>`;
+            let readonlyPin = "" ;
+            if( pin == lastPin ){
+                readonlyPin = "readonly='readonly'";
+            }
+            lastPin = pin ;
+            if( pdtype != lasttype ){
+                let row = insertFormRow( tbody, "", [
+                    title, "", "MIDI note",
+                    "Rank", "Register"] );
+                row.cells[1].colSpan = 2;
+                row.cells[1].innerHTML = `Program number<br>or ${DRUM_PROGRAM}=drum`;
+                row.cells[2].colSpan = 2 ;
+                rownum += 1;
+            }
+            
+            let testFunction = null;
             if( pdtype == "gpio.midi"){
-                s += `<td>
-                <button onclick='testGPIO(${pin})' class='smallbutton'>Test</button>
-                </td>`;
+                testFunction = function() { testGPIO(pin) };
             }
             else {
-                 s += `<td>
-                <button onclick='testMCP(${sda},${scl},${mcpaddr},${pin})' class='smallbutton'>Test</button>
-                </td>`;               
+                testFunction = function() { testMCP(sda, scl, mcpaddr, pin) };            
             } ;
-            s += '</tr>';
+            let row = insertFormRow( tbody, `row_${f}_${pdtype}`, [
+                makeInput( `${pdtype}.pin.${f}`, 3, pin ),
+                makeInput( `${pdtype}.instrument.${f}`, 4, instrument ),
+                "",
+                makeInput( `${pdtype}.midi.${f}`,3, midi ),
+                "",
+                makeInput( `${pdtype}.rank.${f}`, 10, rank ),
+                makeInput( `${pdtype}.register.${f}`, 10, register ),
+                makeButton( null, "Test", testFunction ),
+                makeButton( `b${rownum}`, "Add row", function() {addRow(pdtype, `row_${f}_${pdtype}` )}),
+
+            ]);
+            row.cells[0].children[0].readOnly = (pin == lastPin );
+            row.cells[1].onchange = function() { showNoteName(f) };
+            row.cells[2].id = `program_name.${f}`;
+            row.cells[3].onchange = function() { showNoteName(f) };      
+            row.cells[4].id = `nn.${f}`;
+           
+
+
         }
         else if( pdtype == "i2c" ){
             i2ccount += 1 ;
             mcpcount = -1 ;
             sda = pd[1] ;
             scl = pd[2] ;
-            s += `<tr>
-            <td>I2C</td>
-            <td>SDA</td>
-            <td>SCL</td>
-            </tr>`;
-            s += `<tr>
-            <td>I2C bus ${i2ccount}</td>
-            <td>
-                <input type='text' size='2' id='i2c.sda.${f}' oninput="markField('i2c.sda.${f}')" value='${sda}'/>
-            </td>
-            <td>
-                <input type='text' size='2' id='i2c.scl.${f}' oninput="markField('i2c.scl.${f}')" value='${scl}'/>
-            </td>
-            </tr>`;
+            insertFormRow( tbody, null, ["I2C", "SDA", "SCL"] );
+            rownum += 1;
+            insertFormRow( tbody, `row_${f}_i2c`, [
+                makeInput( `i2c.sda.${f}`, 3, sda),
+                makeInput( `i2c.scl.${f}`, 3, scl),
+            ]);
         }
         else if( pdtype == "mcp23017" ){
             mcpcount += 1 ;
             mcpaddr = pd[1] ;
-            s += `<tr>
-                  <td>I2C bus ${i2ccount}</td>
-                  <td>MCP23017</td>
-                  <td>address</td>
-                  </tr>`;    
-            s += `<tr>
-            <td>I2C bus ${i2ccount}</td>
-            <td>MCP ${mcpcount}</td>
-            <td> 
-                <input type='text' size='2' id='mcp23017.address.${f}'  oninput="markField('mcp23017.address.${f}')" value='${mcpaddr}'/>
-            </td>
-            <td colspan="3">(32 to 39, decimal)</td>
-            </tr>`;
-        }
+            insertFormRow( tbody, null, [`I2C bus ${i2ccount}`,
+                "MCP23017", "address"
+            ] );
+            rownum += 1; 
+            let row = insertFormRow( tbody, `row_${f}_mcp23017`, [
+                `I2C bus ${i2ccount}`,
+                `MCP ${mcpcount}`,
+                makeInput( `mcp23017.address.${f}`, 2, mcpaddr ),
+                "(32 to 39, decimal)"
 
+            ]);
+            row.cells[2].colSpan = 3;
+        }
+        rownum += 1;
         lasttype = pdtype;
     }
-    document.getElementById("pinout_detail").innerHTML = s ;
     // Show all  note names, eg C3, B4
     updateAllNoteNames();
-
-  document.getElementById("pinout_detail").style.display = "";
+    document.getElementById("tbodyPinoutForm").style.display = "";
+    await get_available_pins() ;
 }
    
 getPinoutList();
@@ -281,41 +322,69 @@ async function savePinoutFilename(){
     
     let resp = await fetch_json("/save_pinout_filename",
                         req  ) ;
-    if( resp["result"] == "ok"){
-        showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
-    }
+    showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
     getPinoutDetail();
     await revoke_credentials();
+    await get_available_pins();
 }
     
 async function savePinoutDetail(){
     let newpd = [] ;
-    for( let f=0; f < pinoutDetailElements; f++ ){
-        pdtype = pinout_detail[f][0] ;
-        
+    let rows = document.getElementsByTagName( "tr" );
+    let lastPin = null ;
+    for( n in rows ){
+        let row_id = rows[n].id ;
+        if( row_id == undefined || row_id == null ){
+            continue ;
+        } 
+        if( !row_id.startsWith("row") ) {
+            continue ;
+        }
+        let x = row_id.split("_") ;
+        let pdtype = x[2];
+        let f = parseInt( x[1] ) ;
+ 
         if( pdtype == "description" ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
-            newpd.push( [pdtype, escapeHtml(v)  ] );
+            newpd.push( [pdtype, v  ] );
         }
         else if( ["tachometer", "microphone",
              "neopixel", "touchpad"].includes( pdtype )  ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
             newpd.push( [pdtype, valnum( v )  ] );
         }
+        else if( pdtype == "tempo"){
+            let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
+            let tempo_b = document.getElementById( `tempo_b.${f}`).value ;
+            let tempo_s  = document.getElementById( `tempo_s.${f}`).value ;
+            newpd.push( [pdtype, tempo_a, tempo_b, tempo_s ]);
+        }
+        else if( pdtype == "register" ){
+            let pin = document.getElementById( `${pdtype}.${f}`).value ;
+            let name = document.getElementById( `regname.${f}`).value.trim() ;
+            let inival = document.getElementById( `reginival.${f}`).checked ;
+            newpd.push( [pdtype, valnum( pin ), name, inival  ] );
+        }
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" ) {
-            pin = document.getElementById( `${pdtype}.pin.${f}`) .value  ;
-            instrument = document.getElementById( `${pdtype}.instrument.${f}` ).value ;
-            midi = document.getElementById( `${pdtype}.midi.${f}` ).value ;
-            rank = document.getElementById( `${pdtype}.rank.${f}` ).value ;
-            newpd.push( [pdtype, valnum( pin ), valnum( instrument ),  valnum( midi ), escapeHtml(rank)] ) ;
+            let pin = document.getElementById( `${pdtype}.pin.${f}`).value  ;
+            let instrument = document.getElementById( `${pdtype}.instrument.${f}` ).value ;
+            let midi = document.getElementById( `${pdtype}.midi.${f}` ).value ;
+            let rank = document.getElementById( `${pdtype}.rank.${f}` ).value.trim() ;
+            let register = document.getElementById( `${pdtype}.register.${f}` ).value.trim() ;
+            // Don't delete row if the pin is the only one that is there in the file
+            // but if pin equal to previous pin, delete empty row
+            if( pin != lastPin || (pin == lastPin && (instrument != "" || midi != "" || rank != "" || register != "")) ){
+                newpd.push( [pdtype, valnum( pin ), valnum( instrument ),  valnum( midi ), rank, register] ) ;
+            }
+            lastPin = pin ;
         }
         else if( pdtype == "i2c" ) {
-            sda = document.getElementById( `i2c.sda.${f}` ).value ;
-            scl = document.getElementById( `i2c.scl.${f}` ).value ;   
+            let sda = document.getElementById( `i2c.sda.${f}` ).value ;
+            let scl = document.getElementById( `i2c.scl.${f}` ).value ;   
             newpd.push( ["i2c", valnum( sda ), valnum( scl ) ] ) ;     
         }
         else if( pdtype ==  "mcp23017"  ) {
-            addr = document.getElementById( `mcp23017.address.${f}` ).value ;           
+            let addr = document.getElementById( `mcp23017.address.${f}` ).value ;           
             if( (addr < 32 || addr > 39) && addr != "" ){
                 alert("MCP23017 address must be 32 to 39");
                 return ;
@@ -323,13 +392,11 @@ async function savePinoutDetail(){
             newpd.push( ["mcp23017", valnum( addr ) ] ) ;     
         }
     }
-    
     let resp = await fetch_json( "/save_pinout_detail", newpd ) ;
-    if( resp["result"] == "ok"){
-        showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
-    }   
+    showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
     await revoke_credentials();
     clearMarks() ;
+    await get_available_pins();
 }
     
     
@@ -362,11 +429,13 @@ function valnum( s ){
 }
     
 async function testGPIO( pin ){
+    
     let req = { "pin": pin };
     await fetch_json( "/test_gpio", req ) ;
 }
 
 async function testMCP( sda, scl, mcpaddr, pin ){
+   
     let req = { "sda": sda, "scl": scl, "mcpaddr": mcpaddr, "pin": pin };
     await fetch_json( "/test_mcp", req ) ;
 }
@@ -391,31 +460,52 @@ function showNoteName( f ){
         }
         if( e != null ) {
             nn = "" ;
-            if( p.value != DRUM_PROGRAM ){
+            if( instrument != DRUM_PROGRAM ){
                 let v = e.value ; 
                 if( !isNaN(v) && v != "" ){
                     nn = note_name( parseInt(v) ) ;
                 }
             }
-            textById( `nn.${f}`,  nn ) ;
-            return ;
+            textById( `nn.${f}`,  nn ) ; 
+            let n = document.getElementById( "program_name." + f );
+            if( n != null && p != null ){
+                n.innerText = program_name( p.value );
+            }
+            return;
         }
-
     }
 }
     
 function updateAllNoteNames() {
-    for( let f=0; f < pinoutDetailElements; f++ ){
-        showNoteName( f );
-    }
+    let fields = document.getElementsByTagName( "input" );
+    for( let n in fields ){
+        let field_id = fields[n].id ;
+        if( field_id == null || field_id == undefined ){
+            continue ;
+        }
+        if( field_id.includes("midi.midi") ){
+            let f = parseInt( fields[n].id.split(".")[3] );
+            showNoteName( f ) ;
+        }
+    } 
 }
     
 function hidePinoutDetail(){
- document.getElementById("pinout_detail").style.display = "none";
+ document.getElementById("tbodyPinoutForm").style.display = "none";
 }
-2
+
 function transpose( semitones ){
-    for( let f=0; f < pinoutDetailElements; f++ ){
+    let fields = document.getElementsByTagName( "input" );
+    for( let n in fields ){
+        let field_id = fields[n].id ;
+        if( field_id == null || field_id == undefined ){
+            continue ;
+        }
+        if( !field_id.includes("midi.midi") ){
+            continue ;
+        }
+        let f = parseInt( fields[n].id.split(".")[3] );
+
         enames = [`gpio.midi.midi.${f}`,
                      `mcp.midi.midi.${f}`];
         for( let eid in enames ){
@@ -436,6 +526,8 @@ function transpose( semitones ){
  
 let changed_fields = [];
 function markField( id ){
+    // mark fields only shows field in another color
+    // upon save, all fields are sent to server (not only changed fields)
     if( !changed_fields.includes(id) ){
         changed_fields.push( id );
     }
@@ -449,6 +541,200 @@ function clearMarks() {
     }
     changed_fields = [] ;
 }
+
+
+// Add a new row to a  GPIO MIDI or MCP MIDI definition
+let addedFcounter = 10000 ;
+function addRow( pdtype, rowid ){
+    // get row number of this row
+    let rownum = document.getElementById( rowid ).rowIndex;
+
+    // Make up a unique "f" number
+    addedFcounter += 1 ;
+    let f = addedFcounter ;
+
+    let rows = document.getElementById("tbodyPinoutForm").getElementsByTagName("tr");
+    let currRow = rows[rownum];
+    let tdcells = currRow.getElementsByTagName( "td" );
+    let inputcells = currRow.getElementsByTagName( "input" );
+    // Get pin number for this row from previous row
+    let pin = inputcells[0].value ;
+    let instrument = "" ;
+    let midi = "" ;
+    let rank = "" ;
+    let register = "";
+    let row = document.getElementById("tbodyPinoutForm").insertRow(rownum+1);
+    row.id = `row_${f}_${pdtype}`;
+    row.insertCell(-1).appendChild( makeInput( `${pdtype}.pin.${f}`, 3, pin ) );
+    row.cells[row.cells.length-1].children[0].readOnly = true ;
+    row.insertCell(-1).appendChild(makeInput( `${pdtype}.instrument.${f}`, 4, instrument) );
+    row.cells[row.cells.length-1].children[0].onchange = function(){ showNoteName(f) };
+    row.insertCell(-1).id = `program_name.${f}`;
+    row.insertCell(-1).appendChild( makeInput( `${pdtype}.midi.${f}`, 4, midi) );
+    row.cells[row.cells.length-1].children[0].onchange = function(){ showNoteName(f) };
+    row.insertCell(-1).id = `nn.${f}`;
+    row.insertCell(-1).appendChild(makeInput( `${pdtype}.rank.${f}`, 10, rank) );
+    row.insertCell(-1).appendChild( makeInput( `${pdtype}.register.${f}`, 10, register ) );
+    row.insertCell(-1);
+}
+
+async function list_pinout_by_midi_note(){
+    data = await fetch_json("/list_pinout_by_midi_note") ;
+    let thead = document.getElementById("thead_list_pinout_by_midi_note" );
+    thead.innerText = "";
+    for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register"] ){
+        let th = document.createElement( "th" );
+        th.innerHTML = v;
+        thead.appendChild( th );
+    }
+    let previousNote = null ;
+    let tbody = document.getElementById("tbody_list_pinout_by_midi_note");
+    tbody.innerText = "";
+    for( let i in data ){
+        let row = data[i];
+        let mn = `${pad(row.program_number,3)}-${pad(row.midi_number,2)}`;
+        insertRow( tbody, [ mn, row.midi_note, `${row.solepin_name}=${row.solepin_note}`,
+            row.solepin_rank, row.register_name ] ) ;
+        
+    }
+    showHideElement( "table_list_pinout_by_midi_note", true );
+    sortTable();
+}
+
+function pad(num, size) {
+    num = num.toString();
+    while (num.length < size) num = "0" + num;
+    return num;
+}
+
+async function get_available_pins(){
+    function list_to_string( lst ){
+        if( lst.length == 0){
+            return "";
+        }
+        
+        lst.sort((a, b) => a - b);
+        let s = "";
+        let i = 0;
+        for(;;){
+            let j = i;
+            while( j < lst.length-1 && lst[j] == lst[j+1]-1 ){
+                j += 1;
+            }
+            if( j > i + 1){
+                s += "" + lst[i] + "-" + lst[j] + ",";
+                i = j +  1;
+            }
+            else{
+                s += "" + lst[i] + ",";
+                i += 1;
+            }
+            if( i >= lst.length ){
+                break;
+            }
+        }
+        return s.substring(0,s.length-1);
+    }
+    json_result = await fetch_json( "/get_used_pins" );
+    for( const [key, value] of Object.entries(json_result)) {
+        if( typeof value == typeof []){
+            textById( key, list_to_string(value) );
+        }
+        else{
+            textById( key, value )
+        }
+    }
+
+}
+
+function makeInput( id, size, value ){
+    let textBox = document.createElement( "input" );
+    textBox.id = id ;
+    textBox.size = size ;
+    textBox.value = value ;
+    textBox.oninput = function() { markField(id) };
+    return textBox ;
+}
+
+function makeCheckbox( id, checked ){
+    let checkbox = document.createElement( "input" );
+    checkbox.type = "checkbox";
+    checkbox.id = id ;
+    checkbox.checked = checked ;
+    return checkbox ; 
+}
+
+function makeButton( id, text, onclick) {
+    let button = document.createElement( "button" );
+    button.onclick = onclick;
+    if( text == "Test"){
+        button.classList.add( "smallbutton" );
+    }
+    button.innerText = text;
+    return button;
+}
+function makeRadio( id, name, value, onchange ){
+    let radio = document.createElement( "input" );
+    radio.type = "radio";
+    radio.name = name ;
+    radio.id = id ;
+    radio.value = value ;
+    radio.onchange = onchange ;
+    return radio ; 
+}
+function insertFormRow( body, rowid, data ){
+	let row = body.insertRow(-1);
+    if( rowid ){
+        row.id = rowid ;
+    }
+	for( v of data ){
+        if( typeof v === 'string' || v instanceof String ){
+		    row.insertCell(-1).innerText = "" + v ;
+        }
+        else {
+            // If not a string, this must be a DOM element
+            row.insertCell(-1).appendChild( v );
+        }
+	}
+	return row;
+}
+
+let tableDirection = 1;
+function sortTable() {
+    // https://stackoverflow.com/questions/14267781/sorting-html-table-with-javascript
+    const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
+
+    const comparer = (idx, asc) => (a, b) => ((v1, v2) => 
+    v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
+    )(getCellValue(asc ? a : b, idx), getCellValue(asc ? b : a, idx));
+
+    let sortHeader = null ;
+    // do the work...
+    document.querySelectorAll('th').forEach(th => th.addEventListener('click', (() => {
+        const table = th.closest('table');
+        sortHeader = th ;   
+        Array.from(table.querySelectorAll('tr:nth-child(n+1)'))
+            .sort(comparer(Array.from(th.parentNode.children).indexOf(th), tableDirection))
+            .forEach(tr => table.appendChild(tr) );
+        // added code to manage down/up arrow in table header
+        let headerCells = document.getElementsByName("filelistth");
+        for( let cell of document.querySelectorAll('th') ){
+            // erase previous arrows
+            cell.innerHTML = "&nbsp;" + cell.innerText.substring(1);
+        }
+        // Add new up/down arrow to sort column
+        if( sortHeader ){
+            sortHeader.innerHTML = (tableDirection?"↓":"↑") + sortHeader.innerText.substring(1);
+        }
+        tableDirection = 1 - tableDirection ;
+        console.log("new direction", tableDirection);
+
+    })));
+
+}
+
+// Disable playback
+fetch_json( "/set_playback_disabled" );
 
 </script>
 </body>

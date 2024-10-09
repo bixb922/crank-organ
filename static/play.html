@@ -12,24 +12,28 @@
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
+        <a onclick="pageUp('tunelist')">&#11013;</a>
 	</span>
     &nbsp;&nbsp;&nbsp;<b>Melodía actual</b>
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <table id="main_info_table">
 	<tbody>
-		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name""></td></tr>
+		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
 		<tr><td colspan="2" id="title"></td></td></tr>
-		<tr id='controlButtons'><td colspan='2'> 
-			<button onclick = 'startTune()'>Partir</button>
-			<button onclick = 'backSetList()'>Al comienzo</button>
-			<button onclick = 'stopTuneSetList()'>Próximo</button></td>
+		<tr id="controlButtons">
+			<td colspan="2">
+			<button onclick = "startTune()" id="startButton">Partir</button>
+			<button onclick = "backSetList()" id="daCapoButton">Da capo</button>
+			<button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Mostrar letra</button>
+			<button onclick = "stopTuneSetList()"">Próximo</button>
+			</td>	
 		</tr>
 		<tr id="genre_row"><td>Género</td><td id="genre"></td></tr>
 		<tr id="author_row"><td>Autor</td><td id="author"></td></tr>
@@ -41,20 +45,23 @@
 	</tbody>
 </table>
 <span id="no_tune_span">No hay melodía en curso</span>
-<button id="toggleSetlistLyricsButton" onclick="toggleSetlistLyrics()">Mostrar letra</button>
+
 <span id="setlist_span">
 	<div class="middlediv">Setlist</div>
 
 	<table>
-		<tbody id="setlist">
+		<tbody id="setlistBody">
 		</tbody>
 	</table>
-	<button type="button" onclick="saveSetList()">Guardar setlist</button><span id="saved"></span>
-	<button type="button" onclick="loadSetList()">Cargar setlist</button>
-	<button type="button" onclick="clearSetList()">Borrar setlist</button>
-	<button type="button" onclick="shuffleSetList()">Desordenar setlist</button>
-	<button type="button" onclick="shuffleAllTunes()">Desordenar todos</button>
-	<button type="button" onclick="go_history()">Historia</button>
+	<span id="setlistButtons">
+		<button type="button" onclick="saveSetList()">Guardar setlist</button><span id="saved"></span>
+		<button type="button" onclick="loadSetList()">Cargar setlist</button>
+		<button type="button" onclick="clearSetList()">Borrar setlist</button>
+		<button type="button" onclick="shuffleSetList()">Desordenar setlist</button>
+		<button type="button" onclick="shuffleAllTunes()">Desordenar todos</button>
+		<button type="button" onclick="shuffle3Stars()">Desordenar ⭐⭐⭐</button>
+		<button type="button" onclick="go_history()">Historia</button>
+	</span>
 </span>
 <span id="lyrics_span" style="display:none">
 	<div class="middlediv"><span>Letra</span>&nbsp;<a onclick="setColumns(1)" id="col1_link">1️⃣</a>&nbsp;<a onclick="setColumns(2)" id="col2_link">2️⃣</a></div>
@@ -74,15 +81,18 @@
 		<br>
 		<span id="crankInfo">
 			<br>
-			<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">Tempo sigue manivela</button>
-			<br>
+			<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">
+			<label for="tempo_follows_crank">Tempo sigue manivela</label><br>
 			<br>
 			<span id="turning">Girando</span>
 			<span id="rpsecText">nnn</span>&nbsp;<span>rev/seg</span>&nbsp;
 			<span id="rpsecGraph"></span>
 		</span>
 </span>	
-
+<span id="register_span" style="display:none">
+	<div class="middlediv">Registros</div>
+	<span id="registers"></span>
+</span>
 <div style="width:100%; height:5px"></div>
 <div class="footerdiv"></div>
 
@@ -91,13 +101,12 @@
 <script>
 
 // Tune list with titles and attributes gets loaded in memory
-let last_progress_seen = {} ;
-let columns = 1;
-let current_tuneid = "" ;
+let LYRIC_COLUMNS = 1;
+let CURRENT_TUNEID = "" ;
 async function getProgress() {	
-	sleep_ms(1) ;
+
 	while( true ) {
-        progress = await fetch_json ( "/get_progress" ) ;
+        let progress = await commonGetProgress() ;
         if( progress == undefined ){
             showPopup( "", tlt("No hay información de avance disponible"));
         }
@@ -114,44 +123,56 @@ async function updateProgress( progress ) {
 	console.log("updateProgress", progress );
     // Get tunelib with local cache
     let tunelib = await get_tunelib() ;
-	last_progress_seen = progress ;
 
     let pm = "none";
     if( progress["play_mode"] == false ){
         pm = "" ;
     }
     document.getElementById("play_mode").style.display = pm ;
-	// Update tune info only if tune is playing
-	current_tuneid = progress["tune"] ;
     let tune_requests = progress["tune_requests"] ;
     if( tune_requests == undefined ){
         tune_requests = {} ;
     }
+
+	let startButton = document.getElementById("startButton");
+	let daCapoButton = document.getElementById("daCapoButton");
+    if( progress["status"] == "waiting"
+    ){
+        startButton.classList.remove("inactive");
+		daCapoButton.classList.add("inactive");
+    }
+    else {
+        startButton.classList.add("inactive");
+		daCapoButton.classList.remove("inactive");
+    }
+
 	let toggle_button = document.getElementById("toggleSetlistLyricsButton") ;
     let s = "" ;
-	if( current_tuneid === null ) {
-		// No tune playing
+	// CURRENT_TUNEID is a global variable on this page
+	CURRENT_TUNEID = progress["tune"] ;
+	if( CURRENT_TUNEID == null || CURRENT_TUNEID == undefined ) {
+		// No tune playing nor pending
 		showHideElement( "main_info_table", false );
 		showHideElement( "no_tune_span", true ) ;
         
 		textById("progress", "...") ;
 		progressBar( "timebar", 0, 60 ) ;
-		toggle_button.style.display = "none" ;
+		toggle_button.classList.add("inactive");;
 		let col1 = document.getElementById( "col1") ;
     	col1.innerText ="" ;
 		// Make sure to show setlist controls if no tune
-		toggleSetlistLyrics( "setlist" ) ;
+		await toggleSetlistLyrics( "setlist" ) ;
 	}
 	else {
-		let tune = tunelib[current_tuneid] ;
+		let tune = tunelib[CURRENT_TUNEID] ;
 		showHideElement( "main_info_table", true );
 		showHideElement( "no_tune_span", false ) ;
 
-        let spectator_name = tune_requests[current_tuneid];
+        let spectator_name = tune_requests[CURRENT_TUNEID];
 		textById( "spectator_name",  spectator_name );
 		showHideElement( "request_row", spectator_name );
 
-		textById( "title", tune[TLCOL_TITLE]) ;
+		textById( "title",  makeTuneTitle( tune )) ;
 
 		textById( "genre", tune[TLCOL_GENRE]) ;
 		showHideElement( "genre_row", tune[TLCOL_GENRE]) ;
@@ -168,19 +189,21 @@ async function updateProgress( progress ) {
 		showHideElement( "info_row", tune[TLCOL_INFO]) ;
 
 		let rating = get_rating(tune);
-		htmlById( "rating", rating) ;
+		textById( "rating", rating ) ;
 		showHideElement( "rating_row", rating ) ;
 
 		let lyrics = await formatLyrics() ;
+		
 		if( lyrics == "" ){
 			// No lyrics, no toggle button and setlist controls only
 			// If lyrics were showing, switch to setlist
-			toggleSetlistLyrics( "setlist" );
-			toggle_button.style.display = "none";
+			await toggleSetlistLyrics( "setlist" );
+			// Mark button as hidden
+			toggle_button.classList.add("inactive");
 		}
 		else{
 			// There are lyrics: show button to toggle setlist/lyrics
-			toggle_button.style.display = "" ;
+			toggle_button.classList.remove("inactive"); ;
 		}
 		
 		// Update progress bar every second, first call
@@ -191,42 +214,60 @@ async function updateProgress( progress ) {
 		progressBar( "timebar", percent, 60 );
 	}
 	let setlist = progress["setlist"] ;
-	s = "";
-	for( let i = 0; i < setlist.length; i++ ) {
+	let setlistBody = document.getElementById("setlistBody");
+	setlistBody.innerText = "";
+	for( let z = 0; z < setlist.length; z++ ) {
+		let i = z ;
         let tuneid = setlist[i];
+		// pls is the current tune data
 		let pls = tunelib[tuneid] ;
         if( pls == undefined ){
             continue ;
         }
-		s += "<tr>" ;
-		s += "<td>" + (i+1) + "</td>" ;
-		s += "<td>" + pls[TLCOL_TITLE] + "</td>" ;
-		// emojis are up-arrow, down-arrow, "top" and wastebasket
-		let b1 = "<td><a onclick='upSetList  ("+i+")' style='cursor:pointer'>&#128316;</a></td>"; // Up arrow
-		let b2 = "<td><a onclick='downSetList ("+i+")' style='cursor:pointer'>&#128317;</a></td>" ; // Down arrow
-		let b3 = "<td><a onclick='topSetList("+i+")' style='cursor:pointer'>&#128285;</a></td>" ; // Arrow Top
-		let b4 = "<td><a onclick='dropSetList("+i+")' style='cursor:pointer'>&#128465;</a></td>" ; // Thrash can
-		if( i == 0 ) {
-			// First line does not have "top" nor "up" icons
-			b1 = "<td></td>";
-			b3 = "<td></td>";
+		let row = insertRow( setlistBody, [""+(i+1), makeTuneTitle(pls), "","","","",""] );
+		// All lines have wastebasket
+		let b5 = document.createElement("a");
+		b5.onclick = function(){ dropSetList(i) };
+		b5.style.cursor = "pointer";
+		b5.innerText = " 🗑️ "; // Wastebasket  &#128465;
+		b5.classList.add("anohref");
+		
+		row.cells[5].appendChild( b5 );
+		if( i != 0 ) {
+			// All lines except the first have up and top icon
+			let b2 = document.createElement("a");
+			b2.onclick = function(){ upSetList(i) };
+			b2.style.cursor = "pointer";
+			b2.innerText = " 🔼 "; // &#128316; Upwards button
+			b2.classList.add("anohref");
+			row.cells[2].appendChild( b2 );
+
+			let b4 = document.createElement("a");
+			b4.onclick = function(){ topSetList(i) };
+			b4.style.cursor = "pointer";
+			b4.innerText = " 🔝 "; //&#128285; "top arrow" icon
+			b4.classList.add("anohref");
+			row.cells[4].appendChild( b4 );
+			
 		}
-		else if( i == setlist.length-1 ) {
-			// last line does not have "down" icon
-			b2 = "<td></td>" ;
+		if( i != setlist.length-1 ){
+			// All lines except the last have down icon
+			let b3 = document.createElement("a");
+			b3.onclick = function(){ downSetList(i) };
+			b3.style.cursor = "pointer";
+			b3.innerText = " 🔽 "; // &#128317; Downwards button
+			b3.classList.add("anohref");
+			row.cells[3].appendChild( b3 );
 		}
-		s += b1 + b2 + b3 + b4;
-        
 
         // show spectator name, if any
         let sn = tune_requests[tuneid] ;
         if( sn != undefined ){
-            s += `<td>${sn}</td>`;
+			row.cells[6].innerText = sn ;
+
         }
-		s += "</tr>" ;
 
 	}
-	htmlById("setlist", s ) ;
 
 	// Always update velocity and RPS
 	let vel = progress["velocity"];
@@ -267,45 +308,75 @@ async function updateProgress( progress ) {
 	else {
 		document.getElementById("crankInfo").style.display = "none" ;	
 	}
-
+	
+	if( progress["registers"] && progress["registers"].length > 0 ){
+		let registers = progress["registers"];
+		registers.sort((a, b) => a[0].localeCompare(b[0]) );
+		
+		showHideElement( "register_span", true );
+		// Check if all registers are displayed
+		let regs = document.getElementById("registers");
+		for( let i in registers ){
+			let reg_name = registers[i][0];
+			d = document.getElementById( "reg_" + reg_name );
+			if( !d ){
+				let regcheck = document.createElement( "input" );
+				regcheck.type = "checkbox";
+				regcheck.id = `reg_${reg_name}`;
+				regcheck.onclick = function(){ toggleRegister( reg_name )};
+				// add check box for register if not there
+				regs.appendChild( regcheck );
+				let regspan = document.createElement( "span" );
+				regspan.innerText = reg_name ;
+				regs.appendChild( regspan );
+				let regbr = document.createElement( "br" );
+				regs.appendChild( regbr );
+			}
+		}
+		// Show register values
+		for( let i in registers ){
+			let reg_name = registers[i][0];
+			let reg_value = registers[i][1];
+			document.getElementById( "reg_" + reg_name ).checked = Boolean( reg_value ) ;
+		}
+	}
 	if( isUsedFromServer() ){
-		// This page is residing on drehorgel.pythonanywhere.com
+		// If this page is residing on drehorgel.pythonanywhere.com
 		// disable non-functional buttons (no action on this server)
+		document.getElementById("setlistButtons").style.display = "none";
+
 		// No progress during tunes, since mcserver is disabled during tune
 		// No 1/2 column select, may be too confusing
-		// Always show lyrics
+		
 		document.getElementById("crank_span").style.display = "none";
 		document.getElementById("lyrics_span").style.display = "";
 		document.getElementById("setlist_span").style.display = "none";
-		document.getElementById("toggleSetlistLyricsButton").style.display = "none" ;
+		document.getElementById("register_span").style.display = "none";
+		
 		document.getElementById("col1_link").style.display = "none" ;
 		document.getElementById("col2_link").style.display = "none" ;
 		document.getElementById("timebar").style.display = "none";
 		document.getElementById("progress").style.display = "none";
 		
-		d = document.getElementById("controlButtons");
-		if( d != null && d != undefined ){
-			d.style.display = "none" ;
-		}
+		let d = document.getElementById("controlButtons");
+		d.style.display = "none" ;
 
 	}
 }
 
 
 async function saveSetList() {
-	let resp = await fetch_json("/save_setlist" ) ;
-	if( resp["result"] == "ok" ) {
-		showPopup( "saved", tlt("Guardado")) ;
-	}	
-	else {
-		showPopup( "saved", tlt("No guardado, error")) ;
-	}
+	await updateProgress( await fetch_json("/save_setlist"));
+	showPopup( "saved", tlt("Guardado")) ;
 }
 
 async function shuffleAllTunes() {
 	await updateProgress( await fetch_json("/shuffle_all_tunes" ) ) ;
 }
+async function shuffle3Stars(){
+	await updateProgress( await fetch_json("/shuffle_3stars" ) ) ;
 
+}
 async function shuffleSetList() {
 	await updateProgress( await fetch_json("/shuffle_set_list" ) ) ;
 }
@@ -338,52 +409,57 @@ async function set_velocity( increment ) {
 	await updateProgress( await fetch_json( "/set_velocity_relative/" + increment ) );
 }
 
-async function check_cancelled( progress ) {
-    // Skip cancelled state, it distracts visually
-    for( i = 0; i < 3; i++ ){
-        progress = await fetch_json( "/get_progress" ) ;
+async function check_cancelled( ) {
+    // When cancelling refresh faster to skip transitions
+	// and have better response time
+	let progress = await commonGetProgress() ;
+	let i = 4; // don't iterate forever here...
+	while( i > 0 ){
         if( progress["status"] != "cancelled" ){
             break ;
         }
+        progress = await commonGetProgress() ;
+		i -= 1;
     }
     return progress ;
 }
     
-// For these functions skip cancelled state since
-// it's temporary and distracting
 async function startTune() {
-    progress =  await fetch_json( "/start_tune" ) ;
+    let progress =  await fetch_json( "/start_tune" ) ;
     await updateProgress( progress );
 
 }
 
 async function stopTuneSetList() {
-	progress = await fetch_json("/stop_tune_setlist" ) ;
-    progress = await check_cancelled() ;
+	let progress = await fetch_json("/stop_tune_setlist" ) ;
+    progress = await check_cancelled( ) ;
 	await updateProgress( progress ) ;
 }
 
 async function backSetList() {
-	progress = await fetch_json( "/back_setlist" ) ;
+	let progress = await fetch_json( "/back_setlist" ) ;
     progress = await check_cancelled() ;
 	await updateProgress( progress ) ;
 }
     
 async function tempo_follows_crank(){
-    f = document.getElementById("tempo_follows_crank");
-    data = { "tempo_follows_crank": f.checked };
-    await fetch_json( "/tempo_follows_crank", data );
+    let f = document.getElementById("tempo_follows_crank");
+    let data = { "tempo_follows_crank": f.checked };
+    await updateProgress( await fetch_json( "/tempo_follows_crank", data ) );
 }
 
 function go_history(){
-	window.location.href = "history.html" ;
+	window.location.href = "/static/history.html" ;
 }
 
-function toggleSetlistLyrics( what ){
+async function toggleSetlistLyrics( what ){
+	lyrics = await get_lyrics( CURRENT_TUNEID );
+	
+	// Toggle whether lyrics or setlist is shown
 	let setlist_span =  document.getElementById( "setlist_span") ;
 	let lyrics_span =  document.getElementById( "lyrics_span") ;
 	let toggle_button = document.getElementById( "toggleSetlistLyricsButton" ) ;
-	if( setlist_span.style.display == "none" || what == "setlist" ){
+	if( setlist_span.style.display == "none" || what == "setlist" || lyrics == ""){
 		setlist_span.style.display = "";
 		lyrics_span.style.display = "none" ;
 		toggle_button.innerText = tlt("Mostrar letra") ;
@@ -397,34 +473,44 @@ function toggleSetlistLyrics( what ){
 }
 
 async function setColumns(c){
-	columns = c ;
+	// store desired columns in global variable "LYRIC_COLUMNS"
+	// c should be 1 or 2
+	LYRIC_COLUMNS = c ;
+	// Fomat lyrics 
 	await formatLyrics() ;
 }
 async function formatLyrics(){
+	// Format lyrics to one or two columns
 	let col1 = document.getElementById( "col1") ;
 	let col2 = document.getElementById( "col2") ;
-	let lyrics = await get_lyrics( current_tuneid ) ;
-	if( columns == 1){
+	let lyrics = await get_lyrics( CURRENT_TUNEID ) ;
+	if( LYRIC_COLUMNS == 1 ){
 		col1.innerText = lyrics ;
 		col1.colSpan = 2 ;
 		col2.innerText = "";
 	}
 	else{
-		i = Math.round(lyrics.length/2) ;
+		let i = Math.round(lyrics.length/2) ;
 		while( i < lyrics.length ){
 			if( lyrics.substring(i,i+1) == "\n"){
 				break ;
 			}
 			i = i + 1 ;
 		}
-		l1 = lyrics.substring(0,i+1);
-		l2 = lyrics.substring(i);
+		let l1 = lyrics.substring(0,i+1);
+		let l2 = lyrics.substring(i);
 		col1.innerText = l1 ;
 		col1.colSpan = 1 ;
 		col2.innerText = l2;
 
 	}
+	return lyrics;
 }
+
+async function toggleRegister( register_name ){
+	await updateProgress( await fetch_json( "/toggle_register", {"name": register_name} ));
+}
+
 translate_html();
 getProgress() ;
 

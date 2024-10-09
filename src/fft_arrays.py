@@ -1,6 +1,5 @@
 import sys
 from math import sin
-import time
 import math
 
 if sys.implementation.name != "micropython":
@@ -15,10 +14,9 @@ else:
     
 
 # Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz
-# so 1024 samples gathers about 12 msec of data at maximum rate.
-# To get enough periods of the signal, the sampling has
-# to be slowed down. This allows to process more periods, resulting
-# in more precision. 
+# so 1024 samples can be gathered within 12 msec if sampling at maximum rate.
+# To get enough samples of the signal, the sampling has
+# to be slowed down. 
 
 BUFFER_SIZE = const(1024) 
 
@@ -26,15 +24,14 @@ BUFFER_SIZE = const(1024)
 exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
 
 # Surprisingly, the list is a bit faster than the array...
+# This is the von Hann window for FFT
 hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
 
-#void _fft(cplx buf[], cplx out[], int n, int step)
 # about 2 or 3 ms can be shaved off if n is not passed as parameter
 # and by using BUFFER_SIZE constant instead.
-
-
 @micropython.native
 def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
+#void _fft(cplx buf[], cplx out[], int n, int step)
     et = exptable # Make twiddle factor table local, it's faster
 #	if (step < n) {
 #		_fft(out, buf, n, step * 2);
@@ -71,6 +68,7 @@ def fft(signal, hann_windowing=False):
     if len(signal)!=BUFFER_SIZE:
         raise ValueError
     if hann_windowing:
+        # Apply windowing function
         ht = hann_table
         signal = [ signal[i]*ht[i] for i in range(BUFFER_SIZE) ]
     out = list(signal)

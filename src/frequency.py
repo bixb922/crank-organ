@@ -58,7 +58,7 @@ def find_max( signal ):
     # This is fast, normally takes about 1-2ms, since native functions are used
     maxsignal = max(signal)
     avgsignal = sum(signal)/len(signal)
-    print(f"find_max {maxsignal=} {avgsignal=} {maxsignal/avgsignal=}")
+    # print(f"find_max {maxsignal=} {avgsignal=} {maxsignal/avgsignal=}")
     # If there is no signal at the mic, maxsignal is about avgsignal*3
     # If there is a good signal at the mic, maxsignal is about avgsignal*10 
     # to avgsignal*30
@@ -67,6 +67,8 @@ def find_max( signal ):
     # Get position where maximum occurs
     p = signal.index(maxsignal)
     # Return (x,y) before maximum, at maximum and after maximum
+    if not( 1 <= p <= len(signal)-2):
+        raise ValueError
     return p-1, signal[p-1], p, signal[p], p+1, signal[p+1]
 
 def get_peak( abs_fft ):
@@ -97,7 +99,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     from_position = int(nominal_freq/ACCEPTED_FREQUENCY_RANGE/freq_step)-3
     to_position = int(nominal_freq*ACCEPTED_FREQUENCY_RANGE/freq_step)+3
     
-    print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
+    # print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
     result = fft_module.fft(signal, True)
 
     if save_result:

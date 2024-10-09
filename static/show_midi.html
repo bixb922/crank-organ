@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
+	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="history.back()">&#11013;</a>
+    </span>
+	<span class="headerright" id="header_time"></span>
+</div>
+<h1 id="title"></h1>
+<span id="error_message"></span>
+<script type="text/javascript" src="/static/common.js"></script>
+<script src="https://cdn.jsdelivr.net/combine/npm/tone@14.7.58,npm/@magenta/music@1.23.1/es6/core.js,npm/focus-visible@5,npm/html-midi-player@1.5.0"></script>
+
+<midi-player
+  id="myMidiPlayer"
+  sound-font visualizer="#myVisualizer">	
+</midi-player>
+<br>
+<midi-visualizer id="myVisualizer" type="piano-roll">
+</midi-visualizer>
+
+<p>
+  Internet access is necessary to visualize MIDI files.
+</p>
+<p>
+  For more information, see <a href="https://github.com/cifkao/html-midi-player" target="_blank">the <strong>html-midi-player</strong> repository</a> on GitHub.
+</p>
+
+<script>
+function decodeHTML(html) {
+    var txt = document.createElement("p");
+    txt.innerHTML = html;
+    return txt.innerText ;
+}
+
+
+// Get last element of this page's URL, that's the MIDI file
+let filename = new URL(window.location.href).pathname.split("/").at(-1) ;
+
+
+get_url  = "/get_midi_file/" + filename
+document.getElementById( "myMidiPlayer" ).src = get_url ;
+document.getElementById( "myVisualizer" ).src = get_url ;
+document.getElementById("title").innerText = decodeURI(filename) ;
+
+
+
+</script>
+</body>

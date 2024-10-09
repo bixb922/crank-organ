@@ -6,7 +6,7 @@ from micropython import const
 import time
 import os
 import network
-import ubinascii
+import binascii
 from minilog import getLogger
 import fileops
 
@@ -32,12 +32,15 @@ class Config:
 
         self.BATTERY_JSON = "data/battery.json"
         self.ORGANTUNER_JSON = "data/organtuner.json"
-        self.SETLIST_JSON = "data/setlist.json"
+        self.STORED_SETLIST_JSON = "data/setlist_stored.json"
+        self.CURRENT_SETLIST_JSON = "data/setlist_current.json"
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data"
         self.HISTORY_JSON = "data/history.json"
         self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
         self.LYRICS_JSON = "data/lyrics.json"
+        self.DRUMDEF_JSON = "data/drumdef.json"
+        self.SYNC_TUNELIB = "data/sync_tunelib"
         # minilog folder defined in minilog module, not here
 
         # Get time.ticks_ms() at boot time.
@@ -49,14 +52,9 @@ class Config:
         self.max_gc_time = 30
 
         # Read config.json
-        try:
-            self.cfg = fileops.read_json(self.CONFIG_JSON)
-        except Exception as e:
-            _logger.exc(
-                e,
-                f"Could not read {self.CONFIG_JSON}, loading fallback configuration",
-            )
-            self.cfg = {}
+        self.cfg = fileops.read_json(
+                self.CONFIG_JSON, 
+                default={} )
 
         # Load a fallback configuration, populate cfg with missing values if any
         # If that value is saved, information gets complemented.
@@ -81,7 +79,7 @@ class Config:
             "max_polyphony": 9,
             "touchpad_big_change": 20000,
 
-            "tzidentifier": "America/Santiago",
+            "tzidentifier": "",
             
             "webserver_cache": True,
             # Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds
@@ -99,7 +97,7 @@ class Config:
             "lower_threshold_rpsec": 0.4,
             "higher_threshold_rpsec": 0.7,
             "normal_rpsec": 1.2,
-            "max_expected_rpsec": 3
+            "rotary_tempo_mult": 1,
 
         }
         # Populate missing keys from fallback
@@ -122,7 +120,7 @@ class Config:
             fileops.write_json(self.cfg, self.CONFIG_JSON, keep_backup=False)
             _logger.info("Passwords encrypted")
 
-        self.wifi_mac = ubinascii.hexlify(
+        self.wifi_mac = binascii.hexlify(
             network.WLAN(network.STA_IF).config("mac")
         ).decode()
 
@@ -193,7 +191,7 @@ class Config:
                 "lower_threshold_rpsec",
                 "higher_threshold_rpsec",
                 "normal_rpsec",
-                "max_expected_rpsec"
+                "rotary_tempo_mult"
             ):
                 try:
                     newconfig[k] = float(v)
@@ -236,7 +234,7 @@ class Config:
 
         fileops.write_json(self.cfg, self.CONFIG_JSON)
 
-        return "ok"
+        return
 
 PASSWORD_PREFIX = "@encrypted_"
 
@@ -281,11 +279,11 @@ class PasswordManager:
         # Add password
         pass_buffer[9 : 9 + len(pass_encoded)] = pass_encoded
 
-        from ucryptolib import aes
+        from cryptolib import aes
 
         c = aes(self._get_key(), 1).encrypt(pass_buffer)
 
-        return PASSWORD_PREFIX + ubinascii.hexlify(c).decode()
+        return PASSWORD_PREFIX + binascii.hexlify(c).decode()
 
     def _decrypt_password(self, c)->str:
         if not isinstance(c, str):
@@ -293,8 +291,8 @@ class PasswordManager:
         if not c.startswith(PASSWORD_PREFIX):
             # Not encrypted, no need to do magic
             return c
-        c = ubinascii.unhexlify(c[len(PASSWORD_PREFIX) :])
-        from ucryptolib import aes
+        c = binascii.unhexlify(c[len(PASSWORD_PREFIX) :])
+        from cryptolib import aes
 
         pass_buffer = aes(self._get_key(), 1).decrypt(c)
         # If error, return phony password instead of

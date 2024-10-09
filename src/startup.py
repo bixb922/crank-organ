@@ -6,8 +6,6 @@ import time
 startup_time = time.ticks_ms()
 
 import gc
-import sys
-import os
 import asyncio
 
 # Create folders if not there
@@ -25,17 +23,16 @@ from minilog import getLogger
 timezone.setLogger(getLogger)
 from config import config
 from led import led
+led.starting(0)
 # Start wifimanager as early as possible, so the connections are
 # in progress while doing the rest of the imports
 import wifimanager 
-led.starting(0)
-from solenoid import solenoid 
 led.starting(1)
+from solenoid import solenoids
 led.starting(2)
 from setlist import setlist
 led.starting(3)
 import webserver    
-
 
 try:
     import mcserver
@@ -62,16 +59,18 @@ def _handle_exception(loop, context):
     # Will catch any unhandled exception of asyncio tasks.
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
-    solenoid.all_notes_off()
+    solenoids.all_notes_off()
     last_resort()
 
 def last_resort():
-    print("unrecoverable error, starting uftpd...")
+    #print("unrecoverable error, starting uftpd...")
     # let's hope the wifi is up at this point...
-    import uftpd
-    while True:
+    # Importing uftpd starts the ftp server
+    #import uftpd
+    #while True:
         # Asyncio does not run anymore during "last resort"
-        time.sleep(1000)
+        #time.sleep(1000)
+    pass
 
 # Global background garbage collector. 
 # Use the scheduler
@@ -109,7 +108,7 @@ async def report_profile():
 async def signal_ready():
     # Tell user system ready
     await asyncio.sleep_ms(100)
-    await solenoid.clap(8)
+    await solenoids.clap(8)
     led.off()
     dt = time.ticks_diff(time.ticks_ms(), startup_time)
     print(f"Total startup time (without main, until asyncio ready) {dt} msec")

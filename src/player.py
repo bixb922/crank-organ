@@ -1,20 +1,22 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Plays MIDI files using the umidiparser module
+from micropython import const
 import time
 import asyncio
 import errno
+from random import getrandbits
 
-import umidiparser
-from solenoid import solenoid
+from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE, MidiFile
 from minilog import getLogger
 from tunemanager import tunemanager
 import scheduler
-import midi
+from midi import controller, DRUM_CHANNEL
 from battery import battery
 from history import history
 from tachometer import crank
 from config import config
+from midi import DRUM_PROGRAM
 
 CANCELLED = const("cancelled") # type: ignore
 ENDED = const("ended") # type: ignore
@@ -24,6 +26,7 @@ PLAYING = const("playing") # type: ignore
 
 class MIDIPlayerProgress:
     def __init__(self):
+        self.boot_session = hex(getrandbits(24))
         self.progress = {"tune": None, "playtime": 0, "status": ""}
 
     def tune_started(self, tuneid):
@@ -40,6 +43,7 @@ class MIDIPlayerProgress:
 
     def get(self, time_played_us):
         self.progress["playtime"] = time_played_us / 1000
+        self.progress["boot_session"] = self.boot_session
         return self.progress
 
 
@@ -49,7 +53,9 @@ class MIDIPlayer:
         self.time_played_us = 0
         self.progress = MIDIPlayerProgress()
         # Channel map has the current program number for each
-        # channel
+        # channel. MIDI program numbers are 1 to 128. 
+        # 0 means WILDCARD_PROGRAM (i.e. whatever matches) and
+        # DRUM_PROGRAM is for drum instruments on MIDI channel 10
         self.channelmap = bytearray(16)
         # Register event when cranking starts (0 msec after start)
         # This is used to know when to restart if cranking stops
@@ -68,14 +74,15 @@ class MIDIPlayer:
             # get_info_by_id could fail in case tunelib
             # has not been correctly updated
             midi_file, duration = tunemanager.get_info_by_id(tuneid)
-            solenoid.all_notes_off()
+            #>>> self.logger.info(f"Starting tune {tuneid} {midi_file} {duration=}")
+
+            controller.all_notes_off()
             self.progress.tune_started(tuneid)
 
             self._reset_channelmap()
-            self.logger.info(f"Starting tune {tuneid} {midi_file}")
 
             await self._play(midi_file)
-            self.logger.info(f"Ended tune {tuneid} {midi_file}")
+            #>>>self.logger.info(f"Ended tune {tuneid} {midi_file}")
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
@@ -95,8 +102,9 @@ class MIDIPlayer:
             self.logger.exc(e, f"play_tune+umidiparser {tuneid=}")
             self.progress.report_exception("exception in play_tune! " + str(e))
         finally:
-            self.logger.info(f"Tune ended {solenoid.max_polyphony=}")
-            solenoid.all_notes_off()
+            # End of tune processing and clean up
+            # >>>self.logger.info(f"Tune ended")
+            controller.all_notes_off()
             try:
                 self._insert_history(
                     tuneid, self.time_played_us, duration, requested
@@ -106,8 +114,6 @@ class MIDIPlayer:
             scheduler.run_always()
             battery.start_heartbeat()
             battery.end_of_tune(self.time_played_us / 1_000_000)
-
-            # The channelmap contains the current program for each channel
 
     def _insert_history(self, tuneid, time_played_us, duration, requested):
         if duration > 0:
@@ -126,33 +132,27 @@ class MIDIPlayer:
 
     def _reset_channelmap(self):
         for i in range(len(self.channelmap)):
-            self.channelmap[i] = 0
-        # Percussion channels use the fixed "virtual" DRUM_PROGRAM number
-        # Channel map uses program numbers 0 to 127.
-        # The Note class needs program numbers 1 to 128,
-        # and DRUM_PROGRAM==129 for the "special" program used in channel 10
-        # +1 gets added in midi_event_to_note (129 is not MIDI standard, just an
-        # internal convention)
-        self.channelmap[10] = midi.DRUM_PROGRAM - 1
-
-    def _midi_event_to_note(self, midi_event):
-        # The Note class needs program numbers in the range 1-128
-        return midi.Note(
-            self.channelmap[midi_event.channel] + 1, midi_event.note
-        )
+            self.channelmap[i] = 1 # 1=piano as default program number
+        # Channel 10 always are drum notes, assign the virtual DRUM PROGRAM
+        # to all the notes that are played on ths channel. Program change
+        # events are ignored on channel 10
+        # Use the (virtual) DRUM_PROGRAM numbert for this channel
+        self.channelmap[DRUM_CHANNEL] = DRUM_PROGRAM
+    
 
     async def _play(self, midi_file):
         # Open MIDI file takes about 50 millisec on a ESP32-S3 at 240 Mhz, 
         # do it before
         # starting the loop.
         # With 4 to 8 MB RAM, there is enough to have large buffer.
-        # But there is no need to read the full file to memory
-        midifile = umidiparser.MidiFile(midi_file, buffer_size=5000)
+        # But even so, there is no need to read the full file to memory
+        # A buffer size of > 1000 means almost no impact on CPU
+        midifile = MidiFile(midi_file, 
+										buffer_size=5000,
+									    reuse_event_object=True)
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
         playing_started_at = time.ticks_us()
         midi_time = 0
-        # plist = [] # >>>> DEBUG: allows to test if playing time has
-        # no significant deviations
 
         for midi_event in midifile:
             # midi_time is the calculated MIDI time since the start of the MIDI file
@@ -168,19 +168,7 @@ class MIDIPlayer:
             wait_time = midi_time - playing_time
 
             # Sleep until scheduled time has elapsed
-            await scheduler.wait_and_yield_ms(round(wait_time / 1000))
-
-            # Debug: analyze if playing time is exact
-            #            p = time.ticks_diff( time.ticks_us(),
-            #                                playing_started_at )
-            #            plist.append( midi_time-p )
-            #            if len(plist)>30:
-            #                avgdiff = sum( plist )/len( plist )/1000
-            #                maxdiff = max(abs(x) for x in plist)/1000
-            #                if abs(maxdiff) >= 0:
-            #                    print(f"player {avgdiff=:.0f} {maxdiff=:.0f}")
-            #                plist = []
-
+            await scheduler.wait_and_yield_ms(round(wait_time))
             # time_played_us goes from 0 to the length of the midi file in microseconds
             # and is not affected by playback speed. Is used to calculate
             # % of s
@@ -189,23 +177,27 @@ class MIDIPlayer:
             self._process_midi(midi_event)
 
     def _process_midi(self, midi_event):
+        status = midi_event.status
         # Process note off event (equivalent to note on, velocity 0)
-        if midi_event.status == umidiparser.NOTE_OFF or (
-            midi_event.status == umidiparser.NOTE_ON
+        if status == NOTE_OFF or (
+            status == NOTE_ON
             and midi_event.velocity == 0
         ):
-            solenoid.note_off(self._midi_event_to_note(midi_event))
+            controller.note_off( 
+                    self.channelmap[midi_event.channel], 
+                    midi_event.note)
         # Process note on event
-        elif (
-            midi_event.status == umidiparser.NOTE_ON
-            and midi_event.velocity != 0
-        ):
-            solenoid.note_on(self._midi_event_to_note(midi_event))
+        elif status == NOTE_ON:
+            controller.note_on( 
+                    self.channelmap[midi_event.channel], 
+                    midi_event.note)
         # Process program change
-        elif midi_event.status == umidiparser.PROGRAM_CHANGE:
-            if not (midi_event.channel == 10):
+        elif status == PROGRAM_CHANGE:
+            if midi_event.channel != DRUM_CHANNEL:
                 # Allow program change only for non-percussion channels
-                self.channelmap[midi_event.channel] = midi_event.program
+                # Internally program_number will be 1-128 for MIDI
+                # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
+                self.channelmap[midi_event.channel] = midi_event.program+1
         # umidiparser handles set tempo meta event.
 
     def get_progress(self):
@@ -233,7 +225,7 @@ class MIDIPlayer:
         start_wait = time.ticks_us()
         # Don't let a note on during wait, it may
         # be realistical but it's not nice
-        solenoid.all_notes_off()
+        controller.all_notes_off()
         # Wait for the crank to start turning
         self.crank_start_event.clear()
         await self.crank_start_event.wait()

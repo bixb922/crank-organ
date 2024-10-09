@@ -10,16 +10,15 @@
 <body>
 <span id="popup" class="popuptext"></span>
 <div class="headerdiv">
-	<span class="headerleft" >
-        <a onclick="pageUp('index')">&#11013;</a>
+	<span class="headerleft">
 		&nbsp;Home page
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
 <div style="clear:both" height=1></div>
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <table>
 	<tbody>
@@ -30,7 +29,7 @@
 				</button>
 			</td>
 			<td>
-				<img src="crank.jpg" width=100>
+				<img src="/static/crank.jpg" width=100>
                 <span id="serverinfo" style="display:none"><br>
                     <a href="" id="serverlink">Server link</a>
                 </span>
@@ -44,7 +43,7 @@
 			</td>
 			<td>
 				<!-- wrench emoji -->
-				    <span style="font-size:36px">&#x1F527;</span>
+				<span style="font-size:36px">&#x1F527;</span>
 			</td>
         </tr>
         <tr>
@@ -89,14 +88,13 @@
                     Configuración pins/MIDI
 				</button>
 			</td>
-            <!-- emoji ladder -->
 			<td id="pinout_description">
 			</td>
 		</tr>
 		<tr>
 			<td>
 				<button type="button" onclick="navigate('diag')">
-					Diagnóstico
+					Sistema
 				</button>
 			</td>
 			<td>
@@ -107,13 +105,14 @@
 		</tr>
 		<tr>
 			<td>
-				<button type="button" onclick="startFTP()" id="ftpButton">
-					FTP
+				<button type="button" onclick="window.location.href='/filemanager'">
+					Actualizar archivos
 				</button>
 			</td>
-			<td id="ftpResult">
-			<!-- Open folder emoji-->
-				<span style="font-size:36px">&#x1f4c2;</span>
+			<td>
+			<!-- Open folder emoji &#x1f4c2 -->
+			 <!-- Book stack emoji &#x1F4DA-->
+				<span style="font-size:36px">&#x1F4DA;</span>
 			</td>
 		</tr>
 
@@ -171,12 +170,12 @@
 <script>
 
 async function getPageData(){
+
     resp = await fetch_json( "/get_index_page_info" ) ;
     textById( "pinout_description", resp.pinout_description ) ;
-    if( resp["serverlink"] != undefined &&
-        resp["serverlink"] != ""){
+    if( resp.serverlink ){
         document.getElementById("serverinfo").style.display = "" ;
-        document.getElementById("serverlink").href = resp["serverlink"]
+        document.getElementById("serverlink").href = resp.serverlink
     }
     getBatteryInfo();
     
@@ -184,7 +183,7 @@ async function getPageData(){
    
 
 function navigate( newpage ){
-    window.location.href = newpage + ".html" ;
+    window.location.href = "/static/" + newpage + ".html" ;
 }
 
 async function getBatteryInfo( ) {
@@ -199,17 +198,17 @@ async function getBatteryInfo( ) {
 
 function updateBatteryInfo( battery ) {
 	// Needed for /battery and /battery_zero
-	if( is_no_number(battery["percent_remaining"])){
+	if( is_no_number(battery.percent_remaining)){
 		// Calibration not done, show dash and hide battery graph
 		textById("percent_remaining", "-" ) ;
 		document.getElementById("batterygraph_row").style.display = "none" ;
 	}
 	else{
-		let percent_remaining = Math.round(battery["percent_remaining"]) ;
+		let percent_remaining = Math.round(battery.percent_remaining) ;
 		textById("percent_remaining", "" + percent_remaining + "%") ;
 		progressBar( "batterygraph", percent_remaining, 80 );
 	}
-	let tr = battery["tunes_remaining"]
+	let tr = battery.tunes_remaining
 	if( is_no_number(tr)){
 		textById("tunes_remaining", "-" ) ;
 	}
@@ -217,14 +216,14 @@ function updateBatteryInfo( battery ) {
 		textById("tunes_remaining", Math.floor(tr)  ) ;
 	}
 	textById("remaining_seconds", 
-				format_secHHMM( battery["remaining_seconds"] )) ;
+				format_secHHMM( battery.remaining_seconds )) ;
 	textById("operating_seconds",  
-				format_secHHMM( battery["operating_seconds"] )) ;
+				format_secHHMM( battery.operating_seconds )) ;
 	textById("playing_seconds", 
-				format_secHHMM( battery["playing_seconds"] )) ;
-    textById("date_zero", battery["date_zero"] ) ;
-    textById("solenoid_on_seconds", format_secHHMM( battery["solenoid_on_seconds"] )) ;
-	textById("tunes_played", battery["tunes_played"]) ;
+				format_secHHMM( battery.playing_seconds )) ;
+    textById("date_zero", battery.date_zero ) ;
+    textById("solenoid_on_seconds", format_secHHMM( battery.solenoid_on_seconds )) ;
+	textById("tunes_played", battery.tunes_played) ;
 }
 
 async function battery_zero() {
@@ -257,16 +256,7 @@ async function battery_level(){
 	showPopup( "batteryLevelButton", tlt("Nivel de batería registrado"));
 }
 
-async function startFTP(){
-	resp = await fetch_json("/start_ftp" ) ;
-    await revoke_credentials();
-    if( resp["result"] == "ok" ){
-        showPopup( "ftpButton", tlt("Partió FTP.") );
-        textById( "ftpResult", tlt("Partió FTP. Reiniciar microcontrolador para detener. Conectarse con FileZilla o Windows Explorer"));
-    } 
-}
-
-translate_html() ;
+translate_html();
 getPageData() ; 
 
 

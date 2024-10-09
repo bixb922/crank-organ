@@ -8,8 +8,7 @@ import os
 
 import scheduler
 
-KEEP_OLD_VERSIONS = const(2)
-
+KEEP_OLD_VERSIONS = const(3)
 
 def backup(filename):
     # organtuner: for each note tuned
@@ -20,7 +19,6 @@ def backup(filename):
     #              user data.
     #              Updating history has no backup.
     from timezone import timezone
-
     if not file_exists(filename):
         return
     # Make a daily backup
@@ -29,7 +27,7 @@ def backup(filename):
         os.rename(filename, backup_filename)
 
     # Purging old backup files doesn't need to be done
-    # immediately, do it but a bit later...
+    # immediately, do it a bit later...
     asyncio.create_task(delete_old_versions(filename))
 
 def file_exists(filename):
@@ -40,16 +38,28 @@ def file_exists(filename):
         return False
 
 
-def read_json(filename):
+def read_json(filename, default=None, recreate=False):
+    # Read json file, or backups if error.
+    # If not found or wrong format, and backups fail:
+    #   if default: will return the default
+    #   if recreate and default: will rewrite the file, no backup
+    #   else: raise error
     try:
-        # V1.22: using json.load(file) uses lots of memory...???
         with open(filename) as file:
             return json.load(file)
     except (OSError, ValueError):
         # Will raise OSError(ENOENT) if no file found
-        f = find_latest_backup(filename)
-        with open(f) as file:
-            return json.load(file)
+        try:
+            f = find_latest_backup(filename)
+            with open(f) as file:
+                return json.load(file)
+        except (OSError, ValueError):
+            if default is not None:
+                if recreate:
+                    write_json( default, filename )
+                return default
+            raise
+
 
 def write_json(json_data, filename, keep_backup=True):
     if keep_backup:
@@ -64,7 +74,7 @@ async def delete_old_versions(filename):
         matched_files = get_all_backup_files(filename)
         while len(matched_files) > KEEP_OLD_VERSIONS:
             await asyncio.sleep_ms(1)
-            delete_file = matched_files.pop()
+            delete_file = matched_files.pop(0)
             os.remove(delete_file)
             print("fileops - old backup file deleted", delete_file)
 
@@ -74,8 +84,8 @@ def get_all_backup_files(filename):
     folder = filename[0 : -len(path[-1])]
     matched_files = []
     # Search for filenames like "config.json-2023-10-23"
+    # Compare strings up to the "-", i.e. "config.json-"
     search_for = filename + "-"
-    # Takes about 170 msec with 25 files in data folder
     for fn in os.listdir(folder):
         f = folder + fn
         if f[0 : len(search_for)] == search_for:
@@ -96,3 +106,6 @@ def make_folder( folder ):
         os.mkdir( folder )
     except OSError:
         pass
+
+def is_folder( folder_name ):
+    return os.stat( folder_name )[0] == 16384

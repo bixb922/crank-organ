@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
+    <link rel="stylesheet" type="text/css" href="/static/skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+    <span class="headerleft">
+        <a onclick="pageUp()">&#11013;</a>
+        &nbsp;<span>File manager</span>
+    </span>
+    <span class="headerright" id="header_time"></span>
+</div>
+
+<script type="text/javascript" src="/static/common.js"></script>
+    
+<div>
+    <input type="file" id="fileDialogButton" multiple style="display: none;" 
+        onchange="processFileDialog()" >
+    <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
+    <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
+    <button id="downloadFilesButton" onclick="downloadSelectedFiles()">Download</button>
+    <button id="deleteFilesButton" onclick="deleteFiles()">Delete</button>
+    <button onclick="clearSelection()">Clear selection</button>
+</div>
+
+<div id="logArea" style="display:none">
+    <div class="middlediv">Notifications</div>
+    <span id="messageLog"></span>
+    <button id="closeLogButton" onclick="closeLogWindow()">Close</button>
+</div>
+
+<div>
+    <span id="pathLinks"></span>&nbsp;&nbsp;
+    <span id="usedFlash"></span>&nbsp;&nbsp;
+    <span id="selectedFilesSpan"></span>&nbsp;
+    <br>
+    <span id="thisFolderSize">Wait...</span>&nbsp;
+    <span id="tunelibAvg"></span>&nbsp;
+</div>
+<table id="fileListTable">
+    <thead>
+        <tr>
+            <th name="filelistth">&nbsp;</th>
+            <th name="filelistth">↓Name</th>
+            <th name="filelistth">&nbsp;Size</th>
+            <th name="filelistth">&nbsp;Date</th>
+        </tr>
+    </thead>
+    <tbody id="fileListBody">
+    </tbody>
+</table>
+
+<div class="footerdiv"></div>
+</body>
+</html>
+
+<script>
+// input dialog with webkitdirectory may upload entire folders...
+// It's good enogh I think as it is....
+
+function bytestohex(bytes) {
+    var hex = '';
+    for (var i = 0; i < bytes.length; i++) {
+        hex += ('0' + (bytes[i] & 0xFF).toString(16)).slice(-2);
+    }
+    return hex;
+}
+
+function oldencodePath( path ){
+    // Normalize for example changes diréresis + n to ñ
+    return encodeURIComponent( path.normalize() );
+}
+
+
+function getCurrentPath(){
+    // get current path from URL and normalize it
+    let pathname = new URL(window.location.href).pathname ;
+    // href is /filemanager/<encoded path>
+    if( pathname == ""){
+        return "/";
+    }
+    let p2 = decodeURIComponent( pathname );
+    let path = p2.split("/");
+    // get rid of /filemanager prefix
+    path.shift();
+    path.shift();
+    // normalize path
+    curPath =  "/" + path.join("/");
+    while( curPath.startsWith("//")){
+        curPath = curPath.substring(1, curPath.length);
+    }
+    while( curPath.endsWith("/") ){
+        curPath = curPath.substring(0, curPath.length-1);
+    }
+
+    return curPath;
+}
+let CURRENT_PATH = getCurrentPath() ;
+let SELECTED_FILES = [];
+let UPLOAD_MODE = "currentFolder";
+
+
+function uploadToCurrentFolder(){
+    UPLOAD_MODE = "currentFolder";
+    // click hidden file dialog button
+    closeLogWindow();
+    document.getElementById("fileDialogButton").click();
+}
+
+function uploadToAutoFolder(){
+    UPLOAD_MODE = "autoFolder";
+    // click hidden file dialog button
+    closeLogWindow();
+    document.getElementById("fileDialogButton").click();
+
+}
+
+async function showUsedFlash() {
+    data = await fetch_json( "/used_flash" );
+    let totalFlash = Math.round(data.total_flash/2**20*10)/10;
+    let usedFlash = Math.round(data.used_flash/2**20*10)/10;
+    let percentUsed = Math.round(data.used_flash/data.total_flash*100);
+    d = document.getElementById("usedFlash");
+    d.innerText = `Flash used ${usedFlash} MB of ${totalFlash} MB (${percentUsed}%)`;
+
+    return data.total_flash - data.used_flash ;
+}
+
+async function processFileDialog(event) {
+    let fileList = document.getElementById("fileDialogButton").files ;
+    for( let file of fileList ){
+        await uploadFile( file, CURRENT_PATH, UPLOAD_MODE );
+    };
+    await refreshAll();
+    logNotification("Upload complete");
+    document.getElementById("thisFolderSize").innerText = ""; // Refresh needed
+}
+
+
+async function uploadFile( file, path, mode ){
+    let destFolder = CURRENT_PATH;
+    if( mode == "autoFolder"){
+        destFolder = "__auto__";
+    }
+
+    let url ="/upload/" + encodePath(destFolder) + "+" + encodePath( file.name );
+    
+    
+    try {
+        let response = await fetch( url,
+                {
+                    method:"POST",
+                    body: file,
+                    headers: { 
+                        "Content-Type": "application/octet-stream"
+                    }
+                });
+        if( !response.ok ){
+            logError( `Could not upload file, http error code ${response.status}` );
+            return;
+        }
+        let resp = await response.json();
+        if( !resp.error ){
+            if( resp.oldFileSize != null ){
+                logNotification(`Upload replacing "${file.name}" folder "${resp.folder}" ${file.size} bytes, old size: ${resp.oldFileSize} bytes`);
+            }
+            else{
+                logNotification(`Upload creating "${file.name}" to folder "${resp.folder}" ${file.size} bytes`);
+            }
+        }
+        else{
+            logError(resp.alert);
+        }
+    }
+    catch( error ){
+        logError(`Error in upload ${error.name} ${error.message}`);
+    }
+
+}
+
+function logMessage(message) {
+    document.getElementById('messageLog').innerHTML +=  message + "<br>" ;
+    document.getElementById("logArea").style.display = '';
+}
+
+function closeLogWindow() {
+    document.getElementById('logArea').style.display = "none";
+    document.getElementById('messageLog').innerHTML = "";
+}
+
+function logError(message) {
+    logMessage(  '<span style="color:red">' + escapeHtml(message) + "</span>" ) ;
+}
+
+function logNotification(message) {
+    logMessage(  '<span style="color:green">' + escapeHtml(message) + "</span>" ) ;
+}
+
+
+function downloadFile(filename) {
+    let link = document.createElement("a");
+    link.setAttribute("href", "/download/" + encodePath( filename ));
+    link.setAttribute("download", null);
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // asyncio on server will serialize the requests
+    // seems to be no way to get notification of download done?
+}
+
+function folderUp( path ){
+    if( path == "/" ){
+        return "/";
+    }
+    let pathElements = path.split("/");
+    pathElements.pop();
+    return  "/" + pathElements.join("/");
+}
+
+
+function selectFile( checkbox_id, path ){
+    let checkbox = document.getElementById(checkbox_id);
+    if (checkbox.checked) {
+        SELECTED_FILES.push(path);
+    } 
+    else {
+        SELECTED_FILES = SELECTED_FILES.filter(f => f !== path);
+    };
+    let d = document.getElementById("selectedFilesSpan");
+    if( SELECTED_FILES.length > 0 ){
+        d.innerText = "" + SELECTED_FILES.length + " files selected";
+    }
+    else {
+        d.innerText = "";
+    }
+    updateButtons();
+}
+
+
+function updateButtons(){
+    if( SELECTED_FILES.length > 0 ){
+        document.getElementById("downloadFilesButton").classList.remove("inactive");
+        document.getElementById("deleteFilesButton").classList.remove("inactive");
+    }
+    else {
+        document.getElementById("downloadFilesButton").classList.add("inactive");
+        document.getElementById("deleteFilesButton").classList.add("inactive");
+
+    }
+}
+
+
+
+async function refreshFileList(path) {
+    // Get file list for path from server and show
+    CURRENT_PATH = path;
+    showPath();
+    //let url = "/listdir?" + new URLSearchParams( {"path":  CURRENT_PATH});
+    let url = "/listdir/" + encodePath( CURRENT_PATH );
+    data = await fetch_json( url );
+
+    let body = document.getElementById("fileListBody");
+    body.innerText = "";
+    if (path !== '/' && path != "") {
+        let row = insertRow( body, ["", ""]);
+        let link = document.createElement( "a" );
+        link.href = `/filemanager/${encodePath(folderUp(CURRENT_PATH))}`;
+        link.innerText = "\u{a0}⬆️\u{a0}" ;
+        row.cells[1].appendChild( link );
+    }
+
+    let files = data.sort((a, b) => ((1-a.isDirectory).toString()+"_"+a.name).localeCompare((1-b.isDirectory).toString()+"_"+b.name));
+    let rownum = 0 ;
+    let sumsize = 0;
+    let sumblocks = 0;
+    for( let file of files){
+        fileType = file.name.split(".").pop();
+        if( file.isDirectory ){
+            let row = insertRow( body, ["", "📁\u{a0}", "", file.date])
+            let link = document.createElement("a");
+            link.href = `/filemanager/${encodePath(file.path)}`;
+            link.innerText = file.name ;
+            row.cells[1].appendChild( link );
+        }
+        else {
+            let filetype = file.name.split(".").pop();
+            let row  = insertRow( body, ["", `📄\u{a0}`, file.size, file.date ])
+            let input = document.createElement("input");
+            let checkbox_id = `checkbox_${rownum}`;
+            input.id = checkbox_id;
+            input.type = "checkbox";
+            // For this closure to work, checkbox_id must be a variable
+            // inside the block scope, to be created in each iteration
+            //>>s += `<td><input id="checkbox_${rownum}" type="checkbox" onchange="selectFile(${rownum}, '${file.path}')" name="fileCheckbox"/></td>`;
+            input.onchange = function() {selectFile( checkbox_id, file.path)};
+            input.name = "fileCheckbox";
+            row.cells[0].appendChild( input );
+
+            
+            // allow to navigate to files that can be rendered
+            // both text and image
+            // and also backups of json files
+            // and gzip'ped files are also rendered since webserver.py
+            // knows how to unzip those to a readable text file.
+            // If a gzip file contains binary data, this will not work well.
+            if( (["json", "py", "html", "js", "css", "jpg", "png", "ico", "tsv", "log", "txt", "gz"].includes(filetype.toLowerCase()) ||
+                filetype.startsWith("json-20")) ){
+                let link = document.createElement("a");
+                link.href = "/show_file/" + encodePath(file.path) ;
+                link.innerText = file.name ;
+                row.cells[1].appendChild(link);
+            }
+            else if( filetype == "mid" || filetype == "MID" ){
+                let link = document.createElement("a");
+                link.href = "/show_midi/" + encodePath(file.name) ;
+                link.innerText = file.name ;
+                row.cells[1].appendChild(link);           
+            }
+            else{
+                row.cells[1].innerText += file.name ;
+            }
+            sumsize += file.size ;
+            sumblocks += Math.floor((file.size+4095)/4096)*4096;        }
+        rownum += 1;
+
+    };
+    document.getElementById("thisFolderSize").innerText = 
+        `This folder: ${files.length} files, ${formatIfNumber(sumsize)} bytes net, ${formatIfNumber(sumblocks)} bytes on flash.`;
+    return sumblocks;
+}
+
+function showPath() {
+    // CURRENT_PATH is global variable with current folder's path
+    let pathLinks = document.getElementById("pathLinks");
+    pathLinks.innerText = "";
+    let link = document.createElement("a");
+    link.href = `/filemanager`;
+    link.innerText = "/";
+    link.style.color = "black";
+    pathLinks.appendChild( link );
+    pathLinks.innerHTML += "&nbsp";
+    let path = "/";
+    for( let part of CURRENT_PATH.split("/")) {
+        if( path != "/"){
+            path += "/";
+        }
+        path += part;
+        link = document.createElement( "a" );
+        link.href = `/filemanager/${encodePath(path)}`;
+        link.innerText = part ;
+        link.style.color = "black"
+        pathLinks.appendChild( link );
+        pathLinks.innerHTML += "&nbsp;"
+    }
+ 
+}
+function showTunelibInfo( sumblocks, freeFlash ){
+    if( !CURRENT_PATH.startsWith("/tunelib")) {
+        return;
+    }
+    let fileCount = document.getElementById("fileListBody").rows.length-1;
+    if( fileCount <= 0){
+        return ;
+    }
+    let tunelibInfo = document.getElementById("tunelibAvg");
+    let avg = sumblocks/fileCount ;  
+    tunelibInfo.innerHTML = "<br>";
+    tunelibInfo.innerHTML += ` Average file size ${Math.round(avg)} bytes.`;
+    if( avg != 0 ){
+        let spaceLeft = Math.round( freeFlash/avg );
+        tunelibInfo.innerHTML += ` Space left for ${spaceLeft} average files`;
+    }
+    
+}
+
+async function refreshAll(){
+    let sumblocks = await refreshFileList( CURRENT_PATH );
+    showPath();
+    let freeFlash = await showUsedFlash() ;
+    showTunelibInfo( sumblocks, freeFlash );
+    updateButtons();
+    sortTable();
+}
+
+function downloadSelectedFiles() {
+    closeLogWindow();
+    for( let file of SELECTED_FILES ){
+        logNotification(`Starting to download ${file}`);
+        downloadFile( file );
+    };
+    logNotification("Check browser downloads for result");
+    clearSelection();
+}
+
+function clearSelection() {
+    SELECTED_FILES = [];
+    for( let checkbox of document.getElementsByName("fileCheckbox") ){
+        checkbox.checked = false ;
+    };
+}
+
+function showFile( path ){
+    window.location.href = "/show_file/" + encodePath(path) ;
+}
+
+async function deleteFiles( ){
+    closeLogWindow();
+    if( !confirm(`Do you want to delete ${SELECTED_FILES.length} selected file(s) from the flash on the microcontroller?`)){
+        return ;
+    }
+    for( let file of SELECTED_FILES ){ 
+        try{
+            let data = await fetch_json( "/delete_file/" + encodePath( file )) ;
+            logNotification(`File "${file}" deleted`);
+        }
+        catch{
+            logError(`File ${file} could not be deleted`);
+        }
+    }
+    clearSelection();
+    document.getElementById("thisFolderSize").innerText = ""; // Refresh needed
+    logNotification("Delete complete, now refreshing file list")
+    await refreshAll();
+}
+
+
+function sortTable() {
+    // https://stackoverflow.com/questions/14267781/sorting-html-table-with-javascript
+    const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
+
+    const comparer = (idx, asc) => (a, b) => ((v1, v2) => 
+    v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
+    )(getCellValue(asc ? a : b, idx), getCellValue(asc ? b : a, idx));
+
+    // do the work...
+    document.querySelectorAll('th').forEach(th => th.addEventListener('click', (() => {
+        const table = th.closest('table');
+        Array.from(table.querySelectorAll('tr:nth-child(n+2)'))
+            .sort(comparer(Array.from(th.parentNode.children).indexOf(th), this.asc = !this.asc))
+            .forEach(tr => table.appendChild(tr) );
+        // added code to manage down/up arrow in table header
+        let headerCells = document.getElementsByName("filelistth");
+        for( let cell of headerCells){
+            // erase previous arrows
+            cell.innerHTML = "&nbsp;" + cell.innerText.substring(1);
+        }    
+        // Add new up/down arrow to sorted column
+        th.innerHTML = (this.asc?"↓":"↑") + th.innerText.substring(1);
+    })));
+}
+
+function pageUp(){
+    if( CURRENT_PATH == "/" || CURRENT_PATH == "" ){
+        // if at root, go back to index page
+        window.location.href = "/static/index.html";
+    }
+    else{
+        // Should go one up in current path...
+        history.back();
+    }
+}
+
+
+
+refreshAll();
+
+
+</script>

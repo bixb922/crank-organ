@@ -11,7 +11,7 @@ from minilog import getLogger
 
 from config import config
 from led import led
-from solenoid import solenoid
+from solenoid import solenoids
 import scheduler
 import fileops
 from tachometer import crank
@@ -35,11 +35,12 @@ class Battery:
         self.battery_calibration_filename = battery_calibration_filename
 
         self.logger = getLogger(__name__)
-        try:
-            self.battery_info = fileops.read_json(self.battery_json_filename)
-        except Exception as e:
-            self.logger.info(f"init error loading json, rebuilding. {repr(e)}")
-            self.battery_info = {}
+        self.battery_info = fileops.read_json(
+            self.battery_json_filename, 
+            default={})
+        # No need to recreate missing file. Will be written
+        # once a minute, and browser will not show the error
+
         # Put missing information in battery_info, if necessary
         fallback = {
             "operating_seconds": 0,          # time operating (time with power on), in seconds 
@@ -54,8 +55,7 @@ class Battery:
             "low": None,       # True/False, compares percent used with low battery level
         }
         for k, v in fallback.items():
-            if k not in self.battery_info:
-                self.battery_info[k] = v
+            self.battery_info.setdefault( k, v )
 
         self.battery_task = asyncio.create_task(self._battery_process())
 
@@ -116,7 +116,7 @@ class Battery:
         now = time.ticks_ms()
         self.battery_info["operating_seconds"] += time.ticks_diff(now, self.last_update) / 1000
         # Get time solenoids were "on", convert ms to seconds
-        self.battery_info["solenoid_on_seconds"] += solenoid.get_sum_msec_solenoids_on_and_zero() / 1000
+        self.battery_info["solenoid_on_seconds"] += solenoids.get_sum_msec_solenoids_on_and_zero() / 1000
         
         # Estimate remaining time and tunes
         self.battery_info["percent_remaining"] = self.estimate_percent_remaining()
@@ -137,7 +137,6 @@ class Battery:
         self.make_heartbeat = True
 
         await asyncio.sleep_ms(heartbeat_period)
-        from solenoid import solenoid
 
         while True:
             while self.make_heartbeat:
@@ -147,7 +146,7 @@ class Battery:
                 if not crank.is_installed() or (crank.is_installed() and not crank.is_turning()):
                     print(".", end="")
                     led.heartbeat()
-                    await solenoid.play_random_note(heartbeat_duration)
+                    await solenoids.play_random_note(heartbeat_duration)
                     self.logger.debug(f"Playing random note for {heartbeat_duration=}")
                 await asyncio.sleep_ms(heartbeat_period)
 
@@ -179,11 +178,8 @@ class Battery:
         level = int(level)
         if level < 0 or level > 100:
             raise ValueError
-        try:
-            bcj = self.read_calibration_data()
-        except OSError:
-            bcj = []
-            
+
+        bcj = self.read_calibration_data()
         bcj.append([ timezone.now_ymdhms(),
                   self.battery_info["operating_seconds"], 
                   self.battery_info["solenoid_on_seconds"], 
@@ -194,12 +190,9 @@ class Battery:
 
       
     def read_calibration_data(self)->dict:
-        try:
-            bcj = fileops.read_json(self.battery_calibration_filename)
-        except (OSError, ValueError):
-            bcj = []
-
-        return bcj
+        return fileops.read_json(
+            self.battery_calibration_filename, 
+            default=[])
 
     def get_coefficients(self)->None:
         # Start with some defaults

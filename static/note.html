@@ -22,11 +22,14 @@
 <button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
 <button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
 <button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetición</button>
-    
+<button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
+<button type="button" onclick="nextNote()" id="nextNote">Próxima nota</button>
+
 <div class="middlediv"></div>
 <table>
 	<tbody id>
-		<tr><td>Programa-nota</td><td id="note_name"></td></tr>
+		<tr><td>Programa y nota</td><td id="note_name"></td></tr>
+		<tr><td>Frecuencia</td><td id="frequency"></td></tr>
 		<tr><td>Cents</td><td id="cents"></td></tr>
 		<tr><td>Amplitud</td><td id="amplitude"></td></tr>
 		<tr><td>Pin</td><td id="pin_name"></td></tr>
@@ -55,6 +58,7 @@
 
 // Refresh note info every second
 async function getNoteInfo() {
+	await fetch_json( "/set_playback_disabled" );
 	while( true ) {
 		updateNoteInfo( await fetch_json( "/data/organtuner.json" ) ) ;
 		await sleep_ms( 5_000 );
@@ -63,54 +67,44 @@ async function getNoteInfo() {
 
     
 function updateNoteInfo( notelist ) {
-	let midi = getResourceNumberFromURL() ;
-	let note = notelist[midi] ;
-	let s = "" ;
+	let note_number = getResourceNumberFromURL() ;
+	let note = notelist[note_number] ;
 	textById( "note_name", note["name"] ) ;
-    cents = note["cents"] ;
-	s = "-" ;
+	textById( "frequency", note["frequency"] );
+    let cents = note["cents"] ;
+	let s = "-" ;
     if( cents != null ){
 		s = Math.round(cents) ;
     }
-	textById( "note_name", s ) ;
-    let ampdb = note["ampdb"] ;
+	textById( "cents", s ) ;
+
+	let ampdb = note["ampdb"] ;
 	s = "-" ;
     if( ampdb != null ) {
 	   s += Math.round(ampdb) ;
     }
 	textById( "amplitude", ampdb );
 	textById( "pin_name", note["pinname"] ) ;
-
-	htmlById("tuningcaption", tlt("Afinación") + "(-" + MAX_CENTS + tlt(" a ") + MAX_CENTS + " cents)") ;
-	let st = "" ;
+	textById("tuningcaption", tlt("Afinación") + "(-" + MAX_CENTS + tlt(" a ") + MAX_CENTS + " cents)") ;
+	
+	let tuningBody = document.getElementById( "tuningbody" );
+	tuningBody.innerText = "" ;
 	centslist = note["centslist"] ;
 	for( let j = 0 ; j < centslist.length ; j++ ){
-		st += `<tr>
-			   <td id="tuning${j}_text"></td>
-			   <td id="tuning${j}"></td>
-			   </tr>`;
-		/*st += "<tr>" ;
-		st += '<td id="tuning' + j + '">' ;
-		st += "</td>" ;
-		st += "</tr>" ;*/
+		let row = insertRow( tuningBody, ["", ""]);
+		row.cells[0].id = `tuning${j}_text`;
+		row.cells[1].id =  `tuning${j}`;
 	}
-	htmlById("tuningbody", st) ;
 	
 	let amplistdb = note["amplistdb"] ;
 	textById("ampcaption", tlt("Amplitud") +  "(" + MIN_DB + tlt(" a ") + MAX_DB +" dB)" );
-	let sa = "" ;
+	let amplitudeBody = document.getElementById( "amplitudebody");
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
-		sa += `<tr>
-				<td id="amp${j}_text"></td>
-				<td id="amp${j}"></td>
-			   </tr>`;
-		/*sa += "<tr>" ;
-		sa += '<td id="amp'+ j + '">' ;
-		sa += "</td>" ;
-		sa += "</tr>" ;*/
+		let row = insertRow( amplitudeBody, ["", ""]);
+		row.cells[0].id = `amp${j}_text`;
+		row.cells[1].id = `amp${j}`;
 	}	
-	htmlById("amplitudebody", sa) ;
-	
+
 	for( let j = 0 ; j < centslist.length ; j++  ){
         cents = centslist[j];
         let elename = "tuning" + j ;
@@ -164,6 +158,20 @@ async function soundRepetition() {
 	await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
 }
 
+async function stopTuning() {
+    await fetch_json( "/stop_tuning" ) ;
+}
+
+async function nextNote(){
+	// no previous note button, can use back on browser.
+	let note_number = getResourceNumberFromURL() + 1;
+	parseInt( note_number );
+	let notelist = await fetch_json( "/data/organtuner.json" );
+	if( note_number >= notelist.length ){
+		note_number = 0;
+	}
+	window.location.href = "/note/" + note_number ;
+}
 translate_html();
 getNoteInfo() ;
 

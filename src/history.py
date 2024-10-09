@@ -11,20 +11,17 @@ class HistoryManager:
     def __init__(self,filename):
         self.filename = filename
         self.logger = getLogger(__name__)
-        self.logger.debug("init done")
+        self.logger.debug("init ok")
         # Check if history is present, create empty if not
         if not fileops.file_exists( filename ):
             fileops.write_json( [], filename )
 
     # No "get history" method, browser reads history.json directly
     def _read_hlist(self):
-        try:
-            hlist = fileops.read_json(self.filename)
-        except (OSError,ValueError):
-            self.logger.debug(f"Error reading {self.filename}")
-            # File not present/readable, backup not present/readable
-            hlist = []
-            fileops.write_json(hlist, self.filename)
+        # Read json, recreate empty json, if not it's 404 error
+        hlist = fileops.read_json(self.filename,
+                                  default=[],
+                                  recreate=True)
         self.logger.debug(f"{len(hlist)} elements in history")
         return hlist
     

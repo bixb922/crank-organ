@@ -16,11 +16,13 @@
 	<span class="headerright" id="header_time"></span>
 </div>
 
-<script type="text/javascript" src="common.js"></script>
-<script type="text/javascript" src="translations.js"></script>
+
+<script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <button type="button" onclick="tuneAll()" id="tuneAllButton">Afinar todos</button>
 <button type="button" onclick="scaleTest()" id="scaleTestButton">Escala de prueba</button>
+<button type="button" onclick="allPinTest()" id="allPinTestButton">Prueba pins</button>
 <button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
 <button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
 
@@ -28,7 +30,7 @@
     <table  style="width:100%">
 		<thead>
 			<tr>
-				<th>Programa-nota</th>
+				<th>Programa y nota</th>
 				<th colspan="2">Afinación (cents)</th>
 				<th colspan="2">Amplitud (db)</th>
 				<th>Pin</th>
@@ -45,16 +47,17 @@
 <script>
 
 async function getNoteList() {
+	await fetch_json( "/set_playback_disabled" );
 	while( true ) {
-		updateNoteList( await fetch_json("/data/organtuner.json" ) );
+		updateNoteList( await fetch_json( "/data/organtuner.json" ) );
 		await sleep_ms( 5_000 ) ;
 	}
 }
 
 function updateNoteList( notelist ) {
-	let s = "" ;
+	let noteListTable = document.getElementById("notelist");
     // notelist is a dictionary, key=midi note number
-    
+    noteListTable.innerText = "";
 	for( let midi in notelist ){
 		let note = notelist[midi]  ;
         let ampdb = note["ampdb"] ;
@@ -71,17 +74,16 @@ function updateNoteList( notelist ) {
         else {
             cents = Math.round( cents ) ;
         }
-		s += `
-		    <tr>
-			 <td><a href="/note/${midi}">${note["name"]}</td>
-			 <td>${cents}</td>
-			 <td id="tuning${midi}"></td>
-			 <td>${ampdb}</td>
-			 <td id="amp${midi}"></td>
-			 <td id="pin${midi}">${note["pinname"]}</td>
-			</tr>`;
+		let row = insertRow( noteListTable, ["", cents, "", ampdb, "", note["pinname"]] );
+		let link = document.createElement("a");
+		link.href = `/note/${midi}`;
+		link.innerText = note["name"];
+		row.cells[0].appendChild( link ) ;
+		row.cells[2].id = `tuning${midi}`;
+		row.cells[4].id = `amp${midi}`;
+		row.cells[4].id = `amp${midi}`;
+		row.cells[5].id = `pin${midi}`;
 	};
-	htmlById("notelist", s) ;
 
 	for( let midi in notelist ){
 		let note = notelist[midi] ;
@@ -133,6 +135,10 @@ async function stopTuning() {
 
 async function scaleTest() {
     await fetch_json( "/scale_test" ) ;   
+}
+
+async function allPinTest(){
+	await fetch_json( "/all_pin_test" );
 }
 
 translate_html();

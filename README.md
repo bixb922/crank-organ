@@ -7,13 +7,19 @@ MIDI based crank organ software and hardware
 This animation shows how a crank organ with MIDI control works:
 ![animated gif for crank organ](animacion_organillo.gif)
 
-The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 50 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores a MIDI files that have the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 
+The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 100 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores a MIDI files that have the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 
 
 This repository has a complete hardware and software solution for these devices of mechanical music. This diagram shows how this system works:
 
 ![diagram](diagram.png)
 
-The microcontroller stores the MIDI files with the tunes and is also a web server for the cell phone (or a tablet, or PC). On the cell phone a browser such as Chrome or Firefox is used to select the MIDI files that are going to be played. Once a setlist or a tune have been selected, the microcontroller plays the files.
+The microcontroller stores the MIDI files with the tunes and also has a web server for the cell phone (or a tablet, or PC). On the cell phone a browser such as Chrome or Firefox is used to select the MIDI files that are going to be played. Once a setlist or a tune have been selected, the microcontroller plays the files.
+
+Please note that you really don't need a cell phone or tablet to perform: If you define a setlist, you just turn on the microcontroller and start going. You'll only need a cell phone during performance if you want to change the order of the setlist.
+
+No special application is needed on the cell phone. Just a standard web browser like Firefox or Chrome.
+
+The microcontroller used is a ESP32-S3. It has about 26 pins available to manage pipes and peripherals, simplifying enormously the electronics for a 20 note organ. It also manages touch pads,counters/encoders, lots of RAM and flash at a very low battery load, so I think it is a good choice for a microcontroller.  With the available I2C capabilities, the ESP32-S3 could manage many (hundreds?) of pipes.
 
 The repository describes the complete solution:
 * hardware schematics
@@ -29,7 +35,7 @@ Please post an github issue for any question you might have. Please star this re
 
 ## How is this solution used?
 
-Once the hardware is build (see hardware plans in the doc-hardware folder), install the software, and copy your MIDI files to the microcontroller via WiFi or USB. You can add more information such as title and genre to the music.
+Once the hardware is built (see hardware plans in the doc-hardware folder), install the software, and copy your MIDI files to the microcontroller via WiFi or USB (See software documentation for detailed instructions). You can add more information such as title, genre and lyrics to the music.
 
 You control the order of the tunes with the cell phone. You select tunes to play by tapping on them on the tunelist page on the cell phone. This is done with a very intuitive and easy to use interface using a common browser like Chrome or Firefox. Everything is done over web pages: select a tune, control setlists, configuration, etc.
 
@@ -53,19 +59,21 @@ See [here](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/README.
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
+# To see the a demo
+To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
+
+This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning.
+
 
 # Folders
 These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders.
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
-|Documentation folders:                                      |
-|doc-software|Description of the controller software. Open README.md|
-|doc-hardware|Description of the controller hardware. Open README.md|
-|Software folders:                                   |
-|src| Source code (MicroPython) |
-|data| Pin assignment (pinout) configuration files |
-|static| Web pages for the microcontroller (html)   |
+|doc-software|[Description of the controller software.](https://github.com/bixb922/crank-organ/blob/main/doc-software/README.md) |
+|doc-hardware|[Description of the controller hardware and construction plans](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/README.md))|
+|src| Full source code (MicroPython) |
+|static| Web pages for the microcontroller (html, css, javascript)   |
 |data| Pinout templates for 20, 26 and 31 note organs |
 |install|Installation files                      |
 
@@ -86,7 +94,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE AND DESIGN IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER

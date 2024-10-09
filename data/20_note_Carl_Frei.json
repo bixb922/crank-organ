@@ -1,7 +1,7 @@
 [
 ["description", "20 note Carl Frei scale. GPIO pins only."],
 ["neopixel", 48],
-["microphone", 4],
+["microphone", ""],
 ["tachometer", ""],
 ["touchpad", 5],
     

@@ -121,8 +121,8 @@ are based on 10px sizing. So basically 1.5rem = 15px :) */
 html {
   font-size: 62.5%; }
 body {
-  font-size: 1.5em; /* currently ems cause chrome bug misinterpreting rems on body element */
-  line-height: 1.6;
+  font-size: 1.4em; /* 1.4em currently ems cause chrome bug misinterpreting rems on body element */
+  line-height: 1.4;
   font-weight: 400;
   font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #222; }
@@ -158,11 +158,14 @@ p {
 /* Links
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 a {
-  /* color: #1EAEDB; }*/
-  color: #000000; }
+  color: #1E7EAB; }
 a:hover {
   color: #0FA0CE; }
 
+.anohref {
+  text-decoration: underline;
+  color: #1E7EAB;
+}
 
 /* Buttons
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
@@ -173,7 +176,7 @@ input[type="reset"],
 input[type="button"] {
   display: inline-block;
   height: 38px;
-  padding: 0 10px; /* original 30px */
+  padding: 0 6px; /* original 30px */
   color: #555;
   text-align: center;
   font-size: 11px;
@@ -245,6 +248,10 @@ button.smallbutton  {
 button.smallbutton:active  {
 	background-color:#0a283E;
 }
+button.inactive {
+  color:#afafaf;
+}
+
 /* Forms
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 input[type="email"],
@@ -435,7 +442,7 @@ p.alignleft {
 	float:left;
 }
 p.alignright {
-	float:right:
+	float:right;
 }
 
 div.middlediv {
@@ -488,12 +495,12 @@ span.headerright {
     float: right ;
 }
 
-/* Toggle this class - hide and show the popup */
-/* .popuptext .show { */
-  /* visibility: visible; */
-  /* -webkit-animation: fadeIn 1s; */
-  /* animation: fadeIn 1s; */
-}
+/* Toggle this class - hide and show the popup 
+ .popuptext .show { 
+   visibility: visible;
+   -webkit-animation: fadeIn 1s;
+   animation: fadeIn 1s;
+}*/
 
 
 /* Media Queries

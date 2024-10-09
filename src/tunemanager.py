@@ -5,7 +5,7 @@ from micropython import const
 import os
 import asyncio
 import hashlib
-import ubinascii
+import binascii
 import umidiparser
 import time
 
@@ -25,19 +25,16 @@ TLCOL_FILENAME = const(6)
 TLCOL_AUTOPLAY = const(7) 
 TLCOL_INFO = const(8)
 TLCOL_DATEADDED = const(9) 
-TLCOL_RATING = const(1)
+TLCOL_RATING = const(10)
 TLCOL_SIZE = const(11) 
 TLCOL_HISTORY = const(12)
-#>>>KEEP INDICATOR "FILE DELETED" INSTEAD OF DELETING ROW?
-#>>>values 1/0 instead of true/false
-# >>> add "has lyrics" indicator
-TLCOL_RFU = const(13)
+TLCOL_LYRICS = const(13)
 TLCOL_COLUMNS = const(14)
 
 # Must have names in same order as TLCOL, is used
 # to decode information from web form when saving tunelib.
 # These fields are defined in tunelibedit.html, function updateForm
-# and function makeBox, and are part of the names of the input fields
+# and function makeBoxField, and are part of the names of the input fields
 # The changed fields are sent here for processing, see def save().
 HEADERLIST = [
     "id",
@@ -51,19 +48,16 @@ HEADERLIST = [
     "info",
     "dateadded",
     "rating",
-]
-
-# How to mark the title of files where the file is not on flash.
-NOT_FOUND_MARK = chr(126) + "(not found) "
+] # size, filename, etc are not here because they cannot be set by the user
 
 
-# Maximum lyrics file si€
-MAX_LYRICS_FILESIZE = 8192
+
 class TuneManager:
-    def __init__(self, tunelib_folder, tunelib_filename, lyrics_json ):
+    def __init__(self, tunelib_folder, tunelib_filename, lyrics_json, sync_tunelib_file ):
         self.tunelib_folder = tunelib_folder
         self.tunelib_filename = tunelib_filename
         self.lyrics_json = lyrics_json
+        self.sync_tunelib_file = sync_tunelib_file
         if not fileops.file_exists( self.lyrics_json ):
             fileops.write_json( {}, self.lyrics_json )
 
@@ -73,15 +67,13 @@ class TuneManager:
         # Create tunelib if no backup
         t = self._read_tunelib()
         self.logger.debug(f"init ok, {len(t)} tunes in {tunelib_filename}")
-
+        if fileops.file_exists( self.sync_tunelib_file ):
+            self.start_sync() 
         
     def _read_tunelib(self):
-        try:
-            tunelib = fileops.read_json(self.tunelib_filename)
-        except OSError as e:
-            self.logger.exc(e, f"tunelib {self.tunelib_filename} could not be opened, creating empty tunelib")
-            tunelib = {}
-            self._write_tunelib_json( tunelib )
+        tunelib = fileops.read_json(self.tunelib_filename,
+                                    default={},
+                                    recreate=True)
         return tunelib
     
     def get_info_by_id(self, tuneid):
@@ -100,12 +92,19 @@ class TuneManager:
     def get_autoplay(self):
         # Return list of all possible tune ids marked as autoplay.
         # used for setlist  shuffle all 
+        # Exclude rating "one star"
+        # Include unrating, ** and ***
         tunelib = self._read_tunelib()
-        autoplay = [
-            tuneid for tuneid, v in tunelib.items() if v[TLCOL_AUTOPLAY]
-        ]
-        del tunelib
-        return autoplay
+        return [
+            tuneid for tuneid, v in tunelib.items() 
+            if v[TLCOL_AUTOPLAY] ]
+
+    def get_autoplay_3stars(self):
+        tunelib = self._read_tunelib()
+        return [
+            tuneid for tuneid, v in tunelib.items() 
+            if v[TLCOL_AUTOPLAY] and 
+               "***" in v[TLCOL_RATING] ]
 
     def _get_file_attr(self, fn):
         filename = self.tunelib_folder + fn
@@ -117,7 +116,7 @@ class TuneManager:
         return size, creation_date
 
     def start_sync(self):
-        # Called from webserver to start synchronization
+        # Called from webserver or __init__ to start synchronization
         # of tunelib folder with tunelib.json
         if self.sync_task:
             raise RuntimeError("Calling sync twice")
@@ -129,7 +128,7 @@ class TuneManager:
         # and update tunelib.json.
         self.tunelib_progress = "Starting sync<br>"
 
-        await asyncio.sleep_ms(10)
+        await asyncio.sleep_ms(100)
         changed = False
 
         # Don't work on current tunelib, replace
@@ -140,31 +139,26 @@ class TuneManager:
         # The old version will be discarded
         newtunelib = dict(tunelib)
 
-        # We will recompute which files are not found, delete mark
-        for k, v in newtunelib.items():
-            if v[TLCOL_TITLE].startswith(NOT_FOUND_MARK):
-                v[TLCOL_TITLE] = v[TLCOL_TITLE].replace(NOT_FOUND_MARK, "")
-
         self.tunelib_progress += "Listing files in tunelib folder<br>"
 
         # Yield CPU for a bit to allow webserver and other processes to run
-        await asyncio.sleep_ms(10)
-        filelist = []
-        for fn in os.listdir(self.tunelib_folder):
-            if fn[-4:].lower() == ".mid":
-                filelist.append(fn)
+        await asyncio.sleep_ms(1)
+        filelist = [(inode[0], inode[3]) 
+            for inode in os.ilistdir(self.tunelib_folder)
+            if inode[0][-4:].lower() == ".mid"]
 
         self.tunelib_progress += "Checking for new files<br>"
 
-        for fn in filelist:
+        for fn, filesize in filelist:
             await asyncio.sleep_ms(1)
             key, fn = self._make_unique_hash(fn, newtunelib)
-            if key in tunelib:
+            # Check if in tunelib and that file hasn't been updated
+            if key in tunelib and filesize == tunelib[key][TLCOL_SIZE]:
                 continue
             filename = self.tunelib_folder + fn
             # New file detected, add to tunelib.json
             self.tunelib_progress += (
-                f"Adding {fn}, computing duration of {filename}<br>"
+                f"Adding/updating {fn}, computing duration of {filename}<br>"
             )
 
             try:
@@ -174,31 +168,43 @@ class TuneManager:
                 duration = 0
                 self.logger.exc(e, f"Computing duration of {filename} ")
 
+            # Get size and creation date
             size, creation_date = self._get_file_attr(fn)
 
-            # [ tuneid, title=filename, genre, author. year
-            #        duration, filename, autoplay, info,
-            #        date added, rating, size in bytes, unused field ]
-            newtunelib[key] = [
-                key,
-                fn[0:-4],  # filename as title
-                "",
-                "",
-                "",
-                duration,
-                fn,
-                True,# autoplay
-                "",
-                creation_date,
-                "",
-                size,
-                0,
-            ]
+            if key in newtunelib:
+                # Update tune if already there
+                tune = newtunelib[key]
+                tune[TLCOL_SIZE] = size
+                tune[TLCOL_DATEADDED] = creation_date
+                tune[TLCOL_TIME] = duration
+            else:
+                # Add new tune
+                # [ tuneid, title=based on filename, genre, author. year
+                #        duration, filename, autoplay, info,
+                #        date added, rating, size in bytes, unused field ]
+                initial_title = ("~" + fn[0:-4]).replace("-", " ").replace("_"," ").replace("  "," ")
+                newtunelib[key] = [
+                    key,
+                    initial_title, 
+                    "",
+                    "",
+                    "",
+                    duration, # Will be recomputed if size changes
+                    fn,
+                    True, # autoplay by default
+                    "",
+                    creation_date, # Will not be updated
+                    "",
+                    size, # Will be checked on each sync
+                    0,
+                ]
 
             changed = True
 
         self.tunelib_progress += "Checking for deleted files<br>"
 
+        # Make a dict for filelist for faster query
+        filedict = dict( ( fn, 0 ) for fn, _ in filelist )
         for  tune in newtunelib.values():
             await asyncio.sleep_ms(1)
             # Add missing columns
@@ -206,41 +212,47 @@ class TuneManager:
                 tune.append("")
 
             # Check if file in tunelib is not in flash:
-            if tune[TLCOL_FILENAME] not in filelist:
-                self.tunelib_progress += f"{tune[TLCOL_FILENAME]} in tunelib but found not in flash tunelib folder<br>"
+            if tune[TLCOL_FILENAME] not in filedict:
+                self.tunelib_progress += f"{tune[TLCOL_FILENAME]} in tunelib but found not in flash tunelib folder, deleting entry<br>"
                 self.logger.info(
                     f"{tune[TLCOL_FILENAME]} not found in tunelib folder"
                 )
-                if not tune[TLCOL_TITLE].startswith(NOT_FOUND_MARK):
-                    tune[TLCOL_TITLE] = NOT_FOUND_MARK + tune[TLCOL_TITLE]
-                    tune[TLCOL_AUTOPLAY] = False
-                    changed = True
+                # delete tunelib entry
+                del newtunelib[tune[TLCOL_ID]]
+                changed = True
 
         await asyncio.sleep_ms(10)
         self.tunelib_progress += "Synchronizing lyrics<br>"
-        self._sync_lyrics( newtunelib )
+        changed = changed or self._sync_lyrics( newtunelib )
 
         if changed:
             self.tunelib_progress += "Writing new tunelib<br>"
             await asyncio.sleep_ms(10)
             self._write_tunelib_json(newtunelib)
+            self.tunelib_progress += "tunelib.json written<br>"
 
-        # Last element of tunelib_progress MUST be
+        # Last element of tunelib_progress MUST contain
         # ***end*** for javascript in browser to know
         # that process has ended
-        self.tunelib_progress += "tunelib.json written<br>"
+        
         self.tunelib_progress += "***end***<br>"
         self.sync_task = None
         del tunelib
+        del filelist
+        del filedict
         del newtunelib
+
+        # Sync'ing is done, delete file that may have triggered the sync
+        if fileops.file_exists( self.sync_tunelib_file ):
+            os.remove( self.sync_tunelib_file )
 
     def sync_progress(self):
         self.logger.debug(f"Progress {self.tunelib_progress}")
         return self.tunelib_progress
     
     def _compute_hash(self, s):
-        # Each tune has a immutable hash derived from the filename
-        # This is the tuneid. By design it is unique (see _make_unique_hash)
+        # Each tune has a unique hash derived from the filename
+        # This is the tuneid. By design it is made unique (see _make_unique_hash)
         # and stable.
         digest = hashlib.sha256(s.encode()).digest()
         folded_digest = bytearray(6)
@@ -248,14 +260,15 @@ class TuneManager:
         for n in digest:
             folded_digest[i] ^= n
             i = (i + 1) % len(folded_digest)
-        hash = ubinascii.b2a_base64(folded_digest).decode()
+        hash = binascii.b2a_base64(folded_digest).decode()
         # Make result compatible with URL encoding
         return hash.replace("\n", "").replace("+", "-").replace("/", "_")
 
     def _make_unique_hash(self, fn, newtunelib):
-        # Make a collision-less hash for each file
-
+        # Make a collision-less hash for each file. The probability
+        # of collisions is nil after a few iterations.
         for _ in range(3):
+            # For historical reasons the key starts with "i"
             key = "i" + self._compute_hash(fn)
             tune = newtunelib.get(key, None)
             if not tune or tune[TLCOL_FILENAME] == fn:
@@ -274,6 +287,7 @@ class TuneManager:
             newfilename = self.tunelib_folder + newfn
             os.rename(filename, newfilename)
             fn = newfn
+            # Now hash function should be one-to-one, no collisions
         return key, fn
 
     def _write_tunelib_json(self, tunelib):
@@ -289,17 +303,13 @@ class TuneManager:
         # update["tuneid.fieldname"] is a changed field coming from javascript
         # field names are translated with HEADERLIST to column numbers
         for k, v in update.items():
-            print(f"save {k=} {v=}")
 
             tuneid, field = k.split(".")
             tune = tunelib[tuneid]
-            if field != "clear":
-                index = HEADERLIST.index(field)
+            index = HEADERLIST.index(field)
+            # Don't allow to change key fields
+            if index != TLCOL_FILENAME and index != TLCOL_ID and index < TLCOL_COLUMNS:
                 tune[index] = v
-            else:
-                # clear checkbox means clear info from tunelib
-                if v:
-                    del tunelib[tuneid]
 
         self._write_tunelib_json(tunelib)
         del tunelib
@@ -321,24 +331,39 @@ class TuneManager:
         del tunelib
 
     def save_lyrics( self, tuneid, new_lyrics ):
-        all_lyrics = fileops.read_json( self.lyrics_json )
+        all_lyrics = fileops.read_json( self.lyrics_json,
+                                        default=[],
+                                        recreate=True )
         all_lyrics[tuneid] = new_lyrics
-        fileops.write_json( all_lyrics, self.lyrics_json )
+        fileops.write_json( all_lyrics, self.lyrics_json, keep_backup=True )
         # No need for get_lyrics function since
         # javascript can get the complete lyrics.json 
         # file and cache it.
 
     def _sync_lyrics( self, newtunelib ):
         # Delete all lyrics where the tune has been deleted
-        all_lyrics = fileops.read_json( self.lyrics_json )
+        all_lyrics = fileops.read_json( self.lyrics_json,
+                                        default=[],
+                                        recreate=True )
         changed = False
         for tuneid in all_lyrics.keys():
             if tuneid not in newtunelib:
                 del all_lyrics[tuneid]
                 changed = True
+
+        # Set the "lyrics" indicator
+        tunelib_changed = False
+        for tuneid, tune in newtunelib.items():
+            t = tuneid in all_lyrics
+            if tune[TLCOL_LYRICS] != t:
+                tune[TLCOL_LYRICS] = t
+                tunelib_changed = True
+
         if changed:
             fileops.write_json( all_lyrics, self.lyrics_json )
 
+        return tunelib_changed
+    
     def add_one_to_history( self, tuneid ):
         tunelib = self._read_tunelib()
         tune = tunelib[tuneid]
@@ -348,4 +373,16 @@ class TuneManager:
             tune[TLCOL_HISTORY] += 1
         self._write_tunelib_json( tunelib )
 
-tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON, config.LYRICS_JSON )
+    def remember_to_sync_tunelib( self ):
+        # Remember that something in the tunelib folder has changed
+        # and that sync must be run
+        # This is not necessary for changes done in tunelibedit.html
+        # since the save button on this form saves changes.
+        # This is however necessary for:
+        #   delete button on each row of tunelibedit.html
+        #   upload of files with the filemanager to tunelib folder
+        #   deleting files with the filemanager in the tunelib folder
+        open( self.sync_tunelib_file, "w").close()
+        # If file exists, sync must be done
+
+tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON, config.LYRICS_JSON, config.SYNC_TUNELIB )

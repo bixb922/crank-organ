@@ -9,198 +9,59 @@
 
 # Also included: some functions to get note names, frequency, cents
 
-from collections import OrderedDict
-from math import log
 
+from math import log
+from machine import Pin
+import asyncio
+import array
+import time
+
+from config import config
+import fileops
 
 # Some useful functions related to MIDI
 _NOTE_LIST = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 
+# Define the MIDI channel number for Drums (set by GM standard)
+DRUM_CHANNEL = 9 # MIDI channel 10 (physical=9)
 
-# def frequency_to_midi( freq, all_valid_midis ):
-#    from pinout import midinotes
-#    # Find which organ note corresponds to this frequency
-#    for midi in midinotes.all_valid_midis:
-#        f = midi_to_frequency( midi )
-#        if f*2**(0.5/12) < freq <= f*2**(1.5/12):
-#            return midi
-#    return None
-
+# Definitions for NoteDef
 DRUM_PROGRAM = 129
-WILDCARD_PROGRAM = 0
-
-GM_PROGRAM = [
-    "",
-    "Acoustic Grand Piano",
-    "Bright Acoustic Piano",
-    "Electric Grand Piano",
-    "Honky-tonk Piano",
-    "Electric Piano 1",
-    "Electric Piano 2",
-    "Harpsichord",
-    "Clavi",
-    "Celesta",
-    "Glockenspiel",
-    "Music Box",
-    "Vibraphone",
-    "Marimba",
-    "Xylophone",
-    "Tubular Bells",
-    "Dulcimer",
-    "Drawbar Organ",
-    "Percussive Organ",
-    "Rock Organ",
-    "Church Organ",
-    "Reed Organ",
-    "Accordion",
-    "Harmonica",
-    "Tango Accordion",
-    "Acoustic Guitar (nylon)",
-    "Acoustic Guitar (steel)",
-    "Electric Guitar (jazz)",
-    "Electric Guitar (clean)",
-    "Electric Guitar (muted)",
-    "Overdriven Guitar",
-    "Distortion Guitar",
-    "Guitar Harmonics",
-    "Acoustic Bass",
-    "Electric Bass (finger)",
-    "Electric Bass (pick)",
-    "Fretless Bass",
-    "Slap Bass 1",
-    "Slap Bass 2",
-    "Synth Bass 1",
-    "Synth Bass 2",
-    "Violin",
-    "Viola",
-    "Cello",
-    "Contrabass",
-    "Tremolo Strings",
-    "Pizzicato Strings",
-    "Orchestral Harp",
-    "Timpani",
-    "String Ensemble 1",
-    "String Ensemble 2",
-    "Synth Strings 1",
-    "Synth Strings 2",
-    "Choir Aahs",
-    "Voice Oohs",
-    "Synth Voice",
-    "Orchestra Hit",
-    "Trumpet",
-    "Trombone",
-    "Tuba",
-    "Muted Trumpet",
-    "French Horn",
-    "Brass Section",
-    "Synth Brass 1",
-    "Synth Brass 2",
-    "Soprano Sax",
-    "Alto Sax",
-    "Tenor Sax",
-    "Baritone Sax",
-    "Oboe",
-    "English Horn",
-    "Bassoon",
-    "Clarinet",
-    "Piccolo",
-    "Flute",
-    "Recorder",
-    "Pan Flute",
-    "Blown bottle",
-    "Shakuhachi",
-    "Whistle",
-    "Ocarina",
-    "Lead 1 (square",
-    "Lead 2 (sawtooth)",
-    "Lead 3 (calliope)",
-    "Lead 4 (chiff)",
-    "Lead 5 (charang)",
-    "Lead 6 (voice)",
-    "Lead 7 (fifths)",
-    "Lead 8 (bass + lead)",
-    "Pad 1 (new age)",
-    "Pad 2 (warm)",
-    "Pad 3 (polysynth)",
-    "Pad 4 (choir)",
-    "Pad 5 (bowed)",
-    "Pad 6 (metallic)",
-    "Pad 7 (halo)",
-    "Pad 8 (sweep)",
-    "FX 1 (rain)",
-    "FX 2 (soundtrack)",
-    "FX 3 (crystal=",
-    "FX 4 (atmosphere)",
-    "FX 5 (brightness)",
-    "FX 6 (goblins)",
-    "FX 7 (echoes)",
-    "FX 8 (sci-fi)",
-    "Sitar",
-    "Banjo",
-    "Shamisen",
-    "Koto",
-    "Kalimba",
-    "Bag pipe",
-    "Fiddle",
-    "Shanai",
-    "Tinkle Bell",
-    "Agogô",
-    "Steel Drums",
-    "Woodblock",
-    "Taiko Drum",
-    "Melodic Tom",
-    "Synth Drum",
-    "Reverse Cymbal",
-    "Guitar Fret Noise",
-    "Breath Noise",
-    "Seashore",
-    "Bird Tweet",
-    "Telephone Ring",
-    "Helicopter",
-    "Applause",
-    "Gunshot",
-    "drum",
-]
+WILDCARD_PROGRAM = 0 # Must be zero, see basic_note_on/basic_note_off
 
 
-class Note:
-    def __init__(self, instrument=None, midi_number=None, byhash=None):
+class NoteDef:
+    # Note definition: this class is used to store note definitions
+    # done on the pinout.html page and parsed by pinout.py.
+    # MIDI notes that are retrieved from MIDI files  are never instantiated as NoteDef.
+    def __init__(self, program_number, midi_number):
         # Instrument can be:
         #   program number 1-128 (not 0-127!!!!)
-        #   129 for drum channel 10
-        #   0 or "" = wildcard to match any MIDI program number but not DRUM_PROGRAM, since the
-        # percussion channel has to make exact match.
-        # If created byhash=, then byhash is the hash of a midi.Note
-        # and __init__ computes midi_number and instrument with this input
-        if byhash is not None:
-            self.midi_number = byhash % 256
-            self.instrument = byhash // 256
-            self.hash = byhash
-        else:
-            self.instrument = instrument
-            self.midi_number = midi_number
-            blank = ("", " ", "  ", "\xa0")
-
-            if self.instrument in blank:
-                self.instrument = WILDCARD_PROGRAM
-            if self.midi_number in blank:
-                self.midi_number = 0
-            # Note(0,0) or Note("","") does not exist
-            # and evaluates as False
-            self.hash = self.instrument * 256 + self.midi_number
-
-    def __hash__(self):
-        return self.hash
+        #   DRUM_PROGRAM (129) for drum channel 10
+        #   WILDCARD_PROGRAM (0) any MIDI program number from 1-128
+        # If program_number is None, then it means: WILDCARD_PROGRAM
+        # If midi_number is None, then this note is undefined (this
+        # happens only if midi number field is left blank on the user interface)
+        # If program_number is None, set to WILDCARD_PROGRAM
+        self.program_number = program_number or WILDCARD_PROGRAM
+        self.midi_number = midi_number
+        # self.program_number and self.midi_number are accessed as if
+        # they were properties, no @property (it's faster, less code)
 
     def __str__(self):
-        if self.instrument == WILDCARD_PROGRAM:
-            instr = "*"
+        if self.midi_number is None:
+            return ""
+        
+        if self.program_number == WILDCARD_PROGRAM:
+            instr = ""
+        elif self.program_number == DRUM_PROGRAM:
+            instr = f"Dr{self.program_number}-"
         else:
-            instr = f"{GM_PROGRAM[self.instrument]}({self.instrument})-"
+            # instr = f"{GM_PROGRAM[self.program_number]}({self.program_number})-"
+            instr = f"P{self.program_number}-"
 
-        note_name = f"{self.note_name()}({self.midi_number})"
-        return f"{instr}{note_name}"
-
+        return f"{instr}{self.note_name()}({self.midi_number})"
+    
     def __repr__(self):
         return str(self)
 
@@ -213,174 +74,281 @@ class Note:
         return 1200 * log(measured_freq / self.frequency()) / log(2)
 
     def note_name(self):
-        if self.instrument == DRUM_PROGRAM:
-            return f"drum.{self.midi_number}"
+        if not self.is_valid():
+            return ""
+        if self.program_number == DRUM_PROGRAM:
+            return str(self.midi_number)
         return _NOTE_LIST[self.midi_number % 12] + str((self.midi_number // 12) - 1)
 
-    def __eq__(self, other):
-        if not isinstance(other,Note):
-            return False
-        # Same hash means same value:
-        if self.hash == other.hash:
-            return True
-        # Now test for match with wildcard program name
-        # Drum program does never match wildcard
-        if self.instrument == DRUM_PROGRAM or other.instrument == DRUM_PROGRAM:
-            return False
-        # This is the wildcard match, needs to match
-        # only midi note, not program number
-        if not self.instrument:
-            return self.midi_number == other.midi_number
-        return False
+    def is_valid( self ):
+        return self.midi_number is not None
+    
+    def is_correct( self ):
+        correct = True
+        if self.midi_number is not None:
+            correct = correct and 0 <= self.midi_number <= 127
+        if self.program_number is not None:
+            correct = correct and WILDCARD_PROGRAM <= self.program_number <= DRUM_PROGRAM
+        return correct
+    
+class Register:
+    def __init__( self, name ):
+        self.name = name
+        self.pin = None # or a machine.Pin object
+        self.current_value = 0
+        if not name:
+            # The only software register to start on
+            # is the "always on" default register
+            # or set_initial_value
+            self.current_value = 1
 
-    def __bool__(self):
-        # Return false for a undefined note
-        return bool(self.midi_number)
+    def set_gpio_pin( self, gpio_number ):
+        # Update gpio pin only of not defined already
+        # This allows some flexibility in the order of 
+        # the definition.
+        # if name is "", no gpio should be defined
+        if self.name == "" and gpio_number:
+            raise ValueError
+        # First gpio defined for a register is the valid one
+        if gpio_number:
+            self.pin = Pin( gpio_number, Pin.IN, Pin.PULL_DOWN )
+            self.register_task = asyncio.create_task( self._register_process())
+        # If no gpio_number supplied, don't change anything.
+
+    def set_initial_value( self, initial_value ):
+        self.current_value = initial_value
+
+    def value( self ):
+        return self.current_value
+    
+    async def _register_process( self ):
+        last_value = self.pin.value()
+        while True:
+            # Poll frequently, but not too frequently,
+            # to have good response time but a stable value
+            # 100 ms is well within fast response time perception
+            # but should give enough time for debouncing.
+            await asyncio.sleep_ms(200)
+            pv = self.pin.value()
+            if pv != last_value:
+                # Change seen on hardware switch,
+                # record current value
+                self.current_value = pv
+                # However, web interface can change this again via
+                # toggle() function below
+                last_value = pv
+
+    def toggle( self ):
+        # Change 1 to 0 and 0 to 1, called from web interface
+        # via /register_toggle to change the current value
+        # It can then be set via GPIO and it's hardware switch
+        self.current_value = 1 - self.current_value
 
 
-class MIDIdict():
+
+class RegisterBank:
+    # Register class factory, also holds all defined Register objects
     def __init__( self ):
-        self.mididict = OrderedDict()
-        
-    def __setitem__(self,key,value):
-        self.mididict[key] = value
-        
+        self.register_dict = {}
 
-    def __getitem__(self,instrument_note):
-        # First check for exact match
-        if instrument_note in self.mididict:
-            return self.mididict[instrument_note]
-        # drum program notes cannot be matched with wildcard match
-        if instrument_note.instrument == DRUM_PROGRAM:
-            raise KeyError
-        # Now check for wildcard match, i.e. midi program 0 
-        return self.mididict[Note(WILDCARD_PROGRAM,instrument_note.midi_number)]
-            
-    def __contains__( self, instrument_note ):
-        # Could use __get_item__ but better not raise/trap exception here
-        if instrument_note in self.mididict:
-            return True
-        if instrument_note.instrument == DRUM_PROGRAM:
-            return False
-        return Note(WILDCARD_PROGRAM, instrument_note.midi_number) in self.mididict
+    def factory( self, name ):
+        reg = self.register_dict.get( name, None )
+        if not reg:
+            reg = Register( name )
+            self.register_dict[name] = reg
+        return reg
     
-    def values( self ):
-        return self.mididict.values()
+    def complement_progress( self, progress ):
+        # Return all register names and values (for UI)
+        progress["registers"] = [ 
+            (r.name, r.value()) 
+            for r in self.register_dict.values() if r.name]
+        return progress
     
-    def keys( self ):
-        return self.mididict.keys()
+    def get_register( self, name ):
+        return self.register_dict[name]
     
-    def items( self ):
-        return self.mididict.items()
+class Controller:
+    def __init__( self ):
+
+        # solenoids driver object is defined later by set_solenoid_driver()
+        self.solenoids = None 
+
+        # The key of the note dictionary is self.make_notedict_key()
+        # The contents at this key is the list of solenoid pins/registers
+        # for this note number
+        self.notedict = {}
+
+    def make_notedict_key( self, program_number, midi_number ):
+        # assert WILDCARD_PROGRAM <= program_number <= DRUM_PROGRAM
+        # assert 0 <= midi_number <= 127
+        return program_number*256 + midi_number
     
-    def get(self, instrument_note, default=None ):
-        if self.__contains__(instrument_note):
-            return self.__getitem__(instrument_note)
-        return default
+    def get_actions( self, program_number, midi_number ):
+        # Use program number in the key. If this does not work,
+        # use WILDCARD_PROGRAM. If that doesn't work either,
+        # return a empty list (no note will sound) 
+        return self.notedict.get( self.make_notedict_key( program_number,  midi_number), 
+               self.notedict.get( self.make_notedict_key(WILDCARD_PROGRAM, midi_number), []))
     
-#if __name__ == "__main__":
-#
-#    d = MIDIdict()
-#
-#    i0150 = Note( 1,50 )
-#    idd50 = Note( DRUM_PROGRAM,50 )
-#    i9950 = Note( 99, 50 )
-#    i9977 = Note( 99, 77 )
-#
-#    print(f"i0150 {i0150}")
-#    print(f"idd50 {idd50}")
-#    print(f"i9950 {i9950}")
-#    print(f"i9977 {i9977}")
-#
-#
-#    d[i0150] = "i0150"
-#    assert i9950 not in d
-#    #print(i0150.hash)
-#    #print(d[i0150.hash])
-#    #1/0
-#
-#    assert idd50 not in d
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 not in d
-#    assert i9950 not in d
-#    assert i9977 not in d
-#
-#    d[i0150] = "i0150"
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 not in d
-#    assert i9950 not in d
-#    assert i9977 not in d
-#
-#    d[idd50] = "idd50"
-#    assert i9950 not in d
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 in d
-#    assert d[idd50] == "idd50"
-#    assert i9950 not in d
-#    assert i9977 not in d
-#
-#    d[i9950] = "i9950"
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 in d
-#    assert d[idd50] == "idd50"
-#    assert i9950 in d
-#    assert d[i9950] == "i9950"
-#    assert i9977 not in d
-#
-#    d[i9977] = "i9977"
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 in d
-#    assert d[idd50] == "idd50"
-#    assert i9950 in d
-#    assert d[i9950] == "i9950"
-#    assert i9977 in d
-#    assert d[i9977] == "i9977"
-#
-#    assert Note(1,50) in d
-#    assert d[Note(1,50)] == "i0150"
-#    assert Note(DRUM_PROGRAM,50) in d
-#    assert d[Note(DRUM_PROGRAM,50)] == "idd50"
-#    assert Note(99,50) in d
-#    assert d[Note(99,50)] == "i9950"
-#    assert Note(99,77) in d
-#    assert d[Note(99,77)] == "i9977"
-#
-#    d[Note("",50)] = "wildcard 50"
-#    assert i0150 in d
-#    assert d[i0150] == "i0150"
-#    assert idd50 in d
-#    assert d[idd50] == "idd50"
-#    assert i9950 in d
-#    assert d[i9950] == "i9950"
-#    assert i9977 in d
-#    assert d[i9977] == "i9977"
-#    assert Note("",50) in d
-#    assert d[Note("",50)] == "wildcard 50"
-#    d[Note("",44)] = "wildcard 44"
-#    assert Note(10,44) in d
-#    assert d[Note(10,44)] == "wildcard 44"
-#    assert Note(DRUM_PROGRAM,44) not in d
-#
-#    assert Note("",50) in d
-#    assert d[Note("",50)] == "wildcard 50"
-#    assert Note(0,50) in d
-#    assert d[Note(0,50)] == "wildcard 50"
-#    assert Note(0,50) == Note("",50)
-#
-#
-#    h = Note("",50).hash
-#    nn = Note(byhash=h)
-#    assert nn.midi_number == 50
-#    assert nn.instrument == 0
-#
-#    assert nn in d
-#    assert d[nn] == "wildcard 50"
-#
-#    h = Note(10,50).hash
-#    assert Note(byhash=h) == Note(10,50)
-#    print("end of test")
+    def set_solenoid_driver( self, solenoids ):
+        self.solenoids = solenoids
+    
+    def define_start( self ):
+        self.notedict = {}
+
+    def define_note( self, note, solepin, register_name="" ):
+        register = registers.factory( register_name )
+        program_number = note.program_number
+        midi_number = note.midi_number
+        # Add to a list of notes to sound for each note.        
+        actions = self.notedict.setdefault(self.make_notedict_key(program_number, midi_number), [] )
+        actions.append( ( solepin, register, note ) )
+
+    def define_complete( self ):
+        # Solenoid definitions have now been just parsed.
+        # Drums are not controlled by a register, use "always on" register.
+        register = registers.factory( "" )
+        # Add simulated drum notes if no drums defined via the pinout.html page
+        # There is a recursion of one level here: the simulated drum notes
+        # in turn are composed again of midi notes.
+        for drum in SimulatedDrums( self.solenoids ):
+            key = self.make_notedict_key(DRUM_PROGRAM, drum.midi_number )
+            # Check if there is already a drum defined via pinout page
+            # If not, define drum pointing to the simulated drum
+            self.notedict.setdefault( key, [( drum, register, drum.midi_note )] )
+        return
+    
+    def note_on( self, program_number, midi_number ):
+        # assert WILDCARD_PROGRAM<=program_number <=DRUM_PROGRAM
+        # assert 0<=midi_number<= 127 
+        # Get list of actions (i.e. Solepin objects subject to registers) 
+        # to activate for this midi note
+        actions = self.get_actions( program_number, midi_number )
+        for solepin, register, _ in actions:
+            if register.value():
+                solepin.on()
+        # Return truish to caller if a note was played
+        return actions           
+
+    def note_off( self, program_number, midi_number ):
+        # assert 1<=program_number <=128 
+        # assert 0<=midi_number<= 127
+        # Get list of solenoid pins to turn off for this midi note
+        actions = self.get_actions( program_number, midi_number )
+        for p in actions:
+            # p[0] is the solepin/drum object, p[1] the register (not needed here), p[2] the NoteDef
+            p[0].off()
+
+    def all_notes_off( self ):
+        # Proxy to solenoids.all_notes_off(). 
+        # Turn off all pins, this is better
+        # than turning off all midi notes.
+        self.solenoids.all_notes_off()
+
+    def reinit( self ):
+        # Called to reinitialize controller when pinout.html informs
+        # that the pinout has to be saved/changed.
+        global controller, registers
+        controller = Controller()
+        registers = RegisterBank()
+
+    def get_notedict(self):
+        # Used by webserver to list pinout
+        return self.notedict
+
+class SimulatedDrums:
+    def __init__( self, solenoids ):
+        temp_def = fileops.read_json( config.DRUMDEF_JSON, default={})
+        # Need the midi numbers used as key be an int
+        self.drum_def = dict( 
+            (int(midi_number), dd) 
+            for midi_number,dd in temp_def.items() )
+
+        # Store the solenoid driver to be called directly for drum activation
+        self.solenoids = solenoids
+
+    # Provide iterator for all defined drums
+    def __iter__( self ):
+        self.iter_drums = iter(self.drum_def.items())
+        return self
+    
+    def __next__( self ):
+        # Return a new Drum() object for each iteration
+        midi_number, dd = next( self.iter_drums )
+        return Drum( midi_number, dd, self.solenoids )
+
+    
+class Drum:
+    # Must have same interface as solenoids.Solepin() except __init__
+    def __init__( self, midi_number, drumdef, solenoids ):
+        # Same attributes as Solepin()
+        self.name = drumdef["name"]
+        self.rank = "Simulated drum"
+        self.pin_function = lambda _: None # Null function
+        self.midi_note = NoteDef( DRUM_PROGRAM, midi_number )
+        self.midi_number = midi_number
+        self.on_time = -1
+
+        # Store duration, solenoid driver, and the cluster of valves
+        # to activate if a Simulated Drum note is played
+        self.duration = drumdef["duration"]*1000
+        self.strong_added =  (drumdef["strong_duration"] -  drumdef["duration"])*1000
+        self.solenoids = solenoids
+        self.midi_solepins = set() # of solepins
+        for midi_number in drumdef["midi_list"]:
+            actions = controller.get_actions( WILDCARD_PROGRAM, midi_number )
+            if actions:
+                # Add solepin of this midi number to cluster
+                # actions[0] is the first definition for this midi_number
+                # actions[0] is the solepin for the first midi number
+                self.midi_solepins.add( actions[0][0] )
+        self.strong_midi_solepins = set()
+        for midi_number in drumdef["strong_midis"]:
+            actions = controller.get_actions( WILDCARD_PROGRAM, midi_number )
+            if actions:
+                self.strong_midi_solepins.add( actions[0][0] )
+
+
+
+    # Important restriction: cannot play two drum notes simultaneusly
+    #> They will play one after the other
+    def on( self ):
+        # Simulate a drum note without disturbing other notes that may be on
+        sole_on = self.solenoids.solepins_that_are_on()
+        solepin_list = self.midi_solepins - sole_on
+        strong_solepin_list = self.strong_midi_solepins - sole_on
+        # Sound all notes in the cluster
+        for solepin in strong_solepin_list:
+            solepin.on()
+        for solepin in solepin_list:
+            solepin.on()
+        # Wait here to get the time right.
+        # This time is short (durtion should be <= 50 milliseconds)
+        # Don't use asyncio.sleep_ms because time will be not
+        # controllable and the time is really too short to do other stuff. 
+        # Duration of the drum note is the highest priority here.
+
+        time.sleep_us( self.duration )
+        for solepin in solepin_list:
+            solepin.off()
+        # Wait a bit to turn of stronger (accented) notes
+        time.sleep_us( self.strong_added )
+        for solepin in strong_solepin_list:
+            solepin.off()
+
+
+    def off( self ):
+        # Drum note has already been turned off in on() function
+        return
+    
+    def is_on( self ):
+        # Never seen "on"
+        return False
+ 
+    def get_rank_name( self ):
+        return self.name + " " + self.rank
+    
+
+controller = Controller()
+registers = RegisterBank()
