@@ -1,5 +1,5 @@
 # /20_note_Carl_Frei.json size=910, compressed level=9 wbits=10 compressed size=264
-_f3 = const(
+_f4 = const(
   b'(\xcf}\xd2Kk\x840\x10\x00\xe0\xfb\xc2\xfe\x87\xc1'\
   b'\xf3">\xa2\xc6s\xa1\xa5\xa7\xf6\xbe\xec!\x8d\xa1\x06'\
   b'b&\xa8\x85\xee\xbfo\x82#\xec\x82\x1d/\x81\xf1\x9b'\
@@ -99,7 +99,7 @@ _f2 = const(
   b'\xe7B\xbcP\x87\xf3/\xfe\xb1\xa9o'\
   b'')
 # /48_note_custom.json size=4033, compressed level=9 wbits=10 compressed size=695
-_f6 = const(
+_f7 = const(
   b'(\xcf\x95\x92\xcdn\xdb0\x10\x84\xefy\n\xc3\xe7\xa0'\
   b' )\xf1\xef\x9a>@s\x0frPh"\x11`\x99'\
   b'\x82e\x17\xed\xdbW\xaa\x866%\x93\x14c@0\xb4'\
@@ -145,8 +145,30 @@ _f6 = const(
   b'p4\x9e6\x01.\xf5\x1a\xcf\x9a\xd4E;\xe0\x0f\xd4'\
   b'\xd3\xfb?7\xe5\xdc\xbb'\
   b'')
+# /64_note_midi_over_serial.json size=2645, compressed level=9 wbits=10 compressed size=299
+_f3 = const(
+  b'(\xcf\x8d\xd2\xc1\x8a\x830\x14@\xd1}\xbf"\xb8\x96'\
+  b'!Q\xf3\x12\xf7\xddt1_P\xba\x10\r\x18h\x8d'\
+  b'\xa83\xcc\xe7Oj\x1d\x98]\xaf \xc8\xf3\xa8\xf0\xae'\
+  b'\xd7\xd3\xb5\x18\xc2\xda/q\xdeb\x9a\x8aR\x15\xd2\xa8'\
+  b')maU\x9f\x97\xf3E\xa5\xef\xb0\xa85,\xb1\xbb'\
+  b"\x17\xb72\xeb)\xa49\xfe\x84{\xa6\x8d\xdf'\x8f\xd8"\
+  b'/i\x1e\xd3\x14\x9e\x8f\xbf\xd4\xd6\xf5cz\x84-,'\
+  b'\xfff\xe9\xab\x1f\xe7n\xc8\x13\x9b\x07*\x1fyz\xbc'\
+  b'\xbbT\xca\x94\xca\xe8Riu\xdc\xfc\xbb\xf7\xf1\x88C'\
+  b'\xdc_\xf3:\xf3w\x9f\x17\xefY\x8b\x98\xd5\x8c\x19\xc6'\
+  b'*\xc6j\xc6\x1a\xc6,c\xc2\x98c\x8cU\xb0\xac\x82'\
+  b'\xb0\n\xc2*\x08\xab \xac\x82\xb0\n\xc2*\x08\xab '\
+  b'\xac\x82\xb0\n\xc2*8V\xc1\xb1\n\x8eUp{\x85'\
+  b'\xb7\xaaA\xca"%H9\xa4<R-Q^#e'\
+  b'\x90\xaa\x90B\xbb\xf7h\xf7\x1e\xed\xde\xa3\xdd{\xb4{'\
+  b'\xef\xd1\x0f\xe6[\xc4Z\xcd\x98a\xacb\xacf\xaca'\
+  b'\xcc2&\x8c9\xc6X\x85\x96U0ZCg\xa0\xab'\
+  b'\xa0\xab\xa1k\xa0\xb3\xd0\tt\x0e:\x0f\x1d\xeca`'\
+  b'\x0fs\xf48\xdd~\x01\xa2MV\xa0'\
+  b'')
 # /drumdef.json size=797, compressed level=9 wbits=10 compressed size=266
-_f7 = const(
+_f8 = const(
   b'(\xcf\xad\xd2\xcfk\x830\x14\x07\xf0{\xff\x8aG\xce'\
   b'o`\xd4\x97\xd8B\x0e\xb5\x16V\xd8n\xbbI\x11\x8b'\
   b'\xd2\x05\xaaBM\xbbC\xf1\x7f_\xf6C\x1a\xdd\xd6z'\
@@ -166,29 +188,30 @@ _f7 = const(
   b'P\xe6\xdd\xac{\x07\xcf\x12\xc4\xf6'\
   b'')
 # /pinout.txt size=27
-_f5 = const(
+_f6 = const(
   b'data/20_note_Car'\
   b'l_Frei.json'\
   b'')
 # /tunelib.json size=3
-_f4 = const(
+_f5 = const(
   b'{}\n'\
   b'')
-direntries = const(( ( '/20_note_Carl_Frei.json',  ( _f3, True, 910 ) ),
+direntries = const(( ( '/20_note_Carl_Frei.json',  ( _f4, True, 910 ) ),
  ( '/26_note_Alderman_Wright.json',  ( _f1, True, 1713 ) ),
  ( '/31_note_Raffin.json',  ( _f0, True, 1716 ) ),
  ( '/35_note_custom.json',  ( _f2, True, 1661 ) ),
- ( '/48_note_custom.json',  ( _f6, True, 4033 ) ),
- ( '/drumdef.json',  ( _f7, True, 797 ) ),
- ( '/pinout.txt',  ( _f5, False, 27 ) ),
- ( '/tunelib.json',  ( _f4, False, 3 ) ),
+ ( '/48_note_custom.json',  ( _f7, True, 4033 ) ),
+ ( '/64_note_midi_over_serial.json',  ( _f3, True, 2645 ) ),
+ ( '/drumdef.json',  ( _f8, True, 797 ) ),
+ ( '/pinout.txt',  ( _f6, False, 27 ) ),
+ ( '/tunelib.json',  ( _f5, False, 3 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2024/10/09 16:05:44' )
+date_frozen = const( '2024/10/30 00:48:18' )
 
-sum_size = const(10860)
-files_folders = const(8)
+sum_size = const(13505)
+files_folders = const(9)
 import os
 import errno
 import sys

@@ -2,17 +2,15 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-# >>> revoke credentials on boot?
 
 import os
 import sys
 import gc
 import asyncio
 import time
-import binascii
+from random import getrandbits
 
-
-from microdot import Microdot, send_file, redirect, Request, urldecode_bytes
+from microdot import Microdot, send_file, redirect, Request, Response, urldecode_bytes
 # This is for filemanager, maximum file size to upload
 Request.max_content_length = 1_000_000
 Request.max_body_length = 1_000_000
@@ -46,6 +44,14 @@ _logger = getLogger(__name__)
 DATA_FOLDER = "data/"
 STATIC_FOLDER = "software/static/"
 
+boot_session_id = hex(getrandbits(24))[2:]
+
+# Session is a dict, key=session_id, session data is a dict, for example {"login":True}
+sessions = {}
+def get_session( request ):
+    # Must use try/catch to get the cases where there is no session
+    # This can happen with the first http request after a reboot.
+    return sessions[request.cookies["session"]]
 
 USE_CACHE = True  # will be set by run_webserver() to value in config.json
 MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
@@ -57,31 +63,36 @@ def func_before_req( request ):
     request.g.t0 = time.ticks_ms()
 
 
-# Information active clients
-# key=client IP, data=time.ticks_ms()) of last activity
-# Updated in each request
-client_activity = {}
-
 @app.after_request
 def func_after_req( request, response ):
-    client_activity[request.client_addr[0]] = time.ticks_ms()
+    try:
+        this_session = get_session( request )
+    except KeyError:
+        # No cookie - must send cookie and add new session
+        # 24+24=48 bits = 12 bytes hexa
+        session_id = hex(getrandbits(24))[2:]+hex(getrandbits(24))[2:]
+        response.set_cookie("session", session_id, path="/" )
+        # If password_required, then login starts as False
+        # If not password_required, then login will be always True
+        this_session = {"login":not config.cfg["password_required"]}
+        sessions[session_id] = this_session
+    this_session["last_activity"] = time.ticks_ms()
+    this_session["ip"] = request.client_addr[0]
     dt = time.ticks_diff( time.ticks_ms(), request.g.t0 )
     _logger.debug(f"{request.method} {request.url} {response.status_code}, {dt} msec")
     return response
 
-
-
-
-def is_active(since_seconds=60):
+def is_active(since_msec=60_000):
     # This is used by poweroff.py
-    if client_activity:
-        # Return true if recent activity
-        return time.ticks_diff(
-            time.ticks_ms(), min(client_activity.values())) < since_seconds * 1000
-
+    # Return true if recent web activity
+    now = time.ticks_ms()
+    return any( 
+            s for s in sessions.values()
+            if time.ticks_diff(now, s["last_activity"]) <= since_msec
+            )
 
 def respond_ok():
-    # Absence of "error":False means "everything is ok"
+    # Absence of "error":True means "everything is ok"
     return {}
 
 def respond_error_alert( alert_message ):
@@ -91,45 +102,36 @@ def respond_error_alert( alert_message ):
     # Currently no way to show alert with "error":False.
     return { "error":True, "alert": alert_message }
 
-
-def check_authorization(request):
-    # Returns None if authenticated.
-    # Returns a microdot.Response tuple if authentication is needed
-    if not config.cfg["password_required"]:
-        return 
-    name = config.cfg["name"]
-
-    ask_for_password = ({}, 401, {"WWW-Authenticate": f'Basic realm="{name}"'})
-    # This will prompt a "basic authentication" dialog, asking for username/password
-    # on the browser side. In case of password error, the browser will retry on its own
-    # sending username/password in the Authorization header.
-    # @app.route, must have
-    # save_headers=["Content-Length","Content-Type","Authorization"])
-    auth = request.headers.get("Authorization", "")
-    if not auth:
-        # No authorization header present, responde with
-        # http 401 error "not authorized" to ask for password
-        return ask_for_password
-
-    # Authorization header expected to be "Basic xxxxxx", xxx is base64 of username/password
-    basic, userpass = auth.split(" ")
-    assert basic == "Basic", f"Basic authentication expected, got {basic}"
-    # base64 information is "user:password"
-    user, password = binascii.a2b_base64(userpass.encode()).decode().split(":")
-    if not password_manager.verify_password(password):
-        _logger.info("Web access not authorized: incorrect password")
-        return ask_for_password
-    # Authenticated
-    return
-
 # Define own (async) decorator to check authorization
 def authorize(func):
     async def wrapper(*args, **kwargs):
-        # args[0] is the request
-        if response := check_authorization(args[0]):
-            return response
-        return await func(*args, **kwargs)
+        try:
+            # args[0] is the request object
+            this_session = get_session( args[0] )
+        except KeyError:
+            this_session = {}
+        # No need to check config.cfg["password_required"] because
+        # that was checked when handing out the session cookie in after_request
+        if this_session.get("login"):
+            # Is login: authorized to call the function
+            return await func(*args, **kwargs)
+        # Not login: return 401 to force client to ask
+        # for password.
+        return "Password required", 401
     return wrapper
+
+   
+@app.post("/verify_password")
+def verify_password( request ):
+    # This is a "login" service: if password is correct
+    # them mark session as logged in.
+    # Logout is by rebooting the microcontroller.
+    password = request.json.get("password")
+    if password_manager.verify_password( password, request.cookies["session"] ):
+        get_session( request )["login"] = True
+        return respond_ok()
+    return respond_error_alert("Password incorrect")
+
 
 # Home page
 @app.route("/")
@@ -149,44 +151,38 @@ def static_files( request, path ):
         if "Chrome" not in ua and "Firefox" not in ua:
             # Could not make run Javascript's "await fetch" well in Safari.
             _logger.debug(f"Browser not supported {ua}")
-
             return "Safari not supported, use Chrome or Firefox"
 
     filename = STATIC_FOLDER + path
-    filename_zip = filename + ".gz"
     # Check first for uncompressed file. 
     # Could make it easier for development since
     # uploading a uncompressed file takes precedence.
-
     if fileops.file_exists(filename):
         return send_file(filename, max_age=MAX_AGE)
     
     # File not found, perhaps a compressed version exists?
     # In that case, add a header for the Content-type  according to file type
     # and a header for Content-Encoding = gzip
+    filename_zip = filename + ".gz"
     if fileops.file_exists( filename_zip ):
         # If .gz file, serve this compressed file 
         # instead of regular file
         # On Mac, compress with gzip, for example:
         # gzip -9 -c -k config.html > config.html.gz
         # See https://www.gzip.org/
-        # Content type depends on file type
+        # Content type depends on the original file type
         ct = filemanager.get_mime_type( filename )
         return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
     _logger.info(f"static_files {filename} not found")
     return "", 404
 
-   
-
 
 @app.route("/data/<filepath>")
 async def send_data_file(request, filepath):
-
     filename = DATA_FOLDER + filepath
     if not fileops.file_exists(filename):
         _logger.info(f"send_data_file {filename} not found")
         return "", 404
-
     return send_file(filename, max_age=0)
 
 @app.route("/get_description")
@@ -198,6 +194,8 @@ def get_description(request):
 def get_progress():
     # Gather progress from all sources
     # Also used by mcserver
+    # >>> should be player.complement_progress()
+    # >>> and start progress here 
     progress = player.get_progress()
     crank.complement_progress(progress)
     scheduler.complement_progress(progress)
@@ -212,7 +210,6 @@ async def process_get_progress(request, browser_boot_session):
     # But the javascript uses it to flush cache.
     # If browser_boot_session is different than progress["boot_session"]
     # then this is the first /get_progress after reboot.
-    # >>>Could be used to revoke credentials.
     return get_progress()
 
 
@@ -406,17 +403,18 @@ async def diag(request):
         midi_files = ""
 
     now = timezone.now_ymdhmsz()
+    tz = timezone.get_time_zone_info()
+    time_zone_info = f'{tz[2]}, {tz[1]}, offset={round(-tz[0]/60.0)} min'
 
-    reboot_mins = (
-        time.ticks_diff(time.ticks_ms(), config.boot_ticks_ms) / 1000 / 60
-    )
+    reboot_sec = round(time.ticks_diff(time.ticks_ms(), config.boot_ticks_ms) / 1000 )
     d = {
         "description": config.cfg["description"],
         "name": config.cfg["name"],
         "mp_version": os.uname().version,
         "mp_bin": sys.implementation._machine,
         "last_refresh": now,
-        "reboot_mins": reboot_mins,
+        "time_zone_info":  time_zone_info,
+        "reboot_mins": f"{reboot_sec//60}:{reboot_sec%60:02d}",
         "free_flash": vfs[0] * vfs[3],
         "used_flash": vfs[0] * (vfs[2] - vfs[3]),
         "free_ram": free_ram,
@@ -454,19 +452,24 @@ async def wifi_scan(request):
 
 @app.route("/get_wifi_status")
 async def get_wifi_status(request):
-
-    c = wifimanager.get_status()
-    # Add clientes with activities in the last 10 seconds
     now = time.ticks_ms()
+    def seconds_since_last( session ):
+        return round(time.ticks_diff( now, session["last_activity"] )/1000)
+    c = wifimanager.get_status()
+    # Add clientes with activities in the last minutes
     c["client_IPs"] = "".join(
-        [
-            ip + " "
-            for ip in client_activity
-            if time.ticks_diff(now, client_activity[ip]) < 30_000
-        ]
+        (
+            f'{s["ip"]}={seconds_since_last(s)}sec '
+            for s in sessions.values()
+        )
     )
     return c
 
+@app.post("/set_time_zone")
+async def update_time_zone(request):
+    timezone.set_time_zone( request.json )
+    return respond_ok()
+        
 
 # Play page web requests
 @app.route("/set_velocity_relative/<int:change>")
@@ -604,14 +607,10 @@ async def static_favicon(request):
     return send_file(STATIC_FOLDER + "favicon.png", max_age=MAX_AGE)
 
 
-@app.route("/revoke_credentials")
-async def revoke_credentials(request):
-    # >>> if return {}, 401 is uncommented, credentials will be revoked
-    # after authorizing. Should this configuration be parameter?
-    # I think it's too much hassle to authenticate for each
-    # operation, it's enough for the first, and then until reboot.
-    return {}, 401
-    _logger.debug("Revoking credentials disabled")
+# Not used
+@app.route("/logout")
+async def logout(request): 
+    get_session( request )["login"] = False
     return {}
 
 
@@ -775,7 +774,6 @@ def set_playback_enabled( request ):
 def catch_all(request, path):
     _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))
     return "", 404
-
 
 @app.errorhandler(RuntimeError)
 def runtime_error(request, exception):

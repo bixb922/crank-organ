@@ -4,14 +4,8 @@
 # Crank rotation speed sensor. Still in testing phase.
 import asyncio
 from time import ticks_ms, ticks_diff
-
 from machine import Pin
 
-if __name__ == "__main__":
-    # >>> for debug
-    import sys
-    sys.path.append("software/mpy")
-    
 from minilog import getLogger
 from pinout import gpio
 from config import config
@@ -33,57 +27,58 @@ HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec", 0.7) # grea
 NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
 
 
-import pcnt
 class TachoDriver:
-    def __init__(self,tachometer_pin, automatic_playback):
+    def __init__(self,tachometer_pin1, tachometer_pin2, automatic_playback):
         self.logger = getLogger(__name__)
         self.counter_task = None
         self.rpsec = 0
-        self.counter = None
-
-        if not tachometer_pin or automatic_playback:
-            self.logger.debug("Crank sensor not in configuration")
+        if not tachometer_pin1 or automatic_playback:
+            self.logger.debug("Crank sensor not configured")
             return
-        # >>> may be necessary to implement Encoder too
-        # >>> but needs a second pin.
-        # >>> check if Encoder needs filter_ns
-        self.counter = Counter( 0, 
-                               Pin( tachometer_pin, Pin.IN, Pin.PULL_UP ), 
-                               direction=Counter.UP,
-                               edge=Counter.RISING+Counter.FALLING,
-                               filter_ns=20_000)
-        self.counter_task = asyncio.create_task( self._sensor_process() )
+        
+        if tachometer_pin1 and not tachometer_pin2:
+            # One pin defined means: simple counter for crank
+            counter = Counter( 0, 
+                    Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
+                    direction=Counter.UP,
+                    edge=Counter.RISING+Counter.FALLING,
+                    filter_ns=20_000) # Highest filter value possible
+        else:
+            # Two pins defined means: rotary encoder for crank
+            counter = Encoder( 0,
+                    phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
+                    phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
+                    phases=1, # Can be 2 or 4 too, but not much advantage in this case.
+                    filter_ns=20_000) # Highest filter value possible
+            
+        self.counter_task = asyncio.create_task( self._sensor_process(counter) )
         self.logger.info("init ok")
 
-    async def _sensor_process( self ):
+    async def _sensor_process( self, counter ):
+        # Prime the loop
         last_time = ticks_ms()
-        last_pulse_count = self.counter.value()
-        
-        samples = []           
+        counter.value(0)
         while True:
-            await asyncio.sleep_ms(300)
+            await asyncio.sleep_ms(200)
+            # Get pulses since last call, i.e. value(0) resets
+            # the counter to 0. 
+            # Take abs() because if a Encoder is present, value
+            # can be negative if crank is turned in the opposite
+            # direction. Using abs() neither the order of the pins
+            # nor the direction of rotation matters
+            # If there is a Counter, value() will aways be positive anyhow.
+            pulses =  abs(counter.value(0))
             new_time = ticks_ms()
-            new_pulse_count =  self.counter.value()
-            # Compute differences to get revolutions per second
             time_ms = ticks_diff( new_time, last_time )
-            pulses = new_pulse_count - last_pulse_count
-            rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
-            if PULSES_PER_REV < 20:
-                # Use samples only when few pulses per revolution
-                samples.append( rpsec )
-                if len(samples) > PULSES_PER_REV/2:
-                    samples.pop(0)
-                self.rpsec = sum(samples)/len(samples)
-            else:
-                self.rpsec = rpsec
-            last_pulse_count = new_pulse_count
+            # time_ms should never be 0, because there is a sleep_ms in this loop
+            self.rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
             last_time = new_time
 
     def get_rpsec( self ):
         return self.rpsec
 
     def is_installed(self):
-        return bool(self.counter)
+        return bool(self.counter_task)
 
     def irq_report( self ):
         # This function prepares data for graph on diag.html
@@ -122,13 +117,13 @@ class TachoDriver:
 class Crank:
     # Trigger events based on the crank revolution speed
     # like start and stop turning
-    def __init__(self,tachometer_pin,automatic_playback):
+    def __init__(self,tachometer_pin1, tachometer_pin2,automatic_playback):
         self.logger = getLogger(__name__)
 
         # Set UI setting of velocity to 50, halfway from 0 to 100.
         self.set_velocity(50)
         # Initialize tachometer driver
-        self.td = TachoDriver(tachometer_pin,automatic_playback)
+        self.td = TachoDriver(tachometer_pin1, tachometer_pin2,automatic_playback)
         
         # Dictionary of events to be fired
         self.events={}
@@ -226,6 +221,7 @@ class Crank:
         # Velocity is a superimposed manual control via UI to alter the "normal"
         # playback speed. Crank._ui_velocity is the velocity as set by the ui
         # (50=normal, 0=lowest, 100=highest).
+        # TempoEncoder can also set this velocity. Both are coordinated.
 
         self.ui_velocity = ui_vel
         # The UI sets _ui_velocity to a value from 0 and 100, normal=50.
@@ -252,32 +248,52 @@ class Crank:
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.
 class TempoEncoder:
-    def __init__( self ):
+    def __init__( self, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
         self.logger = getLogger("TempoEncoder")
-        self.tempo_task = asyncio.create_task( self._tempo_process )
-        
-    async def _tempo_process(self):
-        await asyncio.sleep_ms(10) # Let general startup finish
-        rotary_tempo_mult = config.get("rotary_tempo_mult", 1)
-        if gpio.tempo_a and gpio.tempo_b and gpio.switch:
-            encoder_a = Pin( gpio.tempo_a, Pin.IN, Pin.PULL_UP )
-            encoder_b = Pin( gpio.tempo_a, Pin.IN, Pin.PULL_UP )
-            switch = Pin( gpio.switch, Pin.IN, Pin.PULL_UP )
-            encoder = Encoder( 1, filter_ns=13000, # Highest value possible
-                               phase_a=encoder_a, 
-                               phase_b=encoder_b, 
-                               phases=2)
-        else:
-            self.logger.info( "No rotary encoder defined")
+        if not tempo_a or not tempo_b or not tempo_switch:
+            self.logger.debug("TempoEncoder not connected")
             return
+        switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
+        encoder = Encoder( 1, filter_ns=13000, # Highest value possible
+                            phase_a=Pin( tempo_a, Pin.IN, Pin.PULL_UP ), 
+                            phase_b=Pin( tempo_b, Pin.IN, Pin.PULL_UP ), 
+                            phases=1)
+        switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
+        self.tempo_task = asyncio.create_task( self._tempo_process( encoder, switch, rotary_tempo_mult ) )
+        self.logger.info("init done")
+
+    async def _tempo_process(self, encoder, switch, rotary_tempo_mult ):
+        encoder.value(0)
+        times_switch_down = 0
         while True:
-            # Set velocity about 10 times a second following pulse counter
+            # Read velocity about 10 times a second 
             await asyncio.sleep_ms(100)
-            if switch.value() == 0:
+            # Read pulses since last read, reset counter to 0.
+            if (v := encoder.value(0)):
+                crank.set_velocity_relative( v * rotary_tempo_mult ) 
+                # Reset "switch pressed" counter 
+                # because on some devices the switch closes intermittently during
+                # rotation without pressing the switch.
+                times_switch_down = 0  
+                continue   
+            # Switch is "normal on": pressed gives .value()==0
+            if switch.value():
+                # Switch is off
+                times_switch_down = 0
+            else:
+                # Count times switch on
+                times_switch_down += 1
+            # Was this a long press? i.e. about half a second?           
+            if times_switch_down >= 4:
+                # Button on rotary encoder pressed, reset velocity to normal
                 crank.set_velocity(50)
-            if (v := encoder.value()):
-                crank.set_velocity_relative( v * rotary_tempo_mult )       
+                times_switch_down = 0
 
 
-crank = Crank(gpio.tachometer_pin,config.get_int("automatic_delay", 0))
+# Player/setlist need to know if crank is turning.
+crank = Crank(gpio.tachometer_pin1, gpio.tachometer_pin2, config.get_int("automatic_delay", 0))
+
+# The tempo encoder operates as a independent task,
+# no further calls necessary.
+_tempo_encoder = TempoEncoder( gpio.tempo_a, gpio.tempo_b, gpio.tempo_switch, config.cfg.get("rotary_tempo_mult", 1) )
 

@@ -2,24 +2,10 @@
 # MIT License
 # Handles response to notelist.html and note.html pages (tuning support)
 
-import sys
 import time
-
-_implementation = sys.implementation.name
-if _implementation == "micropython":
-    from time import ticks_ms, ticks_diff, ticks_us
-    import gc
-    from machine import Pin, ADC
-    if __name__ == "__main__":
-        sys.path.append("/software/mpy/")
-else:
-    const = lambda x: x
-    time.ticks_us = lambda : time.time_ns()/1_000
-    time.ticks_diff = lambda x, y:x-y
-    time.ticks_ms = lambda: time.time_ns()/1_000_000
-    class gc:
-        def collect():
-            pass
+from time import ticks_diff, ticks_us
+import gc
+from machine import Pin, ADC
 
 
 from math import sin, pi
@@ -29,7 +15,6 @@ import array
 
 import fft_arrays as fft_module
 import frequency
-import midi
 from config import config
 from pinout import gpio
 

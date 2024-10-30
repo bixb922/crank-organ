@@ -311,7 +311,6 @@ async function updateProgress( progress ) {
 	
 	if( progress["registers"] && progress["registers"].length > 0 ){
 		let registers = progress["registers"];
-		registers.sort((a, b) => a[0].localeCompare(b[0]) );
 		
 		showHideElement( "register_span", true );
 		// Check if all registers are displayed

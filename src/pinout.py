@@ -2,6 +2,11 @@
 # MIT License
 # Manage ESP32-S3 GPIO pin definitions and port expander MCP23017 pin definitios
 
+# This module parses the pinout files, e.g. 20_notes_Carl_Frei.json
+# The parsed file is fed into several classes each of which 
+# extracts an aspect of the information and organizes it,
+# see below "subclasses of PinoutParser"
+
 import asyncio
 import os
 import machine
@@ -62,6 +67,9 @@ ESP32_S3_AVAILABLE_GPIO_PINS = [ pin for pin in range(49) if pin not in ESP32_S3
 #   class solenoids.SolenoidDef --> stores relationship
 #       between
 #       MIDI notes and solenoid pins on GPIO or MCP23017.
+#   class pinout.GPIOstatistics --> provides information
+#       about used, reserved and available GPIO pins of the ESP32-S3
+#
 #
 # Class PinTest:
 #  provides low level functions to test pins,
@@ -133,9 +141,11 @@ class PinoutParser:
             "neopixel": lambda pin: self.define_neopixel(
                 toi(pin)
             ),  # (gpio number)
-            "tachometer": lambda pin: self.define_tachometer(
-                toi(pin)
-            ),  # (gpio number)
+            # For transition: pin2 may absent on older versions of json file
+            "tachometer": lambda pin1, pin2="": self.define_tachometer(
+                toi(pin1),
+                toi(pin2)
+            ),  # (gpio number for counter or first encoder, gpio for encoder)
             "microphone": lambda pin: self.define_microphone(
                 toi(pin)
             ),  # (gpio number)
@@ -159,6 +169,9 @@ class PinoutParser:
             "mcp23017": lambda addr: self.define_mcp23017(
                 toi(addr)
             ),  # (address)
+            "serial": lambda uart, pin, channel: self.define_serial( 
+                toi(uart), toi(pin), toi(channel) 
+            ),
             "mcp.midi": lambda pin,
             instrument,
             midi_num,
@@ -166,13 +179,22 @@ class PinoutParser:
             register=None: self.define_mcp_midi(
                 toi(pin), midi.NoteDef(toi(instrument), toi(midi_num)), rank, register
             ),
+            "serial.midi": lambda _,
+            instrument,
+            midi_num,
+            rank,
+            register=None: self.define_serial_midi(
+                 midi.NoteDef(toi(instrument), toi(midi_num)), rank, register 
+                 ),
         }
 
         self.define_start()
-
-        for pd in json_data:
-            actions[pd[0]](*pd[1:])
-
+        try:
+            for pd in json_data:
+                actions[pd[0]](*pd[1:])
+        except Exception as e:
+            print("Exception processing pinout file for line", pd, e)
+            raise
         self.define_complete()
 
     # All functions are empty except define_description.
@@ -187,7 +209,7 @@ class PinoutParser:
     def define_neopixel(self, gpio):
         return
 
-    def define_tachometer(self, gpio):
+    def define_tachometer(self, gpio1, gpio2):
         return
 
     def define_microphone(self, gpio):
@@ -213,12 +235,20 @@ class PinoutParser:
     
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
         return
+    
+    def define_serial( self, uart, pin, channel ):
+        return
+    
+    def define_serial_midi( self, midi_note, rank, register_name ):
+        return
 
     def define_complete(self):
         return
 
 
 # Singleton object to hold GPIO pin definitions and general pinout info
+# GPIO number 0 is always reserved, so  "if not gpio:" is used
+# to mean "no GPIO defined here"
 class GPIODef(PinoutParser):
     def __init__(self, source=None):
         super().__init__(source)
@@ -236,17 +266,23 @@ class GPIODef(PinoutParser):
 
     def define_start( self ):
         self.neopixel_pin = None
-        self.tachometer_pin = None
+        self.tachometer_pin1 = None
+        self.tachometer_pin2 = None
         self.microphone_pin = None
         self.touchpad_pin = None
+        self.tempo_a = None
+        self.tempo_b = None
+        self.tempo_switch = None
 
     def define_neopixel(self, x):
         if x:
             self.neopixel_pin = x
 
-    def define_tachometer(self, x):
-        if x:
-            self.tachometer_pin = x
+    def define_tachometer(self, x1, x2):
+        if x1:
+            self.tachometer_pin1 = x1
+        if x2:
+            self.tachometer_pin2 = x2
 
     def define_microphone(self, x):
         if x:
@@ -273,10 +309,13 @@ class GPIODef(PinoutParser):
             logerror(f"Invalid pin {gpio}, cannot be used")
         # Set initial value at startup
         reg.set_initial_value(initial_value)
+        # Nothing stored in this object
 
 # Singleton class to validate a pinout and save it
 # to the current json file. This class is invoked by
 # the save button on pinout.html
+# >>> check validations for duplicate gpio
+# >>> no error message if json not valid?
 class SaveNewPinout(PinoutParser):
     def __init__(self, source):
         # source must be json
@@ -285,11 +324,11 @@ class SaveNewPinout(PinoutParser):
         super().__init__(source)
 
     def define_start( self ):
-
         self.gpiolist = []
         self.midilist = []
         self.mcplist = []
         self.mcp_port_list = []
+        self.uart_list = []
         self.current_I2C = -1
         self.current_MCP_address = ""
 
@@ -308,12 +347,12 @@ class SaveNewPinout(PinoutParser):
 
             self._add_to_list(gpio, self.gpiolist, f"Duplicate GPIO {gpio}")
             
-
     def define_neopixel(self, gpio):
         self._add_GPIO_to_list(gpio)
 
-    def define_tachometer(self, gpio):
-        self._add_GPIO_to_list(gpio)
+    def define_tachometer(self, gpio1, gpio2 ):
+        self._add_GPIO_to_list(gpio1)
+        self._add_GPIO_to_list(gpio2)
 
     def define_microphone(self, gpio):
         if not gpio:
@@ -343,7 +382,7 @@ class SaveNewPinout(PinoutParser):
         # Check if used as gpio elsewhere (but don't check duplicate
         # use as gpio midi, because that's allowed)
         if gpio_pin in self.gpiolist:
-            raise RuntimeError("MIDI GPIO pin already in use")
+            raise RuntimeError(f"MIDI GPIO pin already in use {gpio_pin}")
         if not midi_note.is_correct():
             raise RuntimeError("MIDI program or note number not in range")
 
@@ -378,6 +417,27 @@ class SaveNewPinout(PinoutParser):
             raise RuntimeError("MCP pin blank")
         if not midi_note.is_correct():
             raise RuntimeError("MIDI program or note number not in range")
+    
+    def define_serial( self, uart, pin, channel ):
+        if not( 1<=uart<=2 ):
+            raise RuntimeError("UART must be 1 or 2")
+        if uart in self.uart_list:
+            raise RuntimeError("Duplicate UART definition")
+        if not( 0<=channel<=15):
+            raise RuntimeError("Channel must be 0 to 15")
+        self.uart_list.append( uart )
+        self._add_GPIO_to_list(pin)
+        # UART 1 by default uses also pin rx=9
+        # UART 2 by default uses also pin rx=16
+        # see https://docs.micropython.org/en/latest/esp32/quickref.html
+        self._add_GPIO_to_list(9)
+        self._add_GPIO_to_list(16)
+        return
+    
+    def define_serial_midi( self, midi_note, rank, register_name ):
+        if not midi_note.is_correct():
+            raise RuntimeError("MIDI program or note number not in range")
+        return
 
     def define_complete(self):
         self.gpiolist.sort()
@@ -467,6 +527,8 @@ class PinoutList:
     def get_description(self, filename=None):
         if not filename:
             filename = self.current_pinout_filename
+        if filename not in self.pinout_files:
+            return f"file {filename} not found"
         # Is the description already there? If not, get it now
         if self.pinout_files[filename] == "":
             # Parse json to get description only
@@ -550,8 +612,9 @@ class GPIOstatistics(PinoutParser):
     def define_neopixel(self, gpio):
         self._add_gpio( gpio )
 
-    def define_tachometer(self, gpio):
-        self._add_gpio( gpio )
+    def define_tachometer(self, gpio1, gpio2 ):
+        self._add_gpio( gpio1 )
+        self._add_gpio( gpio2 )
 
     def define_microphone(self, gpio):
         self._add_gpio( gpio )

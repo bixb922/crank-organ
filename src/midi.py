@@ -13,8 +13,9 @@
 from math import log
 from machine import Pin
 import asyncio
-import array
+from collections import OrderedDict
 import time
+import machine
 
 from config import config
 import fileops
@@ -94,7 +95,6 @@ class NoteDef:
 class Register:
     def __init__( self, name ):
         self.name = name
-        self.pin = None # or a machine.Pin object
         self.current_value = 0
         if not name:
             # The only software register to start on
@@ -111,8 +111,8 @@ class Register:
             raise ValueError
         # First gpio defined for a register is the valid one
         if gpio_number:
-            self.pin = Pin( gpio_number, Pin.IN, Pin.PULL_DOWN )
-            self.register_task = asyncio.create_task( self._register_process())
+            pin = Pin( gpio_number, Pin.IN, Pin.PULL_UP )
+            self.register_task = asyncio.create_task( self._register_process( pin ))
         # If no gpio_number supplied, don't change anything.
 
     def set_initial_value( self, initial_value ):
@@ -121,27 +121,28 @@ class Register:
     def value( self ):
         return self.current_value
     
-    async def _register_process( self ):
-        last_value = self.pin.value()
+    async def _register_process( self, pin  ):
+        last_value = pin.value()
         while True:
             # Poll frequently, but not too frequently,
             # to have good response time but a stable value
             # 100 ms is well within fast response time perception
             # but should give enough time for debouncing.
             await asyncio.sleep_ms(200)
-            pv = self.pin.value()
+            pv = pin.value()
             if pv != last_value:
                 # Change seen on hardware switch,
                 # record current value
-                self.current_value = pv
+                self.current_value = (1-pv)
                 # However, web interface can change this again via
                 # toggle() function below
                 last_value = pv
 
     def toggle( self ):
-        # Change 1 to 0 and 0 to 1, called from web interface
+        # Change register from 1 to 0 and from 0 to 1, called from web interface
         # via /register_toggle to change the current value
-        # It can then be set via GPIO and it's hardware switch
+        # It also can then be set via GPIO and then it follows 
+        # the hardware switch
         self.current_value = 1 - self.current_value
 
 
@@ -149,11 +150,12 @@ class Register:
 class RegisterBank:
     # Register class factory, also holds all defined Register objects
     def __init__( self ):
-        self.register_dict = {}
+        self.register_dict = OrderedDict()
 
     def factory( self, name ):
-        reg = self.register_dict.get( name, None )
-        if not reg:
+        try:
+            return self.register_dict[name]
+        except KeyError:
             reg = Register( name )
             self.register_dict[name] = reg
         return reg
@@ -312,7 +314,7 @@ class Drum:
 
 
     # Important restriction: cannot play two drum notes simultaneusly
-    #> They will play one after the other
+    # They will play one after the other
     def on( self ):
         # Simulate a drum note without disturbing other notes that may be on
         sole_on = self.solenoids.solepins_that_are_on()
@@ -348,7 +350,32 @@ class Drum:
  
     def get_rank_name( self ):
         return self.name + " " + self.rank
-    
+
+# MIDI over serial (UART) driver
+class MidiSerial:
+    # Initialize UART. UART number can be 1 or 2 for the ESP32
+    # (see https://docs.micropython.org/en/latest/esp32/quickref.html)
+    # since UART 0 is used for REPL.
+    # Pin is the GPIO output pin number
+    # Channel is the MIDI channel number assigned to all notes
+    # when played
+    def __init__( self, uart, pin, channel ):
+        # Default rx is 9
+        self.uart = machine.UART( uart, baudrate=31250, tx=pin )
+        # Have bytearray with the command ready, format is:
+        # event+channel, note, velocity
+        self.note_on = bytearray( (0x90 + channel, 0,127))
+        self.note_off = bytearray((0x80 + channel, 0,  0))
+
+    # Only note on/note off messages are sent
+    def note_message( self, midi_note, note_on ):
+        print(">>>", midi_note, note_on)
+        if note_on:
+            self.note_on[1] = midi_note.midi_number
+            self.uart.write( self.note_on )
+        else:
+            self.note_off[1] = midi_note.midi_number
+            self.uart.write( self.note_off )
 
 controller = Controller()
 registers = RegisterBank()

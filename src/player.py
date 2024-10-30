@@ -73,8 +73,7 @@ class MIDIPlayer:
             duration = 1
             # get_info_by_id could fail in case tunelib
             # has not been correctly updated
-            midi_file, duration = tunemanager.get_info_by_id(tuneid)
-            #>>> self.logger.info(f"Starting tune {tuneid} {midi_file} {duration=}")
+            midi_file, duration = tunemanager.get_info_by_tuneid(tuneid)
 
             controller.all_notes_off()
             self.progress.tune_started(tuneid)
@@ -82,7 +81,6 @@ class MIDIPlayer:
             self._reset_channelmap()
 
             await self._play(midi_file)
-            #>>>self.logger.info(f"Ended tune {tuneid} {midi_file}")
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
@@ -103,7 +101,6 @@ class MIDIPlayer:
             self.progress.report_exception("exception in play_tune! " + str(e))
         finally:
             # End of tune processing and clean up
-            # >>>self.logger.info(f"Tune ended")
             controller.all_notes_off()
             try:
                 self._insert_history(

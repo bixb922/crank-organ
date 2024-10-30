@@ -9,6 +9,7 @@ import network
 import binascii
 from minilog import getLogger
 import fileops
+from hashlib import sha256
 
 # One logger for both Config and PasswordManager
 _logger = getLogger(__name__)
@@ -78,19 +79,18 @@ class Config:
             "battery_heartbeat_period": 0,
             "max_polyphony": 9,
             "touchpad_big_change": 20000,
-
-            "tzidentifier": "",
             
             "webserver_cache": True,
-            # Firefox caps max_age at 86400 seconds, Chromium at 7200 seconds
-            "max_age": 300,
+            # Firefox caps max_age at 86400 seconds=1 day, Chromium at 7200 seconds=2 hours
+            "max_age": 1800,
             
             "mic_test_mode": False,
             "mic_signal_low": -18,
             "mic_store_signal": False,
             
-            "servernode": "192.168.100.19:8080",
-            "serverpassword": "password3",
+            "servernode": "192.168.100.19:8080", # Only used if mcserver.py is present
+            "serverpassword": "password3", # Only used if mcserver.py is present
+
             "automatic_delay": 0,
             "tempo_follows_crank": False,
             "pulses_per_revolution": 24,
@@ -215,10 +215,12 @@ class Config:
             elif k == "ap_password":
                 if len(v) < 9:
                     return "Error: Password shorter than 9 characters"
-            elif k == "description":
-                for c in "&<>""'":
-                    if c in v:
-                        return "Error: description may not have & < > "" nor '"
+            #elif k == "description":
+                # >>>> is this still necessary to validate???
+                #>>> test
+                #for c in "&<>""'":
+                #    if c in v:
+                #        return "Error: description may not have & < > "" nor '"
             elif "password" in k and v == NO_PASSWORD:
                 return "Error: overwriting password with ***, programming error?"
 
@@ -327,13 +329,20 @@ class PasswordManager:
 
     # Public methods
     def get_password(self, pwdname)->str:
-        # Used here and by webserver for http authentication
+        # Used by self.verify_password() and by wifimanager
         pwd = config.cfg[pwdname]
         return self._decrypt_password(pwd)
 
-    # Services to verify password (called by webserver)
-    def verify_password(self, password):
-        return password == self.get_password("ap_password")
+    # Used by webserver to verify hashed seed+hashed password
+    # sent by client
+    def verify_password(self, client_password, seed ):
+        # Must be same algorithm as common.js: hashWithSeed()
+        h = sha256( (seed+"_"+self.get_password("ap_password")).encode()).digest()
+        hexhash =  binascii.hexlify( h ).decode() 
+        return client_password == hexhash
+    
 
+    
+    
 password_manager = PasswordManager()
 config = Config()

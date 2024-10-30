@@ -151,6 +151,7 @@ class Encoder(_CounterBase):
             rising=self._PCNT.DECREMENT,
             mode_pin=phase_b,
             mode_low=self._PCNT.HOLD if phases == 1 else self._PCNT.REVERSE,
+            mode_high=self._PCNT.KEEP # >>> added!!!
         )
         if phases == 4:
             # For 4x quadrature, enable the second channel.

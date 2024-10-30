@@ -126,17 +126,12 @@ password</div>
 
 <div class="middlediv">Other parameters</div>
     
-	Enter the time zone identifier, such as Europe/Berlin, or America/Lima. 
-	See <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of tz database time zones</a> for a list of valid TZ identifiers. 
-	If left blank, the time zone is computed based on the client's IP address.
-	The time zone uses the www.worltimedapi.org service once a day to update time zone information.
-	<input id="tzidentifier" name="tzidentifier" type="text" size="20" oninput="markField('tzidentifier')"/>
-	<br>
+
 	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address with the browser, for example: http://192.168.144.1
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')"/>
 	<br>
-    <label for="touchpad_big_change">Touchpad responsiveness (higher=less responsive, lower=more responsive). Start with 10000.  No decimals, integer only:</label>
+    <label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). Start with 10000.  No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6" oninput="markField('touchpad_big_change')"/>
 	<br>
     <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
@@ -144,7 +139,7 @@ password</div>
 	<br>
     
 	
-	<button type="button" onclick="save(  'tzidentifier', 'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other parameters</button>
+	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other parameters</button>
     
 <div class="middlediv">Debug/test settings</div>
    
@@ -239,7 +234,7 @@ async function changePassword() {
 	}
 }
 	
-async function save( /* argument list */) {
+async function save( /* argument list */ ) {
     // Save new configuration data
     let post_data = {} ;
 
@@ -253,7 +248,7 @@ async function save( /* argument list */) {
         else{
             value = getValue( arguments[i] )
         }
-        clearMark( arguments[i] ) ;
+        //>>>> test clearMark( arguments[i] ) ;
         if( arguments[i].includes( "password" ) && value == "***************" ){
             // Don't store unchanged passwords
             continue ;
@@ -262,7 +257,9 @@ async function save( /* argument list */) {
 	}
 	const resp = await fetch_json( "/save_config", post_data ) ;
 	showPopup( "", "Configuration saved to flash" ) ;
-    await revoke_credentials();
+	for( var i=0; i<arguments.length; i++){
+        clearMark( arguments[i] ) ;
+	}
 }
 function getValue( element_id ){
     let a = document.getElementById( element_id ) ;
@@ -322,5 +319,6 @@ function clearMarks() {
     }
     CHANGED_FIELDS = [] ;
 }
+
 </script>
 </body>

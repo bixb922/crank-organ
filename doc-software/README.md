@@ -26,6 +26,9 @@ Please post a Github issue in this repository for any question you might have. P
 * Crank turning speed sets MIDI playback speed (optional)
 * Simulated percussion: drums are simulated playing several pipes together during a very short time
 * Shows remaining battery capacity on browser
+* Drivers to move solenoid valves via GPIO pins, via MCP23017 16 port expander and via MIDI serial out.
+* CrankMake current setlist persistent
+
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
@@ -325,11 +328,11 @@ Maximum polyphony allowed: Since the battery fuse or current protection may shut
 USB power pack heartbeat: Some USB power packs need some current every now and then to remain turned on. This option will activate a random solenoid to achieve a minimal consumption.
 
 ## Time zone
-When connected to a router or cell phone hot spot, the software uses NTP (Network Time Protocol) to acquire the UTC time, and then it queries worldtimeapi.org once a day for the time zone offset and DST offset. Once that is done, the time zone offset is stored in flash for the next refresh, that takes place at most once a day.
+When connected to a router or cell phone hot spot, the software uses NTP (Network Time Protocol) to acquire the UTC time.
 
-Enter your local time zone in the "other parameters" section. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of official names of time zones. The time zone name has to match one recognized by worldtimeapi.org.
+The time zone (i.e. America/Lima or India/Kolkata) is obtained from the browser automatically. There is no need for configuration.
 
-If no internet access is available, time starts on Jan 1st, 2000. This does not impair operation. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
+If no internet access is available, time starts on Jan 1st, 2000. This does not impair operation, allowing to crank the organ without internet access. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
 
 ## Other parameters (less likely to need change)
 
@@ -414,9 +417,23 @@ Go to "MIDI configuration" to select the scale of the organ:
 * 26 note Alderman/Melvin Wright scale
 * 31 note Raffin scale
 * 35 note custom (a custom scale)
+* 64 note scale for MIDI over serial
+
+What you select is a template that allows to see and change pin assignment for different hardware configurations:
+* Use GPIO pins only (useful for 20 note organs), only ULN2803 drivers necessary for the solenoids
+* Use MCP23017 16 port expander for larger configurations
+* Use a MIDI over serial driver to send the data to a DIN type MIDI connector
 
 If you need another scale, post an issue in this Github repository or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 and 48 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file, so you can add your own file here.
 
+You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN plug, others that actuate a GPIO plug, other that actuates solenoid valves via a MCP23017 port expander.
+
+You also specify additional hardware you connect to the microcontroller:
+* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller)
+* Electronic register switches
+* A rotary sensor for the crank (to detect movement, and/or to sense velocity)
+* A rotary knob to set velocity
+* A microphone for tuning
 
 ## Transpose scale if necessary
 If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowest note fits. The transpose buttons shift the complete scale up or down one semitone.
@@ -720,15 +737,25 @@ The tunelib folder will then be at /sd/tunelib
 
 With the SD card, only about 500kb of free flash memory is necessary. The /tunelib folder on flash will serve as fallback should the SD card fail or come loose.
 
+## MIDI over serial
+
+MIDI over serial (i.e. MIDI with a DIN connector) is supported. On the pinout page (Pin and MIDI configuration) select the "64 notes MIDI over serial data/64_note_midi_over_serial.json". 
+
+The provided configuration has defined 64 notes from MIDI 48 to MIDI 111. You can select the MIDI channel here, and all notes are sent to that channel.
+
+No program change messages are sent. In fact, only note on and note off messages are sent, and with fixed velocity, as it is normal for pipes. If you have another requirement, please post an issue in this repository.
+
+MIDI output can be combined with instruments actuated via GPIO or MCP23017 pins.
+
 
 ## Languages: English, Spanish and German
 Pages for daily operation such as home page, tunelist, performance and history are available in english, spanish and german.
 
-Pages for configuration are only available in english. Since these pages are not used very frequently, please  use the translation provided by the browser if necessary.
+Pages for configuration are only available in english. Since these pages are not used very frequently, please  use the translation provided by the browser if necessary. Anyhow, it's best to use a PC for configuration since these pages have a lot of text or are wider than a cell phone screen. On a PC, Chrome and Firefox have translation capabilites, so you can configure the system with translated pages.
 
 The language is selected according to the language preference of the browser.
 
-I will be delighted if someone is willing to add another language. The translations are in the file /static/translations.js.
+I will be delighted if someone is willing to add another language. The translations are in the file /static/translations.js. Please post an issue in this repository if you would like to colaborate.
 
 
 ## Customization crank organ photo
@@ -872,8 +899,17 @@ Changes from June 2024 to October 2024
 * Better management for disabling MIDI file playback during tuning
 * File manager now supports all characters in file name or folder
 * Make current setlist persistent. This allows to reset microcontroller (or power off) during performance and resume setlist.
-* Dropped support for FTP
+* Dropped support for FTP in favor of the included File Manager
 
+Changes on Oct 30, 2024
+
+* Support for MIDI over serial (MIDI over DIN connector)
+* New: both quadrature and simple encoder can be used as crank rotation sensor
+* Potentiometer type rotary encoder to regulate speed
+* Make current setlist persistent, so the current setlist  survives reboots and is not reverted to the stored setlist.
+* After entering a password for configuration, revoke credentials on reboot. Simpler password dialog. Password hashed when sent over http, adds yet another layer of security.
+* Time zone is sent from the browser configuration. No configuration necessary, less overhead, less hassle, smaller code
+* More WiFi client activity info in diag.html
 
 # Programming language
 The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async. No C/C++ code was necessary.
@@ -917,29 +953,25 @@ If you the microcontroller's browser does not respond:
 # Restrictions
 Safari as a browser is not supported.
 
-The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put several safeguards in the software, such as: passwords are encrypted with a hidden key, WiFi to files is controlled with a password, key files are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose.
+The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
 
-Although it is possible to connect several clientes simultaneously, it is recommended to connect only one client at a time, since more than one client may delay notes when playing back music.
+Although it is possible to connect several clients (several cell phones or PCs) simultaneously, it is recommended to connect only one client at a time, but only because since more than one client may delay notes when playing back music.
 
-While playing music, stay on the Tune list and the Performance pages. Other pages may interfere with playing back music.
+While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music.
 
-If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed. Post an issue and I'll assist.
+If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed. Post an issue and I'll assist, or look at the examples provided.
 
-Current time zone offset is updated only once a day. When playing deep in the night during a DST transition, local time will be off one hour until a reboot after next midnight. 
-
-If no internet is accessible, current time will show as January 2000 until internet gets accessible at next reboot. This will NOT affect playing music in any way. Only history and error log timestamps will be of the year 2000 indicating that no time was available. (For example: when connecting in AP mode to the microcontroller, no internet is available.)
-
-The touchpad sensor will probably not work with gloves, I never tested that. The touchpad sensor is not mandatory, use the other means provided to start a tune.
+If no internet is accessible, current time will show as January 2000 until internet gets accessible at next reboot. This will not affect playing music in any way. Only history and error log timestamps will be of the year 2000 indicating that no time was available. (For example: when connecting in AP mode to the microcontroller, no internet is available.)
 
 On some ESP32 N16R8 boards, the port labeled "COM" does not work well. Always use the port labeled "USB" to connect a USB cable. This port is also faster.
 
-I have seen the File Manager sometimes react very slowly when uploading several large files. If the reaction of File Manager is very slow, just reload the page and start over.
+I have seen the File Manager sometimes react very slowly when uploading several large files (i.e. 100kb or more, which is not usual). If the response of File Manager is very slow, please just reload the page and start over.
 
 Password encryption gets lost when installing a new MicroPython version. It should not be necessary to update MicroPython (or very seldom) since MicroPython is very stable. If you update MicroPython, you will have to enter the passwords again on the General Configuration page.
 
-No https is available. Please raise an issue if you think this is vital. https needs you to generate a certificate and register that on your PC and cell phone, so some work would be required to make that work once developed.
+No https is available. Please raise an issue if you think this is vital. https needs you to generate a certificate and register that on your PC and cell phone, so some work would be required on your side to make that work once developed.
 
-The File manager doesn't rename files, doesn't allow to delete folders and may have other restrictions. It is for updating tunes and software, and to peruse the files in the microcontroller.
+The File manager doesn't rename files, doesn't allow to delete folders and may have other restrictions. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
 # Licensing

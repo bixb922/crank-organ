@@ -170,7 +170,6 @@
 <script>
 
 async function getPageData(){
-
     resp = await fetch_json( "/get_index_page_info" ) ;
     textById( "pinout_description", resp.pinout_description ) ;
     if( resp.serverlink ){

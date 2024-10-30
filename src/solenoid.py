@@ -12,7 +12,7 @@ from array import array
 from minilog import getLogger
 import pinout
 from config import config
-from midi import controller
+from midi import controller, MidiSerial
 from led import led
 
 from mcp23017 import MCP23017
@@ -124,6 +124,23 @@ class SolenoidDef(pinout.PinoutParser):
         
         controller.define_note( midi_note, solepin, register_name )
    
+    def define_serial( self, uart, pin, channel ):
+        self.current_serial = MidiSerial( uart, pin, channel )
+        self.current_serial_uartno = uart
+        uart_id = f"serial.{uart}.{pin}"
+        self.device_info[uart_id] = "ok"
+        
+    def define_serial_midi( self, midi_note, rank, register_name ):
+        if not midi_note.is_valid():
+            return
+        
+        name = f"serial.{self.current_serial_uartno}.{midi_note}"
+        # Define function with closure for note on/off with
+        # MIDI over serial ports
+        solepin = self.solepin_factory( lambda v, midifun=self.current_serial, note=midi_note: midifun.note_message( note, v ),
+               name, rank, midi_note )                        
+        controller.define_note( midi_note, solepin, register_name  ) 
+
 
     def define_complete( self ):
         controller.define_complete()

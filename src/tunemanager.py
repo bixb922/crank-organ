@@ -54,6 +54,12 @@ HEADERLIST = [
 
 class TuneManager:
     def __init__(self, tunelib_folder, tunelib_filename, lyrics_json, sync_tunelib_file ):
+        # tunelib_folder: /tunelib, also could be /sd/tunelib
+        # tunelib_filename: data/tunelib.json
+        # lyrics_json: data/lyrics.json 
+        # sync_tunelib_file: zero length file, if present force tunelib sync
+        # This file is set when the filemanager detects upload of a MIDI file to the tunelib folder.
+
         self.tunelib_folder = tunelib_folder
         self.tunelib_filename = tunelib_filename
         self.lyrics_json = lyrics_json
@@ -76,7 +82,7 @@ class TuneManager:
                                     recreate=True)
         return tunelib
     
-    def get_info_by_id(self, tuneid):
+    def get_info_by_tuneid(self, tuneid):
         tunelib = self._read_tunelib()
         filename = self.tunelib_folder + tunelib[tuneid][TLCOL_FILENAME]
         duration = tunelib[tuneid][TLCOL_TIME]

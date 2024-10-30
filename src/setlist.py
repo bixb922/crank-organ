@@ -262,7 +262,7 @@ class Setlist:
         fileops.write_json(
             self.current_setlist, config.STORED_SETLIST_JSON, keep_backup=False
         )
-        # >>>spectator_list is transient, do not store?
+        # >>>spectator_list is not made persistent. Tough luck.
 
     def load(self):
         # Read setlist from flash

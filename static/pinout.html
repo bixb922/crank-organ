@@ -36,7 +36,7 @@
     <br>
     If there is no tachometer sensor, it may be useful to define a touchpad pin instead. Defining both is redundant.
     <br>
-    Microphone pin, tachometer sensor and touchpad must be from ADC bank 1 (see ESP32-S3 specs).
+    Microphone pin and touchpad must be from ADC bank 1 (see ESP32-S3 specs).
     <br>
     For each solenoid you enter:
     <ul>
@@ -183,9 +183,17 @@ async function getPinoutDetail( ) {
             let row = insertFormRow( tbody, ``, [] );
         }
         else if( pdtype == "tachometer"){
+            let second_pin = pd[2];
+            if( second_pin == undefined ){
+                second_pin = "";
+            }
+            // If a simple counter is installed: define only one pin
+            // If a rotary encoder is installed: define two pins
             insertFormRow( tbody,`row_${f}_tachometer`, [
-                "Tachometer pin",
-                makeInput( `tachometer.${f}`, 3, pd[1] )
+                "Tachometer counter pin",
+                makeInput( `tachometer_counter.${f}`, 3, pd[1] ),
+                "2nd pin only for rotary encoder",
+                makeInput( `tachometer_encoder.${f}`, 3, second_pin )
             ] );
         }
         else if( pdtype == "microphone"){
@@ -220,10 +228,13 @@ async function getPinoutDetail( ) {
                 "Set at startup"
             ] );
         }
-        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" ){
+        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || pdtype == "serial.midi"){
             let title = "MCP pin" ;
             if( pdtype == "gpio.midi" ){
                title = "GPIO pin" ;
+            }
+            else if( pdtype == "serial.midi"){
+                title = "This column not used";
             }
             let pin = pd[1];
             let instrument = pd[2];
@@ -252,9 +263,12 @@ async function getPinoutDetail( ) {
             if( pdtype == "gpio.midi"){
                 testFunction = function() { testGPIO(pin) };
             }
-            else {
+            else if( pdtype == "mcp.midi" ){
                 testFunction = function() { testMCP(sda, scl, mcpaddr, pin) };            
-            } ;
+            } 
+            else if( pdtype == "serial.midi" ){
+                testFunction = function() { alert("Not implemented")};
+            }
             let row = insertFormRow( tbody, `row_${f}_${pdtype}`, [
                 makeInput( `${pdtype}.pin.${f}`, 3, pin ),
                 makeInput( `${pdtype}.instrument.${f}`, 4, instrument ),
@@ -272,9 +286,6 @@ async function getPinoutDetail( ) {
             row.cells[2].id = `program_name.${f}`;
             row.cells[3].onchange = function() { showNoteName(f) };      
             row.cells[4].id = `nn.${f}`;
-           
-
-
         }
         else if( pdtype == "i2c" ){
             i2ccount += 1 ;
@@ -304,6 +315,16 @@ async function getPinoutDetail( ) {
             ]);
             row.cells[2].colSpan = 3;
         }
+        else if( pdtype == "serial" ){
+            insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "MIDI channel (0-15)"] );
+            rownum += 1;
+            insertFormRow( tbody, `row_${f}_serial`, [
+                makeInput( `serial.uart.${f}`, 3, pd[1]),
+                makeInput( `serial.pin.${f}`, 3, pd[2]),
+                makeInput( `serial.channel.${f}`, 3, pd[3]),
+            ]);
+        }
+        
         rownum += 1;
         lasttype = pdtype;
     }
@@ -324,7 +345,6 @@ async function savePinoutFilename(){
                         req  ) ;
     showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
     getPinoutDetail();
-    await revoke_credentials();
     await get_available_pins();
 }
     
@@ -346,12 +366,17 @@ async function savePinoutDetail(){
  
         if( pdtype == "description" ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
-            newpd.push( [pdtype, v  ] );
+            newpd.push( [pdtype, v] );
         }
-        else if( ["tachometer", "microphone",
+        else if( [ "microphone",
              "neopixel", "touchpad"].includes( pdtype )  ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
             newpd.push( [pdtype, valnum( v )  ] );
+        }
+        else if( pdtype == "tachometer"){
+            let v1 = document.getElementById( `tachometer_counter.${f}`).value ;
+            let v2 = document.getElementById( `tachometer_encoder.${f}`).value ;
+            newpd.push( [pdtype, v1, v2] );
         }
         else if( pdtype == "tempo"){
             let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
@@ -365,7 +390,7 @@ async function savePinoutDetail(){
             let inival = document.getElementById( `reginival.${f}`).checked ;
             newpd.push( [pdtype, valnum( pin ), name, inival  ] );
         }
-        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" ) {
+        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || pdtype == "serial.midi" ) {
             let pin = document.getElementById( `${pdtype}.pin.${f}`).value  ;
             let instrument = document.getElementById( `${pdtype}.instrument.${f}` ).value ;
             let midi = document.getElementById( `${pdtype}.midi.${f}` ).value ;
@@ -391,10 +416,15 @@ async function savePinoutDetail(){
             }
             newpd.push( ["mcp23017", valnum( addr ) ] ) ;     
         }
+        else if( pdtype == "serial"){
+            let uart = document.getElementById( `serial.uart.${f}` ).value ;
+            let pin = document.getElementById( `serial.pin.${f}` ).value ; 
+            let channel =   document.getElementById( `serial.channel.${f}` ).value ; 
+            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel ) ] ) ;     
+        }
     }
     let resp = await fetch_json( "/save_pinout_detail", newpd ) ;
     showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
-    await revoke_credentials();
     clearMarks() ;
     await get_available_pins();
 }

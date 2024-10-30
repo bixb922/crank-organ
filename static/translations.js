@@ -149,8 +149,8 @@ let translationDict = {
 	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibration data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
 "ingrese comentario o puntaje *, ***,*** para: ": // history.html 
 	["Enter comment or rating *, **, *** for: ", "Schreib Kommentar oder Bewertung *, **, *** zu: "],
-"ip de clientes activos (60 segundos)": // diag.html 
-	["IP of clients active in last 60 sec", "IP aktiver Kunden (60 Sek)"],
+"ip de clientes activos": // diag.html 
+	["IP of active clients", "IP aktiver Kunden"],
 "letra": // play.html 
 	["Lyrics", "Liedtext"],
 "lista de melodías": // tunelist.html 
@@ -165,8 +165,8 @@ let translationDict = {
 	["Current tune", "Jetzige Melodie"],
 "melodías tocadas": // index.html 
 	["Tunes played", "Gespielte Melodien"],
-"minutos": // diag.html 
-	["minutes", "Minuten"],
+"mm:ss": // diag.html meaning minutes:seconds
+	["mm:ss", "mm:ss"],
 "mostrar letra": // play.html 
 	["Show lyrics", "Liedtext anzeigen"],
 "mostrar setlist": // play.html 
@@ -253,7 +253,8 @@ let translationDict = {
 	["Show log", "Log anzeigen"],
 "versión micropython": // diag.html 
 	["MicroPython version", "MicroPython version"],
-
+"zona horaria": // diag.html
+	["Time zone", "Zeitzone"],
 // Server translations
 "bienvenido al organillo en internet": // server index.html
 	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
@@ -271,7 +272,7 @@ let translationDict = {
 	["The crank organ on internet", "Die Drehorgel im Internet"],
 "espectadores":  // admin.html
 	["Spectators","Zuhörer"], 
-"esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre ":
+"esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre":
     ["Here is a demo of the crank organ software. You can see all the options, navigate the pages and test how it works. You cannot alter the configuration. Link to the open source/free software ",
 	"Hier ist eine Demo des Drehorgelsoftwares. Alle Webseiten des Softwares können angesehen werden und der Betrieb wird simuliert. Die Konfiguration kann allerdings nicht geändert werden. Link zum open source/freiem software "],
 "aquí": 

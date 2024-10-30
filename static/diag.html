@@ -45,19 +45,20 @@
             </td>
         </tr>
 		<tr><td>Versión MicroPython</td><td id="mp_version"></td></tr>
-		<tr><td>Imagen MicroPython</td><td id="mp_bin"></td></tr>
-		<tr><td>Fecha/hora</td><td id="last_refresh"></td></tr>
-		<tr><td>Tiempo desde reboot</td><td id="reboot_mins"></td><td>minutos</td></tr>
-		<tr><td>Flash libre</td><td id="free_flash"></td><td>[bytes]</td></tr>
-		<tr><td>Flash usada</td><td id="used_flash"></td><td>[bytes]</td></tr>
-		<tr><td>RAM libre</td><td id="free_ram"></td><td>[bytes]</td></tr>
-		<tr><td>RAM usada</td><td id="used_ram"></td><td>[bytes]</td></tr>
-        <tr><td>Tiempo para gc</td><td id="gc_collect_time"></td><td>[mseg]</td></tr>
-		<tr><td>Fecha/hora compilación</td><td id="compile_date"></td><td></td></tr>
-		<tr><td>Configuración solenoides</td><td id="solenoid_devices"></td></tr>
-		<tr><td>Archivos MIDI</td><td id="midi_files"></td></tr>
-		<tr><td>Carpeta música</td><td id="tunelib_folder"></td></tr>
-		<tr><td>Manivela instalada</td><td id="crank_installed"></td></tr>
+		<tr><td>Imagen MicroPython</td>	<td id="mp_bin"></td></tr>
+		<tr><td>Fecha/hora</td>			<td id="last_refresh"></td></tr> 
+		<tr><td>Zona horaria</td>		<td id="time_zone_info"></td></tr> 
+		<tr><td>Tiempo desde reboot</td><td id="reboot_mins"></td><td>mm:ss</td></tr>
+		<tr><td>Flash libre</td>		<td id="free_flash"></td><td>[bytes]</td></tr>
+		<tr><td>Flash usada</td>		<td id="used_flash"></td><td>[bytes]</td></tr>
+		<tr><td>RAM libre</td>			<td id="free_ram"></td><td>[bytes]</td></tr>
+		<tr><td>RAM usada</td>			<td id="used_ram"></td><td>[bytes]</td></tr>
+        <tr><td>Tiempo para gc</td>		<td id="gc_collect_time"></td><td>[mseg]</td></tr>
+		<tr><td>Fecha/hora compilación</td> <td id="compile_date"></td><td></td></tr>
+		<tr><td>Configuración solenoides</td> <td id="solenoid_devices"></td></tr>
+		<tr><td>Archivos MIDI</td>		<td id="midi_files"></td></tr>
+		<tr><td>Carpeta música</td>		<td id="tunelib_folder"></td></tr>
+		<tr><td>Manivela instalada</td>	<td id="crank_installed"></td></tr>
 		<tr id="crankGraphButton">
 			<td>
 				<button onclick="crankGraph()">Gráfico manivela</button>
@@ -76,7 +77,7 @@
 		<td>Host name, AP SSID, BLE name:</td><td id="hostname"></td>
 	</tr>
 	<tr>	
-		<td>IP de clientes activos (60 segundos)</td><td id="client_IPs"></td>
+		<td>IP de clientes activos</td><td id="client_IPs"></td>
 	</tr>
 	<tr>
 		<td colspan="2"><b>Como WiFi station</b></td>
@@ -276,7 +277,6 @@ async function crankGraph(){
 
 	}
 }
-
 
 translate_html();
 getDiagInfo();

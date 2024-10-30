@@ -281,7 +281,7 @@ class _PCNThardware:
         reg0 = MC.PCNT_Un_CONF_REGx( unit, 0 )
         reg1 = MC.PCNT_Un_CONF_REGx( unit, 1 )
         reg2 = MC.PCNT_Un_CONF_REGx( unit, 2 )
-        # Leave only filter enabled with threshold 16
+        # Leave only filter enabled with threshold 16 (default)
         # which is the default. Configure all other bits to 0
         # This means: no threshold detection, no limits, no interrups
         mem32[reg0] = (1 << 10) | 0x10
@@ -306,16 +306,17 @@ class PCNT:
     DECREMENT = const(2)
     
     # Mode_low/mode_high values
-    HOLD = const(0)
+    KEEP = const(0)
     REVERSE = const(1)
+    HOLD = const(2)
     
     # IRQ types (these are in the same order as the bits in the 
     # status register for simplicity)
     IRQ_ZERO = 64
     IRQ_MAX = 32
     IRQ_MIN = 16
-    IRQ_THRES0 = 8
-    IRQ_THRES1 = 4
+    IRQ_THRESHOLD0 = 8
+    IRQ_THRESHOLD1 = 4
     
     def __new__(cls, unit, *_args, **_kwargs):
         return _PCNThardware().register( cls, unit )
@@ -368,7 +369,6 @@ class PCNT:
                 # Set the value of the limit
                 set_bit_field( register, limitpos, 16, limit_val&0xffff )
                 self.zero()
-                #print(f"config CNT {mem32[self.counter_reg]=}")
 
         # Bit positions of modes in config register 0
         # ch0 neg_mode 16-17
@@ -380,20 +380,21 @@ class PCNT:
         # ch1 hctrl-mode 28-29
         # ch1 lctrl_mode 30-31
         if channel is None:
-            # >>>the right thing to do?
-            # >>> should perhaps factor channel out?
             channel = 0
-        for vconfig, bitpos, length, maxval, channel8 in ( 
-                (falling, 16, 2, 2, True), 
-                (rising, 18, 2, 2, True), 
-                (mode_high, 20, 2, 2, True), 
-                (mode_low,  22, 2, 2, True), 
-                (filter, 0, 10, 1023, False),
-                (1 if filter else 0, 10, 1, 1, False)
+        # This could be written better, but eventually
+        # this driver will be replaced by MicroPython
+        for vconfig, bitpos, length, maxval, channel8, name in ( 
+                (falling, 16, 2, 2, True, "falling"), 
+                (rising, 18, 2, 2, True, "rising"), 
+                (mode_high, 20, 2, 2, True, "mode_high"), 
+                (mode_low,  22, 2, 2, True, "mode_low"), 
+                (filter, 0, 10, 1023, False, "filter"),
+                (1 if filter else 0, 10, 1, 1, False, "f.active")
         ):
             if vconfig is not None:
                 if not( 0 <= vconfig <= 2**length-1):
                     raise ValueError
+                # >>> should check maxval?
                 if channel8:
                     # bit position depends on channel
                     if channel is None:
@@ -401,7 +402,7 @@ class PCNT:
                     bitpos += channel * 8
                 set_bit_field( reg0, bitpos, length, vconfig )
 
-        #>>>>better code for filter.
+        #>>>>better code for filter:
         #if filter is not None:
         #    set_bit_field( reg0, 10, 1023, filter )
         #    set_bit_field( reg0, 10, 1, bool(filter) )
@@ -481,14 +482,15 @@ class PCNT:
         if trigger:
             reg0 = MC.PCNT_Un_CONF_REGx( self.unit, 0 )
             for trigbit, bitpos in (
-                    (PCNT.IRQ_THRES1,15),
-                    (PCNT.IRQ_THRES0,14),
+                    (PCNT.IRQ_THRESHOLD1,15),
+                    (PCNT.IRQ_THRESHOLD0,14),
                     (PCNT.IRQ_MIN,13),
                     (PCNT.IRQ_MAX,12),
                     (PCNT.IRQ_ZERO,11)):
                 if trigbit & trigger:
                     set_bit_field( reg0, bitpos, 1, 1 )
-
+                else:
+                    set_bit_field( reg0, bitpos, 1, 0 )    
         # return so that
         # pcnt.irq().flags() is the bit mask of IRQs detected
         return self
