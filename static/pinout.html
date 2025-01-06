@@ -264,7 +264,11 @@ async function getPinoutDetail( ) {
                 testFunction = function() { testGPIO(pin) };
             }
             else if( pdtype == "mcp.midi" ){
-                testFunction = function() { testMCP(sda, scl, mcpaddr, pin) };            
+		// make copy of objects for testMCP() closure
+                let mcpaddr1 = parseInt(mcpaddr);
+                let sda1 = parseInt(sda);
+                let scl1 = parseInt(scl); 
+                testFunction = function() { testMCP(sda1, scl1, mcpaddr1, pin) };            
             } 
             else if( pdtype == "serial.midi" ){
                 testFunction = function() { alert("Not implemented")};
