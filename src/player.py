@@ -1,26 +1,25 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
+
 # Plays MIDI files using the umidiparser module
+
 from micropython import const
-import time
+from time import ticks_us, ticks_diff
 import asyncio
 import errno
 from random import getrandbits
 
 from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE, MidiFile
 from minilog import getLogger
-from tunemanager import tunemanager
-import scheduler
-from midi import controller, DRUM_CHANNEL
-from battery import battery
-from history import history
-from tachometer import crank
-from config import config
-from midi import DRUM_PROGRAM
+from drehorgel import tunemanager, controller, battery, history, crank, config
 
-CANCELLED = const("cancelled") # type: ignore
-ENDED = const("ended") # type: ignore
-PLAYING = const("playing") # type: ignore
+import scheduler
+from midi import DRUM_PROGRAM, DRUM_CHANNEL
+from fileops import open_midi
+
+CANCELLED = const("cancelled") 
+ENDED = const("ended")
+PLAYING = const("playing")
 
 # Can also be "waiting", "file not found", others.
 
@@ -84,15 +83,14 @@ class MIDIPlayer:
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
-            self.logger.debug("Player cancelled")
+            self.logger.debug("Player cancelled (next or da capo button)")
             self.progress.tune_cancelled()
-
         except OSError as e:
             if e.errno == errno.ENOENT:
-                self.logger.error(f"File {midi_file=} {tuneid=} file not found")
+                self.logger.error(f"File {midi_file=} or .gz {tuneid=} file not found")
                 self.progress.report_exception("file not found")
             else:
-                self.logger.exc(e, f"Exception playing {midi_file=} {tuneid=}")
+                self.logger.exc(e, f"Exception playing {midi_file=} or .gz {tuneid=}")
                 self.progress.report_exception(
                     "exception in play_tune! " + str(e)
                 )
@@ -102,27 +100,18 @@ class MIDIPlayer:
         finally:
             # End of tune processing and clean up
             controller.all_notes_off()
-            try:
-                self._insert_history(
-                    tuneid, self.time_played_us, duration, requested
-                )
-            except Exception as e:
-                self.logger.exc(e, "Exception adding history")
             scheduler.run_always()
             battery.start_heartbeat()
             battery.end_of_tune(self.time_played_us / 1_000_000)
+            self._insert_history( tuneid, 
+                                 self.time_played_us, 
+                                 duration, 
+                                 requested )
 
     def _insert_history(self, tuneid, time_played_us, duration, requested):
-        if duration > 0:
+        percentage_played = 0
+        if duration != 0:
             percentage_played = round(time_played_us / 1000 / duration * 100)
-        else:
-            # Avoid division by 0
-            self.logger.info(f"MIDI file {tuneid} has duration 0")
-            percentage_played = 0
-            
-        self.logger.debug(
-            f"add history {tuneid} {time_played_us=} {duration=}  {percentage_played=}"
-        )
         history.add_entry(tuneid, percentage_played, requested)
         if percentage_played > 95:
             tunemanager.add_one_to_history( tuneid )
@@ -144,21 +133,32 @@ class MIDIPlayer:
         # With 4 to 8 MB RAM, there is enough to have large buffer.
         # But even so, there is no need to read the full file to memory
         # A buffer size of > 1000 means almost no impact on CPU
-        midifile = MidiFile(midi_file, 
-										buffer_size=5000,
-									    reuse_event_object=True)
-        self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
-        playing_started_at = time.ticks_us()
-        midi_time = 0
+        midifile = open_midi( midi_file ) # fileops.open_midi
 
+        self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
+
+        # Leave some time to process possible events previous
+        # to start of music. This can be important if there are
+        # a lot of meta events with lots of text before the first note.
+        # 500 msec should be enough, I have found one case of 240 msec.
+        playing_started_at = ticks_us() + 500_000
+        midi_time = 0
         for midi_event in midifile:
+            # Optimization: skip events that don't matter
+            # in _process_midi(), only NOTE_ON, NOTE_OFF and PROGRAM_CHANGE
+            # events are important.
+            # But if delta_us != 0, the event has to be processed
+            # to update time.
+            if midi_event.delta_us == 0 and not midi_event.is_channel():
+                continue
+
             # midi_time is the calculated MIDI time since the start of the MIDI file
-            # midi_time += midi_event.delta_us
+            # Without tachometer: midi_time += midi_event.delta_us
             midi_time += await self._calculate_tachometer_dt(
                 midi_event.delta_us
             )
-            # playing_time is the clock time since playing started
-            playing_time = time.ticks_diff(time.ticks_us(), playing_started_at)
+            # playing_time is the wall clock time since playing started
+            playing_time = ticks_diff(ticks_us(), playing_started_at)
 
             # Wait for the difference between the time that is and the time that
             # should be
@@ -170,6 +170,7 @@ class MIDIPlayer:
             # and is not affected by playback speed. Is used to calculate
             # % of s
             self.time_played_us += midi_event.delta_us
+
             # Turn one note on or off.
             self._process_midi(midi_event)
 
@@ -201,25 +202,36 @@ class MIDIPlayer:
         p = self.progress.get(self.time_played_us)
         p["tempo_follows_crank"] = self.tempo_follows_crank
         return p
-
+    
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
+        # Compute additional wait time due to crank or UI velocity setting
+        additional_wait = 0
         if not self.tempo_follows_crank or crank.is_turning():
             # Change playback speed with UI settings 
             # and with crank rpsec if crank sensor is enabled
             normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank)
             if normalized_vel < 0.1:
                 # Avoid division by zero.
-                # Also a very slow
-                # speed is meaningless here, crank should be stopped...?
+                # Also a very slow speed is meaningless here, 
+                # crank should inform that it has stopped...?
                 normalized_vel = 1
-            return round(midi_event_delta_us / normalized_vel)
-
+            additional_wait = round(midi_event_delta_us / normalized_vel)
+#>>> test this.
+        # We get here if the crank is not turning and tempo_follows_crank is enabled.
+        # Wait for the crank to start turning again and return the waiting time
+        # to be added to the MIDI time delaying the rest of the tune.
+        return additional_wait + await self._wait_for_crank_to_turn()
+    
+    async def _wait_for_crank_to_turn( self ):
+        if crank.is_turning():
+            return 0
+        
         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
         # again, so playing can resume without a hitch.
         self.logger.debug("waiting for crank to turn")
-        start_wait = time.ticks_us()
+        start_wait = ticks_us()
         # Don't let a note on during wait, it may
         # be realistical but it's not nice
         controller.all_notes_off()
@@ -227,11 +239,9 @@ class MIDIPlayer:
         self.crank_start_event.clear()
         await self.crank_start_event.wait()
         # Lengthen MIDI time by the wait
-        return time.ticks_diff(time.ticks_us(), start_wait)
+        return ticks_diff(ticks_us(), start_wait)
 
     def set_tempo_follows_crank( self, v ):
         # If crank not installed, don't follow crank....
         self.tempo_follows_crank = v and crank.is_installed()
         
-# Singleton instance of player:
-player = MIDIPlayer()

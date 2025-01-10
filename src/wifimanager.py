@@ -13,17 +13,22 @@
 #       only after power on, then it will turn off if inactive.
 import asyncio
 import network
-import time
+from time import ticks_ms, ticks_diff
 
-from config import config, password_manager
+from drehorgel import config, timezone, led
 from minilog import getLogger
 import scheduler
-from timezone import timezone
-from led import led
+
 
 # 15 seconds waiting for this device in station mode to connect to an AP
 # After this time, the device will try with the other AP
 _STATION_WAIT_FOR_CONNECT = 15_000
+
+# WiFi error status codes. This allows to show the error
+# name for WiFi errors (such as "STAT_WRONG_PASSWORD") instead
+# of error codes (such as 202).
+STATUS_CODE_DICT = { getattr(network, errcode): errcode for errcode in dir(network) if errcode.startswith("STAT_")}
+
 
 
 class WiFiManager:
@@ -33,6 +38,7 @@ class WiFiManager:
         # Connect in background to both interfaces
         self.ap_if = network.WLAN(network.AP_IF)
         self.sta_if = network.WLAN(network.STA_IF)
+        network.hostname(config.cfg["name"])
 
         self.sta_if_ssid = ""
 
@@ -68,7 +74,7 @@ class WiFiManager:
             self.ap_if.active(True)
             self.ap_if.config(
                 ssid=config.cfg["name"],
-                key=password_manager.get_password("ap_password"),
+                key=config.get_password("ap_password"),
                 security=4,
             )
             apip = config.cfg.get("ap_ip", "192.168.144.1")
@@ -102,7 +108,7 @@ class WiFiManager:
                 for ap in ("1", "2"):
                     # Will fail if not configured, but AP should start anyhow.
                     self.sta_if_ssid = config.cfg["access_point" + ap]
-                    password = password_manager.get_password("password" + ap)
+                    password = config.get_password("password" + ap)
                     self.logger.debug(
                         f"_start_station_interface for ssid={self.sta_if_ssid=}"
                     )
@@ -144,14 +150,10 @@ class WiFiManager:
             self.sta_if.active(True)
             try:
                 self.sta_if.connect(access_point, password)
-                start_time = time.ticks_ms()
-                while not self.sta_if.isconnected():
+                start_time = ticks_ms()
+                while (not self.sta_if.isconnected() and 
+                       ticks_diff(ticks_ms(), start_time) < _STATION_WAIT_FOR_CONNECT):
                     await asyncio.sleep_ms(100)
-                    if (
-                        time.ticks_diff(time.ticks_ms(), start_time)
-                        > _STATION_WAIT_FOR_CONNECT
-                    ):
-                        break
 
             except Exception as e:
                 # OSError: Wifi Internal Error (recoverable) happens
@@ -169,14 +171,13 @@ class WiFiManager:
 
             # Problems? Get the status and log it
             status = self.sta_if.status()
-            self.sta_if_status = access_point + " " + str(status)
+            self.sta_if_status = access_point + " " + str(status) + " " + STATUS_CODE_DICT.get( status, "" )
             await self.loginfo(
-                f"Status'({self.sta_if_status})', could not connect to {access_point}"
+                f"Status for {self.sta_if_status}, could not connect to {access_point}"
             )
         except Exception as e:
             self.logger.exc(e, "in _station_connect_to_ap")
             self.sta_if_status = access_point + " " + str(e)
-
     def get_status(self):
         # Detailed wifi status for diag.html
         return {
@@ -193,8 +194,8 @@ class WiFiManager:
             "description": config.cfg["description"],
         }
 
-    def sta_isconnected(self):
-        return self.sta_if.isconnected()
+    #def sta_isconnected(self):
+    #    return self.sta_if.isconnected()
 
     def sta_if_scan(self):
         return self.sta_if.scan()
@@ -202,13 +203,12 @@ class WiFiManager:
     async def loginfo(self, message):
         try:
             async with scheduler.RequestSlice(
-                "wifimanager log.info", 2000, 10_000
-            ):
+                "wifimanager log.info", 100, 10_000
+            ):  
+                # logging can take about 100 msec
                 self.logger.info(message)
         except Exception:
             # Don't log info messages if playing
             # does not allow it
             pass
 
-wifimanager = WiFiManager()
-asyncio.run(wifimanager.async_init())

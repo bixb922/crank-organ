@@ -11,19 +11,17 @@ from machine import Pin, ADC
 from math import sin, pi
 
 import random
-import array
+from array import array
 
-import fft_arrays as fft_module
+import fft_arrays as fft_module # Allow for different fft modules
 import frequency
-from config import config
-from pinout import gpio
 
 class Microphone:
     def __init__(self, gpio_microphone_pin, mic_test_mode):
         # Allocate memory as a first step to ensure availability
         gc.collect()
         self.buffer_size = fft_module.BUFFER_SIZE
-        self.adc_signal = array.array("i", (0 for _ in range(self.buffer_size)))
+        self.adc_signal = array("i", (0 for _ in range(self.buffer_size)))
         # Allocate memory for zero crossing/signal processing module
         self.mic_test_mode = mic_test_mode
         if gpio_microphone_pin and not mic_test_mode:
@@ -38,7 +36,8 @@ class Microphone:
             return self._sample_microphone(midi_note)
         if self.mic_test_mode:
             return  self._generate_signal(midi_note)
-
+        # Return dummy signal, no frequency
+        return 1, bytearray(10)
     
     def _sample_microphone(self,midi_note):
         # Get the time between samples
@@ -111,12 +110,13 @@ class Microphone:
 
     def frequency( self, midi_note, save_result ):
         duration, signal = self._sample_adc( midi_note )
+
+
         # for now, no amplitude.
         freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, save_result )
 
         return freq, amplitude, duration
 
-microphone = Microphone( gpio.microphone_pin, config.cfg["mic_test_mode"] )
 
 # Performance test of tuner
 # With BUFFER_SIZE=512, the maximum error about 2 cents

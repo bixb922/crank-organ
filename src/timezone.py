@@ -1,6 +1,5 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-import sys
 import time
 import ntptime
 import asyncio
@@ -10,23 +9,21 @@ import scheduler
 import fileops
 
 TZFILE = "data/timezone.json"
-RETRIES = 5
+NTP_RETRIES = 3
 
-
+NO_TZ_INFO = "no tz info"
 class TimeZone:
     def __init__(self):
         self.ntp_task = None
         self.logger = None
         # No logger yet, because of import circularity
 
-        tz = fileops.read_json( TZFILE, {} )
-        if not tz or "longName" not in tz:
-            self.offset = 0
-            self.shortName = self.longName = "UTC"
-        else:
-            self.offset = tz["offset"]
-            self.shortName = tz["shortName"]
-            self.longName = tz["longName"]
+        self.tzinfo = fileops.read_json( TZFILE, {
+            "offset": 0,
+            "shortName": "UTC",
+            "longName": NO_TZ_INFO,
+            "timestamp": 0
+        } )
 
 
     def setLogger(self, getLogger):
@@ -42,31 +39,36 @@ class TimeZone:
 
     async def _ntp_process(self):
         # Get ntp time, then update time zone 
-        if time.time() > 756864000: # time after 2024/1/1?
+        if self.has_time(): 
             return # Clock already set
-        try:
-            await self._get_ntp_time()
-        except Exception as e:
-            self.logger.exc(e, "Could not get ntp time")
+        # Try several times to get time from ntp server
+        await self._get_ntp_time()
+        self.set_rtc( time.time() )
+    
+    def has_time( self ):
+        # time after 2024/1/1?
+        return time.time() > 756864000
+    
+    def set_rtc( self, timestamp ):
+        if self.has_time():
+            # Do not do set_rtc() if already set,
+            # result will be erroneous.
             return
-        
         # Now we have local time, apply stored time zone only once.
         # Prepare a time tuple as argument for RTC
-        t = time.localtime(time.time() - self.offset )
+        t = time.localtime(timestamp - self.tzinfo["offset"] )
         # Set this as the local time, to be returned
         # by time.localtime() and time.time()
         # year, month, day, weekday, hour, minute, second, subsecond
         machine.RTC().datetime( (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
 
- 
     async def _get_ntp_time(self):
         # Retry a few times.
-        retry_time = 2000
-        for _ in range(RETRIES):
+        retry_time = 3000 # Gets duplicated for every retry
+        for _ in range(NTP_RETRIES):
             try:
                 async with scheduler.RequestSlice("ntptime", 1000):
                     # ntptime.settime is not async, will block
-                    # Could launch in separate thread...?
                     ntptime.settime()
                 return 
             except (asyncio.TimeoutError, OSError) as e:
@@ -80,27 +82,30 @@ class TimeZone:
 
             await asyncio.sleep_ms(retry_time)
             # ntp servers don't like frequent retries...
-            # After first retry, duplicate retry time for each time
+            # Duplicate retry time for each time
             retry_time *= 2
 
     def set_time_zone( self, newtz ):
         # Called from webserver with /set_time_zone
         # Which in turn is called from common.js for each hard page load
-        # Takes effect at next reboot. Needs a hard reset for RTC time to
-        # get rid of time zone. Soft resets don't reset to zero and the offset
-        # gets lost on reboot.
-        if newtz["offset"] == self.offset:
-            # Optimization to avoid writing file.
-            return
-        self.offset = newtz["offset"]
-        self.shortName = newtz["shortName"]
-        self.longName = newtz["longName"]
-        fileops.write_json( newtz, TZFILE, keep_backup=False )
-
-        self.logger.info("Timezone info updated, takes effect next reboot")
-
+        
+        if self.tzinfo["longName"] ==  NO_TZ_INFO:
+            self.tzinfo = newtz
+            fileops.write_json( newtz, TZFILE, keep_backup=False )
+            self.logger.info("Timezone info updated, takes effect next reboot")
+        
+        # If we don't have ntptime, use the timestamp provided
+        # by the browser. This is normally case if using AP mode
+        # but sometimes ntptime fails, since there is no guarantee
+        # of service for ntptime. And also: if setting a new
+        # time zone, this sets the time and resets the RTC
+        # to the new time zone.
+        # Convert from Unix epoch to ESP32 epoch and
+        # set RTC. 
+        self.set_rtc( newtz["timestamp"] - 946_684_800)
+        
     def get_time_zone_info( self ):
-        return (self.offset, self.shortName, self.longName)
+        return self.tzinfo
     
     def now_timestamp(self):
         # time.time() is already in local time, no need to add offset
@@ -108,10 +113,10 @@ class TimeZone:
     
     def now(self):
         t = time.localtime(self.now_timestamp())
-        if t[0] < 2010:
-            # Don't apply time zone if no clock set (no ntptime yet)
-            return time.localtime()
-        return t
+        if self.has_time():
+            return t
+        # Don't apply time zone if no clock set (no ntptime yet)
+        return time.localtime()
 
     def now_ymdhms(self):
         t = self.now()
@@ -131,15 +136,9 @@ class TimeZone:
         return self.now_ymdhms()[0:10]
 
     def now_ymdhmsz(self):
-        t = self.now()
-        if t[0] < 2010:
-            # No ntptime (yet)
-            return self.now_hms()
-        else:
-            return self.now_ymdhms() + self.shortName
+        if self.has_time(): 
+            return self.now_ymdhms() + self.tzinfo["shortName"]
+        # No ntptime (yet)
+        return self.now_hms()
 
-    def _log_exception(self, e, message):
-        print(message, e)
-        sys.print_exception(e)
-        
-timezone = TimeZone()
+           

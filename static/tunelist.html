@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -13,7 +15,8 @@
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;<span>Lista de melodías</span>
+		&nbsp;<span id="headerTitle">Lista de melodías</span>
+        <span id="enterTunelibedit" style="display:none"><big><b>Cambios pendientes, debe entrar a Editar tunelib</b></big></span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
@@ -145,12 +148,13 @@ function fillHeader( ){
             }
         }
         th.innerText = h + header[j];
+        // note that changeOrder is async
         th.onclick = function() { changeOrder(j) };
         headerRow.appendChild( th );
     }
 }
     
-function fillBody( ) {
+async function fillBody( ) {
     let s = "";
     let tlbody = document.getElementById( "tunelistbody")
     tlbody.innerText = "";    
@@ -180,7 +184,7 @@ function fillBody( ) {
         let titleLink = document.createElement("a");
         titleLink.id = `title.${tuneid}`;
         titleLink.onclick = function() { queueTune(tuneid) };
-        titleLink.innerText = makeTuneTitle( tune );
+        titleLink.innerText = await makeTuneTitle( tune );
         titleLink.style.cursor = "pointer";
         titleLink.classList.add( "anohref" );
         row.cells[0].appendChild( titleLink );
@@ -207,9 +211,9 @@ function fillBody( ) {
 	document.getElementById("tunelisttable").appendChild( tlbody );
 }
 
-function updateTunelistTable( ){
+async function updateTunelistTable( ){
     fillHeader( );
-    fillBody( ) ;
+    await fillBody( ) ;
     
 }    
 function navigateToPlayPage() {
@@ -256,6 +260,16 @@ function updateThisPage( progress ) {
     }
     document.getElementById("play_mode").style.display = pm ;
     
+    if( progress["sync_pending"] ){
+        document.getElementById("headerTitle").style.display = "none";
+        enterTunelibedit
+        document.getElementById("enterTunelibedit").style.display = "";
+    }
+    else {
+        document.getElementById("headerTitle").style.display = "";
+        enterTunelibedit
+        document.getElementById("enterTunelibedit").style.display = "none";
+    }
     
 	//const queue_img = "&#127775;"; // Glowing Star
     //const queue_img = "&#x1F9FA;" ; // Basket
@@ -318,9 +332,9 @@ function updateThisPage( progress ) {
     return ;
 }
 
-function changeOrder( column ){
+async function changeOrder( column ){
     sortTunelist( column );
-    updateTunelistTable() ;
+    await updateTunelistTable() ;
 }
     
 function sortTunelist( column ){
@@ -371,3 +385,4 @@ setTuneList() ;
 
 
 </script>
+</html>

@@ -143,8 +143,5 @@ def compute_time_step_usec( nominal_frequency  ):
 
 def clear_stored_signals():
     for filename in os.listdir(SIGNAL_FOLDER):
-            try:
-                os.remove(filename)
-            except OSError:
-                pass
+        os.remove(SIGNAL_FOLDER + "/" + filename)
 

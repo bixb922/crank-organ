@@ -9,14 +9,11 @@ from math import log10
 if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")
+# >>> tune to mean frequency/tune to 440.
 
-from solenoid import solenoids
 from minilog import getLogger
-from config import config
-from midi import controller
-from battery import battery
+from drehorgel import config, controller, actuator_bank, battery, microphone
 import fileops
-from microphone import microphone
 import frequency
 
 # Time spent for measuring frequency for each note
@@ -59,7 +56,7 @@ class OrganTuner:
     def tune_all(self):
         self.queue_tuning( self.wait, 1000 )
         # Open all defined pins, bypass registers
-        for pin_index in range(solenoids.get_pin_count()):
+        for pin_index in range(actuator_bank.get_pin_count()):
             self.queue_tuning( self.update_tuning, pin_index )
 
     async def sound_note(self, pin_index ):
@@ -94,8 +91,8 @@ class OrganTuner:
     async def all_pin_test(self, _):
         # Play all pìns
 
-        pin_indexes = [ x for x in range(solenoids.get_pin_count())]
-        pin_indexes.sort( key=lambda pi: solenoids.get_solepin_by_pin_index(pi).midi_note.midi_number or 9999)
+        pin_indexes = [ x for x in range(actuator_bank.get_pin_count())]
+        pin_indexes.sort( key=lambda pi: actuator_bank.get_actuator_by_pin_index(pi).nominal_midi_note.midi_number or 9999)
         for duration in [240, 120, 60, 30]:  # In milliseconds
             for _ in range(2):
                 # Play twice: one up, one down
@@ -107,9 +104,13 @@ class OrganTuner:
             await asyncio.sleep_ms(500)
 
     async def scale_test(self, _):
-        # Play all notes
+        # Play all notes. Unknown notes will play in zero time,
+        # so they are essentially skipped. This is because 
+        # controller.note_on() will return falsish if no
+        # note was found, so play_midi_note skips waiting and
+        # skips note off.
         notelist =[ midi_number for midi_number in range(128)]
-        for duration in [240, 120, 60, 30]:  # In milliseconds
+        for duration in [700, 240, 120, 60, 30]:  # In milliseconds
             for _ in range(2):
                 # Play twice: one up, one down
                 for midi_number in notelist:
@@ -122,16 +123,20 @@ class OrganTuner:
     async def play_pin( self, arg ):
         #  Make a pipe sound
         pin_index, duration, silence = arg
-        solepin = solenoids.get_solepin_by_pin_index( pin_index )
-        solepin.on()
+        actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
+        actuator.on()
         await asyncio.sleep_ms(round(duration))
-        solepin.off()
+        actuator.off()
         await asyncio.sleep_ms(round(silence))
 
     async def play_midi_note( self, arg ):
         #  Make a midi note sound
         midi_number, duration, silence = arg
-        # Play program_number=1 (piano)
+        # Play program_number=1 (piano), that should
+        # work for most "nominal" midi note definitios
+        # except drums.
+        # controller.note_on will return falsish if 
+        # no note was found. If so, skip waiting and note_off.
         if controller.note_on(  1,  midi_number ):
             await asyncio.sleep_ms(round(duration))
             controller.note_off( 1, midi_number)
@@ -184,12 +189,12 @@ class OrganTuner:
         # Older versions use dict, delete that. 
         # If pin count is different, this organtuner.json is obsolete, delete.
         if (not isinstance( self.stored_tuning, list ) or 
-            len(self.stored_tuning) != solenoids.get_pin_count()):
-            self.stored_tuning = [ None for _ in range(solenoids.get_pin_count())]
+            len(self.stored_tuning) != actuator_bank.get_pin_count()):
+            self.stored_tuning = [ None for _ in range(actuator_bank.get_pin_count())]
 
 
         # Update stored tuning, if necessary
-        for pin_index, solepin in enumerate(solenoids.get_all_pins()):
+        for pin_index, actuator in enumerate(actuator_bank.get_all_pins()):
             d = self.stored_tuning[pin_index] or  {
                     "centslist": [],
                     "amplist": [],
@@ -197,11 +202,11 @@ class OrganTuner:
                 }
             # Update with current pin definition, just to be sure
             # it's up to date
-            midi_note = solepin.midi_note
+            midi_note = actuator.nominal_midi_note
             d["name"] = str(midi_note)
             d["midi_number"] = midi_note.midi_number
-            d["pinname"] = solepin.get_rank_name()
-            d["frequency"] = round(solepin.midi_note.frequency(),1)
+            d["pinname"] = str(actuator) + " " + actuator.get_rank_name()
+            d["frequency"] = round(actuator.nominal_midi_note.frequency(),1)
             self.stored_tuning[pin_index] = d
 
         fileops.write_json(
@@ -213,8 +218,8 @@ class OrganTuner:
         # Tune a single note and update organtuner.json
         self.logger.info(f"update_tuning {pin_index=}")
         # Get midi note to know nominal frequency
-        solepin = solenoids.get_solepin_by_pin_index( pin_index )
-        midi_note = solepin.midi_note
+        actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
+        midi_note = actuator.nominal_midi_note
         # Do the tuning
         _, amp, freqlist, amplist = await self._get_note_pitch(
             pin_index, midi_note
@@ -266,8 +271,8 @@ class OrganTuner:
         store_signal = config.cfg.get("mic_store_signal", False)
         freqlist = []
         amplist = []
-        solepin = solenoids.get_solepin_by_pin_index( pin_index )
-        solepin.on()
+        actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
+        actuator.on()
         # Wait for sound to stabilize before calling tuner
         await asyncio.sleep_ms(300)
         try:
@@ -279,10 +284,7 @@ class OrganTuner:
                 store_this = (store_signal and iteration==0)
                 # Save signal only for iteration 0
                 try:
-                    (
-                        frequency,
-                        amplitude,
-                        duration,
+                    ( frequency, amplitude, duration,
                     ) = microphone.frequency( midi_note, store_this )
                 except ValueError:
                     frequency = None
@@ -311,7 +313,7 @@ class OrganTuner:
         except Exception as e:
             self.logger.exc(e, "Exception in _get_note_pitch")
         finally:
-            solepin.off()
+            actuator.off()
 
         if len(freqlist) == 0:
             return None, 0, freqlist, amplist
@@ -320,5 +322,3 @@ class OrganTuner:
         amplitude = avg( amplist )
         return frequency, amplitude, freqlist, amplist
 
-
-organtuner = OrganTuner()

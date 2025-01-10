@@ -1,3 +1,5 @@
+// Copyright (c) 2023 Hermann von Borries
+// MIT License
 
 let MAX_DB = -20 ;
 let MIN_DB = -0 ;
@@ -594,7 +596,7 @@ TLCOL_DATEADDED = 9 ;
 TLCOL_RATING = 10 ;
 TLCOL_SIZE = 11 ;
 TLCOL_HISTORY = 12 ;
-TLCOL_LYRICS = 13 ;
+TLCOL_RFU = 13 ;
 TLCOL_COLUMNS = 14 ;
 
 
@@ -647,7 +649,7 @@ function currentPage(){
 }
 
 // Cache a json file 
-async function  cache_json( path ) {
+async function cache_json( path ) {
 	let data = sessionStorage.getItem( path );
 	if( data == null || data == undefined || data == "undefined"){
         console.log("getting json from net for cache:", path ) ;
@@ -680,7 +682,7 @@ function drop_tunelib(){
 async function get_lyrics( tuneid ){
 	data = await cache_json( "/data/lyrics.json" ) ;
 	lyrics = data[tuneid] ;
-	if( lyrics == undefined ){
+	if( lyrics == undefined || lyrics == null ){
 		return "";
 	}
 	return lyrics ;
@@ -728,7 +730,7 @@ async function setPageTitle(){
 	if( pt == undefined || pt.innerText != "" ){
 		return ;
 	}
-	// cache description in page storage for efficiency
+	// cache description in tab storage for efficiency
 	let j = await cache_json("/get_description");
 	pt.innerText = j.description ;
 }
@@ -881,7 +883,7 @@ let programNameList = [
     "Applause",
     "Gunshot",
     "drum"]
-// Translate program number to program name
+// Translate MIDI program number to program name
 function program_name( program_number ){
 		if( program_number == "" ){
 			return programNameList[0];
@@ -906,9 +908,10 @@ function insertRow( body, data ){
 	return row;
 }
 
-function makeTuneTitle( tune ){
-	mic = "" ;
-	if( tune[TLCOL_LYRICS]){
+async function makeTuneTitle( tune ){
+	let mic = "" ;
+	let lyrics = await get_lyrics(tune[TLCOL_ID]);
+	if( lyrics.length > 0 ){
 		mic = "🎤";
 	}
 	return tune[TLCOL_TITLE] + mic ;
@@ -917,9 +920,10 @@ function makeTuneTitle( tune ){
 // Encodes a Unicode filename so that it can be
 // added to the url, like in: /delete_file/%2Fmy%20file.txt
 function encodePath( path ){
+	let p = path.normalize("NFC");
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
     return (
-    encodeURIComponent(path)
+    encodeURIComponent(p)
       // The following creates the sequences %27 %28 %29 %2A (Note that
       // the valid encoding of "*" is %2A, which necessitates calling
       // toUpperCase() to properly encode). Although RFC3986 reserves "!",
@@ -995,7 +999,7 @@ async function askForPassword(){
 }
 
 // Share current time zone information with server
-async function set_time_zone(){
+async function setTimezone(){
 	let offsetMinutes = new Date().getTimezoneOffset();
 	let timeInfo = new Date().toLocaleString([], {timeZoneName:"short"}).split(" ");
 	let shortName = timeInfo[timeInfo.length-1];
@@ -1003,9 +1007,12 @@ async function set_time_zone(){
 	await fetch_json( "/set_time_zone", 
 		post={"offset": offsetMinutes*60, 
 			  "shortName":shortName,
-			  "longName": longName });	
+			  "longName": longName,
+			  // current time in Unix epoch seconds
+			  "timestamp": Math.round( Date.now()/1000)
+			 });	
 }
-set_time_zone();
+setTimezone();
 
 
 // https://github.com/6502/sha256

@@ -1,6 +1,6 @@
 # MIDI controller hardware a crank organ
 
-This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue.
+This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue or open a discussion item in this repository.
 
 Contents:
 * Controller for a 20 note crank organ. This design allows to control up to 20 solenoid valves, like the 90 Ohm valves typically used in organs. It is as simple as it can get.
@@ -22,25 +22,40 @@ The goals for the design are:
 * Able to control solenoid based 90 Ohm valves
 * Low power consumption: consumes 0.3W in addition to the power needed for the solenoids
 
-See also the software section for a description of the program that maatches the hardware.
+See also the software section for a description of the program that matches the hardware.
+
+# Table of contents
+[Description](#description)
+[The ESP32-S3](#the-esp32-s3)
+[Circuit diagram](#circuit-diagram)
+[Board assembly](#board-assembly)
+[Circuit for more than 20 Valves](#circuit-for-more-than-20-valves)
+[Microphone](#microphone)
+[Crank rotation sensor](#crank-rotation-sensor)
+[Copyright and license](#copyright-and-license)
 
 # Description
-The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 150 to 200 kb).
+The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 300 kb).
 
-8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
+8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. With compression (see the software section) this goes up to 700 and 1900 average MIDI files, respectively. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
 
-The ESP32-S3 also has enough GPIO ports to drive 20 solenoids. It has WiFi to connect a smartphone, tablet or PC for control. The capacity is large enough to put a web server in the ESP32-S3, so control can be done with a standard browser. No special app is needed.
+The ESP32-S3 also has enough GPIO ports to drive 20 solenoids. It has WiFi to connect a smartphone, tablet or PC for control. The capacity is large enough to put a web server in the ESP32-S3, so control can be done with a standard browser. No special app is needed on the PC or smartphone.
 
 The 90 Ohm solenoid valves are driven by a ULN2803A or TBD62003A 7-circuit transistor array. Both ICs have 7 channels (i.e. can drive 7 solenoids). Both are plug compatible. The TBD62003A has a lower voltage drop when operating, so more voltage is available for the solenoids. 
 
 The solenoids are driven by 12V, so this circuit needs a 12V or higher power supply. Some options are:
-* 10 AA rechargable NiMH batteries.
+* 10 AA rechargable NiMH batteries (add a fuse)
 * A USB power bank with PD or QC capabilities and a PD/QC decoy trigger set to coax 12V out of the batteries.
 * A lithium battery with protections, fuses and BMS
+* A 18V tool battery (add a fuse)
 
 For some 12V valves, feeding with 12V can be insufficient, since 0.7V goes lost in the ULN2003A drivers. See the manufacturer specs, if they state that the voltage that reach the solenoids must be 12V, you need to get a higher voltage source or insert a DC-DC boost converter to get the right voltage.
 
-For smaller pipes, 12V may be enough. For bass pipes with foot pipe diameters of 14mm and more, at 10cmH2O or more of pressure, a higher voltage is necessary.
+For smaller pipes, 12V may be enough. For bass pipes with foot pipe diameters of 14mm and more, at 10cmH2O or more of pressure, a higher voltage may be necessary. 
+
+For example, Peterson Valve (www.petersonemp.com) have a specification sheet here: http://www.petersonemp.com/manuals/manuals/Pipe%20Valves/Pipe%20Valve%20performance%20chart%20revised%2008-14-2014.pdf
+
+The instructions there are for a large organ, such as a church organ, but they state that the valve voltage should be 14V, minus 1 to 2V drop at the switching system = 12V at the valve.
 
 Although MIDI file and software update can be done via WiFi using the software provided, on some occasions, at least initially, it may be of interest to connect a PC or MAC via USB to the USB input of the ESP32-S3. There are several ways to do that safely:
 * Remove the ESP32-S3 from the sockets and then plug in
@@ -52,11 +67,11 @@ The diode is necessary to prevent current from a USB connection (PC tp ESP32-S3)
 
 
 # The ESP32-S3
-I have tested this setup with some ESP32-S3 boards similar a  ESP32-DEVKITC-1 V1.1 board, although schematics differ. Specifications: quad Flash (QD flash) and Octal SPIRAM (OT PSRAM). The boards have 44 pins.
+I have tested this setup with some ESP32-S3 boards similar a  ESP32-DEVKITC-1 V1.1 board, although schematics differ. Specifications: quad Flash (QD flash) and Octal SPIRAM (OT PSRAM). These boards are sold as "N16R8" models. The boards have 44 pins.
 
 On Octal Flash boards such as N16R8V, less than 20 pins are available. From the Espressif documents: "In module variants that have embedded OSPI PSRAM, i.e., that embed ESP32-S3R8, pins IO35, IO36, and IO37 connect to the OSPI PSRAM and are not available for other uses."
 
-MicroPython images for N8R8 boards can be downloaded directly from the MicroPython site. At the time of this writing (2023), N16R8 still need custom generated images. See installation.
+MicroPython images for N8R8 boards can be downloaded directly from the MicroPython site. For N16R8 boards, there is a tool to resize the MicroPython image, no need to generate new images. See the software installation.
 
 
 # Circuit diagram 
@@ -98,7 +113,22 @@ Here is an example:
 
 Make sure it is a N8R8 or N16R8 board. N8R8V (with a V in the designator) have less pins available.
 
-It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any. I
+"No brand name" boards are of mixed quality, you can be very lucky and get a perfect one or have bad luck. For example, I have some no-name brand boards that have a unreliable WiFi, a problem I haven't seen with brand name boards. Here is a list of brands that I have seen recommended in the MicroPython forums, in no particular order:
+* Unexpected Maker
+* WeAct Studio
+* Lolin Wemos
+* M5Stack
+* Lilygo/TTGO
+* Seeed Studio
+* DFRobot
+* Sparkfun
+* AdaFruit
+* Olimex
+* Waveshare
+
+If you know another good quality brand, please post in the discussion forums to add that here.
+
+It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any.
 
 Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed.  See the data sheet or ask the vendor to verify if the ESP32-S3 allows to be connected to 12V, in that case the 12V to 5V regulator might not be necessary.
 
@@ -427,7 +457,7 @@ In this case, it is advisable to connect a standard USB-C male to USB-C female c
 
 The microcontroller board usually has some leds, it's calming to see the leds are blinking because then we know that the board is working. If inside a windchest, it's best to use a 5V DC-DC converter with a led or display to know that the batteries are working.
 
-# Circuit for more than 20 pins
+# Circuit for more than 20 valves
 This circuit uses a ESP32-S3  board as central controller, I2C bus as communication and MCP23017 port expanders to provide 16 solenoid drivers each,
 
 The schematic for a microcontroller and the MCP23017 controller is as follows.
@@ -493,7 +523,14 @@ It's probably easiest to solder the microphone pins on the board, since the micr
 
 
 # Crank rotation sensor
-This is not tested. Once tested, I'll describe that later.
+The software (and the ESP32-S3) currently support connecting a crank rotation sensor, both to start the tune when the crank starts to turn, and (optionally) to change the playback speed based on crank rotation.
+
+You can cut a suitable disk and use a optical sensor, or you can use a quadrature encoder.
+
+When I finish to test the current sensor I am using, I'll write more details. In the meantime, post a discussion topic if you are interested in this.
+
+There is also the possiblity to connect a potentiometer type rotary encoder to change the playback speed.
+
 
 # Copyright and license
 

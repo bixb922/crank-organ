@@ -5,10 +5,10 @@ import json
 import asyncio
 import errno
 import os
-
+from deflate import DeflateIO, AUTO
 import scheduler
 
-KEEP_OLD_VERSIONS = const(3)
+KEEP_OLD_VERSIONS = const(2)
 
 def backup(filename):
     # organtuner: for each note tuned
@@ -18,7 +18,7 @@ def backup(filename):
     # tunemanager: when updating tunelib and when saving
     #              user data.
     #              Updating history has no backup.
-    from timezone import timezone
+    from drehorgel import timezone
     if not file_exists(filename):
         return
     # Make a daily backup
@@ -81,6 +81,7 @@ async def delete_old_versions(filename):
 
 def get_all_backup_files(filename):
     path = filename.split("/")
+    # Folder is everything except the last element of path
     folder = filename[0 : -len(path[-1])]
     matched_files = []
     # Search for filenames like "config.json-2023-10-23"
@@ -88,11 +89,10 @@ def get_all_backup_files(filename):
     search_for = filename + "-"
     for fn in os.listdir(folder):
         f = folder + fn
-        if f[0 : len(search_for)] == search_for:
+        if f.startswith( search_for ):
             matched_files.append(f)
     matched_files.sort()
     return matched_files
-
 
 def find_latest_backup(filename):
     matched_files = get_all_backup_files(filename)
@@ -109,3 +109,75 @@ def make_folder( folder ):
 
 def is_folder( folder_name ):
     return os.stat( folder_name )[0] == 16384
+
+def find_decompressed_midi_filename( filename ):
+    # Will first return .mid file, if it exists.
+    # iI not, will add .gz (if not present) and
+    # then try to open .mid.gz file
+    # If not found: OSError
+    # So it will open the midi file, disregarding if its foo.mid
+    # or foo.mid.gz
+    if file_exists( filename ) and not is_compressed(filename):
+        return filename
+    # Decompress in one go, there is enough RAM
+    # and it will be freed immediately
+    # Using ByteIO is faster but would require changes in umidiparser
+    # Or else, use a RAM disk, with higher gc.collect() times
+    with open( filename, "rb") as file:
+        with DeflateIO(file, AUTO, 0, True) as stream:
+            data = stream.read()
+
+    TEMP_FILENAME = "/data/temp.mid"
+    with open( TEMP_FILENAME, "wb") as output:
+        output.write(data)
+    return TEMP_FILENAME
+
+def open_midi( filename ):
+    from umidiparser import MidiFile
+    return MidiFile(find_decompressed_midi_filename( filename ),
+                    buffer_size=5000,
+                    reuse_event_object=True)
+
+def get_file_type( filename ):
+        # foo.mid.gz returns "mid"
+        # foo.mid returns "mid"
+        # foo.MID returns "mid"
+        # Also works with .html, .json, .html.gz etc.
+        parts = filename.split(".")
+        keep = -1
+        if is_compressed( filename ):
+            keep = -2
+        return parts[keep].lower()
+
+def is_compressed( filename ):
+    return filename.endswith(".gz")
+
+def get_filename_stem( filename ):
+    # Get the name minus folders minus filetype minus .gz
+    parts = filename.split("/")
+    # Disregard folders in filename
+    fn = parts[-1]
+    parts = fn.split(".")
+    keep = -1
+    if is_compressed( filename ):
+        keep = -2
+    return ".".join( parts[0:keep] )
+
+def get_equivalent( filename ):
+    # foo.mpy and foo.py are equivalent
+    # foo.bar.gz and foo.bar are equivalent
+    # No test is made to see if these files exist.
+    if is_compressed( filename ):
+        return filename[0:-3] # get rid of the .gz
+    ft = get_file_type( filename )
+    if ft == "mpy":
+        return filename[0:-3] + "py"
+    if ft == "py":
+        return filename[0:-2] + "mpy"
+    # Its a non-python uncompressed file:
+    return filename + ".gz"
+
+def filename_no_gz( filename ):
+    if is_compressed( filename ):
+        return filename[:-3]
+    return filename

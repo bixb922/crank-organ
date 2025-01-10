@@ -7,37 +7,27 @@ import os
 import sys
 import gc
 import asyncio
-import time
+from time import ticks_ms, ticks_diff
 from random import getrandbits
 
-from microdot import Microdot, send_file, redirect, Request, Response, urldecode_bytes
+from microdot import Microdot, send_file, redirect, Request, urldecode_bytes
 # This is for filemanager, maximum file size to upload
 Request.max_content_length = 1_000_000
 Request.max_body_length = 1_000_000
 
+from compiledate import compiledate
 from minilog import getLogger
 import scheduler
-from config import config, password_manager
 import fileops
-import pinout
-from battery import battery
-from wifimanager import wifimanager
-from solenoid import solenoids
-from compiledate import compiledate
 
-from tunemanager import tunemanager
-from tachometer import crank
-
-from setlist import setlist
-from history import history
-from timezone import timezone
-from player import player
-from organtuner import organtuner
-from poweroff import poweroff
-from led import led
-from midi import registers, controller
 import filemanager
+# Everything is needed here
+from drehorgel import battery, tunemanager, config, history, player, setlist, crank
+from drehorgel import organtuner, gpio, actuator_bank, timezone, poweroff
+from drehorgel import led, wifimanager, plist
 
+
+from pinout import GPIOstatistics, SaveNewPinout
 
 app = Microdot()
 _logger = getLogger(__name__)
@@ -60,7 +50,7 @@ MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
 # Shows webserver processing time (total time is much higher)
 @app.before_request
 def func_before_req( request ):
-    request.g.t0 = time.ticks_ms()
+    request.g.t0 = ticks_ms()
 
 
 @app.after_request
@@ -69,26 +59,35 @@ def func_after_req( request, response ):
         this_session = get_session( request )
     except KeyError:
         # No cookie - must send cookie and add new session
+        # By design, this session cookie is different from the
+        # boot_session_id. The boot session id identifies a
+        # boot session, i.e. changes from one reboot to
+        # the next reboot. Whereas the session cookie is issued
+        # per client as a login session id to keep the login
+        # state on this server from one request to the next.
         # 24+24=48 bits = 12 bytes hexa
         session_id = hex(getrandbits(24))[2:]+hex(getrandbits(24))[2:]
         response.set_cookie("session", session_id, path="/" )
         # If password_required, then login starts as False
         # If not password_required, then login will be always True
         this_session = {"login":not config.cfg["password_required"]}
+        # Session information will be lost with each reboot, i.e.
+        # it is NOT kept in flash. This means a user is logged out
+        # on reboot.
         sessions[session_id] = this_session
-    this_session["last_activity"] = time.ticks_ms()
+    this_session["last_activity"] = ticks_ms()
     this_session["ip"] = request.client_addr[0]
-    dt = time.ticks_diff( time.ticks_ms(), request.g.t0 )
+    dt = ticks_diff( ticks_ms(), request.g.t0 )
     _logger.debug(f"{request.method} {request.url} {response.status_code}, {dt} msec")
     return response
 
 def is_active(since_msec=60_000):
     # This is used by poweroff.py
     # Return true if recent web activity
-    now = time.ticks_ms()
+    now = ticks_ms()
     return any( 
             s for s in sessions.values()
-            if time.ticks_diff(now, s["last_activity"]) <= since_msec
+            if ticks_diff(now, s["last_activity"]) <= since_msec
             )
 
 def respond_ok():
@@ -103,6 +102,7 @@ def respond_error_alert( alert_message ):
     return { "error":True, "alert": alert_message }
 
 # Define own (async) decorator to check authorization
+# func MUST be a async function 
 def authorize(func):
     async def wrapper(*args, **kwargs):
         try:
@@ -117,19 +117,22 @@ def authorize(func):
             return await func(*args, **kwargs)
         # Not login: return 401 to force client to ask
         # for password.
-        return "Password required", 401
+        return respond_error_alert("Password required"), 401
     return wrapper
-
    
 @app.post("/verify_password")
-def verify_password( request ):
+async def verify_password( request ):
     # This is a "login" service: if password is correct
     # them mark session as logged in.
     # Logout is by rebooting the microcontroller.
     password = request.json.get("password")
-    if password_manager.verify_password( password, request.cookies["session"] ):
-        get_session( request )["login"] = True
-        return respond_ok()
+    if config.verify_password( password, request.cookies["session"] ):
+        try:
+            get_session( request )["login"] = True
+            return respond_ok()
+        except KeyError:
+            # Browser session does not exist in this server
+            pass
     return respond_error_alert("Password incorrect")
 
 
@@ -186,21 +189,21 @@ async def send_data_file(request, filepath):
     return send_file(filename, max_age=0)
 
 @app.route("/get_description")
-def get_description(request):    
+async def get_description(request):    
     # Return description of this microcontroller, to be used
-    # as the title of page   
+    # as the title of page. The browser client
+    # caches this in tab storage. 
     return { "description": config.cfg.get("description")}
 
 def get_progress():
     # Gather progress from all sources
-    # Also used by mcserver
-    # >>> should be player.complement_progress()
-    # >>> and start progress here 
+    # Also used by mcserver (if present)
     progress = player.get_progress()
     crank.complement_progress(progress)
     scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
-    registers.complement_progress(progress)
+    gpio.get_registers().complement_progress(progress)
+    tunemanager.complement_progress(progress)
     return progress
 
 
@@ -210,6 +213,8 @@ async def process_get_progress(request, browser_boot_session):
     # But the javascript uses it to flush cache.
     # If browser_boot_session is different than progress["boot_session"]
     # then this is the first /get_progress after reboot.
+    # The browser then will, for example, invalidate the tab
+    # cache to get fresh data.
     return get_progress()
 
 
@@ -348,13 +353,11 @@ async def stop_tuning(request):
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
 async def get_battery_status(request):
-    # When playing music, /battery is good indicator of activity
-
+    # When playing music, /battery is good indicator of activitys
     return battery.get_info()
 
 
 # Index.html page web requests
-
 
 @app.route("/battery_zero")
 async def battery_zero(request):
@@ -378,13 +381,16 @@ async def show_log(request):
 @app.route("/diag")
 async def diag(request):
     # Collect=110ms, mem_free=150ms, mem_alloc=150ms
+    # It's now faster with latest MicroPython version,
+    # gc.collect() now about 50 ms.
+    # After PR#8183, even faster gc.collect() should be possible.
     try:
         async with scheduler.RequestSlice("webserver diag", 5000, 10_000):
             gc.collect()
-            t0 = time.ticks_ms()
+            t0 = ticks_ms()
             gc.collect()  # measure optimal gc.collect() time
-            t1 = time.ticks_ms()
-            gc_collect_time = time.ticks_diff(t1, t0)
+            t1 = ticks_ms()
+            gc_collect_time = ticks_diff(t1, t0)
 
             free_ram = gc.mem_free()  # This is rather slow with 8MB
             used_ram = gc.mem_alloc()  # This is rather slow with 8MB
@@ -404,9 +410,9 @@ async def diag(request):
 
     now = timezone.now_ymdhmsz()
     tz = timezone.get_time_zone_info()
-    time_zone_info = f'{tz[2]}, {tz[1]}, offset={round(-tz[0]/60.0)} min'
+    time_zone_info = f'{tz["longName"]}, {tz["shortName"]}, offset={round(-tz["offset"]/60.0)} min'
 
-    reboot_sec = round(time.ticks_diff(time.ticks_ms(), config.boot_ticks_ms) / 1000 )
+    reboot_sec = round(ticks_diff(ticks_ms(), config.boot_ticks_ms) / 1000 )
     d = {
         "description": config.cfg["description"],
         "name": config.cfg["name"],
@@ -420,7 +426,8 @@ async def diag(request):
         "free_ram": free_ram,
         "used_ram": used_ram,
         "gc_collect_time": gc_collect_time,
-        "solenoid_devices": solenoids.get_status(),
+        "max_gc_collect_time": scheduler.max_gc_time,
+        "solenoid_devices": actuator_bank.get_status(),
         "midi_files": midi_files,
         "tunelib_folder": config.TUNELIB_FOLDER,
         "logfilename": _logger.get_current_log_filename(),
@@ -452,9 +459,9 @@ async def wifi_scan(request):
 
 @app.route("/get_wifi_status")
 async def get_wifi_status(request):
-    now = time.ticks_ms()
+    now = ticks_ms()
     def seconds_since_last( session ):
-        return round(time.ticks_diff( now, session["last_activity"] )/1000)
+        return round(ticks_diff( now, session["last_activity"] )/1000)
     c = wifimanager.get_status()
     # Add clientes with activities in the last minutes
     c["client_IPs"] = "".join(
@@ -510,41 +517,25 @@ async def change_config(request):
 # Pinout functions
 @app.route("/pinout_list")
 async def pinout_list(request):
-    return pinout.plist.get_filenames_descriptions()
-
-
-@app.route("/pinout_detail")
-async def pinout_detail(request):
-    return send_file(pinout.plist.get_current_pinout_filename())
-
+    return plist.get_filenames_descriptions()
 
 @app.route("/get_pinout_filename")
 async def get_pinout_filename(request):
     return {
-        "pinout_filename": pinout.plist.get_current_pinout_filename(),
-        "pinout_description": pinout.plist.get_description(),
+        "pinout_filename": plist.get_saved_pinout_filename(),
+        "pinout_description": plist.get_description(),
     }
 
-@app.route("/get_used_pins")
-def get_used_pins( request ):
-    return pinout.GPIOstatistics().get_used_pins()
+@app.route("/get_used_pins/<path>")
+async def get_used_pins( request, path ):
+    return GPIOstatistics(decodePath(path)).get_used_pins()
 
 
 @app.route("/get_index_page_info")
 async def get_index_page_info(request):
     # Information needed by index.html
     resp = await get_pinout_filename(request)
-    server = config.cfg["servernode"]
-    proto = ""
-    if server != "":
-        if not server.startswith("http"):
-            if server.endswith(".com"):
-                proto = "https://"
-            else:
-                proto = "http://"
-            server = proto + server
-    resp["serverlink"] = server
-
+    resp["servernode"] = config.cfg["servernode"]
     return resp
 
 
@@ -552,24 +543,18 @@ async def get_index_page_info(request):
 @authorize
 async def save_pinout_filename(request):
     data = request.json
-    pinout.plist.set_current_pinout_filename(data["pinout_filename"])
-    solenoids.init_pinout()
+    plist.set_current_pinout_filename(data["pinout_filename"])
 
-    # Organtuner be aware: organtuner.json may no longer
-    # be valid
-    organtuner.clear_tuning()
- 
     return respond_ok()
 
 
-@app.post("/save_pinout_detail")
+@app.post("/save_pinout_detail/<path>")
 @authorize
-async def save_pinout_detail(request):
+async def save_pinout_detail(request, path):
+    output_filename = decodePath(path)
     try:
-        pinout.SaveNewPinout(request.json)
         # SaveNewPinout class will validate and do a init of pint
-        organtuner.clear_tuning()
-        solenoids.reinit()
+        SaveNewPinout(request.json, output_filename)
         _logger.debug("save_pinout_detail pinout.save complete")
         return respond_ok()
     except RuntimeError as e:
@@ -580,7 +565,8 @@ async def save_pinout_detail(request):
 @app.post("/test_mcp")
 async def test_mcp(request):
     data = request.json
-    await pinout.test.web_test_mcp(
+    from solenoid import PinTest
+    await PinTest().web_test_mcp(
         int(data["sda"]),
         int(data["scl"]),
         int(data["mcpaddr"]),
@@ -588,13 +574,27 @@ async def test_mcp(request):
     )
     return respond_ok()
 
-
 @app.post("/test_gpio")
 async def test_gpio(request):
+    from solenoid import PinTest
     data = request.json
-    await pinout.test.web_test_gpio(int(data["pin"]))
+    await PinTest().web_test_gpio(int(data["pin"]))
     return respond_ok()
 
+@app.post("/test_drumdef")
+async def test_drumdef( request ):
+    from driver_ftoms import FauxTomDriver
+    drumdef = request.json
+    for pin in FauxTomDriver().get_pin_list():
+        dd = drumdef[str(pin.nominal_midi_number)]
+        pin.set_virtual_drum_characteristics( dd )
+    return respond_ok()
+
+@app.post("/save_drumdef")
+async def save_drumdef( request ):
+    from driver_ftoms import FauxTomDriver
+    FauxTomDriver().save( request.json )
+    return respond_ok()
 
 # Generic requests requests: some browsers request favicon
 @app.route("/favicon.ico")
@@ -625,11 +625,8 @@ async def start_tunelib_sync(request):
 # Tunelib editor
 @app.route("/tunelib_sync_progress")
 async def tunelib_sync_progress(request):
-    return {"progress":tunemanager.sync_progress()}
+    return {"progress":tunemanager.get_sync_progress()}
 
-
-#
-# Tunelib editor
 @app.post("/save_tunelib")
 @authorize
 async def save_tunelib(request):
@@ -668,30 +665,40 @@ async def tempo_follows_crank( request ):
 @app.post( "/toggle_register")
 async def toggle_register( request ):
     data = request.json
-    reg = registers.factory( data["name"])
-    reg.toggle()
+    reg = gpio.get_registers().factory( data["name"])
+    reg.set_value(data["value"])
     return get_progress()
 
-@app.get("/list_pinout_by_midi_note")
-def list_by_midi_note( request ):
+@app.route("/list_pinout_by_midi_note/<path>")
+async def list_by_midi_note( request, path ):
     def sort_key( x ):
         # Sort by
         # program number
         # midi_number (should not be undefined i.e. None here)
         # register name
-        return f"{x['program_number']:5d}{x['midi_number']}{x['solepin_note']:20s}{x['register_name'] or ' ':20s}"
+        return f"{x['program_number']:5d}{x['midi_number']}{x['actuator_note']:20s}{x['register_name'] or ' ':20s}"
 
-    # Output listing of definition, ordered by midi note
+    filename = decodePath( path )
+    from midicontroller import RegisterBank
+    from pinout import ActuatorDef
+
+    # Parse the pinout.json here, don't disturb what is already
+    # loaded. The result of parsing here is lost when exiting
+    # list_midi_note.
+    actuator_def = ActuatorDef(filename, RegisterBank()) # It's not necessare to store actuator_def
+    controller = actuator_def.get_controller()
     notedef = []
-    for plist in controller.get_notedict().values():
-        for solepin, reg, midi_note in plist:
-            notedef.append( {  "program_number":midi_note.program_number, 
+    for action in controller.get_notedict().values():
+        for actuator, reg, midi_note, invert in action:
+            notedef.append( {  
+                             "program_number":midi_note.program_number, 
                              "midi_number":midi_note.midi_number, 
                              "midi_note": str(midi_note), 
-                             "solepin_name": solepin.name, 
-                             "solepin_note": str(solepin.midi_note), 
-                             "solepin_rank": solepin.rank, 
-                             "register_name": reg.name} )
+                             "actuator_name": str(actuator), 
+                             "actuator_note": str(actuator.nominal_midi_note) if actuator.nominal_midi_note else "", 
+                             "actuator_rank": actuator.get_rank_name(), 
+                             "register_name": reg.name,
+                             "invert": invert } )
     notedef.sort( key=sort_key )
                 
     return notedef
@@ -702,19 +709,26 @@ def list_by_midi_note( request ):
 #
 
 def decodePath( path ):
+    # Inverse function to encodePath() in common.js
     return urldecode_bytes( path.encode() )
 
 @app.route("/listdir")
 @app.route("/listdir/")
 @app.route("/listdir/<path>")
 async def filemanager_listdir(request, path=""):
-    return filemanager.listdir( decodePath(path) )
+    listpath = decodePath(path)
+    if listpath.endswith("filemanager.html"):
+        # Don't navigate to /static/filemanager.html please.
+        return respond_error_alert("Use /filemanager")
+    return filemanager.listdir( listpath )
 
 
 @app.post('/upload/<path_filename>')
 @authorize
 async def filemanager_upload(request, path_filename ):
     path, filename = path_filename.split("+")
+    path = decodePath( path )
+    filename = decodePath( filename )
     try:
         return filemanager.upload( request, path, filename  )
     except ValueError:
@@ -730,12 +744,12 @@ async def filemanager_show_file( request, path ):
     return filemanager.show_file( decodePath( path ) ) 
 
 @app.route("/show_midi/<path>")
-def show_midi( request, path ):
-    # Javascript will decode the path passed in the URL
+async def show_midi( request, path ):
+    # Javascript will retrieve the path passed in the URL
     return static_files( request, "show_midi.html" )
 
 @app.route("/get_midi_file/<path>")
-def get_midi_file( request, path ):
+async def get_midi_file( request, path ):
     return filemanager.get_midi_file( decodePath( path )  )
 
 @app.route("/used_flash")
@@ -749,7 +763,7 @@ async def filemanager_delete(request, path):
     try:
         filemanager.delete( decodePath( path )  )
     except Exception as e:
-        # Probability of this happening is nil...???
+        # Can happen if there are 2 browser windows, which shouldn't
         return respond_error_alert(f"Error {e} deleting file {path}")
     return respond_ok()
 
@@ -757,31 +771,51 @@ async def filemanager_delete(request, path):
 @app.route("/filemanager/")
 @app.route("/filemanager/<path>")
 async def handle_filemanager( request, path=""):
-    # Load page, javascript will handle the rest.
+    # Load page, javascript will retrieve the path an call back
     return static_files( request, "filemanager.html" )
 
 @app.route("/set_playback_disabled")
-def set_playback_enabled( request ):
+async def set_playback_enabled( request ):
     # note.html and notelist.html disable playback
+    # because organtuner interferes with music playback.
+    # Same as pinout.html, to remind a reboot is necessary.
     # so no MIDI files will be played accidentally during tuning
     # To re-enable, reboot.
     scheduler.set_playback_mode(False)
     return respond_ok()
 
+# A very simple call just to ask for password and get authorized
+@app.route("/get_permission")
+@authorize
+async def get_permission( request ):
+    return {} 
 
 # Catchall handler to debug possible errors at html level
 @app.get('/<path:path>')
-def catch_all(request, path):
+async def catch_all(request, path):
     _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))
     return "", 404
 
 @app.errorhandler(RuntimeError)
-def runtime_error(request, exception):
+async def runtime_error(request, exception):
     return respond_error_alert("RuntimeError exception detected")
 
-@app.errorhandler(500)
-def error500(request):
-    return respond_error_alert(f"Server error 500 {request.url=}")
+# >>> this error stops the complete application, goes
+# >>> to the global asyncio error handler
+# Traceback (most recent call last):
+#   File "crank-organ/src/microdot.py", line 1333, in handle_request
+#   File "crank-organ/src/microdot.py", line 397, in create
+#   File "crank-organ/src/microdot.py", line 511, in _safe_readline
+#   File "asyncio/stream.py", line 1, in readline
+# OSError: [Errno 113] ECONNABORTED
+# Was triggered when changing the WiFi network hotspot during operation
+# from main to secondary router of same SSID
+
+
+@app.errorhandler(Exception)
+async def error500( request, exception ):
+    _logger.exc( exception, "Server error 500" )
+    return respond_error_alert(f"Server error 500 {request.url=} {exception=}")
 
 async def run_webserver():
     global _logger, USE_CACHE, MAX_AGE

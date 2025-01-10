@@ -4,17 +4,12 @@
 
 import asyncio
 from random import randrange
-import os
+
 import scheduler
-from config import config
-from tunemanager import tunemanager
-from tachometer import crank
-from player import player
-from pinout import gpio
+from drehorgel import config, tunemanager, crank, player, gpio, led
 import touchpad
 from minilog import getLogger
 import fileops
-from led import led
 
 
 def del_key(key, dictionary):
@@ -36,8 +31,8 @@ class Setlist:
         #   crank starts to turn (if installed) via registered event
         #   time between tune elapsed (if automatic playback) via self.automatic_playback()
         
-        # 50 ms after crank start event: crank turns are already stable
-        self.start_event = crank.register_event(50)
+        # 300 ms after crank start event: crank turns are already stable
+        self.start_event = crank.register_event(300)
 
         # Event to know when bored turning the crank and nothing happens,
         # (losing patience takes 3 seconds?)
@@ -149,7 +144,9 @@ class Setlist:
             self.logger.info(f"start {tuneid=}")
             led.start_tune_flash()
 
-            # Play tune. Create task because we may need to cancel it on request 
+            # Play tune. Store task to have a handle
+            # because we may need to cancel it on request (next tune
+            # button or da capo button)
             self.player_task = asyncio.create_task( 
                 player.play_tune(tuneid, tuneid in self.tune_requests)
             )
@@ -242,6 +239,7 @@ class Setlist:
         # current setlist is updated separately
 
     def stop_tune(self):
+        # Called with the "next" button on play.html
         if (
             not self.isempty()
             and player.get_progress()["tune"] == self.current_setlist[0]
@@ -300,12 +298,14 @@ class Setlist:
         self.current_setlist.insert(0, s)
         self._write_current_setlist()
 
+    # >>> add bottom() ?
     def drop(self, pos):
         del self.current_setlist[pos]
         self._write_current_setlist()
 
     def to_beginning_of_tune(self):
-        # Restart current tune
+        # Restart current tune, called by "da capo"
+        # button on play.html
         progress = player.get_progress()
         tuneid = progress["tune"]
         if tuneid:
@@ -354,8 +354,7 @@ class Setlist:
                 progress["tune"] = None
             progress["status"] = "waiting"
             progress["playtime"] = 0
-        return progress
-    
+
     def isempty(self):
         # Setlist empty?
         return len(self.current_setlist) == 0
@@ -386,5 +385,3 @@ class Setlist:
             self.timeout_task = asyncio.create_task( on_timeout(timeout_seconds) )
             # The timeout_task is also cancelled in
             # self.wait_for_start()
-                
-setlist = Setlist()

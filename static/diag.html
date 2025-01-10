@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -54,6 +56,7 @@
 		<tr><td>RAM libre</td>			<td id="free_ram"></td><td>[bytes]</td></tr>
 		<tr><td>RAM usada</td>			<td id="used_ram"></td><td>[bytes]</td></tr>
         <tr><td>Tiempo para gc</td>		<td id="gc_collect_time"></td><td>[mseg]</td></tr>
+		<tr><td>Máximo tiempo para gc</td>		<td id="max_gc_collect_time"></td><td>[mseg]</td></tr>
 		<tr><td>Fecha/hora compilación</td> <td id="compile_date"></td><td></td></tr>
 		<tr><td>Configuración solenoides</td> <td id="solenoid_devices"></td></tr>
 		<tr><td>Archivos MIDI</td>		<td id="midi_files"></td></tr>
@@ -124,6 +127,7 @@
 	<thead>
 		<tr>
 			<td>SSID</td>
+			<td>Channel</td>
 			<td>dBm</td>
 		</tr>
 	</thead>
@@ -150,12 +154,12 @@ async function getWifiStatus() {
 
 async function wifiScan() {
 	let wifiData = await fetch_json( "/wifi_scan" );
-
+	// Each row is [ ssid, bssid, channel, rssi, authmode, hidden ]
 	var s = "";
 	let scanInfo = document.getElementById( "scanInfo" );
 	for( i = 0; i < wifiData.length; i++ ) {
 		w = wifiData[i] ;
-		insertRow( scanInfo, [ w[0], w[3] ] );
+		insertRow( scanInfo, [ w[0], w[2], w[3] ] );
 	}
 }
 
@@ -281,3 +285,4 @@ async function crankGraph(){
 translate_html();
 getDiagInfo();
 </script>
+</html>

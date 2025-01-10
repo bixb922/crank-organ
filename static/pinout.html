@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -20,6 +23,8 @@
 <div class="middlediv">Select template</div>
     This configuration should be needed only once, when setting up the system.
     
+    Configuration changes only take place after a microcontroller reset.
+
     Select organ scale (for example 20 note Carl Frei, 31 note Raffin) and see or modify the pin and MIDI assignments.
 
     Select a scale and press "save scale" to show the corresponding form. "Save scale" may take several seconds.
@@ -115,6 +120,16 @@ When pressing the save button, you may be asked for the password of the microcon
 <div class="footerdiv"></div>
 <script>
 
+let currentPinoutFilename = null;
+function currentPinoutFilenameAbs(){
+    if( currentPinoutFilename.startsWith("/")){
+        return currentPinoutFilename;
+    }
+    else{
+        return "/" + currentPinoutFilename ;
+    }
+}
+
 async function getPinoutList(){
     let pinout_list = await fetch_json("/pinout_list" ) ;
     pinout_list.sort( (a, b) => a[0].localeCompare(b[0]) )
@@ -133,8 +148,22 @@ async function getPinoutList(){
     }
     let resp = await fetch_json( "/get_pinout_filename" );
     
-    selected_pinout = resp["pinout_filename"];
-    document.getElementById( selected_pinout ).checked = true ;
+    // Store current pinout filename in global variable
+    if( !currentPinoutFilename ){
+        currentPinoutFilename = resp["pinout_filename"];
+    }
+
+    if( !currentPinoutFilename ){
+        // This can happen when deleting a the active
+        //  pinout.json file
+        // As a result, the file will be recreated empty
+        // to enable the configuration to continue normally.
+        return ;
+    }
+    let cpf = document.getElementById( currentPinoutFilename );
+    if( cpf ){
+        cpf.checked = true ;
+    }
     
     getPinoutDetail( ) ;
 }
@@ -144,8 +173,8 @@ let pinout_detail = null ;
 let DRUM_PROGRAM = 129; 
     
 async function getPinoutDetail( ) {
-	// these are globals, don't use let:
-    pinout_detail = await fetch_json( "/pinout_detail" ) ;
+	// these are globals, don't use let statement:
+    pinout_detail = await fetch_json( currentPinoutFilenameAbs() ) ;
     pinoutDetailElements = pinout_detail.length ;
 	//===========
     let s = "";
@@ -163,6 +192,9 @@ async function getPinoutDetail( ) {
     let rownum = 0;
     let lastPin = null ;
     let tbody = document.getElementById( "tbodyPinoutForm" );
+    tbody.innerText = "";
+    let currentDriver = "GPIO";
+
     for( let z in pinout_detail ){
         let f = z + ""; // for the function closures to work.
         let pd = pinout_detail[f] ;
@@ -228,13 +260,18 @@ async function getPinoutDetail( ) {
                 "Set at startup"
             ] );
         }
-        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || pdtype == "serial.midi"){
-            let title = "MCP pin" ;
-            if( pdtype == "gpio.midi" ){
+        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || 
+                pdtype == "serial.midi" || pdtype == "midi"
+               ){
+            let title = "Pin" ;
+            if( currentDriver == "GPIO" ){
                title = "GPIO pin" ;
             }
-            else if( pdtype == "serial.midi"){
+            else if( currentDriver == "MIDIserial" ){
                 title = "This column not used";
+            }
+            else if( currentDriver == "MCP23017" ){
+                title = "MCP pin";
             }
             let pin = pd[1];
             let instrument = pd[2];
@@ -260,25 +297,29 @@ async function getPinoutDetail( ) {
             }
             
             let testFunction = null;
-            if( pdtype == "gpio.midi"){
+            if( currentDriver == "GPIO" ){
                 testFunction = function() { testGPIO(pin) };
             }
-            else if( pdtype == "mcp.midi" ){
-                testFunction = function() { testMCP(sda, scl, mcpaddr, pin) };            
+            else if( currentDriver == "MCP23017" ){
+                // make copy of objects for testMCP() closure
+                let mcpaddr1 = parseInt(mcpaddr);
+                let sda1 = parseInt(sda);
+                let scl1 = parseInt(scl); 
+                testFunction = function() { testMCP(sda1, scl1, mcpaddr1, pin) };            
             } 
-            else if( pdtype == "serial.midi" ){
+            else if( currentDriver == "MIDISerial" ){
                 testFunction = function() { alert("Not implemented")};
             }
-            let row = insertFormRow( tbody, `row_${f}_${pdtype}`, [
-                makeInput( `${pdtype}.pin.${f}`, 3, pin ),
-                makeInput( `${pdtype}.instrument.${f}`, 4, instrument ),
+            let row = insertFormRow( tbody, `row_${f}_midi`, [
+                makeInput( `midi.pin.${f}`, 3, pin ),
+                makeInput( `midi.instrument.${f}`, 4, instrument ),
                 "",
-                makeInput( `${pdtype}.midi.${f}`,3, midi ),
+                makeInput( `midi.number.${f}`,3, midi ),
                 "",
-                makeInput( `${pdtype}.rank.${f}`, 10, rank ),
-                makeInput( `${pdtype}.register.${f}`, 10, register ),
+                makeInput( `midi.rank.${f}`, 10, rank ),
+                makeInput( `midi.register.${f}`, 10, register ),
                 makeButton( null, "Test", testFunction ),
-                makeButton( `b${rownum}`, "Add row", function() {addRow(pdtype, `row_${f}_${pdtype}` )}),
+                makeButton( `b${rownum}`, "Add row", function() {addRow("midi", `row_${f}_midi` )}),
 
             ]);
             row.cells[0].children[0].readOnly = (pin == lastPin );
@@ -295,13 +336,14 @@ async function getPinoutDetail( ) {
             insertFormRow( tbody, null, ["I2C", "SDA", "SCL"] );
             rownum += 1;
             insertFormRow( tbody, `row_${f}_i2c`, [
+                "",
                 makeInput( `i2c.sda.${f}`, 3, sda),
                 makeInput( `i2c.scl.${f}`, 3, scl),
             ]);
         }
         else if( pdtype == "mcp23017" ){
             mcpcount += 1 ;
-            mcpaddr = pd[1] ;
+            mcpaddr = pd[1] ; // Override outer scope to make testMCP() closure work
             insertFormRow( tbody, null, [`I2C bus ${i2ccount}`,
                 "MCP23017", "address"
             ] );
@@ -314,6 +356,7 @@ async function getPinoutDetail( ) {
 
             ]);
             row.cells[2].colSpan = 3;
+            currentDriver = "MCP23017";
         }
         else if( pdtype == "serial" ){
             insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "MIDI channel (0-15)"] );
@@ -323,6 +366,12 @@ async function getPinoutDetail( ) {
                 makeInput( `serial.pin.${f}`, 3, pd[2]),
                 makeInput( `serial.channel.${f}`, 3, pd[3]),
             ]);
+            currentDriver = "MIDISerial";
+        }
+        else if( pdtype == "gpio" ){
+            insertFormRow( tbody, null, [ "MIDI via GPIO ports"] );
+            rownum += 1;
+            currentDriver = "GPIO";
         }
         
         rownum += 1;
@@ -339,19 +388,22 @@ getPinoutList();
     
 async function savePinoutFilename(){
     let filename = getRadioButtonValue( "pinout_list" ) ;
+    currentPinoutFilename = filename ;
     let req = { "pinout_filename": filename  } ;
     
     let resp = await fetch_json("/save_pinout_filename",
                         req  ) ;
     showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
-    getPinoutDetail();
+    await getPinoutDetail();
     await get_available_pins();
+    showHideElement( "table_list_pinout_by_midi_note", false );
 }
     
 async function savePinoutDetail(){
     let newpd = [] ;
     let rows = document.getElementsByTagName( "tr" );
     let lastPin = null ;
+    let midi_seen = false ;
     for( n in rows ){
         let row_id = rows[n].id ;
         if( row_id == undefined || row_id == null ){
@@ -363,7 +415,6 @@ async function savePinoutDetail(){
         let x = row_id.split("_") ;
         let pdtype = x[2];
         let f = parseInt( x[1] ) ;
- 
         if( pdtype == "description" ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
             newpd.push( [pdtype, v] );
@@ -390,16 +441,19 @@ async function savePinoutDetail(){
             let inival = document.getElementById( `reginival.${f}`).checked ;
             newpd.push( [pdtype, valnum( pin ), name, inival  ] );
         }
-        else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || pdtype == "serial.midi" ) {
+        else if( pdtype == "gpio"){
+            newpd.push( ["gpio"]);
+        }
+        else if( pdtype == "midi" ) {
             let pin = document.getElementById( `${pdtype}.pin.${f}`).value  ;
-            let instrument = document.getElementById( `${pdtype}.instrument.${f}` ).value ;
-            let midi = document.getElementById( `${pdtype}.midi.${f}` ).value ;
-            let rank = document.getElementById( `${pdtype}.rank.${f}` ).value.trim() ;
-            let register = document.getElementById( `${pdtype}.register.${f}` ).value.trim() ;
+            let instrument = document.getElementById( `midi.instrument.${f}` ).value ;
+            let midi = document.getElementById( `midi.number.${f}` ).value ;
+            let rank = document.getElementById( `midi.rank.${f}` ).value.trim() ;
+            let register = document.getElementById( `midi.register.${f}` ).value.trim() ;
             // Don't delete row if the pin is the only one that is there in the file
             // but if pin equal to previous pin, delete empty row
             if( pin != lastPin || (pin == lastPin && (instrument != "" || midi != "" || rank != "" || register != "")) ){
-                newpd.push( [pdtype, valnum( pin ), valnum( instrument ),  valnum( midi ), rank, register] ) ;
+                newpd.push( ["midi", valnum( pin ), valnum( instrument ),  valnum( midi ), rank, register] ) ;
             }
             lastPin = pin ;
         }
@@ -414,16 +468,20 @@ async function savePinoutDetail(){
                 alert("MCP23017 address must be 32 to 39");
                 return ;
             }
-            newpd.push( ["mcp23017", valnum( addr ) ] ) ;     
+            newpd.push( ["mcp23017", valnum( addr ) ] ) ;  
         }
         else if( pdtype == "serial"){
             let uart = document.getElementById( `serial.uart.${f}` ).value ;
             let pin = document.getElementById( `serial.pin.${f}` ).value ; 
             let channel =   document.getElementById( `serial.channel.${f}` ).value ; 
-            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel ) ] ) ;     
+            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel ) ] ) ;   
+        }
+        else {
+            console.log("error found pdype=", pdtype, "while saving");
         }
     }
-    let resp = await fetch_json( "/save_pinout_detail", newpd ) ;
+    
+    let resp = await fetch_json( "/save_pinout_detail/" + encodePath(currentPinoutFilenameAbs()), newpd ) ;
     showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
     clearMarks() ;
     await get_available_pins();
@@ -461,12 +519,16 @@ function valnum( s ){
 async function testGPIO( pin ){
     
     let req = { "pin": pin };
+    // test_gpio is with a physical pin number, disregarding
+    // pinout definition
     await fetch_json( "/test_gpio", req ) ;
 }
 
 async function testMCP( sda, scl, mcpaddr, pin ){
    
     let req = { "sda": sda, "scl": scl, "mcpaddr": mcpaddr, "pin": pin };
+    // test_mcp is with physical pin/mcpaddress/mcp pin number
+    // and pinout.json does not matter here, we want to test.
     await fetch_json( "/test_mcp", req ) ;
 }
     
@@ -477,32 +539,30 @@ function note_name( midi ){
 }
     
 function showNoteName( f ){
-    // Set nn (note name) elemen
-    let enames = ["gpio.midi", "mcp.midi" ];
-    for( eid in enames ){
-        let mname = `${enames[eid]}.midi.${f}`;
-        let e = document.getElementById ( mname ) ;
-        let pname = `${enames[eid]}.instrument.${f}`;
-        let p = document.getElementById( pname ) ;
-        let instrument = null;
-        if( p != null ){
-            instrument = p.value ;
-        }
-        if( e != null ) {
-            nn = "" ;
-            if( instrument != DRUM_PROGRAM ){
-                let v = e.value ; 
-                if( !isNaN(v) && v != "" ){
-                    nn = note_name( parseInt(v) ) ;
-                }
+    // Set nn (note name) element
+
+    let mname = `midi.number.${f}`;
+    let e = document.getElementById ( mname ) ;
+    let pname = `midi.instrument.${f}`;
+    let p = document.getElementById( pname ) ;
+    let instrument = null;
+    if( p != null ){
+        instrument = p.value ;
+    }
+    if( e != null ) {
+        nn = "" ;
+        if( instrument != DRUM_PROGRAM ){
+            let v = e.value ; 
+            if( !isNaN(v) && v != "" ){
+                nn = note_name( parseInt(v) ) ;
             }
-            textById( `nn.${f}`,  nn ) ; 
-            let n = document.getElementById( "program_name." + f );
-            if( n != null && p != null ){
-                n.innerText = program_name( p.value );
-            }
-            return;
         }
+        textById( `nn.${f}`,  nn ) ; 
+        let n = document.getElementById( "program_name." + f );
+        if( n != null && p != null ){
+            n.innerText = program_name( p.value );
+        }
+        return;
     }
 }
     
@@ -513,8 +573,8 @@ function updateAllNoteNames() {
         if( field_id == null || field_id == undefined ){
             continue ;
         }
-        if( field_id.includes("midi.midi") ){
-            let f = parseInt( fields[n].id.split(".")[3] );
+        if( field_id.startsWith("midi.") ){
+            let f = parseInt( fields[n].id.split(".")[2] );
             showNoteName( f ) ;
         }
     } 
@@ -527,28 +587,18 @@ function hidePinoutDetail(){
 function transpose( semitones ){
     let fields = document.getElementsByTagName( "input" );
     for( let n in fields ){
-        let field_id = fields[n].id ;
+        let midiNumberField = fields[n];
+        let field_id = midiNumberField.id ;
         if( field_id == null || field_id == undefined ){
             continue ;
         }
-        if( !field_id.includes("midi.midi") ){
+        if( !field_id.startsWith("midi.number") ){
             continue ;
         }
-        let f = parseInt( fields[n].id.split(".")[3] );
-
-        enames = [`gpio.midi.midi.${f}`,
-                     `mcp.midi.midi.${f}`];
-        for( let eid in enames ){
-            e = document.getElementById( enames[eid]) ;
-            if( e != null ){
-                let v = e.value.trim();
-                if( !isNaN(v) && v != "" ){
-                    e.value = parseInt(v)+semitones ;
-                    markField( e.id );
-                    break ;
-                }
-                
-            }
+        let v = midiNumberField.value.trim();
+        if( !isNaN(v) && v != "" ){
+            midiNumberField.value = parseInt(v)+semitones ;
+            markField( midiNumberField.id );
         }
     }
     updateAllNoteNames();
@@ -600,7 +650,7 @@ function addRow( pdtype, rowid ){
     row.insertCell(-1).appendChild(makeInput( `${pdtype}.instrument.${f}`, 4, instrument) );
     row.cells[row.cells.length-1].children[0].onchange = function(){ showNoteName(f) };
     row.insertCell(-1).id = `program_name.${f}`;
-    row.insertCell(-1).appendChild( makeInput( `${pdtype}.midi.${f}`, 4, midi) );
+    row.insertCell(-1).appendChild( makeInput( `${pdtype}.number.${f}`, 4, midi) );
     row.cells[row.cells.length-1].children[0].onchange = function(){ showNoteName(f) };
     row.insertCell(-1).id = `nn.${f}`;
     row.insertCell(-1).appendChild(makeInput( `${pdtype}.rank.${f}`, 10, rank) );
@@ -609,22 +659,22 @@ function addRow( pdtype, rowid ){
 }
 
 async function list_pinout_by_midi_note(){
-    data = await fetch_json("/list_pinout_by_midi_note") ;
+    data = await fetch_json("/list_pinout_by_midi_note/" + encodePath(currentPinoutFilenameAbs())) ;
     let thead = document.getElementById("thead_list_pinout_by_midi_note" );
     thead.innerText = "";
-    for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register"] ){
+    for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register", "\u{a0}Inverted"] ){
         let th = document.createElement( "th" );
         th.innerHTML = v;
         thead.appendChild( th );
     }
     let previousNote = null ;
     let tbody = document.getElementById("tbody_list_pinout_by_midi_note");
-    tbody.innerText = "";
+    tbody.innerHTML = "";
     for( let i in data ){
         let row = data[i];
         let mn = `${pad(row.program_number,3)}-${pad(row.midi_number,2)}`;
-        insertRow( tbody, [ mn, row.midi_note, `${row.solepin_name}=${row.solepin_note}`,
-            row.solepin_rank, row.register_name ] ) ;
+        insertRow( tbody, [ mn, row.midi_note, `${row.actuator_name}`,
+            row.actuator_rank, row.register_name, row.invert ] ) ;
         
     }
     showHideElement( "table_list_pinout_by_midi_note", true );
@@ -665,7 +715,7 @@ async function get_available_pins(){
         }
         return s.substring(0,s.length-1);
     }
-    json_result = await fetch_json( "/get_used_pins" );
+    json_result = await fetch_json( "/get_used_pins/" + encodePath(currentPinoutFilenameAbs()) );
     for( const [key, value] of Object.entries(json_result)) {
         if( typeof value == typeof []){
             textById( key, list_to_string(value) );
@@ -757,7 +807,6 @@ function sortTable() {
             sortHeader.innerHTML = (tableDirection?"↓":"↑") + sortHeader.innerText.substring(1);
         }
         tableDirection = 1 - tableDirection ;
-        console.log("new direction", tableDirection);
 
     })));
 
@@ -768,3 +817,4 @@ fetch_json( "/set_playback_disabled" );
 
 </script>
 </body>
+</html>

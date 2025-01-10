@@ -2,14 +2,17 @@ import os
 from microdot import send_file
 import time
 
-from tunemanager import tunemanager
+from drehorgel import tunemanager
 import fileops
+# >>> allow sync instead of copy?
+# >>> allow 2 tunelib folders, for staging?
+# >>> compare tunelib.json with tunelib folder?
 
 DESTINATION_FOLDERS = {
     "mid": "/tunelib",
-    "main.py": "",
+    "main.py": "", # special case
     "json": "/data",
-    "pinout.txt": "/data",
+    "txt": "/data", # pinout.txt
     "py": "/software/mpy",
     "mpy": "/software/mpy",
     "html": "/software/static",
@@ -18,7 +21,6 @@ DESTINATION_FOLDERS = {
     "ico": "/software/static",
     "png": "/software/static",
     "jpg": "/software/static",
-    "gz": "/software/static"
 }
 
 MIME_TYPES = {
@@ -34,18 +36,32 @@ MIME_TYPES = {
     "css": "text/css",
     "js": "javascript"
 }
+
+def _check_midi_file( path ):
+    if "tunelib/" in path and fileops.get_file_type( path ) == "mid":
+        # Deleting MIDI file requires sync of tunelib at next reboot
+        tunemanager.remember_to_sync_tunelib()
+
 def get_mime_type( filename ):
-    try:
-        part = -1
-        if filename.endswith(".gz"):
-            part = -2
-        return MIME_TYPES[filename.split(".")[part]] + ";charset=UTF-8"
-    except (IndexError, KeyError):
-        return "text/plain;charset=UTF-8"
+    # Default MIME type is text/plain
+    return MIME_TYPES.get( fileops.get_file_type(filename), "text/plain")  + ";charset=UTF-8"
 
 def listdir(path):
     def get_date( filename ):
-        t = time.localtime(os.stat(filename)[7])
+        try:
+            t = time.localtime(os.stat(filename)[7])
+        except OverflowError:
+            # This really happened.... the cause
+            # is that a file got transferred with /filemanager
+            # without having
+            # set the ntp time. Since the time zone offset was minus 3 hours
+            # this gives a negativetime. 
+            # C language interpreted that negative number as
+            # unsigned int.
+            # This means: 
+            # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
+            # which is far, far in the future... overflow.
+            return "2000-01-01 00:00"
         return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
 
     if not path.endswith("/"):
@@ -78,10 +94,13 @@ def upload( request, path, filename  ):
         folder = path
     else:
         # automatic path
-        # Sort files to destination folder depending on name/file extension
-        folder = DESTINATION_FOLDERS.get( filename, 
-                    DESTINATION_FOLDERS.get( filename.split(".")[-1].lower(), None)
-                                        )
+        # Sort files to destination folder depending on file type
+        # But main.py has it's special folder!
+        # So try with the filename first, then with type:
+        folder = DESTINATION_FOLDERS.get( 
+                    filename,
+                    DESTINATION_FOLDERS.get( fileops.get_file_type( filename ) ) )
+                                        
     if folder is None:
         raise ValueError
 
@@ -91,19 +110,25 @@ def upload( request, path, filename  ):
         old_file_size = os.stat(path)[6]
     except OSError:
         old_file_size = None
-
     with open(path, "wb") as file:
         data = request.body
         new_file_size = len(data)
         file.write( data )
 
-    if "tunelib/" in path and path.lower().endswith( ".mid" ):
-        tunemanager.remember_to_sync_tunelib()
+    _check_midi_file( path )
 
+    # If a compressed file is replaced with a uncompressed one
+    # delete the replaced file. Same with .py and .mpy
+    # And vice-versa. Only one instance of two equivalent
+    # files will be allowed, to avoid duplicity and confusion.
+    equiv = fileops.get_equivalent( path )
+    if fileops.file_exists( equiv ):
+        # The equiv file is replaced by the new file
+        os.remove( equiv )
+        
     return {"folder": folder, 
             "oldFileSize": old_file_size,
             "newFileSize": new_file_size }
-
 
 
 def download(path):
@@ -177,7 +202,7 @@ def show_file( filename ):
     ct += ";charset=UTF-8"
     return send_file( filename, 
                      content_type=ct, 
-                     compressed=filename.endswith(".gz") )
+                     compressed=fileops.is_compressed( filename ) )
 
 
 def status():
@@ -189,11 +214,9 @@ def status():
 
 def delete(path):
     os.remove(path)
-    if "tunelib/" in path and path.lower().endswith(".mid"):
-        # Deleting MIDI file requires sync of tunelib at next reboot
-        tunemanager.remember_to_sync_tunelib()
+    _check_midi_file( path )
 
-def get_midi_file( request_path ):
-    filename = "/tunelib/" + request_path
-    return send_file(filename,
+def get_midi_file( request_path ): 
+    physical_name = fileops.find_decompressed_midi_filename( "/tunelib/" + request_path )
+    return send_file( physical_name,
                      content_type=get_mime_type("mid") )

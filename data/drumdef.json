@@ -1,22 +1,32 @@
 {
-    "45": {"name": "Low Tom MIDI=45=A2=A,, tuned to Bb", 
-            "duration": 65, 
-            "midi_list":[ 48,51,53], 
-            "strong_midis": [46],
-            "strong_duration":7 },
-    "47": {"name": "Low-mid Tom MIDI=47=B2=B,, tuned to Eb", 
+    "comment": "35 bass drum (wurlitzer)",
+    "comment": "45 low tom",
+    "comment": "47 low-mid tom",
+    "comment": "48 high-mid tom",
+    "comment": "49 crash cymbal (wurlitzer)",
+    "comment": "50 snare drum (wurlitzer)",
+    "comment": "85 castanets (wurlitzer)",
+    "comment": "59 claves",
+    
+    "47": {
+        "name": "Low-mid Tom MIDI=47=B2=B,, tuned to Eb", 
+        "duration": 15,
+        "midi_list": [61,60,53,56,62], 
+        "strong_duration": 20, 
+        "strong_midis": [58]
+         },
+    "50": {
+        "name": "High Tom MIDI=50=D3=D, tuned to Bb", 
         "duration": 15, 
-        "midi_list": [48,53,56,61], 
-        "strong_midis": [51,63],
-            "strong_duration": 18},
-    "50": {"name": "High Tom MIDI=50=D3=D, tuned to Bb", 
-            "duration": 8, 
-            "midi_list": [66,67,68,69,71,72], 
-            "strong_midis": [58,70],
-            "strong_duration": 11},
-    "75": {"name": "Claves MIDI=75=Eb5=_e, tuned to Eb", 
-            "duration": 7, 
-            "midi_list": [66,67,68,69,71,72], 
-            "strong_midis": [70],
-            "strong_duration": 9}
+        "midi_list": [63,61,60,62,64], 
+        "strong_duration": 20,
+        "strong_midis": [65]
+            },
+    "75": {
+        "name": "Claves MIDI=75=Eb5=_e, tuned to Eb", 
+        "duration": 8, 
+        "midi_list": [69,67,65,66,68], 
+        "strong_duration": 10,
+        "strong_midis": [70]
+        }
 }

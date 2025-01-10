@@ -1,11 +1,34 @@
 # Software for crank organs
-
-
+# Contents
+1. [Purpose](#purpose)
+2. [Features](#features)
+3. [If you want to try out the software](#if-you-want-to-try-out-the-software)
+4. [Main menu and navigation](#main-menu-and-navigation)
+5. [Crank organ: tune list and performance page](#crank-organ-tune-list-and-performance-page)
+6. [Tuner](#tuner)
+7. [History](#history)
+8. [Edit Tunelib](#edit-tunelig)
+9. [General configuration](#general-configuration)
+10. [Pin and MIDI configuration](#pin-and-midi-configuration)
+11. [System](#system)
+12. [File manager](#file-manager)
+13. [Turning the system on](#turning-the-system-on)
+14. [Installation](#installation)
+15. [Other stuff](#other-stuff)
+16. [Backup](#backup)
+17. [Recent changes](#recent-changes)
+18. [Programming language](#programming-language)
+19. [Credits](#credits)
+20. [Testing](#testing)
+21. [Troubleshooting](#troubleshooting)
+22. [Restrictions](#restrictions)
+23. [Licensing](#licensing)
+24. [Affiliation](#affiliation)
 
 # Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
-No software programming knowledge is needed to use this software. However, full source code is provided for perusal and it comes with the permission to change it, if you like. 
+No software programming knowledge is needed to use this software. However, full source code is provided for perusal and it comes with the permission to change it and use it according to the MIT license, which not very restrictive.
 
 Please post a Github issue in this repository for any question you might have. Please star the github repository if this is of interest for you.
 
@@ -14,11 +37,11 @@ Please post a Github issue in this repository for any question you might have. P
 * Browser as user interface (Chrome or Firefox). Management is done with WiFi with a browser on a cell phone, tablet or PC. No need to install anything on the cell phone or tablet.
 * However: the solution can play music perfectly without a cell phone present
 * Can define a setlist or select tune by tune.
-* It's fast to establish a setlist. The setlist can be ordered, shuffled and stored on flash. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
+* It's very fast to establish a setlist. The setlist can be ordered, shuffled and stored on flash. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
 * MIDI files can be updated via WiFi or via USB connection. You can add description, author, title, year and a rating to each tune.
-* To aid tuning, playing scales and individual notes is supported. A tuner is included
+* To aid tuning, playing scales and individual notes is supported. A tuner is included.
 * Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments, like a glockenspiel MIDI instrument.
-* This system is highly scalable, capable of managing a virtually unlimited number of pipes. DThe microcontroller can store more than 700 MIDI files in it's flash memory. With the addition of an SD card, there is virtually no limit.
+* This system is highly scalable, capable of managing a virtually unlimited number of pipes. The microcontroller can store about 1900 MIDI files in it's flash memory. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
 * Allows to store lyrics
 * Unattended operation is possible too
@@ -26,21 +49,19 @@ Please post a Github issue in this repository for any question you might have. P
 * Crank turning speed sets MIDI playback speed (optional)
 * Simulated percussion: drums are simulated playing several pipes together during a very short time
 * Shows remaining battery capacity on browser
-* Drivers to move solenoid valves via GPIO pins, via MCP23017 16 port expander and via MIDI serial out.
-* CrankMake current setlist persistent
+* Drivers to move solenoid valves via GPIO pins, via "MCP23017 16 port expander" and via MIDI over serial output.
 
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # If you want to try out the software
-To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
+To see this software in operation, there is a demo here: https://drehorgel.pythonanywhere.com/demo/.
 
-The demo allows to see the Tune list and the Performance page in operation (although there is certainly no crank organ behind that will sound music). You also can see all configuration pages (although no configuration can be changed on the demo).
+The demo allows to see the Tune list and the Performance page in operation (although there is certainly no crank organ behind that will make music, there are no cranks organ on the cloud). You also can see all configuration pages (although no configuration can be changed on the demo).
 
-If you can get a ESP32-S3 development board (such as a ESP32-S3-DEVKITC-1 board) with at least 1 MB of RAM, for example a N8R8 or N16R8 board, then you can install the software as documented here, and then connect with a browser and navigate and use all functions. 
+If you can get a ESP32-S3 development board (such as a ESP32-S3-DEVKITC-1 board) with at least 1 MB of RAM, for example a N8R8 or N16R8 board, then you can install the software as documented here over USB, and then connect with a browser and navigate and use all functions. 
 
-You will only need a crank organ to make the pipes sound...
-
+As a next step, you will only need a crank organ to make the pipes sound...
 
 I believe the software is relatively intuitive to use. Don't feel overwhelmed with the configuration information presented here. The only configuration you really need to do is to configure the WiFi router where the microcontroller needs to connect. All the rest is optional and the software will work out of the box.
 
@@ -232,7 +253,7 @@ The column "% completed" show how much of the tune has been played. 100% means t
 
 ![History page](history.jpg)
 
-The 📝 button next to the title allows to enter a rating (*, ** or ***) or a comment about a recently played tune. I use that to keep notes on how a recently played tune went. The rating is stored in the _rating_ column of the tunelib. The comment is appended to the _info_ column of the tunelib. These fields can also be edited with the Tunelib Editor, but reviewing the history also allows to add info and rating.
+The 📝 button next to the title allows to enter a rating (*, ** or ***) or a comment about a recently played tune. I use that to keep notes on how a recently played tune went with the audience and with me. The rating is stored in the _rating_ column of the tunelib. The comment is appended to the _info_ column of the tunelib. These fields can also be edited with the Tunelib Editor, but reviewing the history also allows to add info and rating.
 
 # Edit Tunelib
 The Tunelib Editor allows to edit information about the tunes.
@@ -242,7 +263,7 @@ All MIDI files to be played reside in the /tunelib folder in the microcontroller
 
 .kar, .smf and .rtx files that contain MIDI files must be renamed to .mid. If you do that, please check the files by playing them first on the PC.
 
-The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating. This information is stored in /data/tunelib.json
+The Edit Tunelib option allows to add information about each MIDI file, such as title, author, year, rating. This information is stored separately in /data/tunelib.json
 
 ## MIDI files
 Both MIDI file type 0 (single track) and MIDI file type 1 (multitrack) files are supported. 
@@ -251,13 +272,15 @@ Note on and note off will act on solenoids.  Set tempo events are interpreted fo
 
 Be sure to play any MIDI file at least once on your PC to see if it works.
 
+MIDI files without lengthy Meta messages are best. Use the ```compress_midi.py``` utility program to make the MIDI files lean and to compress them to almost one third of the original size.
+
 ## Adding and deleting MIDI tunes
 
 Use the [File Manager](#file-manager) to upload files to the /tunelib folder of the microcontroller. Both the File Manager and the Tunelib Editor can be used to delete files from the MIDI folder.
 
-MIDI files become visible in the Tune List after the next reboot, or after entering the Tunelib Editor once.
+MIDI files become visible after entering the Tunelib Editor once.
 
-You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB.
+You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB. 
 
 ## The Tunelib Editor (Tunelib Editor button on index page)
 
@@ -283,7 +306,7 @@ The following columns are computed and cannot be changed:
 * File size in bytes
 
 And at the end of the row there is this button:
-+ Delete: press the wastebasket button to delete the MIDI file from the microcontroller. You will be asked for confirmation.
+* Delete: press the wastebasket button to delete the MIDI file from the microcontroller. You will be asked for confirmation.
 
 # General configuration
 
@@ -292,6 +315,8 @@ The configuration parameters explained in detail on the configuration page. Afte
 ![Configuration](general_configuration.jpg)
 
 THis page is long and is best used on a PC or MAC.
+
+Any configuration change needs a reboot of the microcontroller after saving changes to become effective.
 
 ## Configuring a network name and host name
 This is the first configuration parameter to change.
@@ -366,10 +391,10 @@ To enable a crank sensor:
 Post an issue in this Github repository for information on options how to add a crank sensor, I'll explain options.
 
 ## Automatic playback
-There are crank organs being used for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically with the indicated pause.
+There are crank organs being used for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically after the indicated pause.
 
 ## Battery calibration
-Battery calibration enables to show computed battery usage on the top of each page and on the home page. If you have other means to show battery load, this is of little interest.
+Battery calibration enables to show computed battery usage on the top of each page and on the home page. If you have other means to show battery level, this is of little interest.
 
 Battery calibration is done on the home page (index page). It will give information to the microcontroller to estimate the level of charge of the batteries based on the time the processor is on and on the time solenoid valves are on.
 
@@ -390,8 +415,6 @@ When the battery symbol &#x1f50b; turns to &#x1faab;, then the computed battery 
 
 The counters are reset  when pressing the "Battery counters set to zero" on the home page. The time is the estimated operating time remaining in hours:minutes, based on the use history.
 
-Keep in mind that battery capacity is usually lower than what the battery manufacturer informs. For example a 5V battery pack impelemented internally with 3.3V lithium batteries shown as 10000 mAh might have 3.3*10 Wh and not 5*10 Wh. To have meaningful output with the battery indicator, you will have to calibrate the battery capacity configuration. Without calibration, no battery information will show on the page header.
-
 Even without calibration, some useful information will show on the home page (index page). Times are since the last reset to zero of counters:
 * Time powered on 
 * Time playing
@@ -407,7 +430,11 @@ Even without calibration, some useful information will show on the home page (in
 
 The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
-There are templates for the pin definition for several usual crank organ scales. For a 20 note Carl Frei scale, the preconfigured settings should normally do, but check if transposition of the configuration is needed.
+The pin configuration assigns GPIO pins for functions like touch pad, crank sensor, microphone, etc.
+
+There are templates for the pin definition for several usual crank organ scales. For a 20 note Carl Frei scale, the preconfigured settings should normally do.
+
+Any Pin and MIDI configuration change needs a reboot of the microcontroller after saving changes to become effective.
 
 ## Select scale
 
@@ -424,15 +451,15 @@ What you select is a template that allows to see and change pin assignment for d
 * Use MCP23017 16 port expander for larger configurations
 * Use a MIDI over serial driver to send the data to a DIN type MIDI connector
 
-If you need another scale, post an issue in this Github repository or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 and 48 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file, so you can add your own file here.
+If you need another scale or hardware configuration, post an issue in this Github repository or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 and 48 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file, so you can add your own file here.
 
-You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN plug, others that actuate a GPIO plug, other that actuates solenoid valves via a MCP23017 port expander.
+You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander.
 
 You also specify additional hardware you connect to the microcontroller:
 * A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller)
 * Electronic register switches
 * A rotary sensor for the crank (to detect movement, and/or to sense velocity)
-* A rotary knob to set velocity
+* A rotary knob (rotary encoder) to set velocity
 * A microphone for tuning
 
 ## Transpose scale if necessary
@@ -441,7 +468,7 @@ If you have a organ with, say, a 20 note Carl Frei scale, that scale may start o
 ## Test solenoids
 Next to each solenoid pin definition there is a test button. If the hardware and solenoids are connected, this is a way to test if the wiring is correct.
 
-If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here.
+If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here. 
 
 ## Redefine MIDI notes (only if necessary)
 
@@ -456,17 +483,17 @@ There are three ways to define a MIDI note here:
 
 ## Microphone, crank sensor, touchpad and neopixel sensor (important)
 
-This configuration is necessary to review depending on what sensors you install in your microcontroller hardware.
+These configurations are necessary to review depending on what sensors you install in your microcontroller hardware.
 
 You select if you will have a microphone, crank sensor, neopixel led or touchpad button installed, and which GPIO ports will be assigned to them. 
 
-If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. Only some pins of the ESP32-S3 support touchpad and analog-digital conversion. 
+If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. Only certain pins of the ESP32-S3 support touchpad and analog-digital conversion. 
 
 Many ESP32-S3 boards have a "neopixel" RGB WS2812 led either on pin 38 or 48. See the vendor's description or schematic, or try with both values. You can use the Pin and MIDI Configuration page to redefine the pin number.
 
 If you don't have, say, a microphone, leave the pin definition blank to tell the software to ignore the microphone.
 
-It's best if you have at least the touchpad button, which essentially is a single wire from the microcontroller to a metallic knob or disc.
+It's best if you have at least the touchpad button, which essentially is a single wire from the microcontroller to a metallic knob or disc. This knob is used to signal the start of tune, when released.
 
 The available pins are shown on the pinout configuration page.
 
@@ -528,7 +555,7 @@ The error log records events of class INFO, ERROR and EXCEPTION. The MicroPython
 
 Press the "Update files" button on the index page, and the File Manager will show up.
 
-You can navigate to all folders, and view text, midi and image files.
+You can navigate to all folders, and view text, MIDI and image files.
 
 ![File manager screenshot](file_manager.png)
 
@@ -544,10 +571,10 @@ When uploading files to the microcontroller, you can select a folder with subfol
 When navigating to the tunelib folder, some useful information about the MIDI files will also appear.
 
 ### Update MIDI files
-Use the "Update to auto folder" button to upload MIDI files, then reboot to make new files visible.
+Use the "Update to auto folder" button to upload MIDI files, then run the "Tunelib editor" to make the files visible.
 
 ### Update software
-Use the "Update to auto folder" button to upload a new software version, then reboot to make the new version take effect.
+Use the "Update to auto folder" button to upload a new software version (.py or .mpy files. .html and .js files), then reboot to make the new version take effect.
 
 ### View files
 Files that are "underlined" in the File Manager can be clicked to view their content. Click on MIDI files is supported.
@@ -556,9 +583,9 @@ Files that are "underlined" in the File Manager can be clicked to view their con
 
 TLDR: turn on, and turn the crank or touch the touchpad 3 times in a row and music starts.
 
-It takes about 4 to 8 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed the boot.
+It takes about 5 to 8 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed the boot.
 
-If a RGB (neopixel) LED is on the board and configured, it will show shades of blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, an error has occurred, see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
+If a RGB (neopixel) LED is on the board and configured, it will show changing blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, or if it turns a solid red, an error has occurred, see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
 
 The software will automatically load the current setlist, or if empty, the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
@@ -574,7 +601,7 @@ You don't need your cell phone turned on to play music, only to alter the setlis
 # Installation
 ## Prerequisite hardware and software
 
-This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes flash, 8 Megabytes RAM. N16R8 means Megabytes Mb flash, 8 Megabytes RAM (Megabytes, not Gigabytes...). The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone.
+This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash, 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash, 8 Megabytes RAM(Megabytes, not Gigabytes...). The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository).
 
 For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schematic. It's best to connect a touchpad, which really is any metal knob or disc such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology. The touchpad is used to start tunes.
 
@@ -590,34 +617,30 @@ No programming required. Configuration is done later via web pages and forms wit
 
 Install Python from python.org. Please follow instructions on that page to install Python. You will not need to program with Python, but the programs to manage the microcontroller need the Python installed.
 
-Python includes the pip "pip installs Python libraries" utility. Install the esptool.py and mpremote utility programs using: ```pip install esptool```and ```pip install mpremote```
+Python includes the pip "pip Installs Python Libraries" utility. Install the esptool.py and mpremote utility programs using: ```pip install esptool```and ```pip install mpremote```
 
-Install the git utility, to access github.com easily, to clone this repository to your PC with ```git clone https://www.github.com/bixb922/crank-organ```
+Install the git utility, to access github.com easily, namely to clone this repository to your PC with ```git clone https://www.github.com/bixb922/crank-organ```
 
 
 ## Installation instructions
 
-To install MicroPython on the ESP32-S3 N8R8 or N16R8 please see https://micropython.org/download/ESP32_GENERIC_S3/ section "Firmware (Support for Octal-SPIRAM)". Download the latest .bin file and use the esptoo.py command provided on the page.
+To install MicroPython on the ESP32-S3 N8R8 or N16R8 please see https://micropython.org/download/ESP32_GENERIC_S3/ section "Firmware (Support for Octal-SPIRAM)". Download the latest .bin file and use the esptool.py command line provided on the page.
 
-To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32
+To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32. If you use this tool, you don't need ```esptool.py```, and the tool alters the .bin image to recognize the 16Mb. See here: https://github.com/bixb922/crank-organ/discussions/3
 
-You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html. 
 
-Run mpremote on the command line and you should get the >>> prompt (also called "REPL prompt").
+You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html.  Run mpremote on the command line and you should get the >>> prompt (also called "REPL prompt").
 
 Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to the hard drive of your PC. 
 
-Install prerrequisite drivers:
-````
-mpremote mip install aiohttp
-````
+No other prerrequisite libraries need to be installed on the microcontroller (former versions required ```aiohttp```, but this is not needed anymore).
 
-Go to the install folder and execute the commands: ```
-
+Go to the install folder and execute the commands: 
 ```
 mpremote run install_software.py
 mpremote run install_data.py
 ```
+Please be patient, these ```run``` commands take a few seconds before a response appears, since ```mpremote``` needs to transfer the data over USB first and does not show progress.
 
 During the installation, a list of all files installed on the microcontroller will be displayed.
 
@@ -633,7 +656,7 @@ The application is now installed. You can copy MIDI files (with .mid type) to th
 ```
 mpremote cp my_nice_melody :/tunelib/
 ```
-Or you can configure WiFi and copy MIDI files to the /tunelib folder with the [File Manager](#file-manager).
+Or you can configure WiFi and copy MIDI files to the /tunelib folder with the [File Manager](#file-manager). Please enter the [Tunelib editor](#the-tunelib-editor-tunelib-editor-button-on-index-page) to make the MIDI files visible after copying ()
 
 
 To test the application use this command in cmd (Windows) or Terminal (Mac) enter the mpremote command. When the >>> prompt appears, press control-D.
@@ -675,22 +698,25 @@ Total startup time (without main, until asyncio ready) 4357 msec
 
 If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
 
-Now connect with WiFi. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on Android phones older than 2021. 
+Now connect with WiFi. WiFi is active about 5 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible around 10 seconds after power on, and will stay on until you configure WiFi and reboot. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on Android phones older than 2021. 
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
 
-![general_configuration](general_configuration.jpg)
+![general_configuration](general-configuration.jpg)
 
-Once WiFi is configured, further updates can be made with the [File Manager](#file-manager)
+Configuration is best done on a PC. That also allows to use the browser to translate the configuration instructions.
 
+Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, upload MIDI files.
+
+If you can't configure WiFi, see (here)(##another-way-to-configure)
 
 ## WiFi capabilities
 
-The microcontroller can connect to a WiFi Access Point, for example your home WiFi Router. It can simultaneously be be an Access Point so that a cell phone or PC can connect to it as if it were a home router.
+The microcontroller can connect to a WiFi Access Point, for example your home WiFi Router. It can simultaneously be an Access Point so that a cell phone or PC can connect to it as if it were a home router.
 
 These options are available for WiFi connection:
 
-* Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
+* Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing away from home. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
 
 ```mermaid
 flowchart LR
@@ -698,7 +724,7 @@ flowchart LR
    
 ```
 
-* Option 2: Have the microcontroller connect to your home router. This way of connecting is useful at home. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs. The microcontroller is in "station mode".
+* Option 2: Have the microcontroller connect to your home router. This way of connecting is useful at home, to configure the software, upload files or to perform. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs. The microcontroller is in "station mode".
 
 ```mermaid
 flowchart LR
@@ -709,7 +735,7 @@ flowchart LR
 
 The microcontroller will try option 1 and option 2 one after the other until connected. It will try during 15 seconds with option 1, then 15 seconds with option 2 and so on, until one of the two options is available.
 
-* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on, or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. If you connect, option 3 access stays active until you stop using it.
+* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on (except when the microcontroller is not configured for WiFi, in that case option 3 is active until configured), or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. If you connect, option 3 access stays active until you stop using it.
 
 ```mermaid
 flowchart LR
@@ -719,6 +745,26 @@ flowchart LR
 See [General Configuration](#general-configuration) to configure WiFi.
 
 # Other stuff
+
+## Increase MIDI file capacity
+
+The software accepts compressed MIDI files. With average size crank organ music MIDI files (i.e. the tunes I have) the capacity without compression is about 700 files for the 16MB flash version of the ESP32-S3. With compression the capacity is about 1900 MIDI files for the 16MB version and 700 files for the 8MB version.
+
+The ```compress_midi.py``` utility included here runs on your PC. It compresses all MIDI files in a input folder to an ouput folder. The input files are not changed. The output folder should start empty. If ```compress_midi.py``` is run later, only files newer than their compressed version are processed.
+
+The compression is done in several steps by ```compress_midi.py```:
+* Only note on, note off and program change MIDI events are kept, the rest of the MIDI events are discarded. Set tempo meta events are processed and incorporated into the MIDI. Pulses per beat is set to a lower (standard) value of 96, which should be precise enough for mechanical music. This makes the MIDI file much faster to process and considerably smaller.
+* All note on and note off events are converted to note on events with running status. This can give in a significant file size reduction.
+* Then the files are compressed by ```compress_midi.py``` using the gzip algorthm and written to the output folder with .gz suffix (i.e. ```foo.mid``` becomes ```foo.mid.gz```)
+
+
+Finally, you should copy these files to the microcontroller using the "Update to auto folder" button of the File Manager. This will replace all *.mid files with their *.mid.gz compressed counterpart.
+
+The music player will automatically recognize either the .mid file or the .mid.gz file and decompress on the fly if necessary.
+
+Use ```compress_midi.py --help``` for help with the utility program. Input and output folder name need to be specified only once because they are kept in ```compress_midi.json``` in your current folder on the PC.
+
+Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes.
 
 ## SD card 
 
@@ -746,6 +792,8 @@ The provided configuration has defined 64 notes from MIDI 48 to MIDI 111. You ca
 No program change messages are sent. In fact, only note on and note off messages are sent, and with fixed velocity, as it is normal for pipes. If you have another requirement, please post an issue in this repository.
 
 MIDI output can be combined with instruments actuated via GPIO or MCP23017 pins.
+
+This option has little testing. Please report any problem.
 
 
 ## Languages: English, Spanish and German
@@ -802,14 +850,16 @@ Microcontroller flash storage is fairly robust. It is very unlikely to end up wi
 
 However, 
 once you configure your microcontroller and enter data in your Tunelib, you should backup relevant files:
-* /data/tunelib.json: it holds the additional information about each tune)
+* /tunelib/*.mid: all MIDI files. Instead of doing backup, it's probably best to have a /tunelib and a /tunelib_compressed folder somewhere on the PC and then copy the newest MIDI files with the [File Manager](#file-manager) to the microcontroller.
+* /data/tunelib.json: it holds the additional information about each tune, such as title, genre, year, date added, rating.
 * /data/lyrics.json: the lyrics of the tunes.
 * /data/config.json: contains encrypted passwords, WiFi and general configuration. 
+* /data/battery_calibration.json: contains the data to calculate battery usage, if you did a calibration
 
 Files that may be of interest to backup, only if you change pinout configuration:
 
 * /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information).
-* /data/pinout.txt (although this file is very easy to restore using the MIDI configuration page)
+* /data/pinout.txt (although this file is very easy to restore using the pinout and MIDI configuration page)
 
 This really is not very important to back up:
 * /data/history.json: only if you are interested in conserving the history of when tunes have played
@@ -818,6 +868,7 @@ These files don't need backup:
 * /data/timezone.json. This file is recreated if absent and refreshed daily. It caches the local time zone information.
 * /data/organtuner.json. This file is recreated or refreshed when tuning, and contains the last tuning.
 * /data/error_nnn_.log. These are error logs, they are interesting only if there is a problem.
+* /data/battery.json. It has the current battery usage information, and will be recreated when the battery level is set to zero on the home page.
 * Files in the data folder ending with a date are backups of configuration files. Older backups are deleted automatically.
 * Files in the signals folder are waveforms stored while tuning, for debugging purposes.
 
@@ -832,7 +883,7 @@ Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 ba
 
 # Recent changes
 
-Changes from Nov 2023 to March 2024:
+## Changes from Nov 2023 to March 2024:
 * Page with history of tunes played, button to purge old records.
 * More fields for tunelib: date added, rating, info, number of times played.
 * Integrated tunelib editor
@@ -858,7 +909,7 @@ Changes from Nov 2023 to March 2024:
 * Detection of polyphony to limit battery consumption. Will flash onboard RGB red briefly when limit acts.
 * English, german and spanish for daily used functions. Configuration pages are in english. 
 
-Changes from March 2024 to June 2024.
+## Changes from March 2024 to June 2024.
  * New Pulse Driver module using hardware PCNT module of the ESP32S3 microprocessor for precise and low overhead crank speed measurement.
 * Configurable crank speed settings
 * Crank revolutions per second graph on diag.html page.
@@ -873,7 +924,7 @@ Changes from March 2024 to June 2024.
 * Register rating and comments easily on history page.
 * Automatic playback
 
-Changes from June 2024 to October 2024
+## Changes from June 2024 to October 2024
 * File manager included: Easier MIDI and software update via web pages, no additional software needed
 * Simulated drum notes, playing several pipes for a short time at once
 * Electronic registers, both by web page and by hardware switch
@@ -886,7 +937,7 @@ Changes from June 2024 to October 2024
 * The touch button now doesn't stop current tune anymore (I found that feature annoying). Use the "Next" button on the Performance page.
 * New tune titles now start with ~, that shows them at the beginning or end of tunelibedit and tunelist.
 * Delete button on tunelibedit page for easier MIDI file deletion.
-* If MIDI files are uploaded or deleted, a automatic tunelib sync is scheduled for next reboot
+* If MIDI files are uploaded or deleted, a automatic tunelib sync is scheduled for next reboot (this has been reverted in a later version)
 * New "shuffle ⭐⭐⭐" button on Performance page. 
 * Changed names of L button on tunelibedit.html to Edit/Add (lyrics).
 * Dropped FTP support in favor of the included File Manager. The File Manager is faster, easier to use and does not need to install additional software.
@@ -901,15 +952,39 @@ Changes from June 2024 to October 2024
 * Make current setlist persistent. This allows to reset microcontroller (or power off) during performance and resume setlist.
 * Dropped support for FTP in favor of the included File Manager
 
-Changes on Oct 30, 2024
+## Changes on Oct 30, 2024
 
 * Support for MIDI over serial (MIDI over DIN connector)
 * New: both quadrature and simple encoder can be used as crank rotation sensor
 * Potentiometer type rotary encoder to regulate speed
 * Make current setlist persistent, so the current setlist  survives reboots and is not reverted to the stored setlist.
 * After entering a password for configuration, revoke credentials on reboot. Simpler password dialog. Password hashed when sent over http, adds yet another layer of security.
-* Time zone is sent from the browser configuration. No configuration necessary, less overhead, less hassle, smaller code
+* Time zone is now set from the browser configuration. No configuration necessary, less overhead, less hassle, smaller code, frequent update, no restrictions on frequency of use.
 * More WiFi client activity info in diag.html
+
+## Changes from Oct 2024 to Dic 2024
+
+* MIDI files can be compressed (.mid.gz), this more than doubles flash capacity for MIDI files.
+* New compress_midi.py utility to compress a complete folder of MIDI files.
+* File manager now knows about compressed files and py/mpy files, deleting the
+replaced file. This allows to replace easily an uncompressed file with a compressed one and vice versa. This means that with MIDI files, you just upload the compressed MIDI files and the uncompressed MIDI files with the same name get deleted on the microcontroller.
+* HTML and JS files can be compressed with gzip to save a bit of flash. Python .py files can be compiled with mpy-cross to .mpy files to save some space.
+* Drum notes made by making several pipes sound at the same time, aka "Fake drums". If configured, certain MIDI drum notes make several pipes sound together as a drum-like sound. See /data/drumdef.json. If you are interested, please post an issue or a discussion topic in this repository.
+* A rotary knob (potentiometer type) can now be used to set playback speed along with the crank rotation sensor.
+* Restructured pinout processing to reduce code size and to make it easier to define new actuators such as PWM/RC servos.
+* Reboot is now needed after saving pinout configuration, to let changes to take effect
+* Tunelist alerts if tunelib not updated. No automatic sync of tunelib anymore.
+* Corrected: encoding filenames with special characters now works correctly for upload.
+* Corrected: unexpected 401 error when uploading files
+* Invalid pinout.json files are shown as if they were empty. Better handling if pinout related files in /data are erroneous or missing.
+* The aiohttp library is not needed anymore. It was formerly used to get the timezone from www.wordtimeapi.org, but now the time zone information is now supplied by the browser configuration.
+* Initial configuration does not require password to make changes. This is one less obstacle to start.
+* Optimize midi file playback skipping processing of unneeded MIDI events. Put a guard at begin start of music, to avoid first note(s) to be skipped due to too many meta messages.
+* Setlist on play.html now shows duration of each song and total.
+* Translate WiFi status codes to MicroPython WiFi status names, aiding to understand WiFi problems.
+* Time limit to start connection to WiFi AP mode when WiFi not configured is now several hours instead of 2 minutes.
+* Updated this README.md, added index to this and the hardware README.md
+
 
 # Programming language
 The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async. No C/C++ code was necessary.
@@ -922,7 +997,12 @@ Pulses are counted with the PCNT hardware on the ESP32-S3 chip, so counting puls
 
 The development relies heavily on the asyncio mode, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 concurrent asyncio tasks to all jobs necessary.
 
-MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, best use the latest version.
+MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, it's best use the latest version.
+
+If you want to program in MicroPython, a IDE (integrated development environment) is useful. Some free options are:
+* Microsoft Visual Studio Code, aka VSCode (free) plus ```mpremote```. You can run mpremote in a VSCode window (this is what I use).
+* Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
+* Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
 # Credits
 
@@ -949,6 +1029,27 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
+## Another way to configure
+
+If you can't configure the microcontroller via WiFi, here is another way to do that. Once the software has been installed, you can copy the configuration file to your PC:
+```
+mpremote cp :/data/config.json ./config.json
+````
+Now use any text editor (like notepad on Windows) to edit the config.json file. Entries you may want to change are:
+* access_point1 and password1: set those to the WiFi name and password of your home router
+* access_point2 and password2: set those to the WiFi name and password of your cell phone hotspot (you can configure this one later via Web, too)
+
+Then save the file to your PC and copy back to the microcontroller:
+```
+mpremote cp config.json :/data/config.json
+```
+Now restart the microcontroller. After about 5 to 10 seconds, you should see the following message with mpremote:
+```
+00:00:05 - wifimanager - INFO - Connected to myhomerouter network config ('192.168.100.104', '255.255.255.0', '192.168.100.1', '192.168.100.1') hostname esp32s3
+```
+You should be able to connect to the microcontroller with your browser at ```http://esp32s3.local``` or with the IP address that is displayed, in this example:  ```http://192.168.100.104```
+
+Now the microcontroller's home page should apper, and you can continue configuration with the brower.
 
 # Restrictions
 Safari as a browser is not supported.
@@ -971,10 +1072,12 @@ Password encryption gets lost when installing a new MicroPython version. It shou
 
 No https is available. Please raise an issue if you think this is vital. https needs you to generate a certificate and register that on your PC and cell phone, so some work would be required on your side to make that work once developed.
 
-The File manager doesn't rename files, doesn't allow to delete folders and may have other restrictions. It is for updating tunes and software, and to browse files and folders in the microcontroller.
+The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
 # Licensing
+This software is available under the MIT license:
+
 Copyright (c) 2023 Hermann Paul von Borries
 
 This software and design is licensed under the MIT License:

@@ -19,7 +19,7 @@ Please note that you really don't need a cell phone or tablet to perform: If you
 
 No special application is needed on the cell phone. Just a standard web browser like Firefox or Chrome.
 
-The microcontroller used is a ESP32-S3. It has about 26 pins available to manage pipes and peripherals, simplifying enormously the electronics for a 20 note organ. It also manages touch pads,counters/encoders, lots of RAM and flash at a very low battery load, so I think it is a good choice for a microcontroller.  With the available I2C capabilities, the ESP32-S3 could manage many (hundreds?) of pipes.
+The microcontroller used is a ESP32-S3. Typical boards have about 26 pins available to manage pipes and peripherals, simplifying enormously the electronics for a 20 note organ. It also manages touch pads, counters/encoders, has lots of RAM and flash at a very low battery load, so I think it is a good choice for a microcontroller.  With the available I2C capabilities, the ESP32-S3 could manage many (hundreds?) of pipes.
 
 The repository describes the complete solution:
 * hardware schematics
@@ -79,7 +79,9 @@ These are the folders in this GITHUB repository. On a cell phone, select "Browse
 
 
 
-# License
+# License 
+This material is available under the MIT license:
+
 This license and disclaimer also covers the hardware design documents. The hardware design is part of the software published here.
 
 Copyright (c) 2023 Hermann Paul von Borries

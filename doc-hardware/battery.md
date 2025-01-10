@@ -186,5 +186,15 @@ From left to right you can see:
 * At the far right: the decoy trigger, set to 12V
 
 
+## Tool battery packs
+
+Electric tools also have battery packs. These packs include a BMS, with a good protection, but they can deliver a very strong current. So I think they always should be protected with a fuse with the maximum current expected. 
+
+For most brands there are adapters available, and most of these batteries have some kind of indicator to show level, for example, 3 or 4 leds.
+
+I like that the current can be quite high. 2A is not very much if you want to sound drum notes with many pipes (see the software description), because you may need a peak current of 3A to 4A for 10 or 15 solenoid valves, although only for a very short time.
+
+I haven't tested these battery packs yet. Make sure that they have a BMS included.
+
 
 

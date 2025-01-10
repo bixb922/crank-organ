@@ -11,10 +11,7 @@ import machine
 # if __name__ == "__main__":
 #    sys.path.append("software/mpy")
 
-# There is little gain caching the pin number
-from pinout import gpio
-# minilog is needed to get error count for blinking problems
-from minilog import getLogger
+LED_FILE = "data/led.txt"
 
 # 1=lowest, 255=highest
 VERY_LOW = const(4)
@@ -23,19 +20,19 @@ MEDIUM = const(32)
 STRONG = const(128)
 VERY_STRONG = const(255)
 
-
 class BlinkingLed:
-    def __init__(self, p):
+    def __init__(self):
         self.neopixel_led = None
+        p = get_led()
         if p:
             self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
             self.off()
 
-            self.logger = getLogger(__name__)
+            self.logger = None
             self.setlist = None # We don't know the setlist yet, too early
             
             self.problem_task = asyncio.create_task(self._problem_process())
-            self.logger.debug("init ok")
+           
 
     # Simple (permanent) led on and off
     def on(self, color):
@@ -48,7 +45,13 @@ class BlinkingLed:
 
     # Problem encountered? run permanent task flashing red
     async def _problem_process(self):
+        # Wait until asyncio is running
+        await asyncio.sleep_ms(1000)
+        # minilog is needed to get error count to blink red if a problem occurred
+        import minilog
+        self.logger = minilog.getLogger(__name__)
         if self.neopixel_led:
+            
             while True:
                 # Problem: error or exception entry in log
                 if self.logger.get_error_count() > 0:
@@ -138,9 +141,21 @@ class BlinkingLed:
             self.off()
             await asyncio.sleep_ms(timeoff)
 
+def set_led( pin ):
+    # Caching pin makes this module decoupled from pinout
+    # and led starts sooner
+    if get_led() != pin:
+        # Write led.txt only if pin definition is different
+        with open(LED_FILE, "w") as file:
+            file.write(str(pin))
 
-led = BlinkingLed(gpio.neopixel_pin)
-
+def get_led():
+    try:
+        with open(LED_FILE) as file:
+            return int(file.read())
+    except: 
+        return 48
+    
 # if __name__ == "__main__":
 #    async def test():
 #        print("led blue")

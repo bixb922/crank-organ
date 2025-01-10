@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title id="pagetitle"></title>
+	<link rel="stylesheet" type="text/css" href="skeleton.css">
+</head>
+<body>
+<span id="popup" class="popuptext"></span>
+<div class="headerdiv">
+	<span class="headerleft">
+        <a onclick="pageUp('tunelist')">&#11013;</a>
+	</span>
+    &nbsp;&nbsp;&nbsp;<b>Drums setting</b>
+	<span class="headerright" id="header_time"></span>
+</div>
+
+<script type="text/javascript" src="/static/common.js"></script>
+
+<table>
+	<tbody id="drumTableBody">
+	</tbody>
+</table>
+<div></div>
+<button onclick="save()">Save</button>
+</body>
+
+<script>
+// {
+//     "45": {"name": "Low Tom MIDI=45=A2=A,, tuned to Bb", 
+//             "duration": 65, 
+//             "midi_list":[ 48,51,53], 
+//             "strong_midis": [46],
+//             "strong_duration":7 },
+let drumdef = {};
+let MAX_MIDIS = 10;
+async function refresh(){
+	// global drumdef
+	drumdef = await fetch_json("/data/drumdef.json");
+	let tbody = document.getElementById("drumTableBody");
+	console.log("tbody=", tbody);
+	for( let midi_number in drumdef ){
+		console.log("midi_number=", midi_number);
+		let dd = drumdef[midi_number];
+		console.log("dd=", dd);
+		let row = insertRow( tbody, [dd["name"]]);
+		row.cells[0].colSpan = 10;
+		insertFormRow( tbody, "durationRow", ["Duration", makeInput(`duration.${midi_number}`, 3, dd["duration"]), "msec"]);
+		insertFormRow( tbody, "strongDurationRow", ["Strong duration", makeInput(`strong_duration.${midi_number}`, 3, dd["strong_duration"]), "msec"]);
+		let fields = ["Strong notes"];
+		for( let i = 0; i < MAX_MIDIS; i++ ){
+			let x = dd["strong_midis"][i];
+			if( !x ){
+				x = "";
+			}
+			fields.push( makeInput(`strong_midis.${midi_number}.${i}`, 3, x ) );
+		}
+		insertFormRow( tbody, `strongrow`, fields );
+		fields = ["Normal notes"];
+		for( let i = 0; i < MAX_MIDIS; i++ ){
+			let x = dd["midi_list"][i];
+			if( !x ){
+				x = "";
+			}
+			fields.push( makeInput(`midi_list.${midi_number}.${i}`, 3, x ) );
+		}
+		insertFormRow( tbody, `midiListRow`, fields );
+		row = insertRow( tbody, ["================================"]);
+		row.cells[0].colSpan = 10;
+	}
+}
+
+function insertFormRow( body, rowid, data ){
+	let row = body.insertRow(-1);
+    if( rowid ){
+        row.id = rowid ;
+    }
+	for( let v of data ){
+        if( typeof v === 'string' || v instanceof String ){
+		    row.insertCell(-1).innerText = "" + v ;
+        }
+        else {
+            // If not a string, this must be a DOM element
+            row.insertCell(-1).appendChild( v );
+        }
+	}
+	return row;
+}
+
+function makeInput( id, size, value ){
+    let textBox = document.createElement( "input" );
+    textBox.id = id ;
+    textBox.size = size ;
+    textBox.value = value ;
+    textBox.onchange = function() { updateField(id) };
+	textBox.oninput = function() { textBox.style.backgroundColor = cream ;}
+    return textBox ;
+}
+async function updateField(id){
+	let data = id.split(".");
+	let input_box = document.getElementById(id);
+	let midi_number = data[1];
+	let field = data[0];
+	console.log("updateField data=", data);
+
+	if( field == "duration" || field == "strong_duration"){		
+		let v = input_box.value;
+		drumdef[midi_number][field] = parseInt(v);
+	}
+	else if( field == "strong_midis" || field == "midi_list") {
+		let midilist = [];
+		for( let i = 0; i < MAX_MIDIS; i++ ){
+			let v = document.getElementById(`${field}.${midi_number}.${i}`).value;
+			if( v && !isNaN(v)) {
+				midilist.push( parseInt(v) );
+			};
+		}
+		drumdef[midi_number][field] = midilist;
+	}
+	console.log("Modified", drumdef);
+	await fetch_json("/test_drumdef", drumdef );
+
+	// Erase background
+	input_box.style.backgroundColor = "#ffffff";
+}
+async function save(){
+	await fetch_json("/save_drumdef", drumdef );
+}
+refresh();
+
+</script>
+</html>

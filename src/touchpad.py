@@ -7,9 +7,9 @@ import machine
 import asyncio
 import time
 
-from config import config
-from led import led
+from drehorgel import config, led
 
+ 
 # Polling interval
 MSEC_BETWEEN_SAMPLES = const(100) 
 # Time for TouchPad signal to settle == time to ignore bouncing,
@@ -47,7 +47,7 @@ class TouchButton:
         self.up_event = ev
     
     def register_down_event(self,ev):
-        # Not used by now.
+        # Not used by now.>>>
         # Event when putting hand down on touch pad
         self.down_event = ev
                                  

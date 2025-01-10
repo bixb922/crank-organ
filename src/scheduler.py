@@ -3,8 +3,9 @@
 # Allows the MIDI player to wait letting well behaved asyncio tasks
 # execute during the times between MIDI events.
 from micropython import const
-import time
+from time import ticks_diff, ticks_us, ticks_ms, sleep_us
 import asyncio
+import gc
 
 _run_always_flag = True
 
@@ -30,17 +31,18 @@ _DEBUG_TIMES = const(False)
 async def wait_and_yield_ms(for_us):
     # This function is to wait for the next MIDI event with precision,
     # and allowing another task to run if the time it needs is less
-    # than the for_us wait time between MIDI events.
+    # than the wait time between MIDI events.
+    # Tasks are scheduled with the RequestSlice context manager, see below.
     #
     # Restriction: this schedules at most one task per wait.
     # but this works well because there are few tasks and many. many MIDI events.
     global _run_always_flag
-    t0 = time.ticks_us()
+    t0 = ticks_us()
     _run_always_flag = False
     if for_us <= 0:
         return
     if for_us < _RESERVED_US:
-        time.sleep_us(for_us)
+        sleep_us(for_us)
         return
     _find_and_run_task(for_us - _RESERVED_US)
     await asyncio.sleep_ms(round((for_us - _RESERVED_US)/1000))
@@ -50,9 +52,9 @@ async def wait_and_yield_ms(for_us):
     # The downside is that during time.sleep_ms() no other tasks can
     # be scheduled, but that is ok, since this is the one and only
     # high priority task.
-    remaining_us = for_us - time.ticks_diff(time.ticks_us(), t0)
+    remaining_us = for_us - ticks_diff(ticks_us(), t0)
     if remaining_us > 0:
-        time.sleep_us(remaining_us)
+        sleep_us(remaining_us)
 
 
 def _find_and_run_task(available):
@@ -70,7 +72,8 @@ def _find_and_run_task(available):
 
 def run_always():
     # At the end of a tune, call run_always() to leave no
-    # restrictions for RequestSlice.
+    # restrictions for RequestSlice. I.e. when no tune is playing,
+    # RequestSlice runs the enclosed code with no delay.
     global _run_always_flag
     _run_always_flag = True
     # Schedule all tasks left pending
@@ -82,15 +85,17 @@ def run_always():
 # How to use RequestSlice:
 # async with RequestSlice( "descriptive name", requested_msec, [maximum_wait] ):
 #       do something
-# Will wait for a slice of requested_msec, but task will not be kept waiting
+# Will wait for a slice of requested_msec, but caller will not be kept waiting
 # more than maximum_wait.
 # At most one task with "descriptive name" can be pending at the same time.
 # This prevents heaping up work that will make system not responsive.
 # If maximum_wait is omitted, this is a very low priority
 # task that can wait until music has stopped playing.
-# Scheduled tasks have to be repetitive and are low priority,
+# Scheduled tasks should to be repetitive and are low priority,
 # because if a second task with the same name is scheduled,
-# the second task is dismissed. Only one task per name is queued.
+# the first task is dismissed. Only one task per name is queued.
+# For example: recalculate battery level once a minute, if that 
+# task is delayed, no serious problem will occur.
 class RequestSlice:
     # Default timeout: much longer than one tune = 1 hour.
     # This means: wait until the current tune is
@@ -104,7 +109,7 @@ class RequestSlice:
         return
 
     async def __aenter__(self):
-        self.start = time.ticks_ms()
+        self.start = ticks_ms()
         if not _run_always_flag:
             # Queue this task for execution
             _tasklist.append(self)
@@ -120,33 +125,33 @@ class RequestSlice:
                     if _DEBUG_TIMES:
                         tl = [x.name for x in _tasklist]
                         print(
-                            f"task TIMEOUT {self.name}  requested={self.requested} timeout={self.wait_at_most} {tl}"
+                            f"task TIMEOUT {self.name}  requested={self.requested} timeout={self.wait_at_most} {tl=}"
                         )
                 except ValueError:
                     pass
                 raise RuntimeError("MIDI player did not let this task run")
 
-        self.t0 = time.ticks_ms()  # For debug
+        self.t0 = ticks_ms()  # For debug
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if _DEBUG_TIMES:
             # This debugging options allows to inspect if times of
             # RequestSlice are ample enough.
-            now = time.ticks_ms()
-            dt = time.ticks_diff(now, self.t0)
+            now = ticks_ms()
+            dt = ticks_diff(now, self.t0)
             exceeded = "***** exceeded *****" if dt > self.requested else ""
-            waited = time.ticks_diff(now, self.start) - dt
+            waited = ticks_diff(now, self.start) - dt
             tl = [x.name for x in _tasklist]
             print(
-                f"task {self.name} used={dt}, requested={self.requested}, available={self.available} timeout={self.wait_at_most}, waited {waited} {exc_type=} {exceeded} {tl}"
+                f"task {self.name} used={dt}, requested={self.requested}, available={self.available} timeout={self.wait_at_most}, waited {waited} {exc_type=} {exceeded} {tl=}"
             )
         # Return None to re-raise any exception
 
-
-async def wait_for_player_inactive():
-    while not _run_always_flag:
-        await asyncio.sleep_ms(1000)
+# Not used. Can be used to wait for player to stop.
+#async def wait_for_player_inactive():
+#    while not _run_always_flag:
+#        await asyncio.sleep_ms(1000)
 
 
 # Enable playback: player.py/setlist.py play music
@@ -178,12 +183,53 @@ class MeasureTime:
     def __init__(self, title ):
         self.title = title
     def __enter__( self ):
-        self.t0 = time.ticks_ms()
+        self.t0 = ticks_ms()
         return self
     def __exit__( self, exc_type, exc_val, exc_traceback ):
-        self.time_msec = time.ticks_diff( time.ticks_ms(), self.t0 )
+        self.time_msec = ticks_diff( ticks_ms(), self.t0 )
         print(f"\tMeasureTime {self.title} {self.time_msec} msec" )
 
+# This garbage collector does not interfere with music playback:
+# it works in the wait times between notes.
+max_gc_time = 0 # Expose maximum garbage collect time for webserver.py /diag.html
+async def background_garbage_collector( ):
+    global max_gc_time
+
+    # With MicroPython 1.21 and later, gc.collect() is not very critical anymore
+    # But I'll still keep the code. Now gc.collect() duration depends on
+    # RAM allocated and not total RAM size.
+
+    while True:
+        # Run garbage collector every 3 seconds
+        # gc is best if not delayed more than a few seconds
+        # If time is longer, gc takes longer too.
+        await asyncio.sleep_ms(3_000)
+
+        # Measured times, minimum: after startup. Maximum: during playback
+        # VCC-GND  gc=49-61
+        # Weact gc=28-50
+        # No name board gc=48-60
+
+        # gc.collect() times just before starting async loop
+        # No name board 48 msec
+        # Weact board 43 msec
+        # VCC-GND board 48 msec
+
+        try:
+            # Request a slice of max_gc_time msec to run 
+            # garbage collector
+            async with RequestSlice( "gc.collect", max_gc_time, 10_000 ):
+                t0 = ticks_ms()
+                gc.collect()
+                # Adjust gc time upwards if initial estimate too low
+                max_gc_time = max( max_gc_time, ticks_diff( ticks_ms(), t0) )
+
+        except RuntimeError:
+            # If RequestSlice times out, collect garbage anyhow
+            # No good to accumulate pending gc, gc time increases
+            # but a MemoryError is not likely, since there
+            # should be plenty of RAM with 8Mb
+            gc.collect()
 
 _tasklist = []
 _run_always_flag = True

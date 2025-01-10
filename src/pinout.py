@@ -7,18 +7,19 @@
 # extracts an aspect of the information and organizes it,
 # see below "subclasses of PinoutParser"
 
-import asyncio
+# >>> no bourdon register.
 import os
 import machine
-import time
 import re
+from collections import OrderedDict
 
-from mcp23017 import MCP23017
-
-from config import config
-import midi
+from minilog import getLogger
+from midi import NoteDef
 import fileops
-from midi import registers
+from midicontroller import MIDIController, RegisterBank
+from solenoid import PinTest
+
+
 # ESP32-S3 Technical Manual
 # See 2.3.3 Restrictions for GPIOs and RTC_GPIOs
 # See Table 2-3. IO MUX Pin Functions, 
@@ -64,51 +65,41 @@ ESP32_S3_AVAILABLE_GPIO_PINS = [ pin for pin in range(49) if pin not in ESP32_S3
 #   class pinout.SaveNewPinout --> Receives new json from web page
 #       and saves to flash, but current definition is not
 #       changed.
-#   class solenoids.SolenoidDef --> stores relationship
+#   class solenoids.ActuatorDef --> stores relationship
 #       between
-#       MIDI notes and solenoid pins on GPIO or MCP23017.
+#       MIDI notes and actuator output pins on GPIO or MCP23017.
 #   class pinout.GPIOstatistics --> provides information
 #       about used, reserved and available GPIO pins of the ESP32-S3
 #
 #
-# Class PinTest:
-#  provides low level functions to test pins,
-#  called from webserver to serve test buttons on pinout page.
-#  These functions are independent of the MIDI definitions.
 
-logger = None
-def get_minilog_lazy():
-    global logger
-    if not logger:
-        from minilog import getLogger
-        logger = getLogger( __name__ )
+logger = getLogger( __name__ )
 
-def logerror(message):
-    get_minilog_lazy()
-    logger.error(message)
-
-def loginfo(message):
-    get_minilog_lazy()
-    logger.info(message)
 
 # superclass to parse pinout json file
 class PinoutParser:
-    def __init__(self, source=None):
-        # Receives eithe filename of the json file or
+    def __init__(self, source):
+        # Receives either filename of the json file or
         # the list with the pinout data.
-        # If source is None use current filename.
-        source = source or plist.get_current_pinout_filename()
         if isinstance(source, list):
             pinout_data = source
         elif isinstance(source, str):
+            # source is a filename.
+            # If no file found, or all backups corrupted
+            # just show a empty file so that program can
+            # continue and allow to choose another pinout.
+            # Or pinout.txt points to a file that does not exist
             pinout_data = fileops.read_json(source,
                         default=[],
                         recreate=True)
+            if not pinout_data:
+                logger.error(f"Pinout json {source} empty or unrecognized format")
         else:
             raise RuntimeError(
-                "PinoutParser neither filename nor list received, no pinout files in /data"
+               "PinoutParser neither filename nor list received, no pinout files in /data"
             )
         self.description = ""
+        self.current_driver = "GPIODriver"
         self.parse(pinout_data)
 
     def get_filename(self):
@@ -134,10 +125,12 @@ class PinoutParser:
     def parse(self, json_data):
         # Parses pinout json list, for each list element it
         # calls the corresponding method of the action object
-        # MIDI notes are passed as midi.NoteDef() object
+        # MIDI notes are passed as NoteDef() object
         toi = self.toi
         actions = {
             "description": self.define_description,  # (description string)
+
+            # GPIO pins for various devices
             "neopixel": lambda pin: self.define_neopixel(
                 toi(pin)
             ),  # (gpio number)
@@ -156,49 +149,40 @@ class PinoutParser:
                 toi(pin), name, initial_value
             ),
             "tempo": lambda pin_a, pin_b, switch: self.define_tempo( toi(pin_a), toi(pin_b), toi(switch) ),
-            "gpio.midi": lambda pin,
-            instrument,
-            midi_num,
-            rank,
-            register=None: self.define_gpio_midi(
-                toi(pin), midi.NoteDef(toi(instrument), toi(midi_num)), rank, register
-            ),
+
+            # MIDI driver definitions and "midi" pin definition
+            "gpio": lambda : self.define_gpio_driver(),
             "i2c": lambda sda, scl: self.define_i2c(
                 toi(sda), toi(scl)
             ),  # (sda, scl)
-            "mcp23017": lambda addr: self.define_mcp23017(
+            "mcp23017": lambda addr: self.define_mcp23017_driver(
                 toi(addr)
             ),  # (address)
-            "serial": lambda uart, pin, channel: self.define_serial( 
+            "serial": lambda uart, pin, channel: self.define_serial_driver( 
                 toi(uart), toi(pin), toi(channel) 
             ),
-            "mcp.midi": lambda pin,
+            "midi": lambda pin,
             instrument,
             midi_num,
             rank,
-            register=None: self.define_mcp_midi(
-                toi(pin), midi.NoteDef(toi(instrument), toi(midi_num)), rank, register
+            register="": self.define_midi(
+                toi(pin), NoteDef(toi(instrument), toi(midi_num)), rank, register
             ),
-            "serial.midi": lambda _,
-            instrument,
-            midi_num,
-            rank,
-            register=None: self.define_serial_midi(
-                 midi.NoteDef(toi(instrument), toi(midi_num)), rank, register 
-                 ),
         }
-
         self.define_start()
         try:
             for pd in json_data:
-                actions[pd[0]](*pd[1:])
+                # For transition from Oct24 version
+                s = pd[0]
+                if s.endswith(".midi"):
+                    s = "midi"
+                actions[s](*pd[1:])
         except Exception as e:
             print("Exception processing pinout file for line", pd, e)
             raise
         self.define_complete()
 
-    # All functions are empty except define_description.
-    # To be filled out by subclasses
+    # To be overriden  by subclasses when neessary
     def define_start( self ):
         return
     
@@ -221,38 +205,35 @@ class PinoutParser:
     def define_register( self, gpio, name, initial_value ):
         return
     
-    def define_gpio_midi(self, gpio_pin, midi_note, rank, register_name ):
-        return
-
     def define_i2c(self, sda, scl):
         return
 
-    def define_mcp23017(self, address):
-        return
+    def define_gpio_driver( self ):
+        self.current_driver = "GPIODriver"
 
-    def define_mcp_midi(self, mcp_pin, midi_note, rank, register_name):
+    def define_mcp23017_driver(self, address):
+        self.current_driver = "MCP23017Driver"
+
+    def define_serial_driver( self, uart, pin, channel ):
+        self.current_driver = "MIDISerialDriver"
+
+    def define_midi(self, pin, midi_note, rank, register_name):
         return
     
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
         return
     
-    def define_serial( self, uart, pin, channel ):
-        return
-    
-    def define_serial_midi( self, midi_note, rank, register_name ):
-        return
-
     def define_complete(self):
         return
 
 
 # Singleton object to hold GPIO pin definitions and general pinout info
-# GPIO number 0 is always reserved, so  "if not gpio:" is used
-# to mean "no GPIO defined here"
+# GPIO number 0 is always reserved, so for example
+# "if not gpio.neopixel:" 
+# mean "no GPIO defined for neopixel"
 class GPIODef(PinoutParser):
-    def __init__(self, source=None):
-        super().__init__(source)
-
+    def __init__(self, source ):
+        self.registers = RegisterBank()
         global ESP32_S3_AVAILABLE_GPIO_PINS
         for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
             try:
@@ -260,11 +241,16 @@ class GPIODef(PinoutParser):
                 # Mark unavailable pins as reserved
                 machine.Pin( pin, machine.Pin.IN )
             except ValueError: # Invalid pin
-                logerror( f"Pin {pin} is not available on this ESP32-S3")
+                logger.error( f"Pin {pin} is not available on this ESP32-S3")
                 del ESP32_S3_AVAILABLE_GPIO_PINS[ESP32_S3_AVAILABLE_GPIO_PINS.index(pin)]
                 ESP32_S3_RESERVED_PINS.append( pin )
+        super().__init__(source)
 
     def define_start( self ):
+        # When using the result of GPIODef, these
+        # instance variables can be read directly
+        # to learn whether a certain device has been
+        # defined.
         self.neopixel_pin = None
         self.tachometer_pin1 = None
         self.tachometer_pin2 = None
@@ -277,6 +263,9 @@ class GPIODef(PinoutParser):
     def define_neopixel(self, x):
         if x:
             self.neopixel_pin = x
+            # Cache led number if not already
+            from led import set_led
+            set_led( x )
 
     def define_tachometer(self, x1, x2):
         if x1:
@@ -299,29 +288,32 @@ class GPIODef(PinoutParser):
             self.tempo_switch = gpio_switch
             
     def define_register( self, gpio, name, initial_value ):
-        reg = registers.factory( name )
+        reg = self.registers.factory( name )
         # If gpio is 0 or None or blank, no GPIO pin is set
         # and it's a software-only register
         try:
             # Check if this pin can be used
             reg.set_gpio_pin( gpio )
         except ValueError:
-            logerror(f"Invalid pin {gpio}, cannot be used")
+            logger.error(f"Invalid pin {gpio}, cannot be used")
         # Set initial value at startup
         reg.set_initial_value(initial_value)
         # Nothing stored in this object
 
+    def get_registers( self ):
+        return self.registers 
+    
 # Singleton class to validate a pinout and save it
 # to the current json file. This class is invoked by
 # the save button on pinout.html
-# >>> check validations for duplicate gpio
-# >>> no error message if json not valid?
 class SaveNewPinout(PinoutParser):
-    def __init__(self, source):
+    def __init__(self, source, output_filename):
         # source must be json
         self.new_json = source
+        self.output_filename = output_filename
         # Validate data in memory
         super().__init__(source)
+        self.current_driver = None
 
     def define_start( self ):
         self.gpiolist = []
@@ -346,7 +338,7 @@ class SaveNewPinout(PinoutParser):
                 raise RuntimeError(f"GPIO Pin {gpio} cannot be used")
 
             self._add_to_list(gpio, self.gpiolist, f"Duplicate GPIO {gpio}")
-            
+      
     def define_neopixel(self, gpio):
         self._add_GPIO_to_list(gpio)
 
@@ -361,13 +353,6 @@ class SaveNewPinout(PinoutParser):
         if gpio not in ESP32_S3_ADC1_PINS:
             raise RuntimeError(f"Pin {gpio} must be ADC1 pin (3 to 10)")
 
-    def define_touchpad(self, gpio):
-        if not gpio:
-            return
-        self._add_GPIO_to_list(gpio)
-        if gpio not in ESP32_S3_TOUCHPAD_PINS:
-            raise RuntimeError(f"Pin {gpio} must be Touchpad pin (3 to 10)")
-
     def define_register( self, gpio, name, initial_value ):
         self._add_GPIO_to_list(gpio)
 
@@ -375,21 +360,28 @@ class SaveNewPinout(PinoutParser):
         self._add_GPIO_to_list(gpio_a)
         self._add_GPIO_to_list(gpio_b)
         self._add_GPIO_to_list(gpio_switch)
+    def define_midi(self, pin, midi_note, rank, register_name):
+        if self.current_driver == "GPIODriver":
+            if not pin:
+                raise RuntimeError("GPIO pin blank or 0")
+            # Check if used as gpio elsewhere (but don't check duplicate
+            # use as gpio midi, because that's allowed)
+            if pin in self.gpiolist:
+                raise RuntimeError(f"MIDI GPIO pin already in use: {pin}")
+        elif self.current_driver == "MCP23017Driver":
+            if not( 0 <= pin <= 15 ):
+                raise RuntimeError( f"MCP pin number not 0-15 {pin}")
+            if pin is None:
+                raise RuntimeError("MCP pin blank")
+        elif self.current_driver == "MIDISerialDriver":
+           pass
+        else:
+            raise RuntimeError("MIDI pin definition must be preceded by controller definition {self.current_driver=}")     
 
-    def define_gpio_midi(self, gpio_pin, midi_note, rank, register_name):
-        if not gpio_pin:
-            raise RuntimeError("GPIO pin blank or 0")
-        # Check if used as gpio elsewhere (but don't check duplicate
-        # use as gpio midi, because that's allowed)
-        if gpio_pin in self.gpiolist:
-            raise RuntimeError(f"MIDI GPIO pin already in use {gpio_pin}")
-        if not midi_note.is_correct():
-            raise RuntimeError("MIDI program or note number not in range")
-
-        # GPIO pin can be used for more than one note
-        # with different registers.
-
-        # Same midi note can be in two or more places...
+        if midi_note.is_valid() and  not midi_note.is_correct():
+            m = f"MIDI program or note number not in range {self.current_driver=} {pin=} {midi_note=} {rank=} {register_name=}"
+            print(m)
+            raise RuntimeError(m)
 
 
     def define_i2c(self, sda, scl):
@@ -400,25 +392,22 @@ class SaveNewPinout(PinoutParser):
         self._add_GPIO_to_list(sda)
         self._add_GPIO_to_list(scl)
 
-    def define_mcp23017(self, address):
+    def define_mcp23017_driver(self, address):
+        if self.current_I2C == -1:
+            raise RuntimeError("MCP23017 definition must be preceded by I2C definition")
         if address is None:
             raise RuntimeError("MCP address blank")
-        self.current_MCP_address = address
         self._add_to_list(
             f"{self.current_I2C}.{address}",
             self.mcplist,
             f"Duplicate MCP, I2C {self.current_I2C} address {address}",
         )
+        self.current_driver = "MCP23017Driver"
 
-    def define_mcp_midi(self, mcp_pin, midi_note, rank, register_name):
-        if not( 0 <= mcp_pin <= 15 ):
-            raise RuntimeError( "MCP pin number not 0-15")
-        if mcp_pin is None:
-            raise RuntimeError("MCP pin blank")
-        if not midi_note.is_correct():
-            raise RuntimeError("MIDI program or note number not in range")
+    def define_gpio_driver( self ):
+        self.current_driver = "GPIODriver"
     
-    def define_serial( self, uart, pin, channel ):
+    def define_serial_driver( self, uart, pin, channel ):
         if not( 1<=uart<=2 ):
             raise RuntimeError("UART must be 1 or 2")
         if uart in self.uart_list:
@@ -430,23 +419,17 @@ class SaveNewPinout(PinoutParser):
         # UART 1 by default uses also pin rx=9
         # UART 2 by default uses also pin rx=16
         # see https://docs.micropython.org/en/latest/esp32/quickref.html
-        self._add_GPIO_to_list(9)
-        self._add_GPIO_to_list(16)
+        if uart == 1:
+            self._add_GPIO_to_list(9)
+        if uart == 2:
+            self._add_GPIO_to_list(16)
+        self.current_driver = "MIDISerialDriver"
         return
     
-    def define_serial_midi( self, midi_note, rank, register_name ):
-        if not midi_note.is_correct():
-            raise RuntimeError("MIDI program or note number not in range")
-        return
-
     def define_complete(self):
-        self.gpiolist.sort()
-        # Replace current pinout filenam
-        filename = plist.get_current_pinout_filename()
-        fileops.write_json(self.new_json, filename)
-        # Load json again
-        # Webserver will inform solenoid and organtuner
-        _init()
+        # Write updated info back to flash
+        fileops.write_json(self.new_json, self.output_filename)
+        # Changes take effect at next reboot
 
 
 class PinoutList:
@@ -460,18 +443,15 @@ class PinoutList:
         self.current_pinout_filename = self._read_pinout_txt()
 
     def _fill_pinout_files(self):
-        # Pinout files have to be in the data folder,
-        # have type json and have "_note_" in the file name.
-        # and start with a digit 1 to 9.
-        # Examples: 20_note_Carl_Freil.json, 31_note_Raffin.json)
-        # self.pinout_files is a dict, key=filename, value=description (initally blank, filled later)
-        self.pinout_files = {}
-        pattern = re.compile("^[0-9]+_note_.+\.json$")
-        for fn in os.listdir(self.pinout_folder):
             # Pinout files must have the form <nnn>_note_<name>.json
             # where <nnn> is the number of notes of the scale and
             # <name> is the name itself, example 20_note_Carl_Frei.json
             # where 20 is the number of notes and Carl_Frei is the name.
+        # Examples: 20_note_Carl_Frei.json, 31_note_Raffin.json)
+        # self.pinout_files is a dict, key=filename, value=description (initally blank, filled later)
+        self.pinout_files = {}
+        pattern = re.compile("^[0-9]+_note_.+\.json$")
+        for fn in os.listdir(self.pinout_folder):
             if re.match(pattern, fn):
                 filename = self.pinout_folder + "/" + fn
                 # the value is the description, get that
@@ -480,7 +460,7 @@ class PinoutList:
 
         if len(self.pinout_files) == 0:
             # No pinout files, can't work, fatal problem
-            logerror("Error: no pinout files found in /data")
+            logger.error("Error: no pinout files found in /data")
 
     def _read_pinout_txt(self):
         # Better separate file than config.json. That
@@ -489,17 +469,20 @@ class PinoutList:
             with open(self.pinout_txt_filename) as file:
                 # Return filename of nn_xxxxx.json with pinout info
                 return file.read()
+            # Test that the selected pinout.json file exists
+            open(fn).close()
         except OSError:
-            # Return first available filename
-            for k in self.pinout_files.keys():
-                return k
-        # no pinout.txt, no pinout files???
-        # Provide some basic default so nohting crashes
+            pass
+            # Fall through if no pin out files in /data
+            # Or specified pinout.json not found
+ 
+        # Provide some basic default so nothing crashes
+        # no pinout folder?? should be created on boot....
         fn = self.pinout_folder + "/1_note_minimal.json"
-        with open( self.pinout_folder + "/pinout.txt", "w") as file:
+        with open( self.pinout_txt_filename, "w") as file:
             file.write(fn)
-        with open( fn, "w" ) as file:
-            file.write("[]")
+        fileops.write_json( [["description","minimal"]], fn, keep_backup=False)
+        logger.error("Pinout configuration incomplete. Go to pinout page, select and save a pinout template")
         return fn
 
 
@@ -509,17 +492,20 @@ class PinoutList:
         fileops.backup(self.pinout_txt_filename)
         with open(self.pinout_txt_filename, "w") as file:
             file.write(new_pinout_filename)
-        # Must parse all instances again to take effect
-        _init()
-        # Webserver reinitializes solenoid
+        # Change takes effect at next reboot
 
     def get_current_pinout_filename(self):
         return self.current_pinout_filename
+
+    def get_saved_pinout_filename(self):
+        return self._read_pinout_txt()
 
     def get_filenames_descriptions(self):
         # Return list of pairs ( filename, description )
         # Fill descriptions on demand to make initialization
         # faster
+        # >>>> dont parse entire file for description
+        # >>> check if all pinout.json files are read by initialization
         for k in self.pinout_files.keys():
             self.pinout_files[k] = self.get_description(k)
         return list(self.pinout_files.items())
@@ -538,72 +524,13 @@ class PinoutList:
         return self.pinout_files[filename]
 
 
-# ========================
-# Test functions
-# ========================
-class PinTest:
-    def _basicTestGPIO(self, gpio_pin):
-        # Test a GPIO pin. Sometimes this does not work,
-        # is random because of ambient electromagnetic noise.
-        gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_UP)
-        with_pull_up = gp.value()
-        gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_DOWN)
-        with_pull_down = gp.value()
-        gp = machine.Pin(gpio_pin, machine.Pin.IN)
-        # no_pull = gp.value()
-
-        n = with_pull_up * 2 + with_pull_down
-        # 00 = something pulls down for all cases. Might be a ULN2803 or
-        # some other device.
-        # 01 = ??? probably not connected
-        # 10 = input follows the pull ups, not connected
-        # 11 = there is something that pulls up this pin, example: I2C
-        return ("DEV", "???", "NC", "I2C")[n]
-
-    # Test several times if something pulls the voltage
-    # up or down on the pin
-    def _testGPIO(self, pin, repeat=10):
-        res = set()
-        for _ in range(repeat):
-            time.sleep_ms(1)
-            r = self._basicTestGPIO(pin)
-            res.add(r)
-        if len(res) == 1:
-            return res.pop()
-        else:
-            return "FLO"
-
-    # Used by solenoid.py to check if something on I2C
-    def testI2Cconnected(self, sda, scl):
-        sdaok = self._testGPIO(sda) == "I2C"
-        sclok = self._testGPIO(scl) == "I2C"
-        return (sdaok, sclok)
-
-    # Used by web page to test one pin - physical chip level
-    async def web_test_gpio(self, gpio_pin):
-        gpio = machine.Pin(gpio_pin, machine.Pin.OUT)
-        for _ in range(8):
-            gpio.value(1)
-            await asyncio.sleep_ms(500)
-            gpio.value(0)
-            await asyncio.sleep_ms(500)
-
-    # Used by web page to test one pin of MCP23017 - physical chip level
-    async def web_test_mcp(self, sda, scl, mcpaddr, mcp_pin):
-        i2c = machine.SoftI2C(scl=machine.Pin(scl), sda=machine.Pin(sda))
-        mcp = MCP23017(i2c, mcpaddr)
-        mcp[mcp_pin].output()
-        for _ in range(8):
-            mcp[mcp_pin].output(1)
-            await asyncio.sleep_ms(500)
-            mcp[mcp_pin].output(0)
-            await asyncio.sleep_ms(500)
-
 class GPIOstatistics(PinoutParser):
-    def __init__( self ):
+    # Called by webserver.py to provide statistics for the
+    # pinout.html page
+    def __init__( self, source ):
         # Get unique ocurrences
         self.used_gpio_pins = set()
-        super().__init__()
+        super().__init__(source)
 
     def _add_gpio( self, gpio ):
         if gpio != "" and gpio is not None:
@@ -625,8 +552,9 @@ class GPIOstatistics(PinoutParser):
     def define_register( self, gpio, *args ):
         self._add_gpio( gpio )
     
-    def define_gpio_midi(self, gpio, *args ):
-        self._add_gpio( gpio )
+    def define_midi(self, pin, *args ):
+        if self.current_driver == "GPIODriver":
+            self._add_gpio( pin )
 
     def define_i2c( self, sda, scl ):
         self._add_gpio( sda )
@@ -657,17 +585,127 @@ class GPIOstatistics(PinoutParser):
             "availableADC1count": len(availableADC1),
             "availableTouchpadcount": len(availableTouchpad)
         }
+    
+class ActuatorDef(PinoutParser):
+    # This class parses the pinout.json file to extract
+    # the information about pins needed for the (valve) actuator driver
+    # and also feeds the midi.Controller with information
+    # about midi notes and their relation with SolePin objects
+    # Source: the filename of a pinout.json file or
+    # a list object with the contents of the pinout.json file.
+    # registers: a RegisterBank() object, already populated
+    # with hardware register definitions (if any).
+    def __init__(self, source, registers):
+        self.registers = registers
+        # The result of the parse is:
+        # pin_list/pin_dict: a the complete list of SolePin objects
+        # device_info: information to show to the user.
+        # These two will be accessed by Solenoid as property
+        # Start parsing this pinout.json file
+        super().__init__(source)
 
-plist = None
-gpio = None
-test = None
+    def driver_factory( self, newdriver ):
+        # repr(driver) is be unique, create one of each kind
+        # only.
+        return self.driver_dict.setdefault( repr(newdriver), newdriver )
 
 
-def _init():
-    global plist, gpio, test
-    plist = PinoutList(config.PINOUT_TXT, config.PINOUT_FOLDER)
-    gpio = GPIODef()
-    test = PinTest()
+    def define_start( self ):
+        self.pin_dict = {}
+        # >>> device_info not necessary anymore?
+        self.device_info = OrderedDict()
+        self.driver_dict = {}
+
+        # Pass initialized registers to MIDIController
+        self.controller = MIDIController( self.registers )
+
+        self.current_i2c = None
+        self.current_i2c_number = -1
+
+        self.controller.define_start()
+        # gpio driver is the default driver, should
+        # the ["gpio"] entry in pinout.json be missing,
+        # also for compatibility with previous versions
+        from driver_gpio import GPIODriver
+        self.current_driver = self.driver_factory( GPIODriver() )
+
+    # define_register is defined in pinout.py/GPIOdef, not here 
+        
+    def define_i2c(self, sda, scl):
+        self.current_i2c_number += 1
+
+        sclpin = machine.Pin(scl)
+        sdapin = machine.Pin(sda)
+
+        device_name = "i2c" + str(self.current_i2c_number)
+        if PinTest().testI2Cconnected(sda, scl):
+            self.current_i2c = machine.SoftI2C(sclpin, sdapin, freq=100_000)
+            self.device_info[device_name] = "ok"
+        else:
+            logger.error(f"No I2C connected {sda=} {scl=}")
+            self.current_i2c = None
+            self.device_info[device_name] = "not connected"
+
+    def define_mcp23017_driver(self, address):
+        from driver_null import NullDriver
+
+        self.current_driver = self.driver_factory( NullDriver() )
+
+        if self.current_i2c and address is not None :
+            logger.debug(f"Try MCP23017 {self.current_i2c=} {address=}")
+            try:
+                from driver_mcp23017 import MCP23017Driver
+
+                self.current_driver = self.driver_factory( MCP23017Driver(self.current_i2c, self.current_i2c_number, address) )
+                self.device_info[str(self.current_driver)] = "ok"
+            except OSError as e:
+                logger.exc(
+                    e,
+                    f"MCP23027 at {self.current_i2c=} {address=} not found, disabled",
+                )
+
+    def define_gpio_driver( self ):
+        from driver_gpio import GPIODriver
+        self.current_driver = self.driver_factory( GPIODriver() )
+
+    def define_midi(self, pin, midi_note, rank, register_name ):
+        if not midi_note.is_valid():
+            # midi note omitted means: disregard this entry
+            return
+        pin = self.current_driver.define_pin( pin, rank, midi_note ) 
+
+        # Don't duplicate Virtual Pin definitions
+        # Use .name to test for uniqueness,
+        # for example: MCP23017Driver.I2C(0).3
+        pin = self.pin_dict.setdefault( str(pin), pin )
+        self.controller.define_note( midi_note, pin, register_name )
+
+    def define_serial_driver( self, uart, pin, channel ):
+        from driver_midiserial import MIDISerialDriver
+        self.current_driver = self.driver_factory( MIDISerialDriver( uart, pin, channel ) )
+        self.device_info[ self.current_driver ] = "ok"
+
+        
+    def define_complete( self ):
+        self.pin_list = list( self.pin_dict.values() )
+        # Organ tuner uses pin index (index to pin_list)
+        # So for organ tuner it's nicer to sort by midi number
+        # Also: for polyphony control, bass notes are turned off first 
+        # (that's preferrable to turning off melody notes)
+        self.pin_list.sort( key=lambda actuator: actuator.nominal_midi_number )
 
 
-_init()
+    # Methods to return what's useful here
+    # These are used by calling method to extract 
+    # populated data structures/objects
+    def get_pin_list( self ):
+        return self.pin_list
+    
+    def get_device_info( self ):
+        return self.device_info
+    
+    def get_controller( self ):
+        return self.controller
+
+    def get_driver_list( self ):
+        return list(  self.driver_dict.values() )

@@ -9,7 +9,7 @@ import io
 import os
 import re
 
-from timezone import timezone
+from drehorgel import timezone
 
 # DEBUG: only to console, rather fast
 # INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is immediately persistent 
@@ -73,7 +73,8 @@ class BaseLogger:
         pattern = re.compile("^error([0-9]+)\.log$")
         filenumber = None
         for filename in os.listdir(_FOLDER):
-            if not (match := re.match(pattern, filename)):
+            match = re.match(pattern, filename)
+            if not match:
                 continue
             # group(0): entire string, group 1: number
             filenumber = int(match.group(1))
@@ -106,10 +107,10 @@ class BaseLogger:
 
         s = self._formatRecord(module, EXCEPTION, message)
         # Format exception to a string
-        bytefile = io.BytesIO()
-        sys.print_exception(exception, bytefile)
-        exception_text = bytefile.getvalue().decode()
-        exception_text = "       " + exception_text.replace("\n", "\n       ")
+        with io.BytesIO() as bytefile:
+            sys.print_exception(exception, bytefile)
+            exception_text = bytefile.getvalue().decode()
+            exception_text = "       " + exception_text.replace("\n", "\n       ")
         # Output exception to console and file
         print(s)
         print(exception_text)
@@ -151,8 +152,8 @@ _baselogger = BaseLogger()
 
 
 # To start a logger in a module use
-# from minilog import getLogger
-# logger = getLogger( __name __ )
+# import minilog
+# logger = minilog.getLogger( __name __ )
 def getLogger(module):
     logger = Logger(module, _baselogger)
     return logger

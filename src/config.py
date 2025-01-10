@@ -7,19 +7,19 @@ import time
 import os
 import network
 import binascii
-from minilog import getLogger
+import minilog
 import fileops
 from hashlib import sha256
 
 # One logger for both Config and PasswordManager
-_logger = getLogger(__name__)
+_logger = minilog.getLogger(__name__)
 # Password mask for web form
 NO_PASSWORD = "*" * 15
 _DEFAULT_PASSWORD = const("password") 
 
 class Config:
     def __init__(self):
-
+        
         self.cfg = {}
 
         # Data file/folder names used in the software
@@ -48,10 +48,6 @@ class Config:
         # Does get set to zero on soft reset.
         self.boot_ticks_ms = time.ticks_ms()
 
-        # For ESP32-S3 at 240Mhz, garbage collection takes
-        # about 20 to 25 msec for this application
-        self.max_gc_time = 30
-
         # Read config.json
         self.cfg = fileops.read_json(
                 self.CONFIG_JSON, 
@@ -73,7 +69,7 @@ class Config:
             "ap_password": _DEFAULT_PASSWORD,
             "password_required": False,
             "ap_ip": "192.168.144.1",
-            "ap_max_idle": 120,
+            "ap_max_idle": 120, 
             "idle_deepsleep_minutes": 15,
             "battery_heartbeat_duration": 0,
             "battery_heartbeat_period": 0,
@@ -97,23 +93,23 @@ class Config:
             "lower_threshold_rpsec": 0.4,
             "higher_threshold_rpsec": 0.7,
             "normal_rpsec": 1.2,
+            "crank_lowpass_cutoff": 1.2,
             "rotary_tempo_mult": 1,
 
         }
         # Populate missing keys from fallback
+        missing_keys = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
+        self.cfg.update(missing_keys)
+        for k in missing_keys:
+            _logger.debug(f"Adding configuration key '{k}'")
 
-        for k, v in fallback.items():
-            if k not in self.cfg:
-                _logger.debug(f"Adding configuration key '{k}'")
-                self.cfg[k] = v
         # Delete surplus keys
-        for k in self.cfg.keys():
-            if k not in fallback:
-                del self.cfg[k]
-                _logger.debug(f"key '{k}' is not needed, now deleted")
+        for k in set(self.cfg.keys()) - set(fallback.keys()):
+            del self.cfg[k]
+            _logger.debug(f"key '{k}' is not needed, now deleted")
 
         # Encrypted passwords, if not done already
-        if password_manager._encrypt_all_passwords(self.cfg):
+        if PasswordManager().encrypt_all_passwords(self.cfg):
             # A password had to be encrypted.
             # Rewrite config.json with encrypted passwords.
             # No backup, the backup would show the passwords
@@ -123,6 +119,12 @@ class Config:
         self.wifi_mac = binascii.hexlify(
             network.WLAN(network.STA_IF).config("mac")
         ).decode()
+
+        # Give AP more time while WiFi station mode is not fully configured
+        if self.cfg["access_point1"] == fallback["access_point1"]:
+            # WiFi not configured yet, give AP mode plenty
+            # of time
+            self.cfg["ap_max_idle"] = 3600
 
         _logger.debug(
             f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}" 
@@ -164,7 +166,7 @@ class Config:
             )
             return default
 
-    def save(self, newconfig)->str:
+    def save(self, newconfig):
         # Save new configuration, validate before storing
         # Authentication is already done by webserver.py
         # Validate data received from config.html
@@ -183,7 +185,7 @@ class Config:
                 try:
                     newconfig[k] = int(v)
                 except ValueError:
-                    return f"Error: {k} is not an integer"
+                    return f"Error: [{k}]={v} is not an integer"
 
             elif k in (
                 "mic_signal_low",
@@ -191,15 +193,16 @@ class Config:
                 "lower_threshold_rpsec",
                 "higher_threshold_rpsec",
                 "normal_rpsec",
+                "crank_lowpass_cutoff",
                 "rotary_tempo_mult"
             ):
                 try:
                     newconfig[k] = float(v)
                 except ValueError:
-                    return f"Error: {k} is not float"
+                    return f"Error: [{k}]={v} is not float"
 
                 if k == "mic_signal_low" and newconfig[k] > 0:
-                    return f"Error: {k} must be negative"
+                    return f"Error: [{k}]={v} must be negative"
 
             elif k == "name":
                 # Validate host name
@@ -215,12 +218,6 @@ class Config:
             elif k == "ap_password":
                 if len(v) < 9:
                     return "Error: Password shorter than 9 characters"
-            #elif k == "description":
-                # >>>> is this still necessary to validate???
-                #>>> test
-                #for c in "&<>""'":
-                #    if c in v:
-                #        return "Error: description may not have & < > "" nor '"
             elif "password" in k and v == NO_PASSWORD:
                 return "Error: overwriting password with ***, programming error?"
 
@@ -232,11 +229,25 @@ class Config:
                 self.cfg[k] = newconfig[k]
 
         # encrypt passwords if not encrypted
-        password_manager._encrypt_all_passwords(self.cfg)
+        PasswordManager().encrypt_all_passwords(self.cfg)
 
         fileops.write_json(self.cfg, self.CONFIG_JSON)
 
         return
+    
+    def get_password(self, pwdname)->str:
+        # Used by self.verify_password() and by wifimanager
+        pwd = self.cfg[pwdname]
+        return PasswordManager().decrypt_password(pwd)
+
+    # Used by webserver to verify hashed seed+hashed password
+    # sent by client
+    def verify_password(self, client_password, seed ):
+        # Must be same algorithm as common.js: hashWithSeed()
+        h = sha256( (seed+"_"+self.get_password("ap_password")).encode()).digest()
+        hexhash =  binascii.hexlify( h ).decode() 
+        return client_password == hexhash
+    
 
 PASSWORD_PREFIX = "@encrypted_"
 
@@ -245,7 +256,9 @@ class PasswordManager:
     # Password are stored encrypted in config.cfg
     def _get_key(self)->bytes:
         from esp32 import NVS
-
+        # Give NVS some protection, but if someone
+        # can have access to USB and/or insert some code,
+        # the contents can be obtained anyhow.
         nvs = NVS(_DEFAULT_PASSWORD)
         key = bytearray(16)
         try:
@@ -259,7 +272,7 @@ class PasswordManager:
             nvs.set_blob("aeskey", key)
         return key
 
-    def _encrypt_password(self, password)->str:
+    def encrypt_passwords(self, password)->str:
         if not isinstance(password, str):
             raise ValueError("Can't encrypt object that isn't str")
         if password.startswith(PASSWORD_PREFIX):
@@ -287,7 +300,7 @@ class PasswordManager:
 
         return PASSWORD_PREFIX + binascii.hexlify(c).decode()
 
-    def _decrypt_password(self, c)->str:
+    def decrypt_password(self, c)->str:
         if not isinstance(c, str):
             raise ValueError("Can't decrypt object that isn't str")
         if not c.startswith(PASSWORD_PREFIX):
@@ -312,7 +325,7 @@ class PasswordManager:
 
         return pass_encoded.decode()
 
-    def _encrypt_all_passwords(self, cfg)->bool:
+    def encrypt_all_passwords(self, cfg)->bool:
         # encrypts passwords in config.json if not yet encrypted
         # Save changes to flash
         changed = False
@@ -323,26 +336,8 @@ class PasswordManager:
                 if v.startswith(PASSWORD_PREFIX):
                     # Don't encrypt again
                     continue
-                cfg[k] = self._encrypt_password(v)
+                cfg[k] = self.encrypt_passwords(v)
                 changed = True
         return changed
 
-    # Public methods
-    def get_password(self, pwdname)->str:
-        # Used by self.verify_password() and by wifimanager
-        pwd = config.cfg[pwdname]
-        return self._decrypt_password(pwd)
 
-    # Used by webserver to verify hashed seed+hashed password
-    # sent by client
-    def verify_password(self, client_password, seed ):
-        # Must be same algorithm as common.js: hashWithSeed()
-        h = sha256( (seed+"_"+self.get_password("ap_password")).encode()).digest()
-        hexhash =  binascii.hexlify( h ).decode() 
-        return client_password == hexhash
-    
-
-    
-    
-password_manager = PasswordManager()
-config = Config()

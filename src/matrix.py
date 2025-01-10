@@ -1,3 +1,6 @@
+# (c) 2024 Hermann von Borries
+# MIT License
+
 class Matrix:
     def __init__( self, rows=0, columns=0 ):
         self.rows = rows

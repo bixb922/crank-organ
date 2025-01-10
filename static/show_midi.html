@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -50,9 +52,10 @@ let filename = new URL(window.location.href).pathname.split("/").at(-1) ;
 get_url  = "/get_midi_file/" + filename
 document.getElementById( "myMidiPlayer" ).src = get_url ;
 document.getElementById( "myVisualizer" ).src = get_url ;
-document.getElementById("title").innerText = decodeURI(filename) ;
+document.getElementById("title").innerText = decodeURIComponent(filename) ;
 
 
 
 </script>
 </body>
+</html>

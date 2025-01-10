@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Hermann von Borries
+// MIT License
+
 // Define columns of translationDict
 let languageDict = { "es": null, "en": 0, "de": 1 };
 
@@ -61,6 +64,8 @@ let translationDict = {
 	["🔍Search", "🔍Suche"],
 "cancelado": // common.js 
 	["cancelled", "gestrichen"],
+"cambios pendientes, debe entrar a editar tunelib": // tunelist.html
+	["Changes pending, must Edit tunelib","MIDI Dateien geändert, muss Tunelib bearbeiten"],
 "calibrar indicación batería": // index.html 
 	["Calibrate battery indicators", "Batterieanzeige eichen"],
 "cargar setlist": // play.html 
@@ -293,6 +298,8 @@ let translationDict = {
 	["Tunes","Melodien"],
 "nombre":  // admin.html
 	["Name", "Namen"], // server index.html
+"máximo tiempo para gc": // diag.html
+	["Maximum gc time","Höchste gc Zeit"],
 "melodía actual":  // server index.html
 	["Current tune", "Gegenwärtige Melodie"],
 "muestra la melodía que se esta tocando ahora ¡y tiene la letra para poder acompañar cantando!": // server index.html

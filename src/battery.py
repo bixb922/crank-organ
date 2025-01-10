@@ -1,4 +1,4 @@
-# (c) 20200 Hermann Paul von Borries
+# (c) 2020 Hermann Paul von Borries
 # MIT License
 # Tallies battery usage
 
@@ -9,14 +9,12 @@ import os
 
 from minilog import getLogger
 
-from config import config
-from led import led
-from solenoid import solenoids
+from drehorgel import config, led, crank, timezone, actuator_bank, controller
 import scheduler
 import fileops
-from tachometer import crank
-from timezone import timezone
+
 from matrix import Matrix, linear_regression
+
 
 # update readings every 60 seconds
 _UPDATE_EVERY_SECONDS = const(60) 
@@ -26,11 +24,7 @@ _UPDATE_EVERY_SECONDS = const(60)
 _BATTERY_LOW_PERCENT = const(10)
 
 class Battery:
-    def __init__(
-        self,
-        battery_json_filename,
-        battery_calibration_filename
-    ):
+    def __init__( self, battery_json_filename, battery_calibration_filename ):
         self.battery_json_filename = battery_json_filename
         self.battery_calibration_filename = battery_calibration_filename
 
@@ -45,7 +39,7 @@ class Battery:
         fallback = {
             "operating_seconds": 0,          # time operating (time with power on), in seconds 
             "playing_seconds": 0,  # time playing music, in seconds
-            "solenoid_on_seconds": 0,  # Time that solenoids were on, in seconds
+            "solenoid_on_seconds": 0,  # Time that actuators were on, in seconds
             "tunes_played": 0,      # Number of tunes played
             "date_zero": "0000-00-00", # Datetime when set to zero
             # These magnitudes are estimated:
@@ -116,7 +110,7 @@ class Battery:
         now = time.ticks_ms()
         self.battery_info["operating_seconds"] += time.ticks_diff(now, self.last_update) / 1000
         # Get time solenoids were "on", convert ms to seconds
-        self.battery_info["solenoid_on_seconds"] += solenoids.get_sum_msec_solenoids_on_and_zero() / 1000
+        self.battery_info["solenoid_on_seconds"] += actuator_bank.get_sum_msec_solenoids_on_and_zero() / 1000
         
         # Estimate remaining time and tunes
         self.battery_info["percent_remaining"] = self.estimate_percent_remaining()
@@ -146,8 +140,7 @@ class Battery:
                 if not crank.is_installed() or (crank.is_installed() and not crank.is_turning()):
                     print(".", end="")
                     led.heartbeat()
-                    await solenoids.play_random_note(heartbeat_duration)
-                    self.logger.debug(f"Playing random note for {heartbeat_duration=}")
+                    await controller.play_random_note(heartbeat_duration)
                 await asyncio.sleep_ms(heartbeat_period)
 
             while not self.make_heartbeat:
@@ -281,7 +274,3 @@ class Battery:
         if self.calibrated:
             return self.estimate_percent_remaining() < _BATTERY_LOW_PERCENT
 
-battery = Battery(
-    config.BATTERY_JSON,
-    config.BATTERY_CALIBRATION_JSON,
-)

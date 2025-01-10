@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -105,14 +107,14 @@ async function updateForm( tunelist ){
         let row = insertRow( tunelistBody, ["","","","","","","","","","","","",""]);
         let rowid = "row" + i;
         row.id = rowid;
-        // The field names must be equal to the HEADERLIST in tunemanager.py
-        row.cells[0].appendChild( makeBoxField(tune[TLCOL_ID],'title',20,tune[TLCOL_TITLE]));
-        row.cells[1].appendChild( makeBoxField(tune[TLCOL_ID],'genre',20,tune[TLCOL_GENRE]));
-        row.cells[2].appendChild( makeBoxField(tune[TLCOL_ID],'author',20,tune[TLCOL_AUTHOR]));
-        row.cells[3].appendChild (makeBoxField(tune[TLCOL_ID],'year',6,tune[TLCOL_YEAR])) ;
-	    row.cells[4].appendChild( makeBoxField(tune[TLCOL_ID],'autoplay',-1,tune[TLCOL_AUTOPLAY]) ) ;
-        row.cells[5].appendChild( makeBoxField(tune[TLCOL_ID],'rating',6,tune[TLCOL_RATING]) );
-        row.cells[6].appendChild( makeBoxField(tune[TLCOL_ID],'info',20,tune[TLCOL_INFO]) ) ;
+        // input box id is tuneid.tlcol_number
+        row.cells[0].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_TITLE,20,tune[TLCOL_TITLE]));
+        row.cells[1].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_GENRE,20,tune[TLCOL_GENRE]));
+        row.cells[2].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_AUTHOR,20,tune[TLCOL_AUTHOR]));
+        row.cells[3].appendChild (makeBoxField(tune[TLCOL_ID],""+TLCOL_YEAR,6,tune[TLCOL_YEAR])) ;
+	    row.cells[4].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_AUTOPLAY,-1,tune[TLCOL_AUTOPLAY]) ) ;
+        row.cells[5].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_RATING,6,tune[TLCOL_RATING]) );
+        row.cells[6].appendChild( makeBoxField(tune[TLCOL_ID],""+TLCOL_INFO,20,tune[TLCOL_INFO]) ) ;
         let lyricsButton = document.createElement( "button" );
         lyricsButton.classList.add( "smallbutton" );
         lyricsButton.onclick = function(){ editLyrics( tune[TLCOL_ID] ) };
@@ -140,7 +142,7 @@ async function updateForm( tunelist ){
         row.cells[12].appendChild( deleteButton );
     }   
  
-	CHANGED_FIELDS = [] ;
+	CHANGED_FIELDS = [];
 }
     
 
@@ -175,6 +177,7 @@ function markField( id ){
     
 
 async function save( ){
+    // Send json with changed fields only
     let newjson = {} ;
     for( let d in CHANGED_FIELDS ){
         let ele = document.getElementById(CHANGED_FIELDS[d]) ; 
@@ -295,3 +298,4 @@ drop_tunelib() ;
 // fill form with tunelib
 getTuneList() ;
 </script>
+</html>

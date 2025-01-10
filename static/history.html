@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -85,7 +88,7 @@ async function getHistory( ) {
             user_request = "✔️" ; // check mark &#x2714;
         }
         // Get title (if still in tunelib...)
-        let tt = await make_tune_title( hist_element[0] );
+        let tt = await make_history_title( hist_element[0] );
         let row = insertRow( body, [time, tt[0], hist_element[2], user_request]);
         row.cells[2].style.textAlign = "right";
         let commentIcon = document.createElement("a");
@@ -109,11 +112,11 @@ async function deleteHistory(){
     window.location.reload() ;
 }
 
-async function make_tune_title( tuneid ){
+async function make_history_title( tuneid ){
 	let tunelib = await get_tunelib();
 	let tune = tunelib[tuneid];
 	if( tune != undefined ){
-		let title =  makeTuneTitle( tune );
+		let title =  await makeTuneTitle( tune );
         let text = title ;
 		let info = tune[TLCOL_INFO] ;
 		if( info != "" ){
@@ -147,3 +150,4 @@ async function register_comment(title, tuneid){
 translate_html() ;
 getHistory() ;
 </script>
+</html>

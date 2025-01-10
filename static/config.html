@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+<html>
+
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -6,319 +10,366 @@
 	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
+
 <body>
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-    </span>
-	&nbsp;Configuration
-	<span class="headerright" id="header_time"></span>
-</div>
-<script type="text/javascript" src="/static/common.js"></script>
+	<span id="popup" class="popuptext"></span>
+	<div class="headerdiv">
+		<span class="headerleft">
+			<a onclick="pageUp('index')">&#11013;</a>
+		</span>
+		&nbsp;Configuration
+		<span class="headerright" id="header_time"></span>
+	</div>
+	<script type="text/javascript" src="/static/common.js"></script>
 
 
-<div class="middlediv">Enter password</div>
-When pressing the save button, you may be asked for the password of the microcontroller. Please leave the username blank.
+	<div class="middlediv">Enter password</div>
+	When pressing the save button, you may be asked for the password of the microcontroller. Please leave the username
+	blank.
 
-Configuration changes only take place after a microcontroller reset.
+	Configuration changes only take place after a microcontroller reset.
 
-<div class="middlediv">Change configuration
-password</div>
-    <input id="password_required" name="password_required" type="checkbox" oninput="markField('password_required')"/>
-    <label for="password_required">Password is required to make configuration changes</label>
-    <br>
-    <button type="button" onclick="save('password_required')">Save if password is required</button>
-    <br>&nbsp;
-    <br>
-    
-    Define the password used connect to the microcontroller acting as access point (AP), this is, you select the microcontroller's SSID which is currently <b><span id="copy_hostname4"></span></b> and will be prompted for this password. This same password is also used to allow changes to the configuration (only if "password required" is checked). 
+	<div class="middlediv">Change configuration
+		password</div>
+	<input id="password_required" name="password_required" type="checkbox" oninput="markField('password_required')" />
+	<label for="password_required">Password is required to make configuration changes</label>
+	<br>
+	<button type="button" onclick="save('password_required')">Save if password is required</button>
+	<br>&nbsp;
+	<br>
+
+	Define the password used connect to the microcontroller acting as access point (AP), this is, you select the
+	microcontroller's SSID which is currently <b><span id="copy_hostname4"></span></b> and will be prompted for this
+	password. This same password is also used to allow changes to the configuration (only if "password required" is
+	checked).
 	<br>
 	<label for="ap_password">New password:</label>
-	<input id="ap_password" name="ap_password" type="password"/ size="15" oninput="validateNewPasswords()">
+	<input id="ap_password" name="ap_password" type="password" / size="15" oninput="validateNewPasswords()">
 	<br>
 	<label for="repeat_ap_password">Type new password again to check:</label>
-	<input id="repeat_ap_password" name="repeat_ap_password" type="password" size="15" oninput="validateNewPasswords()" />
+	<input id="repeat_ap_password" name="repeat_ap_password" type="password" size="15"
+		oninput="validateNewPasswords()" />
 	<br>
 	<button type="button" onclick="changePassword()" id="changePasswords"></button>
 	<br>
 
-	
-<div class="middlediv">Network name and description</div>
-	<label for="name">Host name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9, start with a letter):</label>
-	<input id="name" name="name" type="text" size="15" maxlength="15" oninput="markField('name')"/>
+
+	<div class="middlediv">Network name and description</div>
+	<label for="name">Host name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9,
+		start with a letter):</label>
+	<input id="name" name="name" type="text" size="15" maxlength="15" oninput="markField('name')" />
 	<br>
-	
-	<label for="description">Your description of this device  (free text). This description appears on some of the web pages, but serves no other function:</label>
-	<input id="description" name="description" type="text" style="width:auto" size="50" oninput='markField("description")'/>
+
+	<label for="description">Your description of this device (free text). This description appears on some of the web
+		pages, but serves no other function:</label>
+	<input id="description" name="description" type="text" style="width:auto" size="50"
+		oninput='markField("description")' />
 	<br>
 
 	<button type="button" onclick="save('description','name')">Save description and host name</button>
 
-<div class="middlediv">WiFi Router or hotspot (station mode)</div>
-	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one of these responds. Once connected, you can reach the microcontroller from a PC or the cell phone entering <b>http://<span id="copy_hostname3"></span>.local</b> in your browser. This form of connection is the preferred way to connect to the microcontroller. Only WiFi 2.4Ghz, no 5Ghz.
+	<div class="middlediv">WiFi Router or hotspot (station mode)</div>
+	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one
+	of these responds. Once connected, you can reach the microcontroller from a PC or the cell phone entering
+	<b>http://<span id="copy_hostname3"></span>.local</b> in your browser. This form of connection is the preferred way
+	to connect to the microcontroller. Only WiFi 2.4Ghz, no 5Ghz.
 	<br>
-	<label for="access_point1" >SSID of primary router/hotspot the microcontroller should connect to (Example: a hotspot/access point on your cell phone):</label>
-	<input id="access_point1" name="access_point1" type="text" oninput="markField('access_point1')"/>
+	<label for="access_point1">SSID of primary router/hotspot the microcontroller should connect to (Example: a
+		hotspot/access point on your cell phone):</label>
+	<input id="access_point1" name="access_point1" type="text" oninput="markField('access_point1')" />
 	<br>
 	<label for="password1">Password of the primary router/hotspot:</label>
-	<input id="password1" name="password1" type="password" size="16" oninput="markField('password1')"/>
+	<input id="password1" name="password1" type="password" size="16" oninput="markField('password1')" />
 	<br>
-	<label for="access_point2" >SSID of secondary router/hotspot the microcontroller should connect to, if the primary is not available (Example: your home router):</label>
-	<input id="access_point2" name="access_point2" type="text" oninput="markField('access_point2')"/>
+	<label for="access_point2">SSID of secondary router/hotspot the microcontroller should connect to, if the primary is
+		not available (Example: your home router):</label>
+	<input id="access_point2" name="access_point2" type="text" oninput="markField('access_point2')" />
 	<br>
 	<label for="password2">Password of the secondary router/hotspot:</label>
-	<input id="password2" name="password2" type="password" size="16" oninput="markField('password2')"/>
+	<input id="password2" name="password2" type="password" size="16" oninput="markField('password2')" />
 	<br>
-	<button type="button" onclick="save('access_point1','password1','access_point2','password2')">Save WiFi info and passwords</button>
-    
-<div class="middlediv">Power management</div>
-    
-    <label for="max_polyphony">Maximum polyphony allowed. If more than this number of solenoids are on simultaneously, the oldest note is turned off to protect batteries. Integer only:</label>
-	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')"/>
-	<br>
-	
-	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, i.e. ifnot playing music, no web activity. Turn power off then on to restore.  No decimals, integer only:</label>
-	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3" oninput="markField('idle_deepsleep_minutes')"/>&nbsp;minutes.
+	<button type="button" onclick="save('access_point1','password1','access_point2','password2')">Save WiFi info and
+		passwords</button>
+
+	<div class="middlediv">Power management</div>
+
+	<label for="max_polyphony">Maximum polyphony allowed. If more than this number of solenoids are on simultaneously,
+		the oldest note is turned off to protect batteries. Integer only:</label>
+	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')" />
 	<br>
 
-	
-	<label for="ap_max_idle">Time the AP WiFi radio will be active  without no one connecting. After this time, if idle, the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes fail.  No decimals, integer only:</label>
-	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')"/>
+	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, i.e. ifnot
+		playing music, no web activity. Turn power off then on to restore. No decimals, integer only:</label>
+	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3"
+		oninput="markField('idle_deepsleep_minutes')" />&nbsp;minutes.
 	<br>
-    
-    <label>USB power pack heartbeat period (leave 0 if battery is not a USB power pack), in milliseconds</label>
-    <input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4" oninput="markField('battery_heartbeat_period')"/>
-    <br>
-    
-    <label>USB power pack heartbeat duration (leave 0 if battery is not a USB power pack), in milliseconds</label>
-    <input id="battery_heartbeat_duration" name="battery_heartbeat_duration" type="text" size="4" oninput="markField('battery_heartbeat_duration')"/>
-    <br>
-    
-    
-	<button type="button" onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save power settings</button>
 
-<div class="middlediv">Crank and tune play parameters</div>
-	<label>If zero: no automatic playback. Greater than zero: after this time the next tune is started automatically 
+
+	<label for="ap_max_idle">Time the AP WiFi radio will be active without no one connecting. After this time, if idle,
+		the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the
+		AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP
+		mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes
+		fail. No decimals, integer only:</label>
+	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')" />
+	<br>
+
+	<label>USB power pack heartbeat period (leave 0 if battery is not a USB power pack), in milliseconds</label>
+	<input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4"
+		oninput="markField('battery_heartbeat_period')" />
+	<br>
+
+	<label>USB power pack heartbeat duration (leave 0 if battery is not a USB power pack), in milliseconds</label>
+	<input id="battery_heartbeat_duration" name="battery_heartbeat_duration" type="text" size="4"
+		oninput="markField('battery_heartbeat_duration')" />
+	<br>
+
+
+	<button type="button"
+		onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save
+		power settings</button>
+
+	<div class="middlediv">Crank and tune play parameters</div>
+	<label>If zero: no automatic playback. Greater than zero: after this time the next tune is started automatically
 		and crank sensor will be disabled. In seconds, integer only:</label>
-	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')"/>
+	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')" />
 	<br>
 	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
-	<label for="tempo_follows_crank">Tempo follows crank, setting at startup. Checked means that the playback tempo varies with the crank speed</label>
+	<label for="tempo_follows_crank">Tempo follows crank, setting at startup. Checked means that the playback tempo
+		varies with the crank speed</label>
 	<br>
-	<label for="pulses_per_revolution">Pulses per revolution(rising+falling edge) of crank revolution sensor. It's the number of pulses the crank sensor gives for each revolution.</label>
+	<label for="pulses_per_revolution">Pulses per revolution(rising+falling edge) of crank revolution sensor. It's the
+		number of pulses the crank sensor gives for each revolution.</label>
 	<input id="pulses_per_revolution" type="text" size="4" oninput="markField('pulses_per_revolution')">
 	<br>
-	<label for="lower_threshold_rpsec">Low threshold: to detect crank is still turning. When lower than this speed, the crank is considered as 'not turning anymore'. in revolutions per second:</label>
+	<label for="lower_threshold_rpsec">Low threshold: to detect crank is still turning. When lower than this speed, the
+		crank is considered as 'not turning anymore'. in revolutions per second:</label>
 	<input id="lower_threshold_rpsec" type="text" size="4" oninput="markField('lower_threshold_rpsec')">
 	<br>
-	<label for="higher_threshold_rpsec">High threshold: to detect crank starts turning. When higher than this speed, the crank is considered to have started turning, in revolutions per second:</label>
+	<label for="higher_threshold_rpsec">High threshold: to detect crank starts turning. When higher than this speed, the
+		crank is considered to have started turning, in revolutions per second:</label>
 	<input id="higher_threshold_rpsec" type="text" size="4" oninput="markField('higher_threshold_rpsec')">
 	<br>
-	<label for="normal_rpsec">Normal value of crank speed. If tempo follows crank, this is the speed where the tempo is the recorded tempo in the MIDI file, in revolutions per second:</label>
+	<label for="normal_rpsec">Normal value of crank speed. If tempo follows crank, this is the speed where the tempo is
+		the recorded tempo in the MIDI file, in revolutions per second:</label>
 	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
 	<br>
-
+	<label for="crank_lowpass_cutoff">Crank variations faster than this rev/sec value are filtered.
+		The higher, the more responsive is the crank,
+		The lower, the smoother but slower reacting is the crank. Starting and stopping the crank is always fast.
+		Reasonable values from 0.8 to 1.5, or 999 to disable.
+	</label>
+	<input id="crank_lowpass_cutoff" type="text" size="4" oninput="markField('crank_lowpass_cutoff')" />
+	<br>
 	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier:</label>
 	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
 	<br>
-	<button type="button" onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','automatic_delay', 'rotary_tempo_mult' )">Save play tune parameters</button>
+	<button type="button"
+		onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','crank_lowpass_cutoff','automatic_delay', 'rotary_tempo_mult' )">Save
+		play tune parameters</button>
 
-<div class="middlediv">Other parameters</div>
-    
+	<div class="middlediv">Other parameters</div>
 
-	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address with the browser, for example: http://192.168.144.1
+
+	The WiFi SSID of this microcontroller as Access Point is: <b><span id="copy_hostname1"></span></b>. IP address when
+	connecting to the access point of the microcontroller. Should not be necessary to change. Could be used as address
+	with the browser, for example: http://192.168.144.1
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
-	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')"/>
+	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')" />
 	<br>
-    <label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). Start with 10000.  No decimals, integer only:</label>
-	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6" oninput="markField('touchpad_big_change')"/>
+	<label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). Start with
+		10000. No decimals, integer only:</label>
+	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6"
+		oninput="markField('touchpad_big_change')" />
 	<br>
-    <label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal received. Example: -18 db. Always negative, decimal point allowed:</label>
-	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')"/>dB
+	<label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal
+		received. Example: -18 db. Always negative, decimal point allowed:</label>
+	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')" />dB
 	<br>
-    
-	
-	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other parameters</button>
-    
-<div class="middlediv">Debug/test settings</div>
-   
-	<input id="webserver_cache" name="webserver_cache" type="checkbox" oninput="markField('webserver_cache')"/>
-	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and slows down the microcontroller unnecessarily</label>
-	
+
+
+	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other
+		parameters</button>
+
+	<div class="middlediv">Debug/test settings</div>
+
+	<input id="webserver_cache" name="webserver_cache" type="checkbox" oninput="markField('webserver_cache')" />
+	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and
+		slows down the microcontroller unnecessarily</label>
+
 	<br>
-	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds = 5 minutes seems appropriate.  No decimals, integer only:</label>	<input id="max_age" name="max_age" type="text" size="6"  oninput="markField('max_age')"/>
-    <br>
-
-    <input type="checkbox" name="mic_test_mode" id="mic_test_mode" value="mic_test_mode" oninput="markField('mic_test_mode')">
-    <label for="mic_test_mode">Debug mode for microphone. Generates  some signals to test tuning mode:</label>
-    <br>
-    
-    <input type="checkbox" id="mic_store_signal" value="mic_store_signal" oninput="markField('mic_store_signal')">
-    <label for="mic_store_signal">Store microphone signal and FFT on flash when tuning</label>
-    <br>
-    
-	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode','mic_store_signal' )">Save debug settings</button>
-
-<div class="middlediv">Server (optional)</div>
-   
-    <label for="server">Server node name. Leave blank if no server node. mcserver must be installed for servernode to work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
-	<input id="servernode" name="servernode" type="text"  size="20" oninput="markField('servernode')"/>
-	
-	
+	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds = 5
+		minutes seems appropriate. No decimals, integer only:</label> <input id="max_age" name="max_age" type="text"
+		size="6" oninput="markField('max_age')" />
 	<br>
-	<label for="serverpassword">Password to access server:</label>	<input id="serverpassword" name="serverpassword" type="password" size="12"  oninput="markField('serverpassword')"/>
-    <br>
-    <button type="button" onclick="save( 'servernode', 'serverpassword' )">Save server settings</button>
-    
-<div class="footerdiv"></div>
-<script>
 
-// Used by mark fields
-let CHANGED_FIELDS = [];
-	
-async function getCurrentConfig(){
-	let json_result = await fetch_json( "/get_config" ) ;
-	for( let [key, value] of Object.entries(json_result)) {
-        d = document.getElementById( key );
-        if( d != null ){
-            if( d.type == "checkbox" || d.type == "radio" ) {
-                d.checked = value ;
-            }
-            else {
-                d.value = value ;
-            }
-        }
-	}
-    clearMarks() ;
-	hostnameChanged() ;
-}
-getCurrentConfig() ;
-	
-function validateNewPasswords(){
-    markField( "ap_password" );
-    markField( "repeat_ap_password" ) ;
-    
-    // Check if passwords are equal and minimum length
-    // necessary for WiFi.
-	p1 = document.getElementById("ap_password").value ;
-	p2 = document.getElementById("repeat_ap_password").value ;
-	ok = false ;
-	button = document.getElementById("changePasswords") ;
-    // For better response check password length here
-	if( p1 != p2 ){
-		button.innerText = "(passwords are different, cannot save!)" ;
-		button.disabled = true ;
-		ok = false ;
-	}
-	else if( p1.length < 9 ){
-		button.innerText = "(password shorter than 9 characters, cannot save!)" ;
-		button.disabled = true ;
-		ok = false ;
-	}
-	else {
-		button.innerText = "Save password"
-		button.disabled = false ;
-		ok = true ;
-	}
-	return ok ;
-}
-validateNewPasswords() ;
+	<input type="checkbox" name="mic_test_mode" id="mic_test_mode" value="mic_test_mode"
+		oninput="markField('mic_test_mode')">
+	<label for="mic_test_mode">Debug mode for microphone. Generates some signals to test tuning mode:</label>
+	<br>
+
+	<input type="checkbox" id="mic_store_signal" value="mic_store_signal" oninput="markField('mic_store_signal')">
+	<label for="mic_store_signal">Store microphone signal and FFT on flash when tuning</label>
+	<br>
+
+	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode','mic_store_signal' )">Save debug
+		settings</button>
+
+	<div class="middlediv">Server (optional)</div>
+
+	<label for="server">Server node name. Leave blank if no server node. mcserver must be installed for servernode to
+		work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
+	<input id="servernode" name="servernode" type="text" size="20" oninput="markField('servernode')" />
 
 
-async function changePassword() {
-	if( validateNewPasswords() ){
-		save( "ap_password" ) ;
-        clearField( "ap_password" );
-        clearField( "repeat_ap_password" ) ;
-	}
-}
-	
-async function save( /* argument list */ ) {
-    // Save new configuration data
-    let post_data = {} ;
+	<br>
+	<label for="serverpassword">Password to access server:</label> <input id="serverpassword" name="serverpassword"
+		type="password" size="12" oninput="markField('serverpassword')" />
+	<br>
+	<button type="button" onclick="save( 'servernode', 'serverpassword' )">Save server settings</button>
 
+	<div class="footerdiv"></div>
+	<script>
 
-    // Add al arguments of save to list
-    let value = "" ;
-	for( var i=0; i<arguments.length; i++){
-		if( arguments[i] == "description" ){
-            value = removeSpecialHtmlChars( getValue( arguments[i] ));
-        }
-        else{
-            value = getValue( arguments[i] )
-        }
-        //>>>> test clearMark( arguments[i] ) ;
-        if( arguments[i].includes( "password" ) && value == "***************" ){
-            // Don't store unchanged passwords
-            continue ;
-        }
-        post_data[ arguments[i] ] = value ;
-	}
-	const resp = await fetch_json( "/save_config", post_data ) ;
-	showPopup( "", "Configuration saved to flash" ) ;
-	for( var i=0; i<arguments.length; i++){
-        clearMark( arguments[i] ) ;
-	}
-}
-function getValue( element_id ){
-    let a = document.getElementById( element_id ) ;
-    let value = null ;
-    if( a.type == "checkbox") {
-        value = a.checked ;
-	}
-	else {
-		value = a.value.trim() ;
-	}
-	return value ;
-}	
+		// Used by mark fields
+		let CHANGED_FIELDS = [];
 
-function getRadioButtonValue( element_name ) {
-	// radio button:
-	let checked = "" ;
-	let values = document.getElementsByName( element_name );
-	for( let radio of values ){
-		if( radio.checked ){
-			checked = radio.value ;
+		async function getCurrentConfig() {
+			let json_result = await fetch_json("/get_config");
+			for (let [key, value] of Object.entries(json_result)) {
+				d = document.getElementById(key);
+				if (d != null) {
+					if (d.type == "checkbox" || d.type == "radio") {
+						d.checked = value;
+					}
+					else {
+						d.value = value;
+					}
+				}
+			}
+			clearMarks();
+			hostnameChanged();
 		}
-	}
-	return checked ;
-}
+		getCurrentConfig();
 
-function hostnameChanged(){
-	let hostname = document.getElementById("name").value ;
-	textById("copy_hostname1", hostname ) ;
-	textById("copy_hostname3", hostname ) ;
-	textById("copy_hostname4", hostname ) ;
-}
-    
+		function validateNewPasswords() {
+			markField("ap_password");
+			markField("repeat_ap_password");
 
-function markField( id ){
-    // Change background color of changed fields
-    if( id == "name") {
-        hostnameChanged() ;
-    }
-    if( !CHANGED_FIELDS.includes(id) ){
-        CHANGED_FIELDS.push( id );
-    }
-    const d = document.getElementById( id ) ;
-    d.style.backgroundColor = cream ;
-}
-function clearMark( id ){
-    if( [ "webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id) ){
-        return ;
-    }
-    document.getElementById( id ).style.backgroundColor = "#ffffff" ;
-}
+			// Check if passwords are equal and minimum length
+			// necessary for WiFi.
+			p1 = document.getElementById("ap_password").value;
+			p2 = document.getElementById("repeat_ap_password").value;
+			ok = false;
+			button = document.getElementById("changePasswords");
+			// For better response check password length here
+			if (p1 != p2) {
+				button.innerText = "(passwords are different, cannot save!)";
+				button.disabled = true;
+				ok = false;
+			}
+			else if (p1.length < 9) {
+				button.innerText = "(password shorter than 9 characters, cannot save!)";
+				button.disabled = true;
+				ok = false;
+			}
+			else {
+				button.innerText = "Save password"
+				button.disabled = false;
+				ok = true;
+			}
+			return ok;
+		}
+		validateNewPasswords();
 
-function clearMarks() {
-    // Reset background color of changed fields
-    for( let i in CHANGED_FIELDS ){
-        let id = CHANGED_FIELDS[i] ;
-        clearMark( id ) ;
-    }
-    CHANGED_FIELDS = [] ;
-}
 
-</script>
+		async function changePassword() {
+			if (validateNewPasswords()) {
+				save("ap_password");
+				clearField("ap_password");
+				clearField("repeat_ap_password");
+			}
+		}
+
+		async function save( /* argument list */) {
+			// Save  configuration data according to argument list.
+			let post_data = {};
+
+			// Add al arguments of save to list
+			let value = "";
+			for (var i = 0; i < arguments.length; i++) {
+				value = getValue(arguments[i])
+				if (arguments[i].includes("password") && value == "***************") {
+					// Don't store unchanged passwords
+					continue;
+				}
+				post_data[arguments[i]] = value;
+			}
+			const resp = await fetch_json("/save_config", post_data);
+			showPopup("", "Configuration saved to flash. Reboot needed!");
+			for (var i = 0; i < arguments.length; i++) {
+				clearMark(arguments[i]);
+			}
+		}
+		function getValue(element_id) {
+			let a = document.getElementById(element_id);
+			let value = null;
+			if (a.type == "checkbox") {
+				value = a.checked;
+			}
+			else {
+				value = a.value.trim();
+			}
+			return value;
+		}
+
+		function getRadioButtonValue(element_name) {
+			// radio button:
+			let checked = "";
+			let values = document.getElementsByName(element_name);
+			for (let radio of values) {
+				if (radio.checked) {
+					checked = radio.value;
+				}
+			}
+			return checked;
+		}
+
+		function hostnameChanged() {
+			let hostname = document.getElementById("name").value;
+			textById("copy_hostname1", hostname);
+			textById("copy_hostname3", hostname);
+			textById("copy_hostname4", hostname);
+		}
+
+
+		function markField(id) {
+			// Change background color of changed fields
+			if (id == "name") {
+				hostnameChanged();
+			}
+			if (!CHANGED_FIELDS.includes(id)) {
+				CHANGED_FIELDS.push(id);
+			}
+			const d = document.getElementById(id);
+			d.style.backgroundColor = cream;
+		}
+		function clearMark(id) {
+			if (["webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id)) {
+				return;
+			}
+			document.getElementById(id).style.backgroundColor = "#ffffff";
+		}
+
+		function clearMarks() {
+			// Reset background color of changed fields
+			for (let i in CHANGED_FIELDS) {
+				let id = CHANGED_FIELDS[i];
+				clearMark(id);
+			}
+			CHANGED_FIELDS = [];
+		}
+
+	</script>
 </body>
+
+</html>

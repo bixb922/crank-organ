@@ -7,9 +7,9 @@ from time import ticks_ms, ticks_diff
 from machine import Pin
 
 from minilog import getLogger
-from pinout import gpio
-from config import config
+from drehorgel import config
 from counter import Encoder, Counter
+
 
 # Number of pulses (1 pulse = off + on) per revolution
 PULSES_PER_REV = config.get_int("pulses_per_revolution", 24) 
@@ -26,14 +26,35 @@ HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec", 0.7) # grea
 # "Normal" turning speed, when MIDI speed == real speed
 NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
 
+class LowPassFilter:
+    def __init__( self, fc, step ):
+        # Time constant of low pass filter is 
+        # 1/(2*pi*cutoff frequency)
+        rc = 1/(6.28*fc)
+        self.alpha = step/(rc+step)
+        self.current = 0
 
+    def filter( self, rpsec ):
+        if rpsec >= HIGHER_THRESHOLD_RPSEC:
+            self.current = rpsec*self.alpha + self.current*(1-self.alpha)
+        else:
+            self.current = rpsec
+        return self.current
+    # FIlter probably would be more precise calculating
+    # alpha in filter() with the real step instead of a
+    # estimated step
+
+# This is the low level driver for the crank rotation sensor
+# Main output is get_rps() which returns the "rotations per second"
+# of the crank.
 class TachoDriver:
-    def __init__(self,tachometer_pin1, tachometer_pin2, automatic_playback):
+    def __init__(self, tachometer_pin1, tachometer_pin2):
         self.logger = getLogger(__name__)
         self.counter_task = None
         self.rpsec = 0
-        if not tachometer_pin1 or automatic_playback:
-            self.logger.debug("Crank sensor not configured")
+        self.encoder_factor = 1 # Encoder phases compensation
+        if not tachometer_pin1 or config.get_int("automatic_delay", 0):
+            self.logger.debug("Crank sensor not enabled")
             return
         
         if tachometer_pin1 and not tachometer_pin2:
@@ -48,31 +69,61 @@ class TachoDriver:
             counter = Encoder( 0,
                     phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
-                    phases=1, # Can be 2 or 4 too, but not much advantage in this case.
+                    phases=2, # For a nominal 200 stripes this will count 400 pulses
                     filter_ns=20_000) # Highest filter value possible
-            
+            self.encoder_factor = 2 # To compensate fo r phases=2
+        
+        # For diag.html report of crank frequencies
+        self.report_rps = []
+        self.report_times = []
+        
+        # Start the sensor process
         self.counter_task = asyncio.create_task( self._sensor_process(counter) )
         self.logger.info("init ok")
 
     async def _sensor_process( self, counter ):
         # Prime the loop
         last_time = ticks_ms()
-        counter.value(0)
+        counter.value(0) # Reset value counter to 0
+        step = 100 # Delay between 2 reads of the crank
+        # Most crank variations occur at the crank rev/sec frequency
+        # Filter whatever is faster than that.
+        # If fc were set to 0, that disables the crank altogether
+        # Prevent setting fc to 0
+        fc = max( 0.2, config.get_float("crank_lowpass_cutoff", NORMAL_RPSEC ))
+        
+        lpf = LowPassFilter( fc,  step/1_000 )
+    
         while True:
-            await asyncio.sleep_ms(200)
+            await asyncio.sleep_ms(step)
             # Get pulses since last call, i.e. value(0) resets
             # the counter to 0. 
             # Take abs() because if a Encoder is present, value
             # can be negative if crank is turned in the opposite
             # direction. Using abs() neither the order of the pins
             # nor the direction of rotation matters
-            # If there is a Counter, value() will aways be positive anyhow.
-            pulses =  abs(counter.value(0))
+            # If there is a Counter instead of Encoder, value() will aways be positive anyhow.
+            # Divide by 2 because encoder operates with phases=2
+
+            # At 200 nominal pulses/rev, counter.value()
+            # will read 400 nominal pulses. For a sleep time of
+            # 100 msec and 1.2 rev/sec normal speed, this means
+            # 400*100/1000*1.2 = 40*1.2 = 48 pulses for each reading.
+            # 48 pulses means a maximal error of 1 pulse in 48, about 2%
+            # at nominal speed.
+            # Reading at 100 millisec is similar to human reaction time,
+            # so delay should quite tolerable.
+            pulses =  abs(counter.value(0))/self.encoder_factor
             new_time = ticks_ms()
             time_ms = ticks_diff( new_time, last_time )
+
             # time_ms should never be 0, because there is a sleep_ms in this loop
-            self.rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            # Apply low pass filter
+            self.rpsec = lpf.filter( rpsec )
+            #print(f">>> {rpsec=} {self.rpsec=}")
             last_time = new_time
+            self._accumulate_readings( new_time, self.rpsec )
 
     def get_rpsec( self ):
         return self.rpsec
@@ -80,31 +131,25 @@ class TachoDriver:
     def is_installed(self):
         return bool(self.counter_task)
 
-    def irq_report( self ):
-        # This function prepares data for graph on diag.html
-        # page
-        async def _report_process( ):
-            while True:
-                await asyncio.sleep_ms(250)
-                self.report_rps.append( self.get_rpsec() )
-                self.report_times.append( ticks_ms() )
-                self.report_rps = self.report_rps[-20:]
-                self.report_times = self.report_times[-20:]
+    def _accumulate_readings( self, ticks, rpsec ):
+        # This is for debugging only.
+        # These lists are used in the diag.html page
+        # to show a graph of the rpsec values over time.
+        self.report_rps.append( rpsec ) 
+        self.report_times.append( ticks )
+        self.report_rps = self.report_rps[-20:]
+        self.report_times = self.report_times[-20:]
 
+    def irq_report( self ):
+        # Used by diag.html to show a graph of the rpsec values over time.
         if not self.is_installed():
-            return
-        # TachoDriver report for webserver/web page
-        if not hasattr(self,"report_task"):
-            self.report_rps = []
-            self.report_times = [] # X axis
-            self.report_task = asyncio.create_task( _report_process() )
+            return {}
         times = [] # used as X axis in graph
         if len(self.report_times)>0:
             t0 = self.report_times[0] # 0.0 to 1.0
             times = [ round(ticks_diff(x,t0)/1000,1) for x in self.report_times ]
         return {
             "dtList": [],
-            "ms_since_last_irq": 0,
             "rpsecList": self.report_rps,
             "timesList": times,
             "now": ticks_ms(),
@@ -114,16 +159,29 @@ class TachoDriver:
             "normal_rpsec": NORMAL_RPSEC
         }
 
+# This is the high level processing for the crank rotation sensor
+# It uses TachoDriver.get_rps() to read the rotations per second,
+# filters out small variations to clean up response.
+# Main output is velocity for the MIDI player (get_normalized_rps), combining
+# crank RPS and velocity set via browser (play.html)
+# Main outputs:
+#   Crank.is_turning() 
+#   await Crank.wait_stop_turning()
+#   Crank.get_normalized_rps()
+#   Triggers asyncio.Event() according to registered events.
+#   Events can be registered at the crank start, or some
+#   time after crank starts to turn.
+#   Adds info to get_progress() for tunelist.html and play.html.
 class Crank:
     # Trigger events based on the crank revolution speed
     # like start and stop turning
-    def __init__(self,tachometer_pin1, tachometer_pin2,automatic_playback):
+    def __init__(self,tachometer_pin1, tachometer_pin2):
         self.logger = getLogger(__name__)
 
         # Set UI setting of velocity to 50, halfway from 0 to 100.
         self.set_velocity(50)
         # Initialize tachometer driver
-        self.td = TachoDriver(tachometer_pin1, tachometer_pin2,automatic_playback)
+        self.td = TachoDriver(tachometer_pin1, tachometer_pin2)
         
         # Dictionary of events to be fired
         self.events={}
@@ -145,68 +203,73 @@ class Crank:
     async def _crank_monitor_process(self):
         if not self.is_installed():
             return
+        # Faster access to get_rpsec
+        get_rpsec = self.td.get_rpsec
+        def rpsec_ge_higher_threshold():
+            return get_rpsec()>=HIGHER_THRESHOLD_RPSEC
+        
         # This code connects the tachometer sensor with the event that
         # starts a new tune in setlist
-        # Turning hasn't started
-        time_when_turning_started = None
+
+        # The while True: loop has the following phases:
+        # 1. Wait for RPS to get higher than HIGHER_THRESHOLD_RPSEC
+        #    (meaning the crank started turning).
+        # 2. Wait a bit more for crank to stabilize
+        # 3. Stay in this state while RPS higher than LOWER_THRESHOLD_RPSEC.
+        #    (meaning: crank is turning at adequate speed)
+        #    After some specified time in this state, asyncio.Events
+        #    are triggered for example: to start music playback
+        # 4. When exiting state 3, it means: crank stopped turning.
+        #    Go back to 1. 
         
-        # Calculate a time lapse to wait for rpsec to stabilize
-        some_pulses = int(4*HIGHER_THRESHOLD_RPSEC/PULSES_PER_REV)+1
         while True:
             self.crank_is_turning = False
             # Wait for crank to start turning
-            while self.td.get_rpsec()<HIGHER_THRESHOLD_RPSEC:
+            while not rpsec_ge_higher_threshold():
                 await asyncio.sleep_ms(50)
 
-            self.logger.debug("---------> Crank now turning")    
-            # Guard against spurious events, wait for some pulses
-            await asyncio.sleep_ms(some_pulses)
-            
-            time_when_turning_started = ticks_ms()
+            # Crank is now officialy turning
+            self.logger.debug(f"---------> Crank now turning {get_rpsec()=}")    
+            # setlist will only start tune after some time, so
+            # if this was a fluke, setlist will wait it out.
+
             self.crank_is_turning = True
-            # Check until all registered events have been triggered and some
-            max_time_to_monitor = max(w for w in self.events.keys())+1000
-            while self.td.get_rpsec()>LOWER_THRESHOLD_RPSEC:
-                await asyncio.sleep_ms(100) 
-                time_since_start = ticks_diff(ticks_ms(),time_when_turning_started)
-                #print(f"crank is turning {self.td.get_rpsec()=}, processing events, time left {max_time_to_monitor-time_since_start} msec {time_since_start=} {max_time_to_monitor=}" )
-                for when_ms,ev in self.events.items():
-                    if time_since_start>=when_ms and not ev.is_set():
-                        self.logger.debug(f"---------> rpsec crank turning - set event at {when_ms=} {self.td.get_rpsec()=}")
-                        ev.set()
-                        
-                if time_since_start>max_time_to_monitor:
-                    # Save some CPU, don't continue to monitor crank turning
-                    # until turning stops. All events have been generated
+
+            # setlist.py schedules events to happen
+            # when cranking starts and then after
+            # some time, make these events happen
+            events =list(self.events.items())
+            events.sort( key=lambda x:x[0])
+            while events:
+                if rpsec_ge_higher_threshold():
                     break
-                    
+                when_ms,ev = events.pop(0)
+                await asyncio.sleep_ms(when_ms)
+                ev.set() 
+
             # Wait until crank stops turning
-            while self.td.get_rpsec()>LOWER_THRESHOLD_RPSEC:
-                await asyncio.sleep_ms(100)
-                #print(f"crank is turning {self.td.get_rpsec()=}" )
-            
+            while rpsec_ge_higher_threshold():
+                await asyncio.sleep_ms(50)
+
             # Record that crank is not turning
             self.crank_is_turning = False
-            self.logger.debug(f"---------> Crank now stopped {self.td.get_rpsec()=}")
+            self.logger.debug(f"---------> Crank now stopped {get_rpsec()=}")
             
     def is_turning(self):
         return self.crank_is_turning 
 
     async def wait_stop_turning(self):
         if self.is_installed():
-            while True:
-                if not self.is_turning():
-                    return
+            while self.is_turning():
                 await asyncio.sleep_ms(100)
-        # If not installed, no waiting.
+        # If not installed, no waiting occurs, exit right away.
     
-
     def is_installed(self):
         return self.td.is_installed()
 
     def get_normalized_rpsec(self, tempo_follows_crank ):
         # Used in player.py to delay/hasten music
-        # depending on crank speed AND UI setting
+        # depending on crank speed AND UI velocity setting
         # If no crank, UI can still change tempo!
         if tempo_follows_crank:
             return self.td.get_rpsec() / NORMAL_RPSEC * self.tempo_multiplier 
@@ -242,58 +305,90 @@ class Crank:
         progress["is_turning"] = self.is_turning()
         progress["tacho_installed"] = self.is_installed()
         progress["tempo_multiplier"] = self.tempo_multiplier
-        return progress
 
-# Rotary encoder to detect tempo
+# Rotary encoder to set tempo
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.
+# The effect of this sensor is added to the crank sensor
 class TempoEncoder:
-    def __init__( self, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
+    def __init__( self, crank, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
         self.logger = getLogger("TempoEncoder")
-        if not tempo_a or not tempo_b or not tempo_switch:
-            self.logger.debug("TempoEncoder not connected")
+        self.crank = crank
+        if not tempo_a or not tempo_b:
+            # Both A and B input must be present for the
+            # rotary encoder to work.
             return
-        switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
         encoder = Encoder( 1, filter_ns=13000, # Highest value possible
                             phase_a=Pin( tempo_a, Pin.IN, Pin.PULL_UP ), 
                             phase_b=Pin( tempo_b, Pin.IN, Pin.PULL_UP ), 
                             phases=1)
-        switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
-        self.tempo_task = asyncio.create_task( self._tempo_process( encoder, switch, rotary_tempo_mult ) )
+        self.tempo_task = asyncio.create_task( self._tempo_process( encoder, rotary_tempo_mult ) )
+
+        # Switch is optional
+        if tempo_switch:
+            switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
+            self.switch_task = asyncio.create_task( self._switch_process( switch ))
         self.logger.info("init done")
 
-    async def _tempo_process(self, encoder, switch, rotary_tempo_mult ):
+    async def _tempo_process(self, encoder, rotary_tempo_mult ):
         encoder.value(0)
-        times_switch_down = 0
         while True:
-            # Read velocity about 10 times a second 
-            await asyncio.sleep_ms(100)
+            # Read velocity several times a second 
+            await asyncio.sleep_ms(200)
             # Read pulses since last read, reset counter to 0.
             if (v := encoder.value(0)):
-                crank.set_velocity_relative( v * rotary_tempo_mult ) 
-                # Reset "switch pressed" counter 
-                # because on some devices the switch closes intermittently during
-                # rotation without pressing the switch.
-                times_switch_down = 0  
-                continue   
-            # Switch is "normal on": pressed gives .value()==0
-            if switch.value():
-                # Switch is off
-                times_switch_down = 0
-            else:
-                # Count times switch on
-                times_switch_down += 1
-            # Was this a long press? i.e. about half a second?           
-            if times_switch_down >= 4:
-                # Button on rotary encoder pressed, reset velocity to normal
-                crank.set_velocity(50)
-                times_switch_down = 0
+                self.crank.set_velocity_relative( v * rotary_tempo_mult )  
+        
+    async def _switch_process( self, switch ):
+        # This detects a long press of the rotary encoder's switch
+        # considering that the switch is very, very noisy and bouncy.
+        while True:
+            await asyncio.sleep_ms(300)
+            # Wait until switch pressed (.value()==0 is "pressed")
+            if switch.value() == 0:
+                # Switch is now "on", see if it stays 
+                # steadily on
+                # for about 0.8 seconds. 
+                # I have a rather
+                # low quality rotary encoder where the
+                # switch toggles when the rotary encoder counts.
+                # Or perhaps I don't know how to use that thing.
+                v = 0
+                for _ in range(40):
+                    # Sample frequently
+                    await asyncio.sleep_ms(20)
+                    if(v := switch.value()): 
+                        break
+                # Was switch never off during this time?
+                if v == 0:
+                    self.crank.set_velocity(50)
 
+#>>>Test counter, will plug TachoDriver and generate random RPS
+# from random import random
+# class DebugCounter:
+#     def __init__(self):
+#         self.time_ant = ticks_ms()
+#         self.repetitions = 0
 
-# Player/setlist need to know if crank is turning.
-crank = Crank(gpio.tachometer_pin1, gpio.tachometer_pin2, config.get_int("automatic_delay", 0))
+#     def value( self, newvalue=None ):
+#         self.repetitions -= 1
+#         if self.repetitions < 0:
+#             # 200 stripes = 400 pulses/sec at 1 RPS
+#             # 800 pulses*100ms = 80 pulses
+#             # should result in 2.4 RPS
+#             self.current_val = random()*60
+#             self.repetitions = random()*30
 
-# The tempo encoder operates as a independent task,
-# no further calls necessary.
-_tempo_encoder = TempoEncoder( gpio.tempo_a, gpio.tempo_b, gpio.tempo_switch, config.cfg.get("rotary_tempo_mult", 1) )
+#         #newt = ticks_ms()
+#         #dt = ticks_diff(newt, self.time_ant)
+#         #self.time_ant = newt
+#         return self.current_val
 
+# async def debug():
+#     print("TachoDriver Debug started")
+#     from drehorgel import crank
+#     crank.td.counter_task.cancel()
+#     newcounter = DebugCounter()
+#     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
+
+# asyncio.create_task( debug() )

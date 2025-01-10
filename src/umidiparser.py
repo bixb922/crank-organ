@@ -408,7 +408,7 @@ class MidiEvent:
     @micropython.native
     def __init__(self):
         """
-        Initializes MidiEvent, all instances are assigned None as value,
+        Initializes MidiEvent, all instance variables are assigned None as value,
         this is. This method is used internally by MidiParser.
 
         Usually you will not need to create an instance of MidiEvent,

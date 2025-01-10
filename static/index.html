@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -144,11 +147,12 @@
 <table style="width:100%">
 	<tbody>
         <tr id="batterygraph_row">
-            <td>Remanente</td>
-            <td id="percent_remaining"></td>
+            <td><span>Remanente</span>&nbsp
+            <span id="percent_remaining"></span>
+		</td>
         </tr>
 		<tr>
-			<td id="batterygraph" colspan="2">
+			<td id="batterygraph">
 			</td>
 		</tr>
 	</tbody>
@@ -172,9 +176,20 @@
 async function getPageData(){
     resp = await fetch_json( "/get_index_page_info" ) ;
     textById( "pinout_description", resp.pinout_description ) ;
-    if( resp.serverlink ){
+    if( resp["servernode"] ){
         document.getElementById("serverinfo").style.display = "" ;
-        document.getElementById("serverlink").href = resp.serverlink
+		let server = resp["servernode"];
+		if( server != "" ){
+			if( !server.startsWith("http")){
+				if( server.endsWith(".com")){
+					server = "https://" + server;
+				}
+				else{
+					server = "http://" + server;
+				}
+			}
+		}
+        document.getElementById("serverlink").href = server;
     }
     getBatteryInfo();
     
@@ -262,3 +277,4 @@ getPageData() ;
    
 </script>
 </body>
+</html>

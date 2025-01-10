@@ -1,6 +1,8 @@
 
 <!DOCTYPE html>
-
+<!-- Copyright (c) 2023 Hermann von Borries
+ MIT License-->
+ <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
@@ -47,7 +49,7 @@
 <span id="no_tune_span">No hay melodía en curso</span>
 
 <span id="setlist_span">
-	<div class="middlediv">Setlist</div>
+	<div class="middlediv">Setlist<span id="totalDuration"></span></div>
 
 	<table>
 		<tbody id="setlistBody">
@@ -172,7 +174,7 @@ async function updateProgress( progress ) {
 		textById( "spectator_name",  spectator_name );
 		showHideElement( "request_row", spectator_name );
 
-		textById( "title",  makeTuneTitle( tune )) ;
+		textById( "title",  await makeTuneTitle( tune )) ;
 
 		textById( "genre", tune[TLCOL_GENRE]) ;
 		showHideElement( "genre_row", tune[TLCOL_GENRE]) ;
@@ -212,10 +214,14 @@ async function updateProgress( progress ) {
 		textById("progress", status_text) ;
 		
 		progressBar( "timebar", percent, 60 );
+		//>>>may be interesting to show air consumption graph
+		//>>>to alert of more air needed ahead of time.
 	}
 	let setlist = progress["setlist"] ;
 	let setlistBody = document.getElementById("setlistBody");
 	setlistBody.innerText = "";
+
+	let totalDuration = 0;
 	for( let z = 0; z < setlist.length; z++ ) {
 		let i = z ;
         let tuneid = setlist[i];
@@ -224,7 +230,9 @@ async function updateProgress( progress ) {
         if( pls == undefined ){
             continue ;
         }
-		let row = insertRow( setlistBody, [""+(i+1), makeTuneTitle(pls), "","","","",""] );
+		let duration = formatMilliMMSS( pls[TLCOL_TIME] )
+		totalDuration += pls[TLCOL_TIME];
+		let row = insertRow( setlistBody, [""+(i+1), await makeTuneTitle(pls) + " " + duration, "","","","",""] );
 		// All lines have wastebasket
 		let b5 = document.createElement("a");
 		b5.onclick = function(){ dropSetList(i) };
@@ -259,7 +267,6 @@ async function updateProgress( progress ) {
 			b3.classList.add("anohref");
 			row.cells[3].appendChild( b3 );
 		}
-
         // show spectator name, if any
         let sn = tune_requests[tuneid] ;
         if( sn != undefined ){
@@ -268,6 +275,7 @@ async function updateProgress( progress ) {
         }
 
 	}
+	document.getElementById("totalDuration").innerHTML = "&nbsp;" + Math.round( totalDuration/60_000 ) +"min";
 
 	// Always update velocity and RPS
 	let vel = progress["velocity"];
@@ -506,8 +514,11 @@ async function formatLyrics(){
 	return lyrics;
 }
 
-async function toggleRegister( register_name ){
-	await updateProgress( await fetch_json( "/toggle_register", {"name": register_name} ));
+async function toggleRegister( reg_name ){
+	let value = document.getElementById( `reg_${reg_name}`).checked;
+	await updateProgress( await fetch_json( 
+					"/toggle_register",
+				 	{"name": reg_name, "value": value} ));
 }
 
 translate_html();
@@ -515,3 +526,4 @@ getProgress() ;
 
 
 </script>
+</html>

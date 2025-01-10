@@ -3,28 +3,30 @@
 
 #print("Go!")
 # First thing: turn on led
-import machine
+from machine import Pin, freq
 from neopixel import NeoPixel
-led = NeoPixel(machine.Pin(48), 1)
+led = NeoPixel(Pin(48), 1)
 led[0] = (0, 0, 8)
 led.write()
+
 # Web response time is nearly 3 times better with 240MHz than with 80MHz
 # Garbage collection time: also nearly 3 times faster.
-# Startup until solenoids.clap(): 7 sec with 240MHz, 19sec with 80MHz
-# But: 240 MHz consumes about 20 mA more than 80 MHz, seems affordable.
+# Startup until controller.clap(): 7 sec with 240MHz, 19sec with 80MHz
+# But: 240 MHz consumes about 20 mA more than 80 MHz, that seems affordable.
 # 20mA x 5V = 0.1W
-machine.freq(240_000_000)
+freq(240_000_000) # machine.freq()
 
-import os       # noqa
-import sys      # noqa
-import errno    # noqa
+import os
+import sys
+import errno
 
 # Mount with more appropriate file system parameters
 # lookahead must increase to offset for the size of the flash.
 # Optimal value of lookahead is the number of blocks of the flash/8
 # since then the complete bitmap of free blocks is in RAM.
 # Overhead setting to a large value is low.
-# 16Mb = 4096 blocks/8 bits per byte=512 bytes, although it could be a bit lower since 
+# 16Mb = 4096 blocks/8 bits per byte=512 bytes for lookahead size, 
+# although it could be a bit lower since 
 # not all 16 MB are really available.
 
 os.umount("/")
@@ -43,4 +45,4 @@ except OSError as e:
         # This order allows to override frozen modules
         sys.path = ["/software/mpy",  ".frozen", "/lib" ]
 
-import startup # noqa
+import startup # type: ignore
