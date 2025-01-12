@@ -13,7 +13,7 @@ class MIDISerialDriver(BaseDriver):
         assert 0 <= channel <= 15
         self._uart = UART( uart, baudrate=31250, tx=pin )
         # Have bytearray with the command ready, format is:
-        # event+channel, note, velocity
+        # event+channel, note number, velocity
         self._note_on = bytearray( (0x90 + channel, 0, 127))
         self._note_off = bytearray((0x80 + channel, 0,   0))
         # Could store channel number here to send all_notes_off
@@ -46,15 +46,5 @@ class MIDISerialDriver(BaseDriver):
         return VirtualMIDIPin( self, *args )
    
 class VirtualMIDIPin(BasePin):
-    # >>> some pin number must be supplied in pinout.json
-    # >>> for example 0, 1, 2, ...
-    #def __init__( self, driver, pin_number, rank, nominal_midi_note ):
-    #    super().__init__(driver, pin_number, rank, nominal_midi_note )
-        # Use the MIDI note number as pin number to
-        # get a unique identifier with __repr__
-        # This is also assigned this way in pinout.html
-        # but it's better to reinforce here.
-    #    self._pin = self.nominal_midi_number
-
     def value( self, val ):
         self._driver._note_message( self.nominal_midi_number, val )

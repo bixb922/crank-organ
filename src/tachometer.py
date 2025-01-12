@@ -27,6 +27,11 @@ HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec", 0.7) # grea
 NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
 
 class LowPassFilter:
+# This is a low pass filter for the crank. The special
+# aspect is that if the rev/sec of the crank drop below
+# HIGHER_THRESHOLD_RPSEC, then the response is immediate.
+# As a result, stopping and starting the crank movement is
+# practically not affected by the low pass filter.
     def __init__( self, fc, step ):
         # Time constant of low pass filter is 
         # 1/(2*pi*cutoff frequency)
@@ -40,9 +45,9 @@ class LowPassFilter:
         else:
             self.current = rpsec
         return self.current
-    # FIlter probably would be more precise calculating
+    # Filter probably would be more precise calculating
     # alpha in filter() with the real step instead of a
-    # estimated step
+    # estimated step, but that needs more CPU and storage
 
 # This is the low level driver for the crank rotation sensor
 # Main output is get_rps() which returns the "rotations per second"
@@ -121,7 +126,6 @@ class TachoDriver:
             rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
             # Apply low pass filter
             self.rpsec = lpf.filter( rpsec )
-            #print(f">>> {rpsec=} {self.rpsec=}")
             last_time = new_time
             self._accumulate_readings( new_time, self.rpsec )
 
@@ -186,7 +190,7 @@ class Crank:
         # Dictionary of events to be fired
         self.events={}
         # Register at least one event to prevent max from failing
-        self.register_event(0)
+        # >>> self.register_event(0) # Not needed anymore???
 
         # At startup crank is not turning 
         self.crank_is_turning = False
@@ -205,7 +209,7 @@ class Crank:
             return
         # Faster access to get_rpsec
         get_rpsec = self.td.get_rpsec
-        def rpsec_ge_higher_threshold():
+        def rpsec_ge_lower_threshold():
             return get_rpsec()>=HIGHER_THRESHOLD_RPSEC
         
         # This code connects the tachometer sensor with the event that
@@ -225,7 +229,7 @@ class Crank:
         while True:
             self.crank_is_turning = False
             # Wait for crank to start turning
-            while not rpsec_ge_higher_threshold():
+            while get_rpsec()<=HIGHER_THRESHOLD_RPSEC:
                 await asyncio.sleep_ms(50)
 
             # Crank is now officialy turning
@@ -233,6 +237,8 @@ class Crank:
             # setlist will only start tune after some time, so
             # if this was a fluke, setlist will wait it out.
 
+            # >>> should crank_is_turning and
+            # >>> crank_not_turning be events instead of flags?
             self.crank_is_turning = True
 
             # setlist.py schedules events to happen
@@ -240,15 +246,14 @@ class Crank:
             # some time, make these events happen
             events =list(self.events.items())
             events.sort( key=lambda x:x[0])
-            while events:
-                if rpsec_ge_higher_threshold():
-                    break
+            while events and rpsec_ge_lower_threshold():
                 when_ms,ev = events.pop(0)
+                self.logger.debug(f"---------> Process event at {when_ms}")    
                 await asyncio.sleep_ms(when_ms)
                 ev.set() 
 
             # Wait until crank stops turning
-            while rpsec_ge_higher_threshold():
+            while rpsec_ge_lower_threshold():
                 await asyncio.sleep_ms(50)
 
             # Record that crank is not turning
@@ -362,33 +367,32 @@ class TempoEncoder:
                 # Was switch never off during this time?
                 if v == 0:
                     self.crank.set_velocity(50)
+#This code will plug TachoDriver and generate random RPS
+from random import random
+class DebugCounter:
+    def __init__(self):
+        self.time_ant = ticks_ms()
+        self.repetitions = 0
 
-#>>>Test counter, will plug TachoDriver and generate random RPS
-# from random import random
-# class DebugCounter:
-#     def __init__(self):
-#         self.time_ant = ticks_ms()
-#         self.repetitions = 0
+    def value( self, newvalue=None ):
+        self.repetitions -= 1
+        if self.repetitions < 0:
+            # 200 stripes = 400 pulses/sec at 1 RPS
+            # 800 pulses*100ms = 80 pulses
+            # should result in 2.4 RPS
+            self.current_val = random()*80
+            self.repetitions = random()*50
 
-#     def value( self, newvalue=None ):
-#         self.repetitions -= 1
-#         if self.repetitions < 0:
-#             # 200 stripes = 400 pulses/sec at 1 RPS
-#             # 800 pulses*100ms = 80 pulses
-#             # should result in 2.4 RPS
-#             self.current_val = random()*60
-#             self.repetitions = random()*30
+        #newt = ticks_ms()
+        #dt = ticks_diff(newt, self.time_ant)
+        #self.time_ant = newt
+        return self.current_val
 
-#         #newt = ticks_ms()
-#         #dt = ticks_diff(newt, self.time_ant)
-#         #self.time_ant = newt
-#         return self.current_val
+async def debug():
+    print("TachoDriver Debug started")
+    from drehorgel import crank
+    crank.td.counter_task.cancel()
+    newcounter = DebugCounter()
+    crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
 
-# async def debug():
-#     print("TachoDriver Debug started")
-#     from drehorgel import crank
-#     crank.td.counter_task.cancel()
-#     newcounter = DebugCounter()
-#     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
-
-# asyncio.create_task( debug() )
+asyncio.create_task( debug() )

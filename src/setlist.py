@@ -25,14 +25,14 @@ class Setlist:
 
         self.waiting_for_start_tune_event = False
 
-        # Any of these will set self.start_event:
+        # Any of these will set self.music_start_event:
         #   play.html page start button via self.start_tune()
         #   touchpad up (if installed) via registered event
         #   crank starts to turn (if installed) via registered event
         #   time between tune elapsed (if automatic playback) via self.automatic_playback()
         
         # 300 ms after crank start event: crank turns are already stable
-        self.start_event = crank.register_event(300)
+        self.music_start_event = crank.register_event(300)
 
         # Event to know when bored turning the crank and nothing happens,
         # (losing patience takes 3 seconds?)
@@ -65,7 +65,7 @@ class Setlist:
     # Functions related to the different ways to start a tune
     def start_tune(self):
         # Called by webserver if start button on performance page is pressed
-        self.start_event.set()
+        self.music_start_event.set()
         # Reset "tempo follows crank" if started by web button
         # Perhaps the crank isn't working, this is safer
         player.set_tempo_follows_crank(False)
@@ -73,12 +73,12 @@ class Setlist:
     
     async def wait_for_start( self ):
 
-        self.start_event.clear()
+        self.music_start_event.clear()
 
         # Record that we are waiting for tune to start
         # for progress.
         self.waiting_for_start_tune_event = True
-        await self.start_event.wait()
+        await self.music_start_event.wait()
         self.waiting_for_start_tune_event = False
         # Cancel timeout task, if any, so it won't
         # interfere later
@@ -205,7 +205,7 @@ class Setlist:
                 # Why did user start with touchpad?
                 self.logger.debug("_touchdown_process start tune")
                 # And signal tune to start
-                self.start_event.set()
+                self.music_start_event.set()
             else:
                 # Well, this may happen, ignore
                 self.logger.debug("_touchdown_process ignore")
@@ -367,9 +367,9 @@ class Setlist:
         # do the automatic playback based on "automatic_delay"
         # parameters of config.json.
 
-        async def on_timeout( timeout_seconds ):
+        async def automatic_playback_delay( timeout_seconds ):
             await asyncio.sleep( timeout_seconds )
-            self.start_event.set()
+            self.music_start_event.set()
             self.timeout_task = None
             # In automatic mode, tempo doesn't follow crank
             # because there is probably no manual crank
@@ -382,6 +382,6 @@ class Setlist:
             self.logger.debug(f"Automatic playback after {timeout_seconds} seconds")
             # Start tune after delay, no user action necessary
             # But touchpad, crank, will preempt user action.
-            self.timeout_task = asyncio.create_task( on_timeout(timeout_seconds) )
+            self.timeout_task = asyncio.create_task( automatic_playback_delay(timeout_seconds) )
             # The timeout_task is also cancelled in
             # self.wait_for_start()

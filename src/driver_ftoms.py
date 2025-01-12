@@ -17,7 +17,7 @@ class FauxTomDriver(BaseDriver):
         self.pin_list = []
 
     def save( self, new_drumdef ):
-        # >>> perhaps should validate correct contents??
+        # >>> perhaps we should validate correct contents??
         fileops.write_json( config.DRUMDEF_JSON, new_drumdef )
     
     # Provide iterator for all defined drums
@@ -62,8 +62,8 @@ class VirtualDrumPin(BasePin):
         # Durations to microseconds because time.sleep_ms
         # is not very precise on the ESP32.
         self.duration = drumdef["duration"]*1000
-        # Calculate additional time for "stronger" notes
-        self.strong_added =  (drumdef["strong_duration"] -  drumdef["duration"])*1000
+        # Calculate additional time for "stronger" notes in microseconds
+        self.strong_added_time =  (drumdef["strong_duration"] -  drumdef["duration"])*1000
         
         self.midi_virtual_pins = set() # of virtual_pins
         for midi_number in drumdef["midi_list"]:
@@ -75,7 +75,10 @@ class VirtualDrumPin(BasePin):
             pin = self.actuator_bank.get_pin_by_midi_number( midi_number )
             if pin:
                 self.strong_midi_virtual_pins.add( pin )
-
+        # >>> this is probably shorter
+        #self.strong_midi_virtual_pins = { pin for pin in
+        #    ( self.actuator_bank.get_pin_by_midi_number(m) for m in drumdef["strong_midis"])
+        #     if pin }
     # Important restriction: cannot play two drum notes simultaneusly
     # They will play one after the other
     def on( self ):
@@ -88,17 +91,19 @@ class VirtualDrumPin(BasePin):
             virtual_pin.on()
         for virtual_pin in virtual_pin_list:
             virtual_pin.on()
-        # Wait here to control the timing well.
-        # Wait time here is short (duration should be <= 50 milliseconds)
+        # Wait here with time.sleep_us() to control the timing well.
+        # Wait time is short (duration should be <= 50 milliseconds)
         # Don't use asyncio.sleep_ms because time will be not
-        # controllable and the time is really too short to do other stuff. 
+        # controllable and the time is really too short to do other stuff
+        # while waiting
         # Duration of the drum note is the highest priority here.
-
         time.sleep_us( self.duration )
+
+        # Now turn this off
         for virtual_pin in virtual_pin_list:
             virtual_pin.off()
         # Wait a bit to turn of stronger (accented) notes
-        time.sleep_us( self.strong_added )
+        time.sleep_us( self.strong_added_time )
         for virtual_pin in strong_virtual_pin_list:
             virtual_pin.off()
 

@@ -8,8 +8,7 @@ from random import randrange
 
 from driver_ftoms import FauxTomDriver
 from midi import  DRUM_PROGRAM, WILDCARD_PROGRAM
-#>>> registros parpadean
-#>>> algunas notas no tocan
+
 
 class Register:
     def __init__( self, name ):

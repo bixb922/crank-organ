@@ -216,16 +216,17 @@ class MIDIPlayer:
                 # crank should inform that it has stopped...?
                 normalized_vel = 1
             additional_wait = round(midi_event_delta_us / normalized_vel)
-#>>> test this.
+
         # We get here if the crank is not turning and tempo_follows_crank is enabled.
         # Wait for the crank to start turning again and return the waiting time
         # to be added to the MIDI time delaying the rest of the tune.
         return additional_wait + await self._wait_for_crank_to_turn()
     
     async def _wait_for_crank_to_turn( self ):
-        if crank.is_turning():
+        # >>> test this
+        if crank.is_turning() or not crank.is_installed():
             return 0
-        
+        print(">>>enter wait for crank to turn")
         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
@@ -239,6 +240,7 @@ class MIDIPlayer:
         self.crank_start_event.clear()
         await self.crank_start_event.wait()
         # Lengthen MIDI time by the wait
+        print(">>>exit crank to turn, wait time was ",ticks_diff(ticks_us(), start_wait))
         return ticks_diff(ticks_us(), start_wait)
 
     def set_tempo_follows_crank( self, v ):

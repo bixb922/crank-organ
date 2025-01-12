@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Hermann von Borries
+# Copyright (c) 2025 Hermann von Borries
 # MIT license
 
 # Led, timezone and config are initialized before

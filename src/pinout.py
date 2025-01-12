@@ -7,7 +7,6 @@
 # extracts an aspect of the information and organizes it,
 # see below "subclasses of PinoutParser"
 
-# >>> no bourdon register.
 import os
 import machine
 import re
@@ -374,7 +373,8 @@ class SaveNewPinout(PinoutParser):
             if pin is None:
                 raise RuntimeError("MCP pin blank")
         elif self.current_driver == "MIDISerialDriver":
-           pass
+           if not(0 <= pin <= 1000):
+               raise RuntimeError(f'MIDI over serial must have a unique "virtual" pin number for each MIDI note')
         else:
             raise RuntimeError("MIDI pin definition must be preceded by controller definition {self.current_driver=}")     
 
@@ -503,9 +503,7 @@ class PinoutList:
     def get_filenames_descriptions(self):
         # Return list of pairs ( filename, description )
         # Fill descriptions on demand to make initialization
-        # faster
-        # >>>> dont parse entire file for description
-        # >>> check if all pinout.json files are read by initialization
+        # faster. This function is only called to fill the pinout.html page
         for k in self.pinout_files.keys():
             self.pinout_files[k] = self.get_description(k)
         return list(self.pinout_files.items())

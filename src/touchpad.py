@@ -28,7 +28,7 @@ class TouchButton:
         # Hand goes up from touchpad:
         self.up_event = asyncio.Event()
 
-        # Hand goes down on touchpad:
+        # Hand goes down on touchpad (not used for now)
         self.down_event =  self.up_event
 
         # Two down events in succesion (like a "double click"):
@@ -47,7 +47,7 @@ class TouchButton:
         self.up_event = ev
     
     def register_down_event(self,ev):
-        # Not used by now.>>>
+        # Not used by now
         # Event when putting hand down on touch pad
         self.down_event = ev
                                  

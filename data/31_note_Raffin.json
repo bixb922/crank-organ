@@ -5,7 +5,7 @@
 ["tachometer", 5],
 ["touchpad", ""],
     
-["i2c", 18, 19],
+["i2c", 17, 18],
    [ "mcp23017", 32 ],
         ["midi", 0, "",  46, "melody" ],
         ["midi", 1, "",  48, "melody" ],

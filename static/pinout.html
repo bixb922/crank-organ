@@ -672,7 +672,7 @@ async function list_pinout_by_midi_note(){
     tbody.innerHTML = "";
     for( let i in data ){
         let row = data[i];
-        let mn = `${pad(row.program_number,3)}-${pad(row.midi_number,2)}`;
+        let mn = `${pad(row.program_number,3)}-${pad(row.midi_number,3)}`;
         insertRow( tbody, [ mn, row.midi_note, `${row.actuator_name}`,
             row.actuator_rank, row.register_name, row.invert ] ) ;
         

@@ -135,7 +135,7 @@
 	<br>
 	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
 	<label for="tempo_follows_crank">Tempo follows crank, setting at startup. Checked means that the playback tempo
-		varies with the crank speed</label>
+		varies with the crank speed. Can be changed temporarily on the performance page.</label>
 	<br>
 	<label for="pulses_per_revolution">Pulses per revolution(rising+falling edge) of crank revolution sensor. It's the
 		number of pulses the crank sensor gives for each revolution.</label>
@@ -153,10 +153,10 @@
 		the recorded tempo in the MIDI file, in revolutions per second:</label>
 	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
 	<br>
-	<label for="crank_lowpass_cutoff">Crank variations faster than this rev/sec value are filtered.
+	<label for="crank_lowpass_cutoff">Crank variations faster than this rev/sec value are smoothed out.
 		The higher, the more responsive is the crank,
-		The lower, the smoother but slower reacting is the crank. Starting and stopping the crank is always fast.
-		Reasonable values from 0.8 to 1.5, or 999 to disable.
+		The lower, the smoother but slower reacting is the crank. Starting and stopping the crank always has fast response.
+		Reasonable values seem to be from 0.6 to 1.6. Use 999 to disable.
 	</label>
 	<input id="crank_lowpass_cutoff" type="text" size="4" oninput="markField('crank_lowpass_cutoff')" />
 	<br>
