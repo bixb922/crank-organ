@@ -28,12 +28,14 @@ NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
 
 class LowPassFilter:
 # This is a low pass filter for the crank. The special
-# aspect is that if the rev/sec of the crank drop below
-# HIGHER_THRESHOLD_RPSEC, then the response is immediate.
+# aspect is that if the rev/sec of the crank drops below
+# HIGHER_THRESHOLD_RPSEC, then the response is immediate (without filtering).
 # As a result, stopping and starting the crank movement is
+# Over HIGHER_THRESHOLD_RPSEC the crank movement is smoothed out.
+
 # practically not affected by the low pass filter.
     def __init__( self, fc, step ):
-        # Time constant of low pass filter is 
+        # Time constant rc of low pass filter is 
         # 1/(2*pi*cutoff frequency)
         rc = 1/(6.28*fc)
         self.alpha = step/(rc+step)
@@ -43,11 +45,17 @@ class LowPassFilter:
         if rpsec >= HIGHER_THRESHOLD_RPSEC:
             self.current = rpsec*self.alpha + self.current*(1-self.alpha)
         else:
+            # Below HIGHER_THRESHOLD_RPSEC, there is no filtering.
+            # This allows to process "stop crank" situations with good response.
+            # In other words:
+            # When the crank is still turning between LOWER_THRESHOLD_RPSEC
+            # and HIGHER_THRESHOLD_RPSEC, there is no smoothing out...
             self.current = rpsec
         return self.current
     # Filter probably would be more precise calculating
     # alpha in filter() with the real step instead of a
     # estimated step, but that needs more CPU and storage
+    # and I don't think it helps much.
 
 # This is the low level driver for the crank rotation sensor
 # Main output is get_rps() which returns the "rotations per second"
@@ -62,21 +70,22 @@ class TachoDriver:
             self.logger.debug("Crank sensor not enabled")
             return
         
+        self.encoder_factor = 2 # Rising + falling = 2, phases=2
+
         if tachometer_pin1 and not tachometer_pin2:
             # One pin defined means: simple counter for crank
             counter = Counter( 0, 
                     Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     direction=Counter.UP,
-                    edge=Counter.RISING+Counter.FALLING,
+                    edge=Counter.RISING+Counter.FALLING, # encoder_factor = 2 
                     filter_ns=20_000) # Highest filter value possible
         else:
             # Two pins defined means: rotary encoder for crank
             counter = Encoder( 0,
                     phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
-                    phases=2, # For a nominal 200 stripes this will count 400 pulses
+                    phases=2, # encoder_factor = 2
                     filter_ns=20_000) # Highest filter value possible
-            self.encoder_factor = 2 # To compensate fo r phases=2
         
         # For diag.html report of crank frequencies
         self.report_rps = []
@@ -90,7 +99,10 @@ class TachoDriver:
         # Prime the loop
         last_time = ticks_ms()
         counter.value(0) # Reset value counter to 0
-        step = 100 # Delay between 2 reads of the crank
+        # step: Delay between 2 reads of the crank in millisec
+        # If too small, precision decreases
+        # If too large, response to changes is slower
+        step = 100
         # Most crank variations occur at the crank rev/sec frequency
         # Filter whatever is faster than that.
         # If fc were set to 0, that disables the crank altogether
@@ -108,7 +120,7 @@ class TachoDriver:
             # direction. Using abs() neither the order of the pins
             # nor the direction of rotation matters
             # If there is a Counter instead of Encoder, value() will aways be positive anyhow.
-            # Divide by 2 because encoder operates with phases=2
+            # Divide by self.encoder_factor for the encoder with phases=2
 
             # At 200 nominal pulses/rev, counter.value()
             # will read 400 nominal pulses. For a sleep time of
@@ -123,9 +135,11 @@ class TachoDriver:
             time_ms = ticks_diff( new_time, last_time )
 
             # time_ms should never be 0, because there is a sleep_ms in this loop
-            rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            # so there should never a division by 0 here
+            # >>> rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            # >>> rpsec = pulses * FACTOR / time_ms
             # Apply low pass filter
-            self.rpsec = lpf.filter( rpsec )
+            self.rpsec = lpf.filter( pulses * FACTOR / time_ms )
             last_time = new_time
             self._accumulate_readings( new_time, self.rpsec )
 
@@ -186,89 +200,63 @@ class Crank:
         self.set_velocity(50)
         # Initialize tachometer driver
         self.td = TachoDriver(tachometer_pin1, tachometer_pin2)
-        
-        # Dictionary of events to be fired
-        self.events={}
-        # Register at least one event to prevent max from failing
-        # >>> self.register_event(0) # Not needed anymore???
 
-        # At startup crank is not turning 
-        self.crank_is_turning = False
+        # At startup crank is stopped
+        # Also: when not installed, crank never starts
+        # and is always stopped.
+        self.crank_stopped = asyncio.Event()
+        self.crank_stopped.set()
+        self.crank_turning = asyncio.Event()
 
         # A task to monitor the crank and generate the events
-        self.crank_monitor_task = asyncio.create_task(self._crank_monitor_process())
+        if self.is_installed():
+            self.crank_monitor_task = asyncio.create_task( self._start_stop_monitor() )
         self.logger.debug("crank init ok")
         
     def register_event(self,when_ms)->asyncio.Event:
-        # Can register one event for each time only.
-        # Return event if registered
-        return self.events.setdefault( when_ms, asyncio.Event())
+        ev = asyncio.Event()
+        if self.is_installed():
+            # If not installed, these events never fire...
+            asyncio.create_task( self._after_start_event( when_ms, ev ))
+        return ev
 
-    async def _crank_monitor_process(self):
-        if not self.is_installed():
-            return
-        # Faster access to get_rpsec
-        get_rpsec = self.td.get_rpsec
-        def rpsec_ge_lower_threshold():
-            return get_rpsec()>=HIGHER_THRESHOLD_RPSEC
-        
-        # This code connects the tachometer sensor with the event that
-        # starts a new tune in setlist
+    async def _start_stop_monitor( self ):
+         # This task sets/resets events when crank movement
+         # starts and stops.
+         while True:
+            await asyncio.sleep_ms(50)
+            r = self.td.get_rpsec()
+            # if .is_set() is faster than .set()
+            if r <= LOWER_THRESHOLD_RPSEC and not self.crank_stopped.is_set():
+                self.crank_stopped.set()
+                self.crank_turning.clear()
+            elif r >= HIGHER_THRESHOLD_RPSEC and not self.crank_turning.is_set():
+                self.crank_stopped.clear()
+                self.crank_turning.set()
 
-        # The while True: loop has the following phases:
-        # 1. Wait for RPS to get higher than HIGHER_THRESHOLD_RPSEC
-        #    (meaning the crank started turning).
-        # 2. Wait a bit more for crank to stabilize
-        # 3. Stay in this state while RPS higher than LOWER_THRESHOLD_RPSEC.
-        #    (meaning: crank is turning at adequate speed)
-        #    After some specified time in this state, asyncio.Events
-        #    are triggered for example: to start music playback
-        # 4. When exiting state 3, it means: crank stopped turning.
-        #    Go back to 1. 
-        
+    async def _after_start_event( self, when_ms, event ):
+        # Each time crank starts turning, these events are fired
+        # Clearing these events must be done by the task that
+        # registers the events, normally just before waiting
+        # for the event to be set.
         while True:
-            self.crank_is_turning = False
-            # Wait for crank to start turning
-            while get_rpsec()<=HIGHER_THRESHOLD_RPSEC:
-                await asyncio.sleep_ms(50)
+            await self.crank_turning.wait()
+            await asyncio.sleep_ms( when_ms+10 ) # Add 10 to avoid CPU bound loop
+            event.set()
+            # When one of these events is fired, 
+            # crank must stop before firing it again
+            await self.wait_stop_turning()
 
-            # Crank is now officialy turning
-            self.logger.debug(f"---------> Crank now turning {get_rpsec()=}")    
-            # setlist will only start tune after some time, so
-            # if this was a fluke, setlist will wait it out.
-
-            # >>> should crank_is_turning and
-            # >>> crank_not_turning be events instead of flags?
-            self.crank_is_turning = True
-
-            # setlist.py schedules events to happen
-            # when cranking starts and then after
-            # some time, make these events happen
-            events =list(self.events.items())
-            events.sort( key=lambda x:x[0])
-            while events and rpsec_ge_lower_threshold():
-                when_ms,ev = events.pop(0)
-                self.logger.debug(f"---------> Process event at {when_ms}")    
-                await asyncio.sleep_ms(when_ms)
-                ev.set() 
-
-            # Wait until crank stops turning
-            while rpsec_ge_lower_threshold():
-                await asyncio.sleep_ms(50)
-
-            # Record that crank is not turning
-            self.crank_is_turning = False
-            self.logger.debug(f"---------> Crank now stopped {get_rpsec()=}")
-            
     def is_turning(self):
-        return self.crank_is_turning 
+        return self.crank_turning.is_set()
 
     async def wait_stop_turning(self):
-        if self.is_installed():
-            while self.is_turning():
-                await asyncio.sleep_ms(100)
-        # If not installed, no waiting occurs, exit right away.
-    
+        await self.crank_stopped.wait()
+    # wait_start_turning() is not necessary,
+    # ev = crank.register_event( 0 ) can be used 
+    # to get a event to be
+    # triggered when the crank starts.
+
     def is_installed(self):
         return self.td.is_installed()
 
@@ -368,31 +356,31 @@ class TempoEncoder:
                 if v == 0:
                     self.crank.set_velocity(50)
 #This code will plug TachoDriver and generate random RPS
-from random import random
-class DebugCounter:
-    def __init__(self):
-        self.time_ant = ticks_ms()
-        self.repetitions = 0
+# from random import random
+# class DebugCounter:
+#     def __init__(self):
+#         self.time_ant = ticks_ms()
+#         self.repetitions = 0
 
-    def value( self, newvalue=None ):
-        self.repetitions -= 1
-        if self.repetitions < 0:
-            # 200 stripes = 400 pulses/sec at 1 RPS
-            # 800 pulses*100ms = 80 pulses
-            # should result in 2.4 RPS
-            self.current_val = random()*80
-            self.repetitions = random()*50
+#     def value( self, newvalue=None ):
+#         self.repetitions -= 1
+#         if self.repetitions < 0:
+#             # 200 stripes = 400 pulses/sec at 1 RPS
+#             # 800 pulses*100ms = 80 pulses
+#             # should result in 2.4 RPS
+#             self.current_val = random()*80
+#             self.repetitions = random()*50
 
-        #newt = ticks_ms()
-        #dt = ticks_diff(newt, self.time_ant)
-        #self.time_ant = newt
-        return self.current_val
+#         #newt = ticks_ms()
+#         #dt = ticks_diff(newt, self.time_ant)
+#         #self.time_ant = newt
+#         return self.current_val
 
-async def debug():
-    print("TachoDriver Debug started")
-    from drehorgel import crank
-    crank.td.counter_task.cancel()
-    newcounter = DebugCounter()
-    crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
+# async def debug():
+#     print("TachoDriver Debug started")
+#     from drehorgel import crank
+#     crank.td.counter_task.cancel()
+#     newcounter = DebugCounter()
+#     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
 
-asyncio.create_task( debug() )
+# asyncio.create_task( debug() )

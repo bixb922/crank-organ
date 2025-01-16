@@ -111,7 +111,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     # get abs(result) takes < 1ms
     result = fft_module.fft_abs( result, from_position, to_position )
 
-        # Search for peak frequency and interpolate
+    # Search for peak frequency and interpolate
     freq =  (get_peak( result ) + from_position) * freq_step
     return freq, amplitude
 

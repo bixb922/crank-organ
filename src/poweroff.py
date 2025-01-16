@@ -14,7 +14,6 @@ class PowerManager:
         self.power_task = asyncio.create_task(self._power_process())
         self.logger.debug("init ok")
 
-
     async def _power_process(self):
         last_tune = None
         last_playtime = None

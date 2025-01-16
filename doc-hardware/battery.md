@@ -156,6 +156,10 @@ This is a typical decoy trigger:
 
 The switches on this trigger allow to select the voltage. The recommended setting is 12V or 18V.
 
+Here voltage and current are measured (12V 1.09A):
+
+![current and voltage measurement](solenoid-current-measurement.jpg)
+
 The circuit to use a USB power pack is as follows:
 
 ```mermaid
@@ -184,6 +188,7 @@ From left to right you can see:
 * 12V DC-DC boost converter
 * 5V DC-DC buck converter
 * At the far right: the decoy trigger, set to 12V
+
 
 
 ## Tool battery packs

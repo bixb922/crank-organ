@@ -801,8 +801,8 @@ async def runtime_error(request, exception):
     return respond_error_alert("RuntimeError exception detected")
 
 # >>> this error stops the complete application, is raised
-# >>> to the global asyncio error handler (occurred once in
-# a year, during a test situation)
+# >>> to the global asyncio error handler (occurred only once in
+# during a test situation)
 # Traceback (most recent call last):
 #   File "crank-organ/src/microdot.py", line 1333, in handle_request
 #   File "crank-organ/src/microdot.py", line 397, in create

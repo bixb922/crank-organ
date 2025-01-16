@@ -32,14 +32,15 @@ See also the software section for a description of the program that matches the 
 [Circuit for more than 20 Valves](#circuit-for-more-than-20-valves)
 [Microphone](#microphone)
 [Crank rotation sensor](#crank-rotation-sensor)
+[registers][#registers]
 [Copyright and license](#copyright-and-license)
 
 # Description
-The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 300 kb).
+The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 350 kb of RAM, plus the RAM needed by MicroPython).
 
-8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. With compression (see the software section) this goes up to 700 and 1900 average MIDI files, respectively. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
+8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. With compression (see the software section) this goes up to 700 average MIDI files for 8Mb flash and 1800 average MIDI files for 16Mb flash. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
 
-The ESP32-S3 also has enough GPIO ports to drive 20 solenoids. It has WiFi to connect a smartphone, tablet or PC for control. The capacity is large enough to put a web server in the ESP32-S3, so control can be done with a standard browser. No special app is needed on the PC or smartphone.
+The ESP32-S3 also has enough GPIO ports to drive 20 solenoids, and hundreds of solenoids with a port expander such as a MCP23017. It has WiFi to connect a smartphone, tablet or PC for control. The capacity is large enough to put a web server in the ESP32-S3, so control is be done with a standard browser. No special app is needed on the PC or smartphone.
 
 The 90 Ohm solenoid valves are driven by a ULN2803A or TBD62003A 7-circuit transistor array. Both ICs have 7 channels (i.e. can drive 7 solenoids). Both are plug compatible. The TBD62003A has a lower voltage drop when operating, so more voltage is available for the solenoids. 
 
@@ -49,9 +50,9 @@ The solenoids are driven by 12V, so this circuit needs a 12V or higher power sup
 * A lithium battery with protections, fuses and BMS
 * A 18V tool battery (add a fuse)
 
-For some 12V valves, feeding with 12V can be insufficient, since 0.7V goes lost in the ULN2003A drivers. See the manufacturer specs, if they state that the voltage that reach the solenoids must be 12V, you need to get a higher voltage source or insert a DC-DC boost converter to get the right voltage.
+For some 12V valves, feeding with 12V can be insufficient, since 0.7V gets lost in the ULN2003A drivers. 
 
-For smaller pipes, 12V may be enough. For bass pipes with foot pipe diameters of 14mm and more, at 10cmH2O or more of pressure, a higher voltage may be necessary. 
+See the manufacturer specs, if they state that the voltage that reach the solenoids must be 12V, you need to use a DC-DC boost converter to get the right voltage. For smaller pipes, 12V may be enough. For bass pipes with foot pipe diameters of 14mm and more, at 10cmH2O or more of pressure, a higher voltage may be necessary. In my case, I use 13.5V.
 
 For example, Peterson Valve (www.petersonemp.com) have a specification sheet here: http://www.petersonemp.com/manuals/manuals/Pipe%20Valves/Pipe%20Valve%20performance%20chart%20revised%2008-14-2014.pdf
 
@@ -99,7 +100,7 @@ For main board
 * One Pin 1x40 Single Row Male 2.54mm Breakable Pin Header
 * One Metallic drawer knob as touch pad
 
-Batteries see section below.
+Batteries see section below [batteries](#battery-assembly)
 
 Of course, you will need solenoid valves. These are used in big organs (church organs).
 
@@ -449,7 +450,7 @@ For testing and development I am using this setup. You may choose a prettier swi
 
 ![battery, fuse and switch](battery-fuse-switch.jpg)
 
-## Can the controller be installed inside the windchest?
+## Can the microcontroller be installed inside the windchest?
 
 This is certainly an attractive option. Only 12V needs to be fed into the windchest (only two wires). The solenoid wires are hidden inside the windchest, it's rather neat.
 
@@ -525,18 +526,66 @@ It's probably easiest to solder the microphone pins on the board, since the micr
 # Crank rotation sensor
 The software (and the ESP32-S3) currently support connecting a crank rotation sensor, both to start the tune when the crank starts to turn, and (optionally) to change the playback speed based on crank rotation.
 
-You can cut a suitable disk and use a optical sensor, or you can use a quadrature encoder.
+A simple sensor could be this optical sensor with a slotted disk cut of wood or 3mm MDF:
 
-When I finish to test the current sensor I am using, I'll write more details. In the meantime, post a discussion topic if you are interested in this.
+![simple optical sensor](optical-crank-sensor.png)
 
-There is also the possiblity to connect a potentiometer type rotary encoder to change the playback speed.
+![slotted disk](slotted-wheel.jpg)
 
+This is a simple solution, well suited to detect start/stop of the crank motion. This solution is not suitable if the tempo must follow the crank, because it is rather imprecise when used with the hardware PCNT pulse counter module of the ESP32-S3.
+
+A good solution for the crank can be achieved with this type of sensor:
+
+![crank sensor](industrial-crank-sensor.png)
+
+I used model E38S6G5-200B-G24N which is a optical incremental rotary encoder that generates 200 pulses per revolution. It must be powered with a voltage greater than 5V (for example 6 to 24V) and has two open collector outputs A and B that can go directly to GPIO pins of the ESP32-S3. "Open collector" means that the output acts as switch and do not output a voltage that could burn the GPIO pins. The software configures the pins with a internal pull-up resistor to source the open collector. For me, this setup worked well.
+
+200 pulses per revolution is enough precision. The pulses are fed the PCNT (hardware pulse count unit) of the ESP32-S3. The CPU itself is not involved in counting pulses. This means, a 1000 or 5000 pulses/revolution counter will also work well, there is no significant advantage however. Since the pulse counter reads rising and falling edges, 200 pulses nominal will generate about 400 to 500 pulses/revolution. The software reads this 10 times a second, giving nominal values around 50 per reading, so the measurement error is at around 2%, which is by far precise enough for the purpose.
+
+The PCNT unit of the ESP32-S3 will count positive in one direction and negative in the other direction. This gives the advantage that small pendulum movements or vibrations of the crank are netted out even before reading the value. After that netting, however, the software takes the absolute value so the crank can be turned either direction (which is a nice thing to avoid getting tired).
+
+The PCNT unit also has a debouncing filter, which the software enables. All in all, I could not see artifacts or errors in the counting with this kind of sensor.
+
+I used two printer GT2 timing pulleys and a printer timing belt   of the type use with 3D printers. I used a belt 6mm wide and 138mm long, GT2 meaning: 2mm pitch. The length is up to you depending on the space you have for the sensor. There are pulleys of different numbers of teeth, but a 1:1 transmission is ok, nothing more fancy needed here.
+
+![pulleys and belt](encoder-with-gear.jpg)
+
+The sensor has 5 contacts:
+* 0V (zero volts), goes to GND of the ESP32-S3
+* A and B outputs go to GPIO pins of the ESP32-S3 (MCP23017 pins are not suitable, since the pulse counter of the ESP32-S3 needs GPIO pins)
+* Vcc goes to 12V
+* Shield: can go to GND also.
+
+This is how the crank sensor looks when installed:
+
+![crank sensor installed](crank-sensor-installed.jpg)
+
+The position of the sensor can be adjusted with two bolts to a reasonable belt tension. The gears are fixed in position with hexagonal key nuts. 
+
+I am sure there are other models of sensors out there that will also work well. The unit I show on the photo is probably one of the cheaper rotation sensors out there.
+
+There is also the possiblity to connect a potentiometer type rotary encoder to change the playback speed:
+
+![rotation sensor](rotation-sensor.png)
+
+This little device is NOT meant to be connected to the crank shaft but it should be used as a manual tempo adjustment knob. I think that the crank sensor is a better option than this little device. However, the software supports it.
+
+# Registers
+You can connect any switch as a register, to enable/disable ranks of pipes just like a real organ.
+
+I have used automotive headlight switches for this purpose:
+
+![register switch](headlight-switch.png)
+
+The white light symbol is only printed on this switch, so it was easy to sand away with very fine paper.
+
+One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
 
 # Copyright and license
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 
-Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures. 
+Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures.  Please use proper fuses for batteries.
 
 Software license:
 

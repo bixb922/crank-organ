@@ -9,7 +9,7 @@ import asyncio
 import errno
 from random import getrandbits
 
-from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE, MidiFile
+from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE
 from minilog import getLogger
 from drehorgel import tunemanager, controller, battery, history, crank, config
 
@@ -223,10 +223,8 @@ class MIDIPlayer:
         return additional_wait + await self._wait_for_crank_to_turn()
     
     async def _wait_for_crank_to_turn( self ):
-        # >>> test this
         if crank.is_turning() or not crank.is_installed():
             return 0
-        print(">>>enter wait for crank to turn")
         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
@@ -240,7 +238,6 @@ class MIDIPlayer:
         self.crank_start_event.clear()
         await self.crank_start_event.wait()
         # Lengthen MIDI time by the wait
-        print(">>>exit crank to turn, wait time was ",ticks_diff(ticks_us(), start_wait))
         return ticks_diff(ticks_us(), start_wait)
 
     def set_tempo_follows_crank( self, v ):

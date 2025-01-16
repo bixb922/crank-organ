@@ -35,12 +35,11 @@ class Setlist:
         self.music_start_event = crank.register_event(300)
 
         # Event to know when bored turning the crank and nothing happens,
-        # (losing patience takes 3 seconds?)
+        # (losing patience takes 3 seconds??? this is a fast world)
         self.shuffle_event = crank.register_event(3000)
 
         # Make touch button double click to the same as cranking for a longer time
         # i.e. make it shuffle all
-        self.touch_button.register_double_event(self.shuffle_event)
     
         # Dictionary of tune requests: key=tuneid, data=spectator name
         # Will ony be used if mcserver module is present.
@@ -94,6 +93,7 @@ class Setlist:
 
     # The background setlist process - wait for start and play next tune
     async def _setlist_process(self):
+
         # Let powerup finish
         await asyncio.sleep_ms(10)
         
@@ -185,33 +185,47 @@ class Setlist:
         # there is a test for "self.no tunes()", that 
         # does not lead to a problem
         while True:
-            await asyncio.sleep_ms(100)
+            await asyncio.sleep_ms(100) # Avoid tight CPU bound loop
             self.shuffle_event.clear()
             await self.shuffle_event.wait()
             if self.no_tunes():
-                self.shuffle_all_tunes()
+                # There is no risk of "shuffle twice in a row"
+                # because now the setlist is not empty anymore
+                # (except if there are no tunes...)
+                self.shuffle_3stars()
+                if self.is_empty():
+                    self.shuffle_all_tunes()
     
     async def _touchdown_process(self):
         # Process to detect touchpad up.
         # Will cancel a tune if detected while playing a tune.
         # Will start a tune while waiting for tune to start
+
+        # Count number of touch with empty setlist and no tune waiting
+        touch_count = 0
         touchpad_up_event = asyncio.Event()
         self.touch_button.register_up_event( touchpad_up_event )
         while True:
+            await asyncio.sleep_ms(500)
+
             touchpad_up_event.clear()
             await touchpad_up_event.wait()
-            # See what to do with this event
+
+            # Two touches when no setlist will shuffle all
+            if self.no_tunes():
+                touch_count += 1
+            else:
+                touch_count = 0
+            if touch_count >= 2:
+                self.logger.debug("_touchdown_process shuffle")
+                self.shuffle_event.set()
+
+            # One touch will start current tune (if any)
             if self.is_waiting_for_tune_start():
-                # Why did user start with touchpad?
+                # User signalled start of tune with touchpad
                 self.logger.debug("_touchdown_process start tune")
                 # And signal tune to start
                 self.music_start_event.set()
-            else:
-                # Well, this may happen, ignore
-                self.logger.debug("_touchdown_process ignore")
-            # Get rid of some contact bouncing and
-            # ignore second click of double-clicks
-            await asyncio.sleep_ms(round(touchpad.DOUBLE_TOUCH_MAX*1.2))
 
 
     # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
@@ -357,7 +371,7 @@ class Setlist:
 
     def isempty(self):
         # Setlist empty?
-        return len(self.current_setlist) == 0
+        return not self.current_setlist
     
     def no_tunes(self):
         # No setlist and nothing playing nor about to play
@@ -368,6 +382,8 @@ class Setlist:
         # parameters of config.json.
 
         async def automatic_playback_delay( timeout_seconds ):
+            if self.no_tunes():
+                self.shuffle_event.set()
             await asyncio.sleep( timeout_seconds )
             self.music_start_event.set()
             self.timeout_task = None
@@ -376,12 +392,12 @@ class Setlist:
             player.set_tempo_follows_crank(False)
 
         timeout_seconds = config.get_int("automatic_delay", 0)
+        # Check if "automatic play with a pause" has been asked for
         if timeout_seconds > 0:
-            if self.no_tunes():
-                self.shuffle_all_tunes()
+                
             self.logger.debug(f"Automatic playback after {timeout_seconds} seconds")
             # Start tune after delay, no user action necessary
             # But touchpad, crank, will preempt user action.
             self.timeout_task = asyncio.create_task( automatic_playback_delay(timeout_seconds) )
-            # The timeout_task is also cancelled in
-            # self.wait_for_start()
+            # The timeout_task is also cancelled in self.wait_for_start()
+            # 

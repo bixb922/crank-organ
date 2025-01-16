@@ -162,7 +162,7 @@ playback_enabled = True
 
 def set_playback_mode(p):
     global playback_enabled
-    playback_enabled = p
+    playback_enabled = bool(p)
 
 def is_playback_mode():
     return playback_enabled

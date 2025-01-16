@@ -39,8 +39,8 @@ MIME_TYPES = {
 
 def _check_midi_file( path ):
     if "tunelib/" in path and fileops.get_file_type( path ) == "mid":
-        # Deleting MIDI file requires sync of tunelib at next reboot
-        tunemanager.remember_to_sync_tunelib()
+        # Changing or deleting MIDI file requires sync of tunelib at next reboot
+        tunemanager.remember_to_sync_tunelib( path )
 
 def get_mime_type( filename ):
     # Default MIME type is text/plain

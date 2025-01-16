@@ -50,7 +50,8 @@ class TouchButton:
         # Not used by now
         # Event when putting hand down on touch pad
         self.down_event = ev
-                                 
+
+    # >>> check if still needed                           
     def register_double_event(self,ev):
         # Event when twice down in a row (similar to double-click on PC but slower)
         self.double_event = ev
@@ -75,6 +76,7 @@ class TouchButton:
                 # Keep time of last 2 touch events
                 previous_up = last_up
                 last_up = time.ticks_ms()
+                # >>> check if double touch is needed
                 # See if this is a "double touch"
                 dt = time.ticks_diff(last_up,previous_up)
                 if DOUBLE_TOUCH_MIN<=dt<=DOUBLE_TOUCH_MAX:

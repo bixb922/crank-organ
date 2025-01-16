@@ -279,9 +279,11 @@ def main():
 	# Dic 2024: overhead is 634 bloques, 512 for Micropython
 	# rest for /data, /lib y /software
     # blocks approx including micropython, *.mpy, static, data (with compiled mpy files and compressed static files)
-    application_overhead = 715 
+    # and data files, 4 error.log files, a tunelib.json and lyrics.json
+    # with 2 backups each, estimated size.
+    application_overhead = 720
     # If static is not compressed and micropython is not compiled
-    application_overhead = 821
+    application_overhead = 840
     print("Estimated capacities based on current average MIDI file size")
     for flash_size in [8, 16]:
         blocks = flash_size*1024*1024/4096
@@ -291,6 +293,7 @@ def main():
         output_capacity = round(blocks_free/avg_output)
         model = f"N{flash_size}R8"
         print(f"{model:5s}: raw capacity={input_capacity:4.0f} compressed capacity={output_capacity:4.0f} midi files")
+    print("Application overhead does not consider heavy use of lyrics")
 
 main()
     

@@ -164,8 +164,10 @@ def get_filename_stem( filename ):
     return ".".join( parts[0:keep] )
 
 def get_equivalent( filename ):
-    # foo.mpy and foo.py are equivalent
-    # foo.bar.gz and foo.bar are equivalent
+    # For foo.mpy return foo.py
+    # For foo.py return foo.mpy
+    # For foo.bar.gz return foo.bar
+    # For foo.bar return foo.bar.gz
     # No test is made to see if these files exist.
     if is_compressed( filename ):
         return filename[0:-3] # get rid of the .gz

@@ -15,7 +15,8 @@ from drehorgel import timezone
 # >>> print setlist with lyrics
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
-# >>> browser gets tunelib.json and lyrics.json twice
+# >>> browser gets tunelib.json and lyrics.json twice???
+
 
 # Define Tunelib Column names
 # Must be equal to common.js
@@ -119,7 +120,7 @@ class TuneManager:
     async def _wait_a_bit(self):
         # If sync is taking too long, yield CPU to other tasks
         # but sometimes only... not too frequently
-        if random()>0.95:
+        if random()>0.9:
             # On ESP32, minimum time to wait is 10 or 20 msec
             # anyhow...
             await asyncio.sleep_ms(10)
@@ -127,10 +128,11 @@ class TuneManager:
     def _dedup_midi_files( self, filedict ):
         # If both file.mid and foo.mid.gz are present,
         # erase foo.mid and keep foo.mid.gz
-        # Make a copy of the set allow changing original
-        for filename in list( filename for filename in filedict.keys()
-                if (not filename.endswith(".gz") and 
-                    filename + ".gz" in filedict)):
+        # Make a copy of the set allows changing original
+        for filename in list( 
+                filename for filename in filedict.keys()
+                if fileops.get_equivalent(filename) in filedict 
+                and not fileops.is_compressed( filename )):
                 self.logger.info(f"Dedup: erase file {filename}, duplicate with .gz")
                 os.remove( self.tunelib_folder + filename )
                 del filedict[filename]
@@ -149,7 +151,7 @@ class TuneManager:
             await self._wait_a_bit()
             # Make a unique hash for this file. Hash is the
             # same for file.mid and file.mid.gz
-            # Note that filename changes if there is a hash collision 
+            # Note that filename will change if there is a hash collision 
             tuneid, filename = self._make_unique_hash(filename, newtunelib)
             # Check if in tunelib and check if file has been updated
             if tuneid not in newtunelib: 
@@ -181,7 +183,7 @@ class TuneManager:
             tune[TLCOL_SIZE] = filesize
             tune[TLCOL_DATEADDED] = timezone.now_ymd()
             tune[TLCOL_TIME] = self._get_duration(filename)
-            # update filename, the file could now
+            # Update filename, the file could
             # have (or not) .gz suffix
             tune[TLCOL_FILENAME] = filename
 
@@ -375,7 +377,9 @@ class TuneManager:
         self._write_tunelib_json( tunelib )
 
     # >>> show on filemanager too?
-    def remember_to_sync_tunelib( self ):
+    # >>> queue changes for sync. Store "path" in sync_tunelib_filename?
+    # >>> but then each of those files must be sync'd. 
+    def remember_to_sync_tunelib( self, path ):
         # Remember that something in the tunelib folder has changed
         # and that sync must be run
         # This is not necessary for changes done in tunelibedit.html
