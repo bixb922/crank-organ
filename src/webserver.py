@@ -44,7 +44,7 @@ def get_session( request ):
     return sessions[request.cookies["session"]]
 
 USE_CACHE = True  # will be set by run_webserver() to value in config.json
-MAX_AGE = config.get_int("max_age", 24 * 60 * 60)
+MAX_AGE = config.get_int("max_age") or (24 * 60 * 60)
 
 
 # Shows webserver processing time (total time is much higher)
@@ -56,7 +56,7 @@ def func_before_req( request ):
 @app.after_request
 def func_after_req( request, response ):
     try:
-        this_session = get_session( request )
+        this_session:dict = get_session( request )
     except KeyError:
         # No cookie - must send cookie and add new session
         # By design, this session cookie is different from the
@@ -217,6 +217,9 @@ async def process_get_progress(request, browser_boot_session):
     # cache to get fresh data.
     return get_progress()
 
+#
+# Setlist management
+#
 
 @app.post("/queue_tune/<tune>")
 async def queue_tune_setlist(request, tune):
@@ -285,12 +288,13 @@ async def shuffle_all_tunes(request):
     return get_progress()
 
 @app.route("/shuffle_3stars")
-async def shuffle_all_tunes(request):
+async def shuffle_3stars(request):
     setlist.shuffle_3stars()
     return get_progress()
 
+#
 # Organ tuner web requests
-
+#
 
 @app.route("/note/<int:pin_index>")
 async def note_page(request, pin_index):
@@ -308,7 +312,6 @@ async def start_tune_all(request):
 
 @app.route("/start_tuning/<int:pin_index>")
 async def start_tuning(request, pin_index):
-
     # Tune one note
     organtuner.queue_tuning(organtuner.wait, 1000 )
     organtuner.queue_tuning(organtuner.update_tuning, pin_index)
@@ -417,7 +420,7 @@ async def diag(request):
         "description": config.cfg["description"],
         "name": config.cfg["name"],
         "mp_version": os.uname().version,
-        "mp_bin": sys.implementation._machine,
+        "mp_bin": sys.implementation._machine, # type:ignore
         "last_refresh": now,
         "time_zone_info":  time_zone_info,
         "reboot_mins": f"{reboot_sec//60}:{reboot_sec%60:02d}",
@@ -499,8 +502,9 @@ async def drop_setlist(request, pos):
     setlist.drop(pos)
     return get_progress()
 
-
+#
 # Changes to config.json
+#
 
 @app.route("/get_config")
 async def get_config(request):
@@ -514,7 +518,10 @@ async def change_config(request):
         return respond_error_alert(result)
     return respond_ok()
 
+#
 # Pinout functions
+#
+
 @app.route("/pinout_list")
 async def pinout_list(request):
     return plist.get_filenames_descriptions()
@@ -542,6 +549,8 @@ async def get_index_page_info(request):
 @app.post("/save_pinout_filename")
 @authorize
 async def save_pinout_filename(request):
+    # Force reboot to make this take effect.
+    scheduler.set_playback_mode(False)
     data = request.json
     plist.set_current_pinout_filename(data["pinout_filename"])
 
@@ -551,6 +560,10 @@ async def save_pinout_filename(request):
 @app.post("/save_pinout_detail/<path>")
 @authorize
 async def save_pinout_detail(request, path):
+    # Force reboot to use the player to make definitions take effect.
+    # However, it's not mandatory to stop current tune and setlist,
+    # unlike organtuner.
+    scheduler.set_playback_mode(False)
     output_filename = decodePath(path)
     try:
         # SaveNewPinout class will validate and do a init of pint
@@ -564,6 +577,7 @@ async def save_pinout_detail(request, path):
 
 @app.post("/test_mcp")
 async def test_mcp(request):
+    scheduler.set_playback_mode(False)
     data = request.json
     from solenoid import PinTest
     await PinTest().web_test_mcp(
@@ -576,6 +590,7 @@ async def test_mcp(request):
 
 @app.post("/test_gpio")
 async def test_gpio(request):
+    scheduler.set_playback_mode(False)
     from solenoid import PinTest
     data = request.json
     await PinTest().web_test_gpio(int(data["pin"]))
@@ -583,6 +598,8 @@ async def test_gpio(request):
 
 @app.post("/test_drumdef")
 async def test_drumdef( request ):
+    # Drum definition does not stop playback, it's desirable
+    # to use a MIDI to see how it works.
     from driver_ftoms import FauxTomDriver
     drumdef = request.json
     for pin in FauxTomDriver().get_pin_list():
@@ -592,6 +609,8 @@ async def test_drumdef( request ):
 
 @app.post("/save_drumdef")
 async def save_drumdef( request ):
+    # Don't disable music playback here, need to play
+    # MIDI while testing drums.
     from driver_ftoms import FauxTomDriver
     FauxTomDriver().save( request.json )
     return respond_ok()
@@ -774,15 +793,6 @@ async def handle_filemanager( request, path=""):
     # Load page, javascript will retrieve the path an call back
     return static_files( request, "filemanager.html" )
 
-@app.route("/set_playback_disabled")
-async def set_playback_enabled( request ):
-    # note.html and notelist.html disable playback
-    # because organtuner interferes with music playback.
-    # Same as pinout.html, to remind a reboot is necessary.
-    # so no MIDI files will be played accidentally during tuning
-    # To re-enable, reboot.
-    scheduler.set_playback_mode(False)
-    return respond_ok()
 
 # A very simple call just to ask for password and get authorized
 @app.route("/get_permission")
@@ -800,8 +810,8 @@ async def catch_all(request, path):
 async def runtime_error(request, exception):
     return respond_error_alert("RuntimeError exception detected")
 
-# >>> this error stops the complete application, is raised
-# >>> to the global asyncio error handler (occurred only once in
+# >>> this error stops the complete application, is raised to
+# >>>  the global asyncio error handler (occurred only once in
 # during a test situation)
 # Traceback (most recent call last):
 #   File "crank-organ/src/microdot.py", line 1333, in handle_request
@@ -832,4 +842,4 @@ async def run_webserver():
 
 
 async def shutdown():
-    await app.shutdown()
+    app.shutdown()

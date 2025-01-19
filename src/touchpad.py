@@ -2,10 +2,10 @@
 # MIT License
 # Touchpad asyncio driver, detects button down event in background
 # and triggers events defined by registering.
-from micropython import const
-import machine
+from micropython import const 
+import machine 
 import asyncio
-import time
+from time import ticks_ms, ticks_diff, ticks_add
 
 from drehorgel import config, led
 
@@ -34,8 +34,6 @@ class TouchButton:
         # Two down events in succesion (like a "double click"):
         self.double_event = self.up_event
         
-        # Sensitivity of touchpad: size of change to cause an event
-        self.big_change = int(config.get_int("touchpad_big_change", 10000))
         
         if gpio_pin:
             self.task = asyncio.create_task(self._tp_process(  machine.TouchPad(machine.Pin(gpio_pin) )))
@@ -46,15 +44,16 @@ class TouchButton:
         # Event when lifting hand up leaving touch pad
         self.up_event = ev
     
-    def register_down_event(self,ev):
-        # Not used by now
-        # Event when putting hand down on touch pad
-        self.down_event = ev
+    # Not needed
+    #def register_down_event(self,ev):
+    #    # Not used by now
+    #    # Event when putting hand down on touch pad
+    #    self.down_event = ev
 
-    # >>> check if still needed                           
-    def register_double_event(self,ev):
-        # Event when twice down in a row (similar to double-click on PC but slower)
-        self.double_event = ev
+    # Not needed
+    # def register_double_event(self,ev):
+    #     # Event when twice down in a row (similar to double-click on PC but slower)
+    #     self.double_event = ev
 
  
     async def _tp_process(self, tp ):
@@ -62,34 +61,40 @@ class TouchButton:
         await asyncio.sleep(1)
         # Last_up and previous_up are times of previous touches
         # Initialize last_up and previous up in the very past
-        previous_up = time.ticks_add(time.ticks_ms(),-DOUBLE_TOUCH_MAX)
+                # Sensitivity of touchpad: size of change to cause an event
+        big_change = config.get_int("touchpad_big_change") or 10000
+
+        previous_up = ticks_add(ticks_ms(),-DOUBLE_TOUCH_MAX) 
         last_up = previous_up
         tpval_ant = tp.read()
+        # >>> could optimize, double and up events
+        # >>> currently not needed
         while True:
-            await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )
+            await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )  # type:ignore
             tpval = tp.read()
             # See if this is a transition: hand leaving the touchpad
-            if tpval-tpval_ant<-self.big_change:
+            if tpval-tpval_ant<(-big_change):
                 led.off()
                 # Touch end: set event to publish this
                 self.up_event.set()
                 # Keep time of last 2 touch events
                 previous_up = last_up
-                last_up = time.ticks_ms()
-                # >>> check if double touch is needed
+                last_up = ticks_ms()  # type:ignore
+                # >>> double touch not needed
                 # See if this is a "double touch"
-                dt = time.ticks_diff(last_up,previous_up)
+                dt = ticks_diff(last_up,previous_up)
                 if DOUBLE_TOUCH_MIN<=dt<=DOUBLE_TOUCH_MAX:
                     self.double_event.set()
                     # 3 touch down in a row will yield 2 double events...
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms(MSEC_SETTLE)
             # See if this is a transition: hand touching the touchpad
-            elif tpval-tpval_ant>self.big_change:
+            elif tpval-tpval_ant>big_change:
                 # Touch down: show led, activate event, wait for signal to settle
                 led.touch_start()
                 self.down_event.set()
-                await asyncio.sleep_ms( MSEC_SETTLE )
+                await asyncio.sleep_ms( MSEC_SETTLE )  
+
                 
             tpval_ant = tpval
 

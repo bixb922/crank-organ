@@ -116,7 +116,7 @@ class RequestSlice:
             # Now it has been queued, wait for a time slice
             # but never wait more than the timeout.
             try:
-                await asyncio.wait_for_ms(self.event.wait(), self.wait_at_most)
+                await asyncio.wait_for_ms(self.event.wait(), self.wait_at_most) # type:ignore
             except asyncio.TimeoutError:
                 # Timeout is over, remove from tasklist
                 try:
@@ -156,7 +156,8 @@ class RequestSlice:
 
 # Enable playback: player.py/setlist.py play music
 # Disable playback: user is tuning or using pinout
-# page, don't react to "start music" requests
+# page, don't react to "start music" requests.
+# Only way to restore is to reboot.
 playback_enabled = True
 
 
@@ -164,7 +165,7 @@ def set_playback_mode(p):
     global playback_enabled
     playback_enabled = bool(p)
 
-def is_playback_mode():
+def is_playback_enabled():
     return playback_enabled
 
 # Add more info to progress.

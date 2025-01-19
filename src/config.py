@@ -142,7 +142,7 @@ class Config:
         c["serverpassword"] = NO_PASSWORD
         return c
 
-    def get_int(self, item, default=None)->int|None:
+    def get_int(self, item, default=None):
         # Return configuration item as integer, apply default if error
         n = self.cfg.get(item, default)
         if n is None:

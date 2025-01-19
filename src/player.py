@@ -56,10 +56,7 @@ class MIDIPlayer:
         # 0 means WILDCARD_PROGRAM (i.e. whatever matches) and
         # DRUM_PROGRAM is for drum instruments on MIDI channel 10
         self.channelmap = bytearray(16)
-        # Register event when cranking starts (0 msec after start)
-        # This is used to know when to restart if cranking stops
-        # during playback.
-        self.crank_start_event = crank.register_event(0)
+
         # Default startup value for tempo follows crank
         self.set_tempo_follows_crank( config.cfg.get("tempo_follows_crank", False ) )
         self.logger.debug("init ok")
@@ -69,7 +66,7 @@ class MIDIPlayer:
             self.time_played_us = 0
             battery.end_heartbeat()
 
-            duration = 1
+            duration = 1 # Needed for finally:
             # get_info_by_id could fail in case tunelib
             # has not been correctly updated
             midi_file, duration = tunemanager.get_info_by_tuneid(tuneid)
@@ -83,7 +80,7 @@ class MIDIPlayer:
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
-            self.logger.debug("Player cancelled (next or da capo button)")
+            self.logger.debug("Player cancelled (next or da capo button, tuner)")
             self.progress.tune_cancelled()
         except OSError as e:
             if e.errno == errno.ENOENT:
@@ -154,22 +151,22 @@ class MIDIPlayer:
 
             # midi_time is the calculated MIDI time since the start of the MIDI file
             # Without tachometer: midi_time += midi_event.delta_us
-            midi_time += await self._calculate_tachometer_dt(
-                midi_event.delta_us
-            )
+            midi_time += await self._calculate_tachometer_dt( midi_event.delta_us )
+
             # playing_time is the wall clock time since playing started
             playing_time = ticks_diff(ticks_us(), playing_started_at)
 
-            # Wait for the difference between the time that is and the time that
-            # should be
-            wait_time = midi_time - playing_time
+            # Wait for the difference between the "time that is" and 
+            # the "time that should be"
+            wait_time = round(midi_time - playing_time)
 
             # Sleep until scheduled time has elapsed
-            await scheduler.wait_and_yield_ms(round(wait_time))
+            await scheduler.wait_and_yield_ms( wait_time )
+
             # time_played_us goes from 0 to the length of the midi file in microseconds
             # and is not affected by playback speed. Is used to calculate
             # % of s
-            self.time_played_us += midi_event.delta_us
+            self.time_played_us += midi_event.delta_us # type:ignore
 
             # Turn one note on or off.
             self._process_midi(midi_event)
@@ -196,7 +193,7 @@ class MIDIPlayer:
                 # Internally program_number will be 1-128 for MIDI
                 # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
                 self.channelmap[midi_event.channel] = midi_event.program+1
-        # umidiparser handles set tempo meta event.
+        # umidiparser already handled the set tempo meta event
 
     def get_progress(self):
         p = self.progress.get(self.time_played_us)
@@ -235,12 +232,13 @@ class MIDIPlayer:
         # be realistical but it's not nice
         controller.all_notes_off()
         # Wait for the crank to start turning
-        self.crank_start_event.clear()
-        await self.crank_start_event.wait()
+        await crank.wait_start_turning()
+
         # Lengthen MIDI time by the wait
         return ticks_diff(ticks_us(), start_wait)
 
     def set_tempo_follows_crank( self, v ):
+        # Store setting
         # If crank not installed, don't follow crank....
         self.tempo_follows_crank = v and crank.is_installed()
         

@@ -15,7 +15,7 @@ from drehorgel import timezone
 # >>> print setlist with lyrics
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
-# >>> browser gets tunelib.json and lyrics.json twice???
+# >>> browser gets tunelib.json and lyrics.json twice sometimes
 
 
 # Define Tunelib Column names
@@ -58,7 +58,7 @@ class TuneManager:
         self.sync_task = None
         # Create tunelib if no backup
         tu = self._read_tunelib()
-        self.logger.debug(f"init ok, {len(tu)} tunes in {tunelib_filename} {len(ly)} lyrics in {lyrics_json}")
+        self.logger.debug(f"init ok, {len(tu)} tunes in {tunelib_filename}, {len(ly)} lyrics in {lyrics_json}")
 
         
     def _read_tunelib(self):
@@ -377,8 +377,8 @@ class TuneManager:
         self._write_tunelib_json( tunelib )
 
     # >>> show on filemanager too?
-    # >>> queue changes for sync. Store "path" in sync_tunelib_filename?
-    # >>> but then each of those files must be sync'd. 
+    # >>> queue changes for sync? Store "path" in sync_tunelib_filename?
+    # >>> but then each of those files must be sync'd individually, needs more code
     def remember_to_sync_tunelib( self, path ):
         # Remember that something in the tunelib folder has changed
         # and that sync must be run

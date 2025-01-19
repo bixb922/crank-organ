@@ -49,7 +49,6 @@
 <script>
 
 async function getNoteList() {
-	await fetch_json( "/set_playback_disabled" );
 	while( true ) {
 		updateNoteList( await fetch_json( "/data/organtuner.json" ) );
 		await sleep_ms( 5_000 ) ;

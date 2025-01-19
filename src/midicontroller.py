@@ -53,7 +53,8 @@ class Register:
             if pv != last_value:
                 # However, web interface can change this again via
                 # set_value() function below
-                self.current_value = not pv
+    
+                self.set_value( not pv )
                 last_value = pv
 
     def set_value( self, new_value ):
@@ -181,8 +182,9 @@ class MIDIController:
                 ( n//256, n&256) 
                 for n in self.notedict.keys() 
                 if n//256 != DRUM_PROGRAM ]
-        if (n := len(self.all_midis)):
-            program_number, midi_number = self.all_midis[ randrange( n ) ]
+        n =  len(self.all_midis)
+        if n:
+            program_number, midi_number = self.all_midis[ randrange( 0, n ) ]
             self.note_on( program_number, midi_number )
             await asyncio.sleep_ms(duration_msec)
             self.note_off( program_number, midi_number )

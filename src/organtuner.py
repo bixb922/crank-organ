@@ -15,6 +15,7 @@ from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery, microphone
 import fileops
 import frequency
+import scheduler
 
 # Time spent for measuring frequency for each note
 _TARGET_DURATION = 0.8 # seconds
@@ -43,8 +44,12 @@ class OrganTuner:
         self.logger.debug("init ok")
 
     def queue_tuning(self, method, arg):
-        #  Request is a tuple of an async organtuner method
-        # and an argument. Normally arg is a pin_index but can
+        scheduler.set_playback_mode(False)
+        from drehorgel import setlist
+        setlist.stop_tune()
+        
+        #  Request is a tuple of an (async organtuner method,
+        # and an argument). Normally the argument is a pin_index but can
         # also be a tuple depending on the method called
         # The queue is served by the _organtuner_process.
         self.tuner_queue.append( (method, arg) )
@@ -170,7 +175,7 @@ class OrganTuner:
                     battery.start_heartbeat()
 
                     # Queue empty, wait to be woken up
-                    await self.start_tuner_event.wait()
+                    await self.start_tuner_event.wait() # type:ignore
 
             except Exception as e:
                 self.logger.exc(e, "exception in _organtuner_process")
@@ -183,7 +188,7 @@ class OrganTuner:
 
 
     def _get_stored_tuning(self):
-        self.stored_tuning = fileops.read_json(config.ORGANTUNER_JSON,
+        self.stored_tuning:list = fileops.read_json(config.ORGANTUNER_JSON,
                                   default={},
                                   recreate=True)
         # Older versions use dict, delete that. 
@@ -195,7 +200,7 @@ class OrganTuner:
 
         # Update stored tuning, if necessary
         for pin_index, actuator in enumerate(actuator_bank.get_all_pins()):
-            d = self.stored_tuning[pin_index] or  {
+            d:dict = self.stored_tuning[pin_index] or  {
                     "centslist": [],
                     "amplist": [],
                     "amplistdb": []

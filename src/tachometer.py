@@ -12,7 +12,7 @@ from counter import Encoder, Counter
 
 
 # Number of pulses (1 pulse = off + on) per revolution
-PULSES_PER_REV = config.get_int("pulses_per_revolution", 24) 
+PULSES_PER_REV = config.get_int("pulses_per_revolution") or 24
 
 # Factor to convert the milliseconds  to revolutions per second (rpsec)
 # and vice-versa. rpsec = FACTOR/msec, msec = FACTOR/rpsec
@@ -20,11 +20,11 @@ FACTOR = 1000/PULSES_PER_REV
 
 # Less than these minimum means "stopped" or "not turning"
 # The two values give the detection a hysteresis.
-LOWER_THRESHOLD_RPSEC = config.get_float( "lower_threshold_rpsec", 0.3)
-HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec", 0.7) # greater than this value means the crank is *turning*
+LOWER_THRESHOLD_RPSEC = config.get_float( "lower_threshold_rpsec") or 0.3
+HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec") or 0.7 # greater than this value means the crank is *turning*
 
 # "Normal" turning speed, when MIDI speed == real speed
-NORMAL_RPSEC = config.get_float( "normal_rpsec", 1.2)
+NORMAL_RPSEC = config.get_float( "normal_rpsec") or 1.2
 
 class LowPassFilter:
 # This is a low pass filter for the crank. The special
@@ -66,7 +66,7 @@ class TachoDriver:
         self.counter_task = None
         self.rpsec = 0
         self.encoder_factor = 1 # Encoder phases compensation
-        if not tachometer_pin1 or config.get_int("automatic_delay", 0):
+        if not tachometer_pin1 or config.get_int("automatic_delay"):
             self.logger.debug("Crank sensor not enabled")
             return
         
@@ -107,7 +107,7 @@ class TachoDriver:
         # Filter whatever is faster than that.
         # If fc were set to 0, that disables the crank altogether
         # Prevent setting fc to 0
-        fc = max( 0.2, config.get_float("crank_lowpass_cutoff", NORMAL_RPSEC ))
+        fc = max( 0.2, config.get_float("crank_lowpass_cutoff") or  NORMAL_RPSEC )
         
         lpf = LowPassFilter( fc,  step/1_000 )
     
@@ -136,8 +136,8 @@ class TachoDriver:
 
             # time_ms should never be 0, because there is a sleep_ms in this loop
             # so there should never a division by 0 here
-            # >>> rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
-            # >>> rpsec = pulses * FACTOR / time_ms
+            # rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
+            # rpsec = pulses * FACTOR / time_ms
             # Apply low pass filter
             self.rpsec = lpf.filter( pulses * FACTOR / time_ms )
             last_time = new_time
@@ -207,18 +207,16 @@ class Crank:
         self.crank_stopped = asyncio.Event()
         self.crank_stopped.set()
         self.crank_turning = asyncio.Event()
+        # Will be replaced by register_start_crank_event:
+        self.registered_event = asyncio.Event()
 
-        # A task to monitor the crank and generate the events
+        # A task to monitor the crank and set/reset the events
         if self.is_installed():
             self.crank_monitor_task = asyncio.create_task( self._start_stop_monitor() )
         self.logger.debug("crank init ok")
-        
-    def register_event(self,when_ms)->asyncio.Event:
-        ev = asyncio.Event()
-        if self.is_installed():
-            # If not installed, these events never fire...
-            asyncio.create_task( self._after_start_event( when_ms, ev ))
-        return ev
+    
+    def register_start_crank_event( self, ev ):
+        self.registered_event = ev
 
     async def _start_stop_monitor( self ):
          # This task sets/resets events when crank movement
@@ -233,29 +231,19 @@ class Crank:
             elif r >= HIGHER_THRESHOLD_RPSEC and not self.crank_turning.is_set():
                 self.crank_stopped.clear()
                 self.crank_turning.set()
+                # And kick the registered event
+                self.registered_event.set()
 
-    async def _after_start_event( self, when_ms, event ):
-        # Each time crank starts turning, these events are fired
-        # Clearing these events must be done by the task that
-        # registers the events, normally just before waiting
-        # for the event to be set.
-        while True:
-            await self.crank_turning.wait()
-            await asyncio.sleep_ms( when_ms+10 ) # Add 10 to avoid CPU bound loop
-            event.set()
-            # When one of these events is fired, 
-            # crank must stop before firing it again
-            await self.wait_stop_turning()
+
 
     def is_turning(self):
         return self.crank_turning.is_set()
 
     async def wait_stop_turning(self):
-        await self.crank_stopped.wait()
-    # wait_start_turning() is not necessary,
-    # ev = crank.register_event( 0 ) can be used 
-    # to get a event to be
-    # triggered when the crank starts.
+        await self.crank_stopped.wait() # type:ignore
+
+    async def wait_start_turning(self):
+        await self.crank_turning.wait() # type:ignore
 
     def is_installed(self):
         return self.td.is_installed()
@@ -355,6 +343,7 @@ class TempoEncoder:
                 # Was switch never off during this time?
                 if v == 0:
                     self.crank.set_velocity(50)
+
 #This code will plug TachoDriver and generate random RPS
 # from random import random
 # class DebugCounter:
@@ -369,7 +358,8 @@ class TempoEncoder:
 #             # 800 pulses*100ms = 80 pulses
 #             # should result in 2.4 RPS
 #             self.current_val = random()*80
-#             self.repetitions = random()*50
+#             print(f"DebugCounter {self.current_val=}")
+#             self.repetitions = random()*40 + 10
 
 #         #newt = ticks_ms()
 #         #dt = ticks_diff(newt, self.time_ant)
@@ -379,8 +369,9 @@ class TempoEncoder:
 # async def debug():
 #     print("TachoDriver Debug started")
 #     from drehorgel import crank
-#     crank.td.counter_task.cancel()
+#     if crank.td.counter_task:
+#         crank.td.counter_task.cancel() # type:ignore
 #     newcounter = DebugCounter()
 #     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
 
-# asyncio.create_task( debug() )
+#asyncio.create_task( debug() )

@@ -18,7 +18,7 @@ class PowerManager:
         last_tune = None
         last_playtime = None
         idle_minutes = 0
-        idle_deepsleep_minutes = config.get_int("idle_deepsleep_minutes", 15)
+        idle_deepsleep_minutes = config.get_int("idle_deepsleep_minutes") or 15
         await asyncio.sleep_ms(1000)
         from webserver import is_active
         
@@ -51,21 +51,23 @@ class PowerManager:
                 await self.wait_and_power_off()
                 # Not to return
 
-    async def wait_and_power_off(self):
+    async def _wait_and_action(self, action):
         setlist.stop_tune()
         # Turn all midis off
         controller.all_notes_off()
         # Wait for web server to respond, led to flash, etc
+        # Don't shut down microdot, need it to respond.
         await asyncio.sleep_ms(1000)
         led.off()
-        # Closest thing to self power off.
-        machine.deepsleep()
+        action()
+
+    async def wait_and_power_off(self):
+        # Deepsleep is the closest thing to "self power off"
+        await self._wait_and_action( machine.deepsleep )
+        # Does not return
 
     async def wait_and_reset(self):
-        setlist.stop_tune()
-        # Wait for web server to respond, led to flash, etc
-        await asyncio.sleep_ms(1000)
-        controller.all_notes_off()
-        led.off()
-        machine.reset()
+        await self._wait_and_action( machine.reset )
+        # Does not return
+
 

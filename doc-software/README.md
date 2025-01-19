@@ -381,7 +381,7 @@ The crank can be equipped optionally with a sensor to sense rotation. The softwa
 
 When starting to turn the crank, the current MIDI file will start playing.
 
-When starting to turn the crank and no setlist has been defined, after some seconds of turning, all tunes will be shuffled and the first tune will start to play.
+When starting to turn the crank and no setlist has been defined, all tunes with 3 stars (or if not starred, all tunes) will be shuffled and the first tune will start to play.
 
 On the performance page, there is an option to make the tempo of the music depend on the crank revolution speed. 
 
@@ -392,7 +392,7 @@ To enable a crank sensor:
 Post an issue in this Github repository for information on options how to add a crank sensor, I'll explain options.
 
 ## Automatic playback
-There are crank organs being used for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically after the indicated pause.
+There are crank organs being used for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically one after the other with the indicated pause between tunes. As with manual operation, first the current setlist will be played, and if empty, the microcontroller will shuffle tunes.
 
 ## Battery calibration
 Battery calibration enables to show computed battery usage on the top of each page and on the home page. If you have other means to show battery level, this is of little interest.
@@ -590,7 +590,7 @@ If a RGB (neopixel) LED is on the board and configured, it will show changing bl
 
 The software will automatically load the current setlist, or if empty, the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
-If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad *twice in a row* will shuffle all tunes randomly. You'll then need a third touch to start the first tune.
+If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad  will shuffle all tunes randomly (first all tunes with 3 starts, if none, all tunes). 
 
 
 If you have the tune list or performance page open in your cell phone previously to reboot, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. There should be no need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
@@ -943,7 +943,7 @@ Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 ba
 * Migrated web server from tinyweb to Microdot
 * Improved blocking of MIDI playback when using tuner or pin test functions
 * Tested and measured for interference of web server functions with MIDI music playback. Enhanced a guard to minimize delays of MIDI events due to essential functions during playback.
-* Improved and changed touchpad sensitivity. Touchpad now works on release. Two touches in a row with a empty setlist will shuffle all tunes. RGB LED gives visual feedback when using touchpad. If there are ratings, only *** tunes will be included.
+* Improved and changed touchpad sensitivity. Touchpad now works on release.  RGB LED gives visual feedback when using touchpad. 
 * Changed fields on forms change background color to cream until saved.
 * Tuner now locks in on signals where harmonics are much stronger than the fundamental.
 * Refactored many modules to be based on classes instead of plain modules.
@@ -1052,10 +1052,12 @@ Optimizations, enhancements and corrections
 * Deleted General MIDI instrument names to free space
 * Corrected: register bug - change toggle to set_value()
 * Updated this README.md, added index to this and the hardware README.md
-
+* Make sure organ tuner stops current tune and that tuner/pinout definitions cause reboot message
+* Run pylint with Jos Verlinde's stubs (www.github.com/josverl/micropython-stubs) on all code, correct findings, add type hints where necessary
+* Will shuffle tunes with 3 stars when attempting to start a tune. If there are no tunes with 3 stars, microcontroller will shuffle all tunes and start a tune.
 
 # Programming language
-The application is programmed in MicroPython using the asyncio model to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async. No C/C++ code was necessary.
+The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
 
@@ -1063,12 +1065,12 @@ Frequency detection is done with the FFT algorithm, interpolating the maximum wi
 
 Pulses are counted with the PCNT hardware on the ESP32-S3 chip, so counting pulses is very afficient.
 
-The development relies heavily on the asyncio mode, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 concurrent asyncio tasks to all jobs necessary.
+The development relies heavily on the asyncio, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 concurrent asyncio tasks to all jobs necessary.
 
-MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, it's best use the latest version.
+MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, it's best use the latest version, at the time of this writing 1.24.
 
 If you want to program in MicroPython, a IDE (integrated development environment) is useful. Some free options are:
-* Microsoft Visual Studio Code, aka VSCode (free) plus ```mpremote```. You can run mpremote in a VSCode window (this is what I use).
+* Microsoft Visual Studio Code, aka VSCode (free) plus ```mpremote```. You can run mpremote in a VSCode window (this is what I use). Add the MicroPython stubs from https://github.com/Josverl/micropython-stubs
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 

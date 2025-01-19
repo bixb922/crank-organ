@@ -88,7 +88,7 @@ class WiFiManager:
 
         # The timeout is 2 minutes for a client to connect to the AP WiFi
         # Once connected, there is no limit on time to use the AP WiFi connection
-        await asyncio.sleep(config.get_int("ap_max_idle", 120))
+        await asyncio.sleep(config.get_int("ap_max_idle") or 120)
         if not self.ap_if.isconnected():
             self.ap_if.active(False)
             self.logger.debug("AP mode idle, disconnected")

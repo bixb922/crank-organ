@@ -60,7 +60,6 @@
 
 // Refresh note info every second
 async function getNoteInfo() {
-	await fetch_json( "/set_playback_disabled" );
 	while( true ) {
 		updateNoteInfo( await fetch_json( "/data/organtuner.json" ) ) ;
 		await sleep_ms( 5_000 );

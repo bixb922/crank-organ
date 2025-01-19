@@ -6,7 +6,7 @@ from drehorgel import tunemanager
 import fileops
 # >>> allow sync instead of copy?
 # >>> allow 2 tunelib folders, for staging?
-# >>> compare tunelib.json with tunelib folder?
+# >>> compare tunelib.json with tunelib folder to see what has been deleted?
 
 DESTINATION_FOLDERS = {
     "mid": "/tunelib",
