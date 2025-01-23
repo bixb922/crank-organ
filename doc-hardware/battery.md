@@ -137,8 +137,6 @@ Use two battery holders of 6 AA batteries each for a total of 12 batteries. Use 
 Be sure to put a fuse next to the battery pack.
 Put some kind of switch to turn on and off. 
 
-See here: https://www.github.com/bixb922/crank-organ/doc-hardware section on AA batteries.
-
 ## USB battery packs
 
 One nice option to power a crank organ is a USB battery pack, those that are used for quick charging a cell phone. The battery pack must have the QC or PD standard.

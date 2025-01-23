@@ -419,7 +419,11 @@ For this configuration, it's advisable to have some sort of voltage indicator co
 
 ## Battery assembly
 
-There are many options for batteries. I´ll describe here a battery pack based on 10 AA NiMH rechargeable batteries. Materials needed are:
+Always use batteries with an appropriate fuse, normally a 3 Ampere fuse. There is danger of burns or fire if you don't use a fuse.
+
+There are many options for batteries. See [here](battery.md) for a writeup on battery options.
+
+ I´ll describe here a battery pack based on 10 AA NiMH rechargeable batteries, because it is very simple. Materials needed are:
 
 * Battery holder for 10 AA batteries
 * 10 AA NiMH rechargable batteries
@@ -429,7 +433,7 @@ There are many options for batteries. I´ll describe here a battery pack based o
 * Male/female 12V plug
 * (and a AA Battery charger)
 
-Please use a fuse.  Use an appropriate BMS with protections for rechargeable batteries. A short circuit or overcharging may cause injury or fire.
+Please use a fuse.  Use an appropriate BMS with protections for rechargeable batteries. A short circuit or overcharging may cause injury or fire (I know, I am repeating myself).
 
 It's safest to connect this way:
 
@@ -570,6 +574,9 @@ There is also the possiblity to connect a potentiometer type rotary encoder to c
 
 This little device is NOT meant to be connected to the crank shaft but it should be used as a manual tempo adjustment knob. I think that the crank sensor is a better option than this little device. However, the software supports it.
 
+This is my history with crank sensors: [Crank sensor history](crank-sensor.md)
+
+
 # Registers
 You can connect any switch as a register, to enable/disable ranks of pipes just like a real organ.
 
@@ -585,7 +592,9 @@ One side of the switch must be connected to ground and the other side to a GPIO 
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 
-Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures.  Please use proper fuses for batteries.
+Use at your own risk. If you are not familiar with electronics and the equipment needed to do a project like the one described here, please get instruction and learn about proper use of tools, protection and safety measures.  Please use proper fuses for batteries. 
+
+The information provided here is for general informational purposes only. All information on the Site is provided in good faith, however I make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability or completeness of any information on this repository. 
 
 Software license:
 

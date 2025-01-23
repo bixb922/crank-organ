@@ -5,7 +5,7 @@ class Matrix:
     def __init__( self, rows=0, columns=0 ):
         self.rows = rows
         self.columns = columns
-        self.elements = [ [0]*columns for i in range(rows) ]
+        self.elements = [ [0]*columns for _ in range(rows) ]
 
     def setElements( self, new_values):
         # use: m = Matrix().setElements( list of lists )
@@ -54,7 +54,7 @@ class Matrix:
             if self.elements[row][lead] != 0:
                 f = self.elements[row][lead]
                 for column in range(self.columns):
-                    self.elements[row][column] /= f
+                    self.elements[row][column] /= f  # type:ignore
             for j in range(self.rows):
                 if j == row:
                     continue
@@ -64,7 +64,7 @@ class Matrix:
             row += 1
             lead += 1
 
-    def __mul__( a, b ):
+    def __mul__( a, b ):  # type:ignore
         # Matrix multiply, returns a*b
         assert a.columns == b.rows
         result = Matrix( a.rows, b.columns )

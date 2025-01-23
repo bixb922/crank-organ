@@ -172,7 +172,7 @@ class Battery:
         if level < 0 or level > 100:
             raise ValueError
 
-        bcj = self.read_calibration_data()
+        bcj:list = self.read_calibration_data()
         bcj.append([ timezone.now_ymdhms(),
                   self.battery_info["operating_seconds"], 
                   self.battery_info["solenoid_on_seconds"], 
@@ -182,7 +182,7 @@ class Battery:
         fileops.write_json(bcj, self.battery_calibration_filename, keep_backup=False)
 
       
-    def read_calibration_data(self)->dict:
+    def read_calibration_data(self)->list:
         return fileops.read_json(
             self.battery_calibration_filename, 
             default=[])
@@ -271,6 +271,7 @@ class Battery:
             return self.estimate_tunes_remaining()*total_per_tune
     
     def estimate_low(self)->None|bool:
-        if self.calibrated:
-            return self.estimate_percent_remaining() < _BATTERY_LOW_PERCENT
+        pr = self.estimate_percent_remaining()
+        if pr is not None:
+            return pr < _BATTERY_LOW_PERCENT
 

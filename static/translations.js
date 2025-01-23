@@ -349,6 +349,7 @@ function translate_html(){
 	// Translates bottom level html DOM elements
 	// Must be run by page to be translated when DOM
 	// elements are loaded.
+	// Dynamic DOM elements are translated by tlt() function
 	let all = document.getElementsByTagName("*");
 	for (let i=0, max=all.length; i < max; i++) {
 		let d = all[i] ;

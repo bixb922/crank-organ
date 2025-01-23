@@ -9,6 +9,7 @@ import network
 import binascii
 import minilog
 import fileops
+import re
 from hashlib import sha256
 
 # One logger for both Config and PasswordManager
@@ -19,35 +20,35 @@ _DEFAULT_PASSWORD = const("password")
 
 class Config:
     def __init__(self):
+        # Get time.ticks_ms() at boot time.
+        # Gets set to zero on soft reset.
+        self.boot_ticks_ms = time.ticks_ms()
+
         
         self.cfg = {}
 
         # Data file/folder names used in the software
-        self.CONFIG_JSON = "data/config.json"
         if fileops.file_exists("/sd"):
             self.TUNELIB_FOLDER = "/sd/tunelib/"
         else:
             self.TUNELIB_FOLDER = "tunelib/"
         
-        self.TUNELIB_JSON = "data/tunelib.json"
-
+        # minilog folder/filenames defined in minilog module, not here
+        # Timezone file/folder defined in timezone module, not here
+        self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
         self.BATTERY_JSON = "data/battery.json"
-        self.ORGANTUNER_JSON = "data/organtuner.json"
-        self.STORED_SETLIST_JSON = "data/setlist_stored.json"
+        self.CONFIG_JSON = "data/config.json"
         self.CURRENT_SETLIST_JSON = "data/setlist_current.json"
+        self.DRUMDEF_JSON = "data/drumdef.json"
+        self.HISTORY_JSON = "data/history.json"
+        self.LYRICS_JSON = "data/lyrics.json"
+        self.ORGANTUNER_JSON = "data/organtuner.json"
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data"
-        self.HISTORY_JSON = "data/history.json"
-        self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
-        self.LYRICS_JSON = "data/lyrics.json"
-        self.DRUMDEF_JSON = "data/drumdef.json"
+        self.STORED_SETLIST_JSON = "data/setlist_stored.json"
         self.SYNC_TUNELIB = "data/sync_tunelib"
-        # minilog folder defined in minilog module, not here
-
-        # Get time.ticks_ms() at boot time.
-        # Does get set to zero on soft reset.
-        self.boot_ticks_ms = time.ticks_ms()
-
+        self.TUNELIB_JSON = "data/tunelib.json"
+        
         # Read config.json
         self.cfg = fileops.read_json(
                 self.CONFIG_JSON, 
@@ -98,9 +99,9 @@ class Config:
 
         }
         # Populate missing keys from fallback
-        missing_keys = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
-        self.cfg.update(missing_keys)
-        for k in missing_keys:
+        missing_items = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
+        self.cfg.update(missing_items)
+        for k in missing_items:
             _logger.debug(f"Adding configuration key '{k}'")
 
         # Delete surplus keys
@@ -116,6 +117,7 @@ class Config:
             fileops.write_json(self.cfg, self.CONFIG_JSON, keep_backup=False)
             _logger.info("Passwords encrypted")
 
+        # Get WiFi MAC address (only to show in diag.html)
         self.wifi_mac = binascii.hexlify(
             network.WLAN(network.STA_IF).config("mac")
         ).decode()
@@ -123,12 +125,10 @@ class Config:
         # Give AP more time while WiFi station mode is not fully configured
         if self.cfg["access_point1"] == fallback["access_point1"]:
             # WiFi not configured yet, give AP mode plenty
-            # of time
+            # of time. Alter AP max idle temporarily.
             self.cfg["ap_max_idle"] = 3600
 
-        _logger.debug(
-            f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}" 
-        )
+        _logger.debug( f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}"  )
 
     def get_config(self)->dict:
         # Get copy of complete configuration, to be
@@ -209,12 +209,8 @@ class Config:
                 name = newconfig[k]
                 if len(name) > 15:
                     return "Error: Host name exceeds 15 characters"
-                u = name.upper()
-                for s in u:
-                    if not ("A" <= s <= "Z" or "0" <= s <= "9"):
-                        return "Host name is not A-Z, a-z, 0-9"
-                if not ("A" <= u[0:1] <= "Z"):
-                    return "Error: Host name does not start with letter"
+                if not re.match("[A-Za-z][A-Za-z0-9]*", name):
+                    return "Error: Host name is not alphanumeric"
             elif k == "ap_password":
                 if len(v) < 9:
                     return "Error: Password shorter than 9 characters"
@@ -224,6 +220,7 @@ class Config:
         # Copy newconfig into configuration
 
         # Update only keys that are already in config
+        # Don't use self.cfg.update() because it could add new keys
         for k in self.cfg:
             if k in newconfig:
                 self.cfg[k] = newconfig[k]
@@ -254,6 +251,7 @@ PASSWORD_PREFIX = "@encrypted_"
 
 class PasswordManager:
     # Password are stored encrypted in config.cfg
+    # Although this doesn't make the ESP32-S3 secure....
     def _get_key(self)->bytes:
         from esp32 import NVS
         # Give NVS some protection, but if someone

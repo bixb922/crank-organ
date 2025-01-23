@@ -53,9 +53,9 @@ The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the 
 
 # Detailed description of software and hardware, schematics, plans
 
-Please see [here](https://github.com/bixb922/crank-organ/blob/main/doc-software/README.md) for a detailed description of the software.
+Please see [here](doc-software/README.md) for a detailed description of the software.
 
-See [here](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/README.md) for schematics of the hardware and detailed instructions on how to build the hardware.
+See [here](doc-hardware/README.md) for schematics of the hardware and detailed instructions on how to build the hardware.
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
@@ -70,16 +70,16 @@ These are the folders in this GITHUB repository. On a cell phone, select "Browse
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
-|doc-software|[Description of the controller software.](https://github.com/bixb922/crank-organ/blob/main/doc-software/README.md) |
-|doc-hardware|[Description of the controller hardware and construction plans](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/README.md))|
-|src| Full source code (MicroPython) |
-|static| Web pages for the microcontroller (html, css, javascript)   |
+|doc-software|[Description of the controller software.](doc-software/README.md) |
+|doc-hardware|[Description of the controller hardware and construction plans](doc-hardware/README.md))|
+|src| Full source code in MicroPython language |
+|static| Web pages for the microcontroller (HTML, CSS, Javascript)   |
 |data| Pinout templates for 20, 26 and 31 note organs |
 |install|Installation files                      |
 
 
+# License
 
-# License 
 This material is available under the MIT license:
 
 This license and disclaimer also covers the hardware design documents. The hardware design is part of the software published here.
@@ -103,5 +103,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# Disclaimer
+
+The information provided here is for general informational purposes only. All information on this repository is provided in good faith, however I make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability or completeness of any information in this repository. 
+
 
 

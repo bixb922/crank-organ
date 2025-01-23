@@ -6,6 +6,8 @@ from machine import UART
 
 from driver_base import BasePin, BaseDriver
 
+# Not a singleton, there could be different serial
+# drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
     def __init__( self, uart, pin, channel ):
         # Default rx is 9 for UART 0
@@ -45,6 +47,11 @@ class MIDISerialDriver(BaseDriver):
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )
    
+    def __repr__( self ):
+        # One MIDISerial driver for each UART, there can be more
+        # than 1 UART.
+        return "MIDISerial." + str(self._uart)[0:6] + ")"
+    
 class VirtualMIDIPin(BasePin):
     def value( self, val ):
         self._driver._note_message( self.nominal_midi_number, val )

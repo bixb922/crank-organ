@@ -1008,7 +1008,7 @@ Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 ba
 * Time zone is now set from the browser configuration. No configuration necessary, less overhead, less hassle, smaller code, frequent update, no restrictions on frequency of use.
 * More WiFi client activity info in diag.html
 
-## Changes on January 2025 version
+## Changes from Oct 30, 2024 to January 2024
 New features
 
 * Midi files can be gzip compressed (e.g. ```.mid.gz```), this more than doubles the capacity for MIDI files, from about 720 to about 1800 MIDI files.
@@ -1055,6 +1055,10 @@ Optimizations, enhancements and corrections
 * Make sure organ tuner stops current tune and that tuner/pinout definitions cause reboot message
 * Run pylint with Jos Verlinde's stubs (www.github.com/josverl/micropython-stubs) on all code, correct findings, add type hints where necessary
 * Will shuffle tunes with 3 stars when attempting to start a tune. If there are no tunes with 3 stars, microcontroller will shuffle all tunes and start a tune.
+* Enable MIDI over serial handle multiple UARTs.
+* Check for registers with blank name and non-blank pin
+* Use re wherever possible, correct backslash in pattern
+
 
 # Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

@@ -1,20 +1,10 @@
 # Copyright (c) 2023 Hermann von Borries
 # MIT license
-
+#  
 from time import ticks_ms, ticks_diff
-
-def singleton(cls):
-    instance = None
-    def getinstance(*args, **kwargs):
-        nonlocal instance
-        if instance is None:
-            instance = cls(*args, **kwargs)
-        return instance
-    return getinstance
 
 
 class BaseDriver:
-    
     def set_actuator_bank( self, actuator_bank ):
         self._actuator_bank = actuator_bank
 
@@ -65,7 +55,7 @@ class BasePin:
         # Set to on only when currently off
         if self.on_time < 0:
             # Turn pin on
-            self.value(1)
+            self.value(1)  # type:ignore
             #print(f">>>{type(self).__name__} {self.nominal_midi_note} on")
             # Record time when it was set on
             self.on_time = ticks_ms()
@@ -77,7 +67,7 @@ class BasePin:
         # Set to off only when currently on
         if self.on_time >= 0:
             # Set to off
-            self.value(0)
+            self.value(0)  # type:ignore
             #print(f">>>{type(self).__name__} {self.nominal_midi_note} off")
             # Accumulate time a solenoid was on
             self._actuator_bank.add_on_time(  ticks_diff(ticks_ms(), self.on_time) )

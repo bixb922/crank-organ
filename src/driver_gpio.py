@@ -8,6 +8,13 @@ from driver_base import BasePin, BaseDriver
 # This is called when a ["gpio"] definition is encountered
 # in the current pinout.json to set up for MIDI definitions
 # that go to GPIO pins on the ESP32-S3
+# Must be singleton, one driver class for all drivers
+# so that only one list of self._gpiopins[] exists.
+# This is used for GPIODriver.all_notes_off() to turn off all GPIO pins
+# when a MIDI all notes off is received.
+
+# Does not need to be declared @singleton. Since __repr__ is
+# defined in BaseDriver, it is unique.
 class GPIODriver(BaseDriver):
     def __init__( self ):
         # Need a list of all pins for .all_notes_off() function

@@ -6,7 +6,7 @@
 from machine import Pin, freq
 from neopixel import NeoPixel
 led = NeoPixel(Pin(48), 1)
-led[0] = (0, 0, 8)
+led[0] = (0, 0, 8)  # type:ignore
 led.write()
 
 # Web response time is nearly 3 times better with 240MHz than with 80MHz

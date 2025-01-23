@@ -1,7 +1,7 @@
 from machine import mem32, Pin
-import sys
-import asyncio
+
 from micropython import const
+from scheduler import singleton
 
 # Comments refer to the ESP32 Technical Manual
 # or ESP32-S3 technical manual. Comments with C language
@@ -22,15 +22,6 @@ def get_gpio_number( pin ):
     s = str(pin)
     assert s[0:4] == "Pin("
     return int( s[4:-1])
-
-def singleton(cls):
-    instance = None
-    def getinstance(*args, **kwargs):
-        nonlocal instance
-        if instance is None:
-            instance = cls(*args, **kwargs)
-        return instance
-    return getinstance
 
 
 class BaseRegisters:

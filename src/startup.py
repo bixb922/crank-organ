@@ -22,14 +22,14 @@ led = drehorgel.led
 led.starting(0)
 
 
-# Now ensure all folders are there
+# First ensure all folders are there.
 drehorgel.init_fileops()
 
 # And get the time/timezone/ntp process going in background,
 # the timezone object is needed for logger, and most modules
 # require logger
 drehorgel.init_timezone()
-import minilog
+import minilog 
 _logger = minilog.getLogger(__name__)
 
 
@@ -38,7 +38,7 @@ _logger = minilog.getLogger(__name__)
 def start_aiorepl():
     try:
         # For debugging and testing, enable automatically if aiorepl present.
-        import aiorepl
+        import aiorepl # type:ignore
         asyncio.create_task(aiorepl.task())
         print("aiorepl enabled")
     except ImportError:
@@ -50,7 +50,7 @@ def _handle_exception(loop, context):
     # Will catch any unhandled exception of asyncio tasks.
     _logger.exc(context["exception"], "asyncio global exception handler")
     led.severe()
-    from pinout import controller
+    from drehorgel import controller
     controller.all_notes_off()
     last_resort()
 
@@ -71,7 +71,7 @@ async def do_aioprof():
     # Report profile every 30 seconds for debugging/optimizing
     # if aioprof is installed
     try:
-        import aioprof
+        import aioprof # type:ignore
     except ImportError:
         return
     aioprof.inject()
@@ -84,7 +84,7 @@ def start_mcserver():
     # Start communication task with server on internet
     # but only if installed.
     try:
-        import mcserver
+        import mcserver # type:ignore
     except ImportError:
         # No impact if mcserver not present.
         pass
@@ -137,7 +137,7 @@ async def main():
         scheduler.background_garbage_collector(),
         signal_ready(drehorgel.controller),
         #do_aioprof()
-    )
+    ) # type:ignore
 
 asyncio.run(main())
 

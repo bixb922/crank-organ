@@ -18,7 +18,7 @@ _MCP_GPPU = const(0x0C)  # R/W Pull-Up Resistor Register
 _MCP_GPIO = const(0x12)  # R/W General Purpose I/O Port Register
 
 
-
+# Not a singleton, one instance for each MCP23017 chip
 class MCP23017Driver(BaseDriver):
     def __init__( self, i2c, i2c_number, address ):
         self._i2c = i2c

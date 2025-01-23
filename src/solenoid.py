@@ -9,7 +9,6 @@ import asyncio
 import minilog
 from drehorgel import led
 from midi import DRUM_PROGRAM
-from driver_null import NullPin
 
 
 _logger = minilog.getLogger(__name__)

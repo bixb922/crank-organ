@@ -101,9 +101,6 @@ class PinoutParser:
         self.current_driver = "GPIODriver"
         self.parse(pinout_data)
 
-    def get_filename(self):
-        return self.filename
-
     def get_description(self):
         return self.description
 
@@ -232,7 +229,7 @@ class PinoutParser:
 # mean "no GPIO defined for neopixel"
 class GPIODef(PinoutParser):
     def __init__(self, source ):
-        self.registers = RegisterBank()
+        self.register_bank = RegisterBank()
         global ESP32_S3_AVAILABLE_GPIO_PINS
         for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
             try:
@@ -287,20 +284,25 @@ class GPIODef(PinoutParser):
             self.tempo_switch = gpio_switch
             
     def define_register( self, gpio, name, initial_value ):
-        reg = self.registers.factory( name )
-        # If gpio is 0 or None or blank, no GPIO pin is set
-        # and it's a software-only register
-        try:
-            # Check if this pin can be used
-            reg.set_gpio_pin( gpio )
-        except ValueError:
-            logger.error(f"Invalid pin {gpio}, cannot be used")
-        # Set initial value at startup
-        reg.set_initial_value(initial_value)
-        # Nothing stored in this object
+        # No name means "disregard this register"
+        # Also: name cannot be blank, factory will return "always on"
+        # register, and cannot set gpio pin for that...
+        if name:
+            # Make a new register or return one with this name
+            reg = self.register_bank.factory( name )
+            # If gpio is 0 or None or blank, no GPIO pin is set
+            # and it's a software-only register
+            try:
+                # Check if this pin can be used
+                reg.set_gpio_pin( gpio )
+            except ValueError:
+                logger.error(f"Invalid pin {gpio}, cannot be used")
+            # Set initial value at startup
+            reg.set_initial_value(initial_value)
+            # Nothing stored in this object
 
     def get_registers( self ):
-        return self.registers 
+        return self.register_bank 
     
 # Singleton class to validate a pinout and save it
 # to the current json file. This class is invoked by
@@ -441,6 +443,7 @@ class PinoutList:
         self._fill_pinout_files()
 
         self.current_pinout_filename = self._read_pinout_txt()
+        logger.info(f"Current pinout {self.current_pinout_filename}")
 
     def _fill_pinout_files(self):
             # Pinout files must have the form <nnn>_note_<name>.json
@@ -450,7 +453,7 @@ class PinoutList:
         # Examples: 20_note_Carl_Frei.json, 31_note_Raffin.json)
         # self.pinout_files is a dict, key=filename, value=description (initally blank, filled later)
         self.pinout_files = {}
-        pattern = re.compile("^[0-9]+_note_.+\.json$")
+        pattern = re.compile("^[0-9]+_note_.+\\.json$")
         for fn in os.listdir(self.pinout_folder):
             if re.match(pattern, fn):
                 filename = self.pinout_folder + "/" + fn
@@ -464,7 +467,7 @@ class PinoutList:
 
     def _read_pinout_txt(self):
         # Better separate file than config.json. That
-        # way led pin can be read before reading config.
+        # way neopixel LED pin can be read before reading config.
         try:
             with open(self.pinout_txt_filename) as file:
                 # Return filename of nn_xxxxx.json with pinout info
@@ -591,10 +594,10 @@ class ActuatorDef(PinoutParser):
     # about midi notes and their relation with SolePin objects
     # Source: the filename of a pinout.json file or
     # a list object with the contents of the pinout.json file.
-    # registers: a RegisterBank() object, already populated
+    # register_bank: the RegisterBank() object, already populated
     # with hardware register definitions (if any).
-    def __init__(self, source, registers):
-        self.registers = registers
+    def __init__(self, source, register_bank):
+        self.register_bank = register_bank
         # The result of the parse is:
         # pin_list/pin_dict: a the complete list of SolePin objects
         # device_info: information to show to the user.
@@ -603,7 +606,7 @@ class ActuatorDef(PinoutParser):
         super().__init__(source)
 
     def driver_factory( self, newdriver ):
-        # repr(driver) is be unique, create one of each kind
+        # repr(driver) is unique. Create one of each kind
         # only.
         return self.driver_dict.setdefault( repr(newdriver), newdriver )
 
@@ -615,7 +618,7 @@ class ActuatorDef(PinoutParser):
         self.driver_dict = {}
 
         # Pass initialized registers to MIDIController
-        self.controller = MIDIController( self.registers )
+        self.controller = MIDIController( self.register_bank )
 
         self.current_i2c = None
         self.current_i2c_number = -1
@@ -646,7 +649,7 @@ class ActuatorDef(PinoutParser):
 
     def define_mcp23017_driver(self, address):
         from driver_null import NullDriver
-
+        # Default in case MCP23017 is not installed
         self.current_driver = self.driver_factory( NullDriver() )
 
         if self.current_i2c and address is not None :
@@ -673,7 +676,7 @@ class ActuatorDef(PinoutParser):
         pin = self.current_driver.define_pin( pin, rank, midi_note ) 
 
         # Don't duplicate Virtual Pin definitions
-        # Use .name to test for uniqueness,
+        # Use repr() or str() to test for uniqueness,
         # for example: MCP23017Driver.I2C(0).3
         pin = self.pin_dict.setdefault( str(pin), pin )
         self.controller.define_note( midi_note, pin, register_name )

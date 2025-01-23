@@ -47,7 +47,7 @@ class _CounterBase:
             return
 
         # Counter- or Encoder-specific configuration of self._pcnt.
-        self._configure(*args, **kwargs)
+        self._configure(*args, **kwargs)  # type:ignore
 
         # Common unit configuration.
         self._pcnt.init(

@@ -11,6 +11,7 @@ import touchpad
 from minilog import getLogger
 import fileops
 
+# >>> blink soft blue while setlist is empty.
 
 def del_key(key, dictionary):
     if key in dictionary:
@@ -72,7 +73,7 @@ class Setlist:
         self.waiting_for_start_tune_event = True
         self.music_start_event.clear()
         await self.music_start_event.wait() # type:ignore
-        print(">>>music start event wait finished")
+
         self.waiting_for_start_tune_event = False
 
         # Cancel automatic playback timeout task, if running, so it won't
@@ -102,29 +103,16 @@ class Setlist:
             if self.current_setlist:
                 break    
 
-        while True:
+        while scheduler.is_playback_enabled():
+
             # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
 
             # Wait for music to start
             await self.wait_for_start()
-            print(">>>wait for start over")
-            # If tuner or test mode are active, don't
-            # interfere playing music. Rebooting resets this mode.
-            # However, if a tune is playing, the user would have
-            # to stop that manually.
-            if not scheduler.is_playback_enabled():
-                self.logger.debug("Not in playback mode, stop setlist process")
-                # This is to avoid interference between MIDI files
-                # (player.py)
-                # and the tuning process (organtuner.py)
-                return # No more setlist process - no more playing MIDI files
-                # Progress of current tune will probably not be updated anymore.
-
-
-            # User signalled start of tune
-            # Get a current setlist by shuffling
             
+            # User signalled start of tune
+            # Get a current setlist by shuffling if no setlist
             if self.shuffle_if_empty():
                 self.logger.info("Tunelib empty, setlist terminated")
                 return
@@ -146,6 +134,8 @@ class Setlist:
             
             # Record that this task has ended and isn't available anymore
             self.player_task = None
+            self.logger.info(f"ended {tuneid=}")
+
 
             # Clean up tune_requests, delete all
             # elements not in setlist. It may be sufficent
@@ -154,17 +144,28 @@ class Setlist:
                 if t not in self.current_setlist:
                     del_key(tuneid, self.tune_requests)
 
-            self.logger.info(f"ended {tuneid=}")
-
             # Wait for the crank to cease turning after
             # a tune has played before proceeding to next tune.
-            # If no crank, this will not cause waiting
+            # If no crank, this will never wait.
             await crank.wait_stop_turning()
+
             # If velocity has been altered by software or by
             # encoder, reset to normal. User can change velocity
             # before the next tune starts.
             crank.set_velocity(50)
     
+        # If tuner or test mode are active, don't
+        # interfere playing music. Rebooting resets this mode.
+        # However, if a tune is playing, the user would have
+        # to stop that manually.
+        # This is to avoid interference between MIDI files
+        # (player.py)
+        # and the tuning process (organtuner.py)
+        self.logger.debug("Not in playback mode, stop setlist process")
+        # Progress of current tune will not be updated anymore.
+
+
+
 
     # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
     def queue_tune(self, tuneid):
@@ -326,14 +327,14 @@ class Setlist:
         timeout_seconds = config.get_int("automatic_delay") or 0
         if not timeout_seconds:
             return 
-        while True:
+        while scheduler.is_playback_enabled():
+            # Wait for any tune to ned
             while self.player_task:
-                await asyncio.sleep_ms(100)
+                await asyncio.sleep_ms(500)
+            # Wait the time between tunes as indicated in config.json
             await asyncio.sleep( timeout_seconds )
+            # If no tune playing, kick start event to get tune going
             if not self.player_task:
                 self.logger.debug("Automatic playback sets music start event")
                 self.music_start_event.set()
-        # When tuning, this process will continue to start music
-        # but since the setlist process is stopped, nothing
-        # will happen, as expected. 
 

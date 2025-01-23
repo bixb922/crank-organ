@@ -6,9 +6,10 @@ import time
 import fileops
 from drehorgel import config
 import midi
-from driver_base import BaseDriver, BasePin, singleton
+from driver_base import BaseDriver, BasePin
 
-@singleton
+# Does not need to be declared singleton. Since __repr__ is
+# defined in BaseDriver, it is unique.
 class FauxTomDriver(BaseDriver):
     def __init__( self ):
         temp_def = fileops.read_json( config.DRUMDEF_JSON, default={})
@@ -75,7 +76,7 @@ class VirtualDrumPin(BasePin):
             pin = self.actuator_bank.get_pin_by_midi_number( midi_number )
             if pin:
                 self.strong_midi_virtual_pins.add( pin )
-        # >>> this is probably shorter
+        # >>> this is probably shorter??
         #self.strong_midi_virtual_pins = { pin for pin in
         #    ( self.actuator_bank.get_pin_by_midi_number(m) for m in drumdef["strong_midis"])
         #     if pin }

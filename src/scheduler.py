@@ -33,34 +33,48 @@ async def wait_and_yield_ms(for_us):
     # and allowing another task to run if the time it needs is less
     # than the wait time between MIDI events.
     # Tasks are scheduled with the RequestSlice context manager, see below.
-    #
+    # for_us is the time to wait in microseconds.
     # Restriction: this schedules at most one task per wait.
-    # but this works well because there are few tasks and many. many MIDI events.
+    # but this works well because there are few tasks and many, many MIDI events.
     global _run_always_flag
     t0 = ticks_us()
+    # If player calls wait_and_yield_ms() it means that
+    # _run_always_flag must be set to false, i.e. we have to process
+    # time slices.
     _run_always_flag = False
     if for_us <= 0:
+        # No time to wait, return immediately
         return
+    # If time is rather short, wait with precision
     if for_us < _RESERVED_US:
         sleep_us(for_us)
         return
+    # Run a task that can run in the available time, minus
+    # the reserved time.
     _find_and_run_task(for_us - _RESERVED_US)
+    # Wait for the reserved time yielding control. The task that
+    # was found and run should finish within this time.
     await asyncio.sleep_ms(round((for_us - _RESERVED_US)/1000))
+    # Now the task continued with _find_and_run_task should
+    # have finished.
 
     # Wait for the rest of time with more precision
-    # This is much more precise (less jitter) than asyncio.sleep_ms()
+    # Waiting with sleep_us() is much more precise (less jitter) 
+    # than asyncio.sleep_ms()
     # The downside is that during time.sleep_ms() no other tasks can
     # be scheduled, but that is ok, since this is the one and only
-    # high priority task.
+    # high priority task. We don't want to schedule other tasks during
+    # this short wait.
     remaining_us = for_us - ticks_diff(ticks_us(), t0)
     if remaining_us > 0:
         sleep_us(remaining_us)
 
 
 def _find_and_run_task(available):
-    # only play mode is protected while playing music.
     if _run_always_flag:
+        # If run_always is set, all tasks are scheduled
         available = _INFINITY
+    # Find a task that can run in the "available" time slice
     for i, task in enumerate(_tasklist):
         if task.requested <= available:
             task.available = available  # for debug only
@@ -231,6 +245,17 @@ async def background_garbage_collector( ):
             # but a MemoryError is not likely, since there
             # should be plenty of RAM with 8Mb
             gc.collect()
+
+# This has to go somewhere
+def singleton(cls):
+    instance = None
+    def getinstance(*args, **kwargs):
+        nonlocal instance
+        if instance is None:
+            instance = cls(*args, **kwargs)
+        return instance
+    return getinstance
+
 
 _tasklist = []
 _run_always_flag = True

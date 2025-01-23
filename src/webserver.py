@@ -2,7 +2,6 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-
 import os
 import sys
 import gc
@@ -202,6 +201,7 @@ def get_progress():
     crank.complement_progress(progress)
     scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
+    # gpio has th RegisterBank() object
     gpio.get_registers().complement_progress(progress)
     tunemanager.complement_progress(progress)
     return progress

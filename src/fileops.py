@@ -124,11 +124,11 @@ def find_decompressed_midi_filename( filename ):
     # Using ByteIO is faster but would require changes in umidiparser
     # Or else, use a RAM disk, with higher gc.collect() times
     with open( filename, "rb") as file:
-        with DeflateIO(file, AUTO, 0, True) as stream:
+        with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
             data = stream.read()
 
     TEMP_FILENAME = "/data/temp.mid"
-    with open( TEMP_FILENAME, "wb") as output:
+    with open( TEMP_FILENAME, "wb") as output:  # type:ignore
         output.write(data)
     return TEMP_FILENAME
 

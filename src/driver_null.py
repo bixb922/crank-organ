@@ -12,7 +12,6 @@ from driver_base import BasePin, BaseDriver
 
 null_pin_serial = 0
 
-# This class is simultaneously the NullDriver and the Null pin.
 class NullDriver(BaseDriver):
     # __init__ is done by base class
     def define_pin( self, *args ):

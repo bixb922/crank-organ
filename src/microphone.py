@@ -48,7 +48,7 @@ class Microphone:
         delay = round(step-9)
         n = len(self.adc_signal)
         # Sample the mic. Should read about 30.000 samples/sec
-        read = self.adc_device.read
+        read = self.adc_device.read  # type:ignore
         read()
         t0 = time.ticks_us()
         for i in range(n):

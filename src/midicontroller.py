@@ -62,7 +62,7 @@ class Register:
 
 # Class for all registers
 class RegisterBank:
-    # Register class factory, also holds all defined Register objects
+    # Register factory, holds all defined Register objects
     def __init__( self ):
         self.register_dict = OrderedDict()
 

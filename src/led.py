@@ -37,7 +37,7 @@ class BlinkingLed:
     # Simple (permanent) led on and off
     def on(self, color):
         if self.neopixel_led:
-            self.neopixel_led[0] = color
+            self.neopixel_led[0] = color  # type:ignore
             self.neopixel_led.write()
 
     def off(self):
@@ -116,7 +116,7 @@ class BlinkingLed:
         # by global async error handler.
         if self.problem_task:
             # No more flashing for problem
-            self.problem_task.cancel()
+            self.problem_task.cancel()  # type:ignore
         self.on((MEDIUM, 0, MEDIUM))
 
     def _blink_background(

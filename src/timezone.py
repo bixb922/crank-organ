@@ -8,10 +8,13 @@ import machine
 import scheduler
 import fileops
 
+# Don't use config.py, because timezone is needed before
 TZFILE = "data/timezone.json"
 NTP_RETRIES = 3
 
+# Time zone longName if no time zone info is available
 NO_TZ_INFO = "no tz info"
+
 class TimeZone:
     def __init__(self):
         self.ntp_task = None
@@ -39,22 +42,22 @@ class TimeZone:
 
     async def _ntp_process(self):
         # Get ntp time, then update time zone 
-        if self.has_time(): 
+        # But do nothing if time has already been set 
+        # maybe by browser, maybe previous to a soft reset
+        if self.has_time():
             return # Clock already set
         # Try several times to get time from ntp server
         await self._get_ntp_time()
+        # Set RTC with this time + time zone offset
         self.set_rtc( time.time() )
     
     def has_time( self ):
-        # time after 2024/1/1?
+        # is time after 2024/1/1?
+        # i.e. has time already been set by ntp, browser
+        # or previous to soft reset?
         return time.time() > 756864000
     
     def set_rtc( self, timestamp ):
-        if self.has_time():
-            # Do not do set_rtc() if already set,
-            # result will be erroneous.
-            return
-        # Now we have local time, apply stored time zone only once.
         # Prepare a time tuple as argument for RTC
         t = time.localtime(timestamp - self.tzinfo["offset"] )
         # Set this as the local time, to be returned
@@ -72,12 +75,12 @@ class TimeZone:
                     ntptime.settime()
                 return 
             except (asyncio.TimeoutError, OSError) as e:
-                self.logger.info(f"Recoverable ntptime exception {repr(e)}")
+                self.logger.info(f"Recoverable ntptime exception {repr(e)}") # type:ignore
                 # RequestSlice did not give slice, retry later
                 # OSError -202 means server not found, happens once in a while
                 pass
             except Exception as e:
-                self.logger.info(f"Unrecoverable ntptime exception {repr(e)}")
+                self.logger.info(f"Unrecoverable ntptime exception {repr(e)}") # type:ignore
                 return
 
             await asyncio.sleep_ms(retry_time)
@@ -92,7 +95,7 @@ class TimeZone:
         if self.tzinfo["longName"] ==  NO_TZ_INFO:
             self.tzinfo = newtz
             fileops.write_json( newtz, TZFILE, keep_backup=False )
-            self.logger.info("Timezone info updated, takes effect next reboot")
+            self.logger.info("Timezone info updated, takes effect next reboot") # type:ignore
         
         # If we don't have ntptime, use the timestamp provided
         # by the browser. This is normally case if using AP mode
@@ -102,6 +105,8 @@ class TimeZone:
         # to the new time zone.
         # Convert from Unix epoch to ESP32 epoch and
         # set RTC. 
+        if self.has_time():
+            return # NTP or browser has already set time.
         self.set_rtc( newtz["timestamp"] - 946_684_800)
         
     def get_time_zone_info( self ):
@@ -141,4 +146,3 @@ class TimeZone:
         # No ntptime (yet)
         return self.now_hms()
 
-           

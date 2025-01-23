@@ -85,9 +85,10 @@ def upload( request, path, filename  ):
 
     # Javascript must use String.normalize() for filenames
     # See filemanager.html encodePath()
-    # If not Hände can be encoded H\xc3\xa4nde
+    # If not Hände can be encoded H\xc3\xa4nde (Code point for a umlaut)
     # or Ha\xcc\x88nde (combined a + diacritics mark)
-    # normalize() substitutes combined diacritics
+    # And we want to have it normalized to NFC!
+    # Javascript normalize("NFC") substitutes combined diacritics
     # to code points.
 
     if path != "__auto__":
@@ -110,7 +111,7 @@ def upload( request, path, filename  ):
         old_file_size = os.stat(path)[6]
     except OSError:
         old_file_size = None
-    with open(path, "wb") as file:
+    with open(path, "wb") as file:  # type:ignore
         data = request.body
         new_file_size = len(data)
         file.write( data )
@@ -133,7 +134,7 @@ def upload( request, path, filename  ):
 
 def download(path):
     # Download a file from the microcontroller to the PC
-
+    # Serve file in chunks of 10kB
     def serve_file( path ):
         buffer = bytearray(10000)
         mvb = memoryview(buffer)
@@ -159,7 +160,8 @@ def _formatLogGenerator(filename):
             .replace(">","&gt;")\
             .replace("'","&apos;")\
             .replace('"',"&quot;")\
-            
+
+    # Generator function to yield log lines
     def log_generator():
         # Format log as HTML
         with open(filename) as file:
@@ -196,6 +198,7 @@ def show_file( filename ):
     
     # Don't render html, show everything as plain text.
     # Allow to show compressed files, let browser uncompress
+    # Mark json files, some browsers (Chrome) pretty print json
     ct = "text/plain"
     if ".json" in filename:
         ct = "application/json"

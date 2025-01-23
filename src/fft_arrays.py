@@ -2,15 +2,15 @@ import sys
 from math import sin
 import math
 
-if sys.implementation.name != "micropython":
+if sys.implementation.name != "micropython": # type:ignore
     def const(x):
         return x
     # Make micropython decorator a no-op
     class micropython:
-        def native(f):
-            return f
+        def native(self):
+            return self
 else:
-    from micropython import const
+    from micropython import const # type:ignore
     
 
 # Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz
@@ -29,7 +29,7 @@ hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
 
 # about 2 or 3 ms can be shaved off if n is not passed as parameter
 # and by using BUFFER_SIZE constant instead.
-@micropython.native
+@micropython.native  # type:ignore
 def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
 #void _fft(cplx buf[], cplx out[], int n, int step)
     et = exptable # Make twiddle factor table local, it's faster
@@ -63,7 +63,7 @@ def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
 #	_fft(buf, out, n, 1);
 #}
 
-@micropython.native
+@micropython.native  # type:ignore
 def fft(signal, hann_windowing=False):
     if len(signal)!=BUFFER_SIZE:
         raise ValueError
@@ -72,11 +72,11 @@ def fft(signal, hann_windowing=False):
         ht = hann_table
         signal = [ signal[i]*ht[i] for i in range(BUFFER_SIZE) ]
     out = list(signal)
-    _fft_recursive( signal, 0, out, 0, len(signal), 1 )
+    _fft_recursive( signal, 0, out, 0, len(signal), 1 )  # type:ignore
     return signal
 
 
 # return magnitude of a slice of the fft
-@micropython.native
+@micropython.native  # type:ignore
 def fft_abs( data, from_position, to_position ):
     return [ abs(data[i]) for i in range(from_position, to_position) ]
