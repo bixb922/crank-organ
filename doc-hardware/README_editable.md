@@ -1,56 +1,9 @@
 # MIDI controller hardware a crank organ
 
 # Contents
-1.  [Introduction](#1-introduction)
-2.  [Controller for a  20 note crank organ.](#2-controller-for-a-20-note-crank-organ)
-3.  [Table of contents](#3-table-of-contents)
-4.  [Description](#4-description)
-5.  [The ESP32-S3](#5-the-esp32-s3)
-6.  [Circuit diagram](#6-circuit-diagram)
-7.  [How to build the electronics](#7-how-to-build-the-electronics)
-     * [Materials needed](#materials-needed)
-         * [ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board](#esp32-s3-n8r8-or-n16r8-devkit-c-on-44-pin-board)
-         * [Two 22 pin contacts for ESP32-S3](#two-22-pin-contacts-for-esp32-s3)
-         * [ULN2003A or TBD62003A](#uln2003a-or-tbd62003a)
-         * [1N4007 or 1N5822 diode](#1n4007-or-1n5822-diode)
-         * [12V to 5V 2A DC-DC buck converter](#12v-to-5v-2a-dc-dc-buck-converter)
-         * [7x9 cm solderable bread board](#7x9-cm-solderable-bread-board)
-         * [Screw terminals](#screw-terminals)
-         * [Color wire](#color-wire)
-         * [4-40 screws](#4-40-screws)
-         * [Pin 1x40 Single Row Male 2.54mm Breakable Pin Header](#pin-1x40-single-row-male-254mm-breakable-pin-header)
-         * [Metallic drawer knob as touch pad](#metallic-drawer-knob-as-touch-pad)
-     * [Tools](#tools)
-     * [Assembly](#assembly)
-         * [Position connectors](#position-connectors)
-         * [Insert IC (integrated circuits) and components](#insert-ic-integrated-circuits-and-components)
-         * [Solder pins for the ICs](#solder-pins-for-the-ics)
-         * [Pin numbering](#pin-numbering)
-         * [Insert the wires](#insert-the-wires)
-         * [Wires for ground](#wires-for-ground)
-         * [Wires for 12V and 5V](#wires-for-12v-and-5v)
-         * [Wire from GPIO to touchpad screw terminal](#wire-from-gpio-to-touchpad-screw-terminal)
-         * [Wires from GPIO to ULN2803 input](#wires-from-gpio-to-uln2803-input)
-         * [Wires for ULN2803 output to solenoid screw terminals](#wires-for-uln2803-output-to-solenoid-screw-terminals)
-         * [Solder the wires](#solder-the-wires)
-         * [Clean](#clean)
-         * [Inspect](#inspect)
-     * [Testing](#testing)
-     * [Connect the solenoids](#connect-the-solenoids)
-     * [Test with the provided software](#test-with-the-provided-software)
-     * [Microcontroller board inside the windchest](#microcontroller-board-inside-the-windchest)
-     * [Battery assembly](#battery-assembly)
-     * [A battery circuit for testing](#a-battery-circuit-for-testing)
-     * [Can the microcontroller be installed inside the windchest?](#can-the-microcontroller-be-installed-inside-the-windchest)
-8.  [Circuit for more than 20 valves](#8-circuit-for-more-than-20-valves)
-     * [Wiring from the microcontroller to the MCP23017 boards](#wiring-from-the-microcontroller-to-the-mcp23017-boards)
-     * [Microcontroller for I2C control](#microcontroller-for-i2c-control)
-     * [Second version](#second-version)
-9.  [Microphone](#9-microphone)
-10.  [Crank rotation sensor](#10-crank-rotation-sensor)
-11.  [Registers](#11-registers)
-12.  [Copyright and license](#12-copyright-and-license)
-# 1. Introduction
+
+
+# Introduction
 
 
 This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue or open a discussion item in this repository.
@@ -60,7 +13,7 @@ Contents:
 * Controller for more valves (virtually no limit). This design uses a central microcontroller and valve controller boards in the windchests. 
 
 
-# 2. Controller for a  20 note crank organ.
+# Controller for a  20 note crank organ. 
 20 voice organs are very common, so here is a design for these:
 
 The goals for the design are:
@@ -77,7 +30,7 @@ The goals for the design are:
 
 See also the software section for a description of the program that matches the hardware.
 
-# 3. Table of contents
+# Table of contents
 [Description](#description)
 [The ESP32-S3](#the-esp32-s3)
 [Circuit diagram](#circuit-diagram)
@@ -88,7 +41,7 @@ See also the software section for a description of the program that matches the 
 [registers][#registers]
 [Copyright and license](#copyright-and-license)
 
-# 4. Description
+# Description
 The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 350 kb of RAM, plus the RAM needed by MicroPython).
 
 8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. With compression (see the software section) this goes up to 700 average MIDI files for 8Mb flash and 1800 average MIDI files for 16Mb flash. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
@@ -120,7 +73,7 @@ The diode is necessary to prevent current from a USB connection (PC tp ESP32-S3)
 
 
 
-# 5. The ESP32-S3
+# The ESP32-S3
 I have tested this setup with some ESP32-S3 boards similar a  ESP32-DEVKITC-1 V1.1 board, although schematics differ. Specifications: quad Flash (QD flash) and Octal SPIRAM (OT PSRAM). These boards are sold as "N16R8" models. The boards have 44 pins.
 
 On Octal Flash boards such as N16R8V, less than 20 pins are available. From the Espressif documents: "In module variants that have embedded OSPI PSRAM, i.e., that embed ESP32-S3R8, pins IO35, IO36, and IO37 connect to the OSPI PSRAM and are not available for other uses."
@@ -128,13 +81,13 @@ On Octal Flash boards such as N16R8V, less than 20 pins are available. From the 
 MicroPython images for N8R8 boards can be downloaded directly from the MicroPython site. For N16R8 boards, there is a tool to resize the MicroPython image, no need to generate new images. See the software installation.
 
 
-# 6. Circuit diagram
+# Circuit diagram 
 
 This is the circuit diagram:
 
 ![20 pipe organ controller](kicad_20.png)
 
-# 7. How to build the electronics
+# How to build the electronics
 
 ## Materials needed
 For main board
@@ -256,7 +209,7 @@ To connect to 12V it's better to have cable (with many strands) since cable resi
 
 ![color wire](wire-22awg.jpg)
 
-### 4-40 screws
+### 4-40 screws 
 
 These are standoff screws to screw the board to a wooden base. Drill small holes for the hex part, put some epoxy on it, and you can screw the microcontroller board with the nuts to the wooden base.
 
@@ -312,7 +265,7 @@ The general sequence is as follows
 * Verify all points against all points for continuity with the multitester in Continuity Test mode (beep for continuity).
 
 
-### Position connectors
+### Position connectors 
 Insert connectors. Mark position of the ESP32-S3 and the direction (12V to 5V) of the DC-DC voltage regulator. Mark the screw terminal where the touchpad goes (black on the photo). I used blue tape.
 
 ![board with connectors](mcboard-connectors.jpg)
@@ -516,7 +469,7 @@ In this case, it is advisable to connect a standard USB-C male to USB-C female c
 
 The microcontroller board usually has some leds, it's calming to see the leds are blinking because then we know that the board is working. If inside a windchest, it's best to use a 5V DC-DC converter with a led or display to know that the batteries are working.
 
-# 8. Circuit for more than 20 valves
+# Circuit for more than 20 valves
 This circuit uses a ESP32-S3  board as central controller, I2C bus as communication and MCP23017 port expanders to provide 16 solenoid drivers each,
 
 The schematic for a microcontroller and the MCP23017 controller is as follows.
@@ -566,7 +519,7 @@ The second version has the the 12V to 5V DC-DC convertor on board, plus the conn
 * 2x screw terminal for 12V and ground.
 
 
-# 9. Microphone
+# Microphone
 The software allows to connect a microphonefor tuning. You have to turn the crank. The software opens the valve of each pipe, plays a note and measures amplitude and frequency. This is stored on flash for later reference and shown graphically on a browser page.
 
 Any small microphone with amplifier will do. It has to operate with 3.3V and have 3 pins: ground, output and Vcc. Vcc goes to 3.3V, ground to ground, and microphone output to a GPIO pin on the ESP32-S3, for example pin 4.
@@ -581,7 +534,7 @@ There are microphones with automatic volume control. These do not allow to measu
 It's probably easiest to solder the microphone pins on the board, since the microcontroller will be very near the organ anyhow
 
 
-# 10. Crank rotation sensor
+# Crank rotation sensor
 The software (and the ESP32-S3) currently support connecting a crank rotation sensor, both to start the tune when the crank starts to turn, and (optionally) to change the playback speed based on crank rotation.
 
 A simple sensor could be this optical sensor with a slotted disk cut of wood or 3mm MDF:
@@ -631,7 +584,7 @@ This little device is NOT meant to be connected to the crank shaft but it should
 This is my history with crank sensors: [Crank sensor history](crank-sensor.md)
 
 
-# 11. Registers
+# Registers
 You can connect any switch as a register, to enable/disable ranks of pipes just like a real organ.
 
 I have used automotive headlight switches for this purpose:
@@ -642,7 +595,7 @@ The white light symbol is only printed on this switch, so it was easy to sand aw
 
 One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
 
-# 12. Copyright and license
+# Copyright and license
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 
@@ -670,4 +623,4 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE
+SOFTWARE.

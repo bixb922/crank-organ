@@ -17,6 +17,7 @@ from drehorgel import timezone
 # >>> print complete setlist (author, genre, year, info, rating)
 # >>> browser gets tunelib.json and lyrics.json twice sometimes
 # >>> detect deleted files PC vs microcontroller
+# >>> Sync tunelib
 
 # Define Tunelib Column names
 # Must be equal to common.js

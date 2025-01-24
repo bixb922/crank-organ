@@ -67,10 +67,14 @@ class TachoDriver:
         self.rpsec = 0
         self.encoder_factor = 1 # Encoder phases compensation
         if not tachometer_pin1 or config.get_int("automatic_delay"):
+            # Disable crank sensor for "automatic_delay" so music
+            # will not pause at the end of the song.
             self.logger.debug("Crank sensor not enabled")
             return
         
-        self.encoder_factor = 2 # Rising + falling = 2, phases=2
+         # For Counter: Rising + falling = 2
+         # For encoder: phases=2
+        self.encoder_factor = 2
 
         if tachometer_pin1 and not tachometer_pin2:
             # One pin defined means: simple counter for crank
@@ -183,13 +187,12 @@ class TachoDriver:
 # Main output is velocity for the MIDI player (get_normalized_rps), combining
 # crank RPS and velocity set via browser (play.html)
 # Main outputs:
-#   Crank.is_turning() 
-#   await Crank.wait_stop_turning()
-#   Crank.get_normalized_rps()
+#   crank.is_turning() 
+#   await crank.wait_start_turning()
+#   await crank.wait_stop_turning()
+#   crank.get_normalized_rps()
 #   Triggers asyncio.Event() according to registered events.
-#   Events can be registered at the crank start, or some
-#   time after crank starts to turn.
-#   Adds info to get_progress() for tunelist.html and play.html.
+#   Adds crank info to get_progress() for tunelist.html and play.html.
 class Crank:
     # Trigger events based on the crank revolution speed
     # like start and stop turning
@@ -233,8 +236,6 @@ class Crank:
                 self.crank_turning.set()
                 # And kick the registered event
                 self.registered_event.set()
-
-
 
     def is_turning(self):
         return self.crank_turning.is_set()
@@ -290,7 +291,7 @@ class Crank:
 # Rotary encoder to set tempo
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.
-# The effect of this sensor is added to the crank sensor
+# The effect of this sensor is added to the crank sensor and UI setting
 class TempoEncoder:
     def __init__( self, crank, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
         self.logger = getLogger("TempoEncoder")

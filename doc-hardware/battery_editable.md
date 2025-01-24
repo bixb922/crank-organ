@@ -1,15 +1,10 @@
 # Batteries
 
 # Contents
-1.  [Fuse and security](#1-fuse-and-security)
-2.  [Requirements](#2-requirements)
-3.  [Battery technologies](#3-battery-technologies)
-4.  [Voltage conversion](#4-voltage-conversion)
-5.  [BMS: Battery Management Systems](#5-bms-battery-management-systems)
-6.  [AA batteries](#6-aa-batteries)
-7.  [USB battery packs](#7-usb-battery-packs)
-8.  [Tool battery packs](#8-tool-battery-packs)
-# 1. Fuse and security
+
+
+
+# Fuse and security
 Always use a fuse for batteries, except when the manufacturer states clearly that the battery pack has a short circuit and overload protection.
 
 Batteries can deliver a very high current when there is a direct connection between battery terminals. This high current can cause severe burns or fire. Fuses (or their equivalent electronic circuit) aim to prevent this.
@@ -20,7 +15,7 @@ The fuse goes between the positive (+) terminal of the battery and the switch. I
 
 Please read the battery manufacturer's safety instructions.
 
-# 2. Requirements
+# Requirements
 For a crank organ, looking at many MIDI files for crank organs, it seems that on the average three solenoid valves are closed. Yes, it seems a low figure, but then music consists of a lot of silence. This figure is necessary to estimate how long a battery can play.
 
 Also, the maximum solenoid valves that are closed at any time are around 10 or 12. This figure is necessary to calculate the capacity of a fuse.
@@ -38,7 +33,7 @@ Commercial batteries are usually rated in mAh (milliampere-hours) or Ah (ampere 
 
 For Lithium-Ion batteries, the Wh are usually calculated at 3.3V, which is what a single Li-ion battery delivers. So a 10000 mAh Li-ion battery pack will deliver 3.3*10000/1000 = 33 Watt-hours (33 Wh).
 
-# 3. Battery technologies
+# Battery technologies
 
 This is a rapidly evolving field. Here is a simple table. The weight is compared for 24Wh, which is enough to play about 70 or 80 tunes.
 
@@ -60,7 +55,7 @@ All rechargable batteries fail when discharged completely. The software that is 
 
 
 
-# 4. Voltage conversion
+# Voltage conversion
 Rechargable batteries will deliver higher voltage when recently recharged, and 10 to 20% less voltage when almost empty. Search internet for "lithium-ion discharge curve".
 
 To avoid that voltage drop, and to get always the correct voltage, you can use a circuit called "DC-DC voltage converter". There are many ready made circuits that do this. Since the output must be a odd voltage such as 13 or 13.5V, it's best to purchase a variable converter. These have a small screw or two buttons to you can adjust the output voltage. Some also have a display to show the output voltage (and even the input voltage and currents). That eases the adjustment of the voltage. Once set, you will not need to change the setting. Instead of a display, you can also use any multimeter set to DC volts.
@@ -120,7 +115,7 @@ LiFePO4 batteries have a very flat discharge curve. The battery voltage is fairl
 
 
 
-# 5. BMS: Battery Management Systems
+# BMS: Battery Management Systems
 
 Rechargable batteries must be treated well:
 
@@ -137,7 +132,7 @@ There are electronic circuits called Battery Management Systems (BMS) to protect
 
 It's best to use a battery with integrated BMS, since then the manufacturer did the design to match the BMS with the battery.
 
-# 6. AA batteries
+# AA batteries
 
 This is a very simple, cheap and lightweight solution.
 
@@ -146,7 +141,7 @@ Use two battery holders of 6 AA batteries each for a total of 12 batteries. Use 
 Be sure to put a fuse next to the battery pack.
 Put some kind of switch to turn on and off. 
 
-# 7. USB battery packs
+# USB battery packs
 
 One nice option to power a crank organ is a USB battery pack, those that are used for quick charging a cell phone. The battery pack must have the QC or PD standard.
 
@@ -198,7 +193,7 @@ From left to right you can see:
 
 
 
-# 8. Tool battery packs
+# Tool battery packs
 
 Electric tools also have battery packs. These packs include a BMS, with a good protection, but they can deliver a very strong current. So I think they always should be protected with a fuse with the maximum current expected. 
 

@@ -67,7 +67,7 @@ class Microphone:
         r = random.random()
         # Randomly show some frequencies in red or out of range
         freq = nominal_freq
-        if True:#>>>__name__ != "__main__":
+        if True:# >>>__name__ != "__main__":
             if r<0.05:
                 freq = nominal_freq*1.18
             elif r>0.95:

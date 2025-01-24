@@ -108,6 +108,7 @@
         UPLOAD_MODE = "currentFolder";
         // click hidden file dialog button
         closeLogWindow();
+        // Calls processFileDialog() when user pushes OK
         document.getElementById("fileDialogButton").click();
     }
 
@@ -115,6 +116,7 @@
         UPLOAD_MODE = "autoFolder";
         // click hidden file dialog button
         closeLogWindow();
+        // Calls processFileDialog() when user pushes OK
         document.getElementById("fileDialogButton").click();
 
     }
@@ -156,7 +158,7 @@
         if (mode == "autoFolder") {
             destFolder = "__auto__";
         }
-
+        // encodePath() will also normalize("NFC")
         let url = "/upload/" + encodePath(destFolder) + "+" + encodePath(file.name);
 
 

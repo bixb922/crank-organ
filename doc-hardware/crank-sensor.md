@@ -1,10 +1,26 @@
 # A crank sensor journey
+# Contents
+1.  [Introduction](#1-introduction)
+2.  [The sensors and the slotted wheels](#2-the-sensors-and-the-slotted-wheels)
+3.  [Hall sensor](#3-hall-sensor)
+4.  [Infrared distance sensors](#4-infrared-distance-sensors)
+5.  [Optical sensors with a slot](#5-optical-sensors-with-a-slot)
+6.  [Integration](#6-integration)
+7.  [In search of another design](#7-in-search-of-another-design)
+8.  [Incremental rotary encoder](#8-incremental-rotary-encoder)
+9.  [Settings](#9-settings)
+10.  [Smoothing out crank movement](#10-smoothing-out-crank-movement)
+11.  [How is it to have a crank sensor in the organ?](#11-how-is-it-to-have-a-crank-sensor-in-the-organ)
+12.  [A rotating encoder](#12-a-rotating-encoder)
+13.  [Costs](#13-costs)
+14.  [Conclusion](#14-conclusion)
+# 1. Introduction
 
 My MIDI organ had to have a crank sensor. My main motivation was to mimic a mechanical organ very closely: start to turn the crank and the music starts. Turn slower, and the music is slower. Stop the crank, and the music stops at that point. No additional buttons, controls nor displays needed to play music.
 
 Well, the journey was long. Over the course of the last few years I purchased some sensor boards.
 
-# The sensors and the wheels
+# 2. The sensors and the slotted wheels
 
 ![crank sensors](20250114-crank-sensors.jpg)
 
@@ -17,15 +33,15 @@ From left to right:
 
 All these sensors have a small potentiometer to adjust the level, and the boards have a comparator to produce a clean on-off signal for the microcontroller at the required 3.3V levels, but no kind of filter.
 
-I made some slotted wheels to test the sensors. The hall (magnets) wheel is on the top left.
+I made some slotted wheels to test the sensors. The hall effect wheel (wheel with 20 little magnets) is on the top left.
 
 ![slotted wheels](20250114-slotted-wheels-and-hall.jpg)
 
-# Hall sensor
+# 3. Hall sensor
 
 First I tested the hall sensor with a small wheel of about 3 cm diameter with 20 3mm diameter magnets. To be effective, the sensor had to be very close (< 1mm) from the magnets, so there was a high probability of friction. I had had some faith in the hall sensor, since I thought sensing the movement at the distance was neat. Probably with larger magnets (5mm diameter?) and 2cm of separation  between magnets this could work, but then the wheel to support these magnets would be too large for the space I had.
 
-# Infrared distance sensors
+# 4. Infrared distance sensors
 
 (Sensors number 2 and 3 on the image above)
 
@@ -33,7 +49,7 @@ The “distance sensors” output high if there is something near the sensor and
 
 The long distance infrared sensor also sensed the connecting rod behind the slotted wheel, so the count was off once for each revolution. The short distance sensor worked a better, but at a very close distance (millimeters).
 
-# Optical sensors with a slot
+# 5. Optical sensors with a slot
 
 (Sensors 4 and 5 on the image above)
 
@@ -47,13 +63,13 @@ When stopping the wheel, the revolutions/second had to be inferred by the absenc
 
 Finally, after some trying, I found that the combination of  the large slot optical sensor (1 cm slot) with a wheel with 12 slots worked best. A normal crank speed is around 1.2 revolutions/second, so 12 slots give about 10 to 15 pulses a second when using only one edge of the pulse and the double when using both edges. This means one interrupt every 50 milliseconds or so.  Interrupt processing took 20 microseconds, so everything seemed ok. 
 
-# Integration
+# 6. Integration
 
 But then I tried this on the real organ with a crank instead of on the breadboard with my electric screwdriver. And it did not work... I could make the microcontroller sense crank starting and stopping but could get no consistent revolutions/second readings. Interrupts got lost, and the crank speed reading was very irregular. What had happened?
 
 Well, in ESP32 microcontrollers WiFi operations (and to a much lesser degree file operations) interfere with the interrupt processing and cause interrupts to be late or lost, sometimes 50 or 100 milliseconds late. When testing on a protoboard, I did not have WiFi enabled, but my software uses WiFi to report status to a browser on the cell phone. So it’s not feasible to use interrupts measure crank speed.
 
-# In search of another design
+# 7. In search of another design
 
 Back to the drawing board. I like the ESP32-S3 because it has lots of pins, RAM, flash, WiFi and even bluetooth! If interrupts are not reliable, what to use? Well, fortunately the ESP32 family has a built-in pulse count unit (PCNT). It can count pulses up to several Mhz without interfering with the CPU load.
 
@@ -61,7 +77,7 @@ But with 10 slots in the wheel, and reading the pulse count, say, 10 times a sec
 
 So I tried with more slots (see the photo) but did not like the wheel I made (it’s ugly). You can buy slotted wheels with 100 slots or more, but then I found a different type of sensors.
 
-# Incremental rotary encoder
+# 8. Incremental rotary encoder
 
 ![incremental rotary encoder](20250114-optical-incremental-encoder.jpg)
 
@@ -83,11 +99,11 @@ So now everything was ready to test the new sensor. I connected everything, and.
 
 So now this works well! The encoder has nice ball bearings, so it’s no effort at all to rotate it. It has to be powered by more than 5V (exactly 5V is not enough). The 13.5V I had available did the job. It has two outputs, since it is a quadrature encoder that can sense forward and backward rotation. The outputs are open collector, so they can be connected directly to the ESP32-S3 GPIO ports. The software enables the internal pullup resistors. No voltage level shifter needed.
 
-# Settings
+# 9. Settings
 
 When reaching 0.7 revolutions/sec, the crank is considered “started” and music sounds. When the revolutions/sec fall below 0.4, the crank is considered “stopped” and the music stops.  The “normal” crank speed is set to 1.2 revolutions/second.
 
-# Smoothing out crank movement
+# 10. Smoothing out crank movement
 
 Looking at a graph of the crank movement, I found it difficult to keep each the movement perfectly steady:
 
@@ -99,7 +115,7 @@ So I added a software low pass filter to the crank rev/sec reading with a time c
 
 The filter is turned off if the revolutions/sec are below 0.7 rev/sec. The effect of this is that starting and stopping the music is immediate, no delay. The filter smoothes out small fluctuations but does not protect if you don't pay attention to the crank.
 
-# How is it to have a crank sensor in the organ?
+# 11. How is it to have a crank sensor in the organ?
 
 Having music tempo depend on crank motion gave me a mixed feeling. It is certainly interesting to dramatize the music a bit using the crank movement, but on the other hand, it is much easier to forget controlling the exact crank rotation speed and rely on the tempo set in the MIDI file. Also, if a passage needs more air, it needs turning the crank faster, but no tempo increase is desirable here. Unwanted tempo changes are very distracting. So I left an option on the user interface to turn “tempo follows crank” on and off when desired. The jury doesn’t have a final verdict on this point.
 
@@ -109,7 +125,7 @@ In real crank organs, there may be notes that sound in the instant the crank is 
 
 If the crank sensor only needs to start/stop music, then I believe a slotted wheel of 3mm MDF with 12 slots and the 1cm wide optical sensor will do perfectly (sensor number 5 on the image of the sensors).
 
-# A rotating encoder
+# 12. A rotating encoder
 
 I tried yet another way to change tempo:
 
@@ -123,13 +139,13 @@ This is a small rotating encoder of 20 pulses per revolution. If you turn the kn
 
 The software supports this as the "tempo" encoder.
 
-# Costs
+# 13. Costs
 
 The slotted optical sensor board should cost around US$3 to 10.  Search for "infrared slotted optical sensor" or "optical rotation sensor". 
 
 The incremental rotary encoder should cost around US$10 to 20, but there are much more expensive encoders out there. If you don't find one with a suitable cost, use the "slotted optical encoder" and build a your own slotted wheel with 12 slots, it will work fine.
 
-# Conclusion
+# 14. Conclusion
 
 Being able to start and stop the music with the crank is very nice. I can have a setlist stored (or have the microcontroller shuffle the tunes automatically) and then I can start turning the crank. The technology gets totally out of the way and becomes invisible.
 

@@ -1,90 +1,39 @@
 # Software for crank organs
 
 # Contents
-1.  [Purpose](#1-purpose)
-2.  [Features](#2-features)
-3.  [If you want to try out the software](#3-if-you-want-to-try-out-the-software)
-4.  [Main menu and navigation](#4-main-menu-and-navigation)
-     * [The page header](#the-page-header)
-5.  [Crank organ: tune list and performance page](#5-crank-organ-tune-list-and-performance-page)
-     * [The tune list page](#the-tune-list-page)
-     * [The performance control page](#the-performance-control-page)
-         * [Current tune](#current-tune)
-         * [How to start a queued tune that is waiting](#how-to-start-a-queued-tune-that-is-waiting)
-         * [Setlist control](#setlist-control)
-         * [Crank and speed control](#crank-and-speed-control)
-6.  [Tuner](#6-tuner)
-     * [The note list page](#the-note-list-page)
-     * [The note page](#the-note-page)
-7.  [History](#7-history)
-8.  [Edit Tunelib](#8-edit-tunelib)
-     * [The tune library](#the-tune-library)
-     * [MIDI files](#midi-files)
-     * [Adding and deleting MIDI tunes](#adding-and-deleting-midi-tunes)
-     * [The Tunelib Editor (Tunelib Editor button on index page)](#the-tunelib-editor-tunelib-editor-button-on-index-page)
-9.  [General configuration](#9-general-configuration)
-     * [Configuring a network name and host name](#configuring-a-network-name-and-host-name)
-     * [Configurations you should change: WiFi connections](#configurations-you-should-change-wifi-connections)
-     * [Power management settings](#power-management-settings)
-     * [Other parameters (less likely to need change)](#other-parameters-less-likely-to-need-change)
-     * [Crank configuration](#crank-configuration)
-     * [Automatic playback](#automatic-playback)
-     * [Battery calibration](#battery-calibration)
-10.  [Pin and MIDI configuration](#10-pin-and-midi-configuration)
-     * [Select scale](#select-scale)
-     * [Transpose scale (only if necessary)](#transpose-scale-only-if-necessary)
-     * [Test solenoids](#test-solenoids)
-     * [Redefine MIDI notes (only if necessary)](#redefine-midi-notes-only-if-necessary)
-     * [Microphone, crank sensor, touchpad and neopixel sensor (important)](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
-     * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
-11.  [System](#11-system)
-     * [Error log](#error-log)
-12.  [File manager](#12-file-manager)
-     * [Update MIDI files](#update-midi-files)
-     * [Update software](#update-software)
-     * [View files](#view-files)
-13.  [Turning the system on](#13-turning-the-system-on)
-14.  [Installation](#14-installation)
-     * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
-     * [Prerequisites installing and configuring the software](#prerequisites-installing-and-configuring-the-software)
-     * [Installation instructions](#installation-instructions)
-     * [WiFi capabilities](#wifi-capabilities)
-15.  [Other stuff](#15-other-stuff)
-     * [Increase MIDI file capacity](#increase-midi-file-capacity)
-     * [SD card](#sd-card)
-     * [Time zone](#time-zone)
-     * [MIDI over serial](#midi-over-serial)
-     * [Languages: English, Spanish and German](#languages-english-spanish-and-german)
-     * [Customization crank organ photo](#customization-crank-organ-photo)
-     * [Registers](#registers)
-     * [Percussion sounds made with pipes a.k.a. "fake drums"](#percussion-sounds-made-with-pipes-aka-fake-drums)
-     * [Crank rotation sensor and tempo](#crank-rotation-sensor-and-tempo)
-     * [Compressed HTML and JS files, compile .py files](#compressed-html-and-js-files-compile-py-files)
-     * [Automatic shutdown when idle](#automatic-shutdown-when-idle)
-     * [The onboard RGB LED](#the-onboard-rgb-led)
-     * [Another way to do initial configuration](#another-way-to-do-initial-configuration)
-16.  [Backup](#16-backup)
-17.  [Recent changes](#17-recent-changes)
-     * [Changes from Nov 2023 to March 2024:](#changes-from-nov-2023-to-march-2024)
-     * [Changes from March 2024 to June 2024.](#changes-from-march-2024-to-june-2024)
-     * [Changes from June 2024 to October 2024](#changes-from-june-2024-to-october-2024)
-     * [Changes on Oct 30, 2024](#changes-on-oct-30-2024)
-     * [Changes from Oct 30, 2024 to January 2024](#changes-from-oct-30-2024-to-january-2024)
-18.  [Programming language](#18-programming-language)
-19.  [Credits](#19-credits)
-20.  [Testing](#20-testing)
-21.  [Troubleshooting](#21-troubleshooting)
-22.  [Restrictions](#22-restrictions)
-23.  [Licensing](#23-licensing)
-24.  [Affiliation](#24-affiliation)
-# 1. Purpose
+1. [Purpose](#purpose)
+2. [Features](#features)
+3. [If you want to try out the software](#if-you-want-to-try-out-the-software)
+4. [Main menu and navigation](#main-menu-and-navigation)
+5. [Crank organ: tune list and performance page](#crank-organ-tune-list-and-performance-page)
+6. [Tuner](#tuner)
+7. [History](#history)
+8. [Edit Tunelib](#edit-tunelig)
+9. [General configuration](#general-configuration)
+10. [Pin and MIDI configuration](#pin-and-midi-configuration)
+11. [System](#system)
+12. [File manager](#file-manager)
+13. [Turning the system on](#turning-the-system-on)
+14. [Installation](#installation)
+15. [Other stuff](#other-stuff)
+16. [Backup](#backup)
+17. [Recent changes](#recent-changes)
+18. [Programming language](#programming-language)
+19. [Credits](#credits)
+20. [Testing](#testing)
+21. [Troubleshooting](#troubleshooting)
+22. [Restrictions](#restrictions)
+23. [Licensing](#licensing)
+24. [Affiliation](#affiliation)
+
+# Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
 No software programming knowledge is needed to use this software. However, full source code is provided for perusal and it comes with the permission to change it and use it according to the MIT license, which not very restrictive.
 
 Please post a Github issue in this repository for any question you might have. Please star the github repository if this is of interest for you.
 
-# 2. Features
+# Features
 
 * Browser as user interface (Chrome or Firefox). Management is done with WiFi with a browser on a cell phone, tablet or PC. No need to install anything on the cell phone or tablet.
 * However: the solution can play music perfectly without a cell phone present
@@ -106,7 +55,7 @@ Please post a Github issue in this repository for any question you might have. P
 
 The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
-# 3. If you want to try out the software
+# If you want to try out the software
 To see this software in operation, there is a demo here: https://drehorgel.pythonanywhere.com/demo/.
 
 The demo allows to see the Tune list and the Performance page in operation (although there is certainly no crank organ behind that will make music, there are no cranks organ on the cloud). You also can see all configuration pages (although no configuration can be changed on the demo).
@@ -118,7 +67,7 @@ As a next step, you will only need a crank organ to make the pipes sound...
 I believe the software is relatively intuitive to use. Don't feel overwhelmed with the configuration information presented here. The only configuration you really need to do is to configure the WiFi router where the microcontroller needs to connect. All the rest is optional and the software will work out of the box.
 
 
-# 4. Main menu and navigation
+# Main menu and navigation
 The home page has the main menu and shows detailed battery use information.
 
 ![home page](homepage1.jpg) 
@@ -166,7 +115,7 @@ If the browser looses the connection to the server, the broken heart symbol &#x1
 ![page header - not connected](page_header_not_connected.jpg)
 
 
-# 5. Crank organ: tune list and performance page
+# Crank organ: tune list and performance page
 
 ## The tune list page
 ![tune list page](tunelist.jpg)
@@ -254,7 +203,7 @@ The current setlist is kept even if the microcontroller is rebooted or turned of
 
 These controls regulate playback speed. Even if there is no crank sensor, you can vary the tempo with the two buttons left and right to the indicator bar. If there is a crank sensor, and "Tempo follows crank", then the crank determines playback speed.
 
-# 6. Tuner
+# Tuner
 Tuning mode aids tuning and intonation of pipes.
 
 Even without a microphone installed, these pages are useful to make individual notes sound and look at a tuner, to play scales and do repetition tests.
@@ -298,7 +247,7 @@ The "Repetition test" button will make a repetition test increasing speed until 
 
 "Next note" will go to the next note in the tuner list.
 
-# 7. History
+# History
 The history page will show all dates a tune has been played, and a list of all tunes played that date. There is a button to purge older history, if you should wish that.
 
 The column "% completed" show how much of the tune has been played. 100% means the complete tune. I like to know whether I stopped a tune (with the "Next" button on the performance page) before completing in order to review that tune.
@@ -307,7 +256,7 @@ The column "% completed" show how much of the tune has been played. 100% means t
 
 The 📝 button next to the title allows to enter a rating (*, ** or ***) or a comment about a recently played tune. I use that to keep notes on how a recently played tune went with the audience and with me. The rating is stored in the _rating_ column of the tunelib. The comment is appended to the _info_ column of the tunelib. These fields can also be edited with the Tunelib Editor, but reviewing the history also allows to add info and rating for recently played tunes while the memory is fresh.
 
-# 8. Edit Tunelib
+# Edit Tunelib
 The Tunelib Editor allows to edit information about the tunes.
 
 ## The tune library
@@ -360,7 +309,7 @@ The following columns are computed and cannot be changed:
 And at the end of the row there is this button:
 * Delete: press the wastebasket button to delete the MIDI file from the microcontroller. You will be asked for confirmation.
 
-# 9. General configuration
+# General configuration
 
 The configuration parameters explained in detail on the configuration page. After changing and saving a new configuration, please reboot the microcontroller.
 
@@ -475,7 +424,7 @@ Even without calibration, some useful information will show on the home page (in
 
 
 
-# 10. Pin and MIDI configuration
+# Pin and MIDI configuration
 
 The MIDI configuration consists of defining wich MIDI note should activate a certain output port and thus a solenoid.
 
@@ -580,7 +529,7 @@ Please see other scale definitions in their respective json files. Several scale
 The Pin and MIDI configuration allows to alter that the default. For example, I don't care very much which valve is connected to what pin, I just connect and then use the Test button on the Pin and Midi Configuration to find out what wiring I did, and then adjust configuration correspondingly. I don't even label the wires.
 
 
-# 11. System
+# System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
 
 ![System information](system_information.jpg)
@@ -600,7 +549,7 @@ If there is some problem, please post the relevant part of the error log in a Gi
 
 The error log records events of class INFO, ERROR and EXCEPTION. The MicroPython Console, accessible through the USB connector with mpremote (or also putty, Thonny, or other tools) will additionally show records of class DEBUG. Due to the overhead, DEBUG records are not recorded to flash. It may be of interest to look at these detailed error logs too.
 
-# 12. File manager
+# File manager
 
 Press the "Update files" button on the index page, and the File Manager will show up.
 
@@ -628,7 +577,7 @@ Use the "Update to auto folder" button to upload a new software version (.py or 
 ## View files
 Files that are "underlined" in the File Manager can be clicked to view their content. Click on MIDI files is supported.
 
-# 13. Turning the system on
+# Turning the system on
 
 TLDR: turn on, and turn the crank or touch the touchpad 3 times in a row and music starts.
 
@@ -647,7 +596,7 @@ You don't need your cell phone turned on to play music, only to alter the setlis
 
 
 
-# 14. Installation
+# Installation
 ## Prerequisite hardware and software
 
 This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash, 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash, 8 Megabytes RAM(Megabytes, not Gigabytes...). The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository).
@@ -793,7 +742,7 @@ flowchart LR
 
 See [General Configuration](#general-configuration) to configure WiFi.
 
-# 15. Other stuff
+# Other stuff
 
 ## Increase MIDI file capacity
 
@@ -815,7 +764,7 @@ Use ```compress_midi.py --help``` for help with the utility program. Input and o
 
 Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes.
 
-## SD card
+## SD card 
 
 If the microcontroller has a SD or TF card controller please modify boot.py to mount at /sd, including the following lines: 
 ```
@@ -946,7 +895,7 @@ You should be able to connect to the microcontroller with your browser at ```htt
 Now the microcontroller's home page should appear, and you can continue configuration with the brower.
 
 
-# 16. Backup
+# Backup
 Microcontroller flash storage is fairly robust. It is very unlikely to end up with corrupt files.
 
 However, 
@@ -982,7 +931,7 @@ To restore a backup: If you start with an empty ESP32S3, install the software as
 Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 backup files are kept in the data folder. The date in the filename is the day the backup was stored, excluding the changes of that date. These backups are used as fallback in case of possible problems.
 
 
-# 17. Recent changes
+# Recent changes
 
 ## Changes from Nov 2023 to March 2024:
 * Page with history of tunes played, button to purge old records.
@@ -1116,7 +1065,7 @@ Optimizations, enhancements and corrections
 * Use regular expressions wherever possible, correct missing backslash in patterns
 
 
-# 18. Programming language
+# Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1134,7 +1083,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 19. Credits
+# Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1144,12 +1093,12 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 20. Testing
+# Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 21. Troubleshooting
+# Troubleshooting
 If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
@@ -1158,7 +1107,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 22. Restrictions
+# Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1182,7 +1131,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 23. Licensing
+# Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1208,7 +1157,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 24. Affiliation
+# Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.

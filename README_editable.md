@@ -2,14 +2,11 @@
 MIDI based crank organ software and hardware
 
 # Contents
-1.  [Overview](#1-overview)
-     * [How is this solution used?](#how-is-this-solution-used)
-2.  [Detailed description of software and hardware, schematics, plans](#2-detailed-description-of-software-and-hardware-schematics-plans)
-3.  [To see a demo](#3-to-see-a-demo)
-4.  [Folders](#4-folders)
-5.  [License](#5-license)
-6.  [Disclaimer](#6-disclaimer)
-# 1. Overview
+
+
+
+
+# Overview
 
 
 This animation shows how a crank organ with MIDI control works:
@@ -59,7 +56,7 @@ The diligent and flexible mode: You can modify the setlist on the fly with the p
 
 The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
-# 2. Detailed description of software and hardware, schematics, plans
+# Detailed description of software and hardware, schematics, plans
 
 Please see [here](doc-software/README.md) for a detailed description of the software.
 
@@ -67,13 +64,13 @@ See [here](doc-hardware/README.md) for schematics of the hardware and detailed i
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
-# 3. To see a demo
+# To see a demo
 To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
 
 This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning.
 
 
-# 4. Folders
+# Folders
 These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders.
 
 | Folder     | Contents                             |
@@ -87,7 +84,7 @@ These are the folders in this GITHUB repository. On a cell phone, select "Browse
 
 [Here](doc-software/README.md) is a change log, see section "Recent changes".
 
-# 5. License
+# License
 
 This material is available under the MIT license:
 
@@ -113,7 +110,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-# 6. Disclaimer
+# Disclaimer
 
 The information provided here is for general informational purposes only. All information on this repository is provided in good faith, however I make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability or completeness of any information in this repository. 
 

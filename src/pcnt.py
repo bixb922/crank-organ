@@ -393,7 +393,7 @@ class PCNT:
                     bitpos += channel * 8
                 set_bit_field( reg0, bitpos, length, vconfig )
 
-        #>>>>better code for filter:
+        # >>> better code for filter:
         #if filter is not None:
         #    set_bit_field( reg0, 10, 1023, filter )
         #    set_bit_field( reg0, 10, 1, bool(filter) )

@@ -85,9 +85,10 @@ def upload( request, path, filename  ):
 
     # Javascript must use String.normalize() for filenames
     # See filemanager.html encodePath()
-    # If not Hände can be encoded H\xc3\xa4nde (Code point for a umlaut)
-    # or Ha\xcc\x88nde (combined a + diacritics mark)
-    # And we want to have it normalized to NFC!
+    # If not Hände can be encoded 
+    # H\xc3\xa4nde (this is wanted, Code point for a umlaut)
+    # Ha\xcc\x88nde (this is not wanted, combined a + diacritics mark)
+    # And we want to have it normalized to NFC! (Code points)
     # Javascript normalize("NFC") substitutes combined diacritics
     # to code points.
 
@@ -123,7 +124,9 @@ def upload( request, path, filename  ):
     # And vice-versa. Only one instance of two equivalent
     # files will be allowed, to avoid duplicity and confusion.
     equiv = fileops.get_equivalent( path )
+
     if fileops.file_exists( equiv ):
+        print("Equivalent does not exist")
         # The equiv file is replaced by the new file
         os.remove( equiv )
         

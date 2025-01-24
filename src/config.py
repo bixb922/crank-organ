@@ -165,7 +165,8 @@ class Config:
                 f"Config.json item {item} not a floating point number"
             )
             return default
-
+    # >>> implement get() and get_bool()
+    
     def save(self, newconfig):
         # Save new configuration, validate before storing
         # Authentication is already done by webserver.py
