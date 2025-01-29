@@ -9,13 +9,14 @@ from math import log10
 if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")
-# >>> tune to mean frequency/tune to 440.
+# >>> tune to mean frequency vs. tune to 440.
 
 from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery, microphone
 import fileops
 import frequency
 import scheduler
+import midi
 
 # Time spent for measuring frequency for each note
 _TARGET_DURATION = 0.8 # seconds
@@ -271,7 +272,20 @@ class OrganTuner:
             if dbval >= config.cfg["mic_signal_low"]:
                 return dbval
 
-            
+    def set_to_mean_frequency(self):
+        # >>> pending: set on web page
+        # >>> ?Button "set to mean?" or "set to 440?"
+        # >>> ?Button "Tune all to mean" "Tune all to 440"
+        # >>> ???check boxes "Use mean frequency" or "Use 440"
+        # >>> ???config.cfg["tune_to_mean"] = True
+        # Set tuning frequency according to the mean deviation
+        # of all notes. Zero deviation if no tuning available.
+        cents_list = [ v["cents"] for v in self.stored_tuning if v ]
+        try: 
+            midi.set_tuning_frequency( sum( cents_list ) / len(cents_list) )
+        except ZeroDivisionError:
+            pass
+
     async def _get_note_pitch(self, pin_index, midi_note):
         store_signal = config.cfg.get("mic_store_signal", False)
         freqlist = []

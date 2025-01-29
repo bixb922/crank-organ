@@ -49,7 +49,8 @@
 9.  [Microphone](#9-microphone)
 10.  [Crank rotation sensor](#10-crank-rotation-sensor)
 11.  [Registers](#11-registers)
-12.  [Copyright and license](#12-copyright-and-license)
+12.  [Related documents](#12-related-documents)
+13.  [Copyright and license](#13-copyright-and-license)
 # 1. Introduction
 
 
@@ -642,7 +643,13 @@ The white light symbol is only printed on this switch, so it was easy to sand aw
 
 One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
 
-# 12. Copyright and license
+# 12. Related documents
+[Batteries](battery.md)
+
+[Crank sensor](crank-sensor.md)
+
+
+# 13. Copyright and license
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 

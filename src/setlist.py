@@ -227,31 +227,27 @@ class Setlist:
         self.current_setlist = []
         self._write_current_setlist()
 
+    def _interchange( self, pos1, pos2 ):
+        # Interchange tunes at positions pos1 and pos2
+        cs = self.current_setlist
+        cs[pos1], cs[pos2] = cs[pos2], cs[pos1]
+        self._write_current_setlist()
+
     def up(self, pos):
         # Move this tune one up in setlist
-        # Move one position up
-        s = self.current_setlist[pos]
-        del self.current_setlist[pos]
-        self.current_setlist.insert(pos - 1, s)
-        self._write_current_setlist()
+        self._interchange( pos, pos - 1 )
 
     def down(self, pos):
         # Move this tune one down in setlist
-        # Move one position down
-        s = self.current_setlist[pos]
-        del self.current_setlist[pos]
-        self.current_setlist.insert(pos + 1, s)
-        self._write_current_setlist()
+        self._interchange( pos, pos + 1)
 
     def top(self, pos):
         # Move this tune to top of setlist
-        # Move to top
-        s = self.current_setlist[pos]
-        del self.current_setlist[pos]
-        self.current_setlist.insert(0, s)
-        self._write_current_setlist()
+        self._interchange( 0, pos )
 
-    # >>> add bottom() ?
+    # >>> add bottom() function?
+
+
     def drop(self, pos):
         del self.current_setlist[pos]
         self._write_current_setlist()

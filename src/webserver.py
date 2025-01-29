@@ -263,7 +263,8 @@ async def clear_setlist(request):
     setlist.clear()
     return get_progress()
 
-
+# >>> better to pass tuneid instead of position, for the (very uncommon) case
+# of two users updating the setlist at the same time.
 @app.route("/up_setlist/<int:pos>")
 async def up_setlist(request, pos):
     setlist.up(pos)

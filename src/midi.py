@@ -22,6 +22,10 @@ WILDCARD_PROGRAM = 0 # Must be zero, see basic_note_on/basic_note_off
 
 tuning_frequency = 440
 
+def set_tuning_frequency( cents_deviation ):
+    global tuning_frequency
+    tuning_frequency = 440*2**(cents_deviation/1200)
+
 class NoteDef:
     # Note definition: this class is used to store note definitions
     # done on the pinout.html page and parsed by pinout.py.

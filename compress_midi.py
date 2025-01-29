@@ -274,8 +274,8 @@ def main():
     avg_input = input_blocks/n
     ratio = output_blocks/input_blocks
     print(f"{n} files {input_blocks=} {output_blocks=} (1 block=4096 bytes)")
-    print(f"average input={avg_input:.1f} blocks/file average output={avg_output:.1f} blocks/file {ratio=:.2f}")
-    print(f"average input={input_bytes/n:.0f} bytes/file average output={output_bytes/n:.0f} bytes/file ratio={output_bytes/input_bytes:.2f}")
+    print(f"average input={avg_input:4.1f} blocks/file, average output={avg_output:4.1f} blocks/file, block compression {ratio=:4.2f}")
+    print(f"average input={input_bytes/n/1000:4.0f} kbytes/file, average output={output_bytes/n/1000:4.0f} kbytes/file, bytes compression ratio={output_bytes/input_bytes:4.2f}")
 	# Dic 2024: overhead is 634 bloques, 512 for Micropython
 	# rest for /data, /lib y /software
     # blocks approx including micropython, *.mpy, static, data (with compiled mpy files and compressed static files)
@@ -292,7 +292,7 @@ def main():
         input_capacity = round(blocks_free/avg_input)
         output_capacity = round(blocks_free/avg_output)
         model = f"N{flash_size}R8"
-        print(f"{model:5s}: raw capacity={input_capacity:4.0f} compressed capacity={output_capacity:4.0f} midi files")
+        print(f"{model:5s}: raw capacity={input_capacity:4.0f}, compressed capacity={output_capacity:4.0f} midi files")
     print("Application overhead does not consider heavy use of lyrics")
 
 main()

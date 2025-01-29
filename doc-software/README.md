@@ -673,9 +673,9 @@ Install the git utility, to access github.com easily, namely to clone this repos
 
 ## Installation instructions
 
-To install MicroPython on the ESP32-S3 N8R8 or N16R8 please see https://micropython.org/download/ESP32_GENERIC_S3/ section "Firmware (Support for Octal-SPIRAM)". Download the latest .bin file and use the esptool.py command line provided on the page.
+To install MicroPython on the ESP32-S3 N8R8 or N16R8 please see https://micropython.org/download/ESP32_GENERIC_S3/ section "Firmware (Support for Octal-SPIRAM)". Download the latest .bin file and use the esptool.py command line provided on the page. Version 1.24 is fine.
 
-To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32. If you use this tool, you don't need ```esptool.py```, and the tool alters the .bin image to recognize the 16Mb. See here: https://github.com/bixb922/crank-organ/discussions/3
+To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32. If you use this tool, you don't need ```esptool.py```, and the tool alters the .bin image to recognize the 16Mb and can even load the altered image to the microcontroller. See here: https://github.com/bixb922/crank-organ/discussions/3 or read the documentation at the respository for mp-image-tool-esp32. 
 
 
 You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html.  Run mpremote on the command line and you should get the >>> prompt (also called "REPL prompt").

@@ -2,7 +2,6 @@
 
 # Contents
 
-
 # Introduction
 
 
@@ -594,6 +593,12 @@ I have used automotive headlight switches for this purpose:
 The white light symbol is only printed on this switch, so it was easy to sand away with very fine paper.
 
 One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
+
+# Related documents
+[Batteries](battery.md)
+
+[Crank sensor](crank-sensor.md)
+
 
 # Copyright and license
 

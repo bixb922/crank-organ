@@ -9,8 +9,7 @@ if sys.implementation.name != "micropython": # type:ignore
     class micropython:
         def native(self):
             return self
-else:
-    from micropython import const # type:ignore
+
     
 
 # Sample rate is about max 35kHz for a ESP32-S3 at 240Mhz
