@@ -60,12 +60,17 @@ The diligent and flexible mode: You can modify the setlist on the fly with the p
 The very lazy mode: Don't use your cell phone. Don't define a setlist. Turn the microcontroller on. Turn the crank or touch the touchpad. All available tunes will be shuffled randomly and played. 
 
 # 2. Detailed description of software and hardware, schematics, plans
+Main documents:
 
-Please see [here](doc-software/README.md) for a detailed description of the software.
+* [Description of the controller software.](doc-software/README.md)
+* [Description of the controller hardware and construction plans](doc-hardware/README.md)
 
-See [here](doc-hardware/README.md) for schematics of the hardware and detailed instructions on how to build the hardware.
+Specific documents
+* [Battery](doc-hardware/batery.md)
+* [Crank sensor](doc-hardware/crank-sensor.md)
 
-This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the issue section of this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
+
+This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the "issue" section or start a discussion in this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 # 3. To see a demo
 To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
@@ -74,7 +79,9 @@ This demo simulates the operation of the software in this repository closely. Th
 
 
 # 4. Folders
-These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders.
+
+These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders. Open the README.md in the folder for the detailed description.
+
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
