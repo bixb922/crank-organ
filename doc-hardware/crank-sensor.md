@@ -16,6 +16,8 @@
 14.  [Conclusion](#14-conclusion)
 # 1. Introduction
 
+TL;DR: read[this](README.md#10-crank-rotation-sensor).
+
 My MIDI organ had to have a crank sensor. My main motivation was to mimic a mechanical organ very closely: start to turn the crank and the music starts. Turn slower, and the music is slower. Stop the crank, and the music stops at that point. No additional buttons, controls nor displays needed to play music.
 
 Well, the journey was long. Over the course of the last few years I purchased some sensor boards.

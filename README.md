@@ -1,4 +1,5 @@
 # crank-organ
+
 MIDI based crank organ software and hardware
 
 # Contents
@@ -67,7 +68,7 @@ Main documents:
 
 Specific documents
 * [Battery](doc-hardware/batery.md)
-* [Crank sensor](doc-hardware/crank-sensor.md)
+* [Crank sensor](doc-hardware/crank-sensor.md) with a summary [here](doc-hardware/README.md#10-crank-rotation-sensor)
 
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the "issue" section or start a discussion in this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
