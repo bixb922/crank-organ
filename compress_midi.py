@@ -161,7 +161,7 @@ def reformat_midi( input_filename, output_filename ):
         else:
             # A kind of flute for all other channels except drum
             program = 74
-        track.append( mido.Message( type="program_change", program=program, time=0, channel=channel) )
+        track.append( mido.Message( type="program_change", program=program, time=0, channel=channel, time=delta) )
 
     running_time = 0
     for event in event_list:
