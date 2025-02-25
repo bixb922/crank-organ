@@ -1,12 +1,12 @@
 {
-    "comment": "35 bass drum (wurlitzer)",
-    "comment": "45 low tom",
-    "comment": "47 low-mid tom",
-    "comment": "48 high-mid tom",
-    "comment": "49 crash cymbal (wurlitzer)",
-    "comment": "50 snare drum (wurlitzer)",
-    "comment": "85 castanets (wurlitzer)",
-    "comment": "59 claves",
+    "comment1": "35 bass drum (wurlitzer)",
+    "comment2": "45 low tom",
+    "comment3": "47 low-mid tom",
+    "comment4": "48 high-mid tom",
+    "comment5": "49 crash cymbal (wurlitzer)",
+    "comment6": "50 snare drum (wurlitzer)",
+    "comment7": "85 castanets (wurlitzer)",
+    "comment8": "59 claves",
     
     "47": {
         "name": "Low-mid Tom MIDI=47=B2=B,, tuned to Eb", 

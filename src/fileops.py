@@ -127,13 +127,25 @@ def find_decompressed_midi_filename( filename ):
         with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
             data = stream.read()
 
+    # This code does not allow have two MIDI files open at the same time.
+    # Also: temp.mid does not get deleted after use, it remains there
+    # until the next file is decompressed.
     TEMP_FILENAME = "/data/temp.mid"
     with open( TEMP_FILENAME, "wb") as output:  # type:ignore
         output.write(data)
     return TEMP_FILENAME
 
 def open_midi( filename ):
+    # Restriction: find_decompressed_midi_filename() works only
+    # for one file at a time. Cannot open 2 MIDI files simultaneously.
+    # (but that is not required here)
     from umidiparser import MidiFile
+    # With 4 to 8 MB RAM, there is enough to have large buffer.
+    # But even so, there is no need to read the full file to memory
+    # A buffer size of > 1000 means almost no impact on CPU and
+    # uses a relatively small amount of RAM
+    # >>> could push decompress to MidiFile() and decompress on the
+    # fly, but that would require buffer_size=0 (i.e. buffer complete file)
     return MidiFile(find_decompressed_midi_filename( filename ),
                     buffer_size=5000,
                     reuse_event_object=True)

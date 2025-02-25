@@ -10,6 +10,7 @@ if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")
 # >>> tune to mean frequency vs. tune to 440.
+# >>> check 48_note_custom for rogue high note when tuning
 
 from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery, microphone

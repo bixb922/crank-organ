@@ -50,7 +50,7 @@ import sys
 #   For CircuitPython, it's import asyncio. Also time_now_us now returns an integer.
 
 # Compatibility wrapper for python/micropython/circuitpython functions
-_implementation = sys.implementation.name
+_implementation = sys.implementation.name # type:ignore
 if _implementation == "micropython":
     from micropython import const
     import uasyncio as asyncio
@@ -432,13 +432,13 @@ class MidiEvent:
         #       The raw data of the event. self.data is the read only
         #       property for self._data.
 
-        self._event_status_byte = None
-        self._data = None
+        #self._event_status_byte = None
+        #self._data = None
 
-        self._status = None
-        self.delta_miditicks = None
-        self.delta_us = None
-        self.timestamp_us = None
+        #self._status = None
+        #self.delta_miditicks = None
+        #self.delta_us = None
+        #self.timestamp_us = None
 
     @micropython.native
     def _set(self, event_status, data, delta_miditicks):
@@ -973,9 +973,9 @@ class MidiTrack:
             # Skip rest of track chunk, fast forward to beginning of next track
             file_object.seek(self._track_length, 1)
 
-        self._track_parser = None
-        self.event = None
-        self.current_miditicks = None
+        #self._track_parser = None
+        #self.event = None
+        #self.current_miditicks = None
 
     def _buffered_data_generator(self):
         # Generator to return byte by byte from a buffered track

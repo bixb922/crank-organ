@@ -21,13 +21,17 @@ BUFFER_SIZE = const(1024)
 
 # No complex arrays, use list
 exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
-
 # Surprisingly, the list is a bit faster than the array...
+
 # This is the von Hann window for FFT
 hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
 
 # about 2 or 3 ms can be shaved off if n is not passed as parameter
 # and by using BUFFER_SIZE constant instead.
+
+# Code is based on
+# https://rosettacode.org/wiki/Fast_Fourier_transform#C
+
 @micropython.native  # type:ignore
 def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
 #void _fft(cplx buf[], cplx out[], int n, int step)

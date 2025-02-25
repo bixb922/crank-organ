@@ -243,7 +243,11 @@ class Setlist:
 
     def top(self, pos):
         # Move this tune to top of setlist
-        self._interchange( 0, pos )
+        # Move to top
+        s = self.current_setlist[pos]
+        del self.current_setlist[pos]
+        self.current_setlist.insert(0, s)
+        self._write_current_setlist()
 
     # >>> add bottom() function?
 

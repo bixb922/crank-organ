@@ -371,7 +371,7 @@ class TempoEncoder:
 #     print("TachoDriver Debug started")
 #     from drehorgel import crank
 #     if crank.td.counter_task:
-#         crank.td.counter_task.cancel() # type:ignore
+#         crank.td.counter_task.cancel() 
 #     newcounter = DebugCounter()
 #     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
 

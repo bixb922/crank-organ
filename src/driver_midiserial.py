@@ -11,8 +11,8 @@ from driver_base import BasePin, BaseDriver
 class MIDISerialDriver(BaseDriver):
     def __init__( self, uart, pin, channel ):
         # Default rx is 9 for UART 0
-        assert 1 <= uart <= 2
-        assert 0 <= channel <= 15
+        # assert 1 <= uart <= 2
+        # assert 0 <= channel <= 15
         self._uart = UART( uart, baudrate=31250, tx=pin )
         # Have bytearray with the command ready, format is:
         # event+channel, note number, velocity

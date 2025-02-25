@@ -49,7 +49,8 @@ class MCP23017Driver(BaseDriver):
         self.all_notes_off()
 
     def _write(self, reg, val):
-        assert 0 <= val <= 255
+        #assert 0 <= val <= 255
+        # >>> (val).to_bytes(1)
         self._i2c.writeto_mem(
             self._address, reg, bytearray([val])
         )
@@ -75,7 +76,7 @@ class MCP23017Driver(BaseDriver):
 
 class MCPPin(BasePin):
     def __init__( self,  driver, pin_number, rank, nominal_midi_note ):
-        assert 0 <= pin_number <= 15
+        #assert 0 <= pin_number <= 15
 
         # Store register number according to bank
         # 0<=pin<8 means bank 0, 8<=pin<=15 means bank 1

@@ -57,7 +57,8 @@ class MIDIPlayer:
         # DRUM_PROGRAM is for drum instruments on MIDI channel 10
         self.channelmap = bytearray(16)
 
-        # Default startup value for tempo follows crank
+        # Default startup value for tempo follows crank, can ge changed
+        # from play.html page
         self.set_tempo_follows_crank( config.cfg.get("tempo_follows_crank", False ) )
         self.logger.debug("init ok")
         
@@ -66,9 +67,10 @@ class MIDIPlayer:
             self.time_played_us = 0
             battery.end_heartbeat()
 
-            duration = 1 # Needed for finally:
-            # get_info_by_id could fail in case tunelib
-            # has not been correctly updated
+            duration = 1 # Needed so finally does not fail.
+
+            # get_info_by_id() could fail in case tunelib
+            # has not been correctly updated. 
             midi_file, duration = tunemanager.get_info_by_tuneid(tuneid)
 
             controller.all_notes_off()
@@ -77,6 +79,7 @@ class MIDIPlayer:
             self._reset_channelmap()
 
             await self._play(midi_file)
+
             self.progress.tune_ended()
 
         except asyncio.CancelledError:
@@ -106,9 +109,10 @@ class MIDIPlayer:
                                  requested )
 
     def _insert_history(self, tuneid, time_played_us, duration, requested):
-        percentage_played = 0
-        if duration != 0:
+        try:
             percentage_played = round(time_played_us / 1000 / duration * 100)
+        except ZeroDivisionError:
+            percentage_played = 0
         history.add_entry(tuneid, percentage_played, requested)
         if percentage_played > 95:
             tunemanager.add_one_to_history( tuneid )
@@ -118,18 +122,17 @@ class MIDIPlayer:
             self.channelmap[i] = 1 # 1=piano as default program number
         # Channel 10 always are drum notes, assign the virtual DRUM PROGRAM
         # to all the notes that are played on ths channel. Program change
-        # events are ignored on channel 10
-        # Use the (virtual) DRUM_PROGRAM numbert for this channel
+        # events are ignored on channel 10, see self._process_midi()
+        # Use the (virtual) DRUM_PROGRAM number for this channel
         self.channelmap[DRUM_CHANNEL] = DRUM_PROGRAM
     
 
     async def _play(self, midi_file):
-        # Open MIDI file takes about 50 millisec on a ESP32-S3 at 240 Mhz, 
+        # MidiFile() file takes about 50 millisec on a ESP32-S3 at 240 Mhz, 
         # do it before
-        # starting the loop.
-        # With 4 to 8 MB RAM, there is enough to have large buffer.
-        # But even so, there is no need to read the full file to memory
-        # A buffer size of > 1000 means almost no impact on CPU
+        # starting the for event in midifile loop.
+        # fileops.open_midi() takes 200 to 400 ms to decompress a gz
+        # file and to create temp.mid and open it with MidiFile()
         midifile = open_midi( midi_file ) # fileops.open_midi
 
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
@@ -138,6 +141,8 @@ class MIDIPlayer:
         # to start of music. This can be important if there are
         # a lot of meta events with lots of text before the first note.
         # 500 msec should be enough, I have found one case of 240 msec.
+        # This should not be an issue for MIDI files compressed with
+        # compress_midi.py, since all meta events are skipped.
         playing_started_at = ticks_us() + 500_000
         midi_time = 0
         for midi_event in midifile:
@@ -146,6 +151,7 @@ class MIDIPlayer:
             # events are important.
             # But if delta_us != 0, the event has to be processed
             # to update time.
+            # (No gain for MIDI files compressed with compress_midi.py)
             if midi_event.delta_us == 0 and not midi_event.is_channel():
                 continue
 
@@ -159,7 +165,7 @@ class MIDIPlayer:
             # Wait for the difference between the "time that is" and 
             # the "time that should be"
             wait_time = round(midi_time - playing_time)
-
+# >>> medir jitter
             # Sleep until scheduled time has elapsed
             await scheduler.wait_and_yield_ms( wait_time )
 
@@ -174,10 +180,10 @@ class MIDIPlayer:
     def _process_midi(self, midi_event):
         status = midi_event.status
         # Process note off event (equivalent to note on, velocity 0)
-        if status == NOTE_OFF or (
+        if (
             status == NOTE_ON
             and midi_event.velocity == 0
-        ):
+        ) or status == NOTE_OFF:
             controller.note_off( 
                     self.channelmap[midi_event.channel], 
                     midi_event.note)
@@ -187,13 +193,14 @@ class MIDIPlayer:
                     self.channelmap[midi_event.channel], 
                     midi_event.note)
         # Process program change
-        elif status == PROGRAM_CHANGE:
-            if midi_event.channel != DRUM_CHANNEL:
-                # Allow program change only for non-percussion channels
-                # Internally program_number will be 1-128 for MIDI
-                # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
-                self.channelmap[midi_event.channel] = midi_event.program+1
-        # umidiparser already handled the set tempo meta event
+        elif status == PROGRAM_CHANGE and midi_event.channel != DRUM_CHANNEL:
+            # Allow program change only for non-percussion channels
+            # Internally program_number will be 1-128 for MIDI
+            # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
+            self.channelmap[midi_event.channel] = midi_event.program+1
+
+        # umidiparser already handled the set tempo meta event, no
+        # need to process here.
 
     def get_progress(self):
         p = self.progress.get(self.time_played_us)
@@ -201,8 +208,9 @@ class MIDIPlayer:
         return p
     
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
-        # Compute additional wait time due to crank or UI velocity setting
+        # Recompute delta time due to crank or UI velocity setting
         additional_wait = 0
+        # >>> check this if.
         if not self.tempo_follows_crank or crank.is_turning():
             # Change playback speed with UI settings 
             # and with crank rpsec if crank sensor is enabled
@@ -213,16 +221,19 @@ class MIDIPlayer:
                 # crank should inform that it has stopped...?
                 normalized_vel = 1
             additional_wait = round(midi_event_delta_us / normalized_vel)
+            # >>>>>SHOULD RETURN HERE?
+
 
         # We get here if the crank is not turning and tempo_follows_crank is enabled.
         # Wait for the crank to start turning again and return the waiting time
         # to be added to the MIDI time delaying the rest of the tune.
-        return additional_wait + await self._wait_for_crank_to_turn()
+        if not crank.is_turning() and crank.is_installed():
+            additional_wait += await self._wait_for_crank_to_turn()
+
+        return additional_wait
     
     async def _wait_for_crank_to_turn( self ):
-        if crank.is_turning() or not crank.is_installed():
-            return 0
-        # Turning too slow or stopped, wait until crank turning
+         # Turning too slow or stopped, wait until crank turning
         # and return the waiting time. MIDI time is then delayed
         # by the same amount than the time waiting for the crank to turn
         # again, so playing can resume without a hitch.

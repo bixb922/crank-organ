@@ -116,7 +116,7 @@ class BlinkingLed:
         # by global async error handler.
         if self.problem_task:
             # No more flashing for problem
-            self.problem_task.cancel()  # type:ignore
+            self.problem_task.cancel() # type:ignore    
         self.on((MEDIUM, 0, MEDIUM))
 
     def _blink_background(
@@ -143,7 +143,8 @@ class BlinkingLed:
 
 def set_led( pin ):
     # Caching pin makes this module decoupled from pinout
-    # and led starts sooner
+    # and led starts sooner. led.txt is only written if
+    # the pin is changes and is different from the default 48.
     if get_led() != pin:
         # Write led.txt only if pin definition is different
         with open(LED_FILE, "w") as file:

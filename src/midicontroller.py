@@ -157,6 +157,7 @@ class MIDIController:
         # to activate for this midi note
         actions = self.get_actions( program_number, midi_number )
         for actuator, register, _, invert in actions:
+            # >>> could get rid of "invert", perhaps not useful?
             if register.value() != invert:
                 actuator.on()
         # Return truish to caller if a note was played
@@ -166,8 +167,8 @@ class MIDIController:
         # assert 1<=program_number <=128 
         # assert 0<=midi_number<= 127
         # Get list of  pins to turn off for this midi note
-        actions = self.get_actions( program_number, midi_number )
-        for p in actions:
+
+        for p in self.get_actions( program_number, midi_number ):
             # p[0] is the pin or virtual pin object
             # Don't check register here, no damage in turning off
             # a note.
