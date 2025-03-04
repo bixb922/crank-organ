@@ -5,9 +5,6 @@ import time
 from drehorgel import tunemanager
 import fileops
 # >>> allow sync instead of copy?
-# >>> allow 2 tunelib folders, for staging?
-# >>> compare tunelib.json with tunelib folder to see what has been deleted?
-# >>> tunelibedit.html did not delete .mid.gz file?
 
 DESTINATION_FOLDERS = {
     "mid": "/tunelib",

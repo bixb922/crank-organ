@@ -50,9 +50,8 @@ class MCP23017Driver(BaseDriver):
 
     def _write(self, reg, val):
         #assert 0 <= val <= 255
-        # >>> (val).to_bytes(1)
         self._i2c.writeto_mem(
-            self._address, reg, bytearray([val])
+            self._address, reg, (val).to_bytes(1) 
         )
     def _read(self, reg):
         data = self._i2c.readfrom_mem(

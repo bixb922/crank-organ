@@ -43,6 +43,7 @@ class Setlist:
 
         self.setlist_task = asyncio.create_task(self._setlist_process())
         self.automatic_playback_task = asyncio.create_task( self._automatic_playback_process() )
+        self.blink_empty_task = asyncio.create_task( self._blink_empty() )
         self.player_task = None
         self.timeout_task = None
         self.logger.debug("init ok")
@@ -66,7 +67,6 @@ class Setlist:
         
     
     async def wait_for_start( self ):
-
 
         # Record that we are waiting for tune to start
         # for progress.
@@ -337,4 +337,9 @@ class Setlist:
             if not self.player_task:
                 self.logger.debug("Automatic playback sets music start event")
                 self.music_start_event.set()
+
+    async def _blink_empty( self ):
+        while True:
+            led.set_blink_setlist( self._is_empty() )
+            await asyncio.sleep_ms(300) # type:ignore
 

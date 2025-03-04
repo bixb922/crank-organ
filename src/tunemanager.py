@@ -87,8 +87,10 @@ class TuneManager:
     def get_autoplay(self, rating=""):
         # Return list of all possible tune ids marked as autoplay.
         # used for setlist  shuffle all 
-        # Exclude rating "one star"
-        # Include unrating, ** and ***
+        # If rating="": include all tunes with autoplay.
+        # If rating is "*", "**" or "***"
+        # include all tuning with autoplay and specified rating or better.
+        # The resulting list must be a copy, since it will be modified.
         tunelib = self._read_tunelib()
         return [
             tuneid for tuneid, v in tunelib.items() 
@@ -121,7 +123,7 @@ class TuneManager:
     async def _wait_a_bit(self):
         # If sync is taking too long, yield CPU to other tasks
         # but sometimes only... not too frequently
-        if random()>0.9:
+        if random()>0.8:
             # On ESP32, minimum time to wait is 10 or 20 msec
             # anyhow...
             await asyncio.sleep_ms(10)
@@ -134,9 +136,9 @@ class TuneManager:
                 filename for filename in filedict.keys()
                 if fileops.get_equivalent(filename) in filedict 
                 and not fileops.is_compressed( filename )):
-                self.logger.info(f"Dedup: erase file {filename}, duplicate with .gz")
-                os.remove( self.tunelib_folder + filename )
-                del filedict[filename]
+            self.logger.info(f"Dedup: erase file {filename}, duplicate with .gz")
+            os.remove( self.tunelib_folder + filename )
+            del filedict[filename]
 
     def _get_duration(self, filename):
         try:
@@ -178,22 +180,24 @@ class TuneManager:
                 # Title based on filename
                 tune[TLCOL_TITLE] = ("~" + fileops.get_filename_stem(filename)).replace("-", " ").replace("_"," ").replace("  "," ")
                 tune[TLCOL_AUTOPLAY] = True
+                tune[TLCOL_INFO] = self.get_initial_info( tune[TLCOL_TITLE] )
             
             # Update tune if already there, but this certainly
             # also needed for new tunes
             tune[TLCOL_SIZE] = filesize
             tune[TLCOL_DATEADDED] = timezone.now_ymd()
             tune[TLCOL_TIME] = self._get_duration(filename)
-            # Update filename, the file could
-            # have (or not) .gz suffix
+            # Update filename, the file could now
+            # have (or not) .gz suffix and be different from befgore
             tune[TLCOL_FILENAME] = filename
 
             changed = True
+
         return changed
     
     async def _check_deleted_files( self, filedict, newtunelib ):
         changed = False
-              # Now check if files in tunelib are not in flash
+        # Now check if files in tunelib are not in flash
         for tune in newtunelib.values():
             await self._wait_a_bit()
             # Add missing columns (this is in case
@@ -269,7 +273,7 @@ class TuneManager:
         self.sync_task = None
 
 
-        # Sync'ing is done, delete file that may have triggered the sync
+        # Sync'ing is done, delete indicator that sync is pending
         self.forget_sync_pending()
 
     def _compute_hash(self, s):
@@ -401,3 +405,10 @@ class TuneManager:
 
     def complement_progress( self, progress ):
         progress["sync_pending"] = self.sync_tunelib_pending()
+
+    def get_initial_info( self, title ):
+        try:
+            p = title.lower().index("vb") - 1
+            return title[p:p+4]
+        except: 
+            return ""

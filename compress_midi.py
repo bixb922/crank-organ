@@ -30,6 +30,8 @@ python <this_file>.py <input folder> <output folder>
 Input and output folder need only be specified once. From then on, they
 are stored in <this_file>.json in the current folder.
 Can also compare with a tunelib.json copied from the microcontroller to the PC, to see difference between local and microcontroller's tunelib folder.
+All MIDI output files are generated with 96 ticks per beat, which was used in the past,
+and is a good compromise between file size and timing resolution.
 """
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -63,7 +65,7 @@ def parse_arguments():
             j = json.load(file)
     except FileNotFoundError:
         if len(args.folders) != 2:
-            print(f"No {this_file_json}, must specify input and output folder. Use --help to get command description")
+            print(f"No {this_file_json} found, must specify input and output folder. Use --help to get command description")
             sys.exit(1)
         j = {}
     json_changed = False
@@ -107,10 +109,12 @@ def file_info( filename ):
         return -1, -1
     
 def size_on_flash( size ):
-    #if size < 512:
-    # but then, the inode should also be accounted for....
-    #    return size/4096
-    return (size+4095)//4096
+    # Return the estimated file size considering that the file will be stored on flash
+    # in blocks of 4096 bytes.
+    # If the file is smaller than 4096 bytes, return 1 block.
+    # MIDI files smaller than the littlefs2 limit of 512 bytes are not common.
+    # Also: this does not add the overhead for the inode (filename, etc)    
+    return min((size+4095)//4096,4096)
 
 def read_file( filename ):
     with open(filename, "rb") as file:
@@ -181,22 +185,26 @@ def reformat_midi( input_filename, output_filename, bass_correction ):
     # There is no need for a "track 0" since no set tempo nor other meta
     # messages are needed. 
     # Append the tracks to the MIDI file.
-    track0 = None
-    for channel in set( event.channel for start_time, event in new_event_list):
+    # First a track for channel 0, then one for each channel.
+    track0 =  mido.MidiTrack()
+    trackdict[0] = track0
+    tracktime[0] = 0
+    midifile.tracks.append( track0 )
+    # Now repeat for other channels (if any)
+    for channel in set( event.channel for _, event in new_event_list if event.channel != 0):
         track = mido.MidiTrack()
         trackdict[channel] = track
         tracktime[channel] = 0
         midifile.tracks.append( track )
-        if not track0:
-            track0 = track
 
-    # Insert one set_tempo event at the beginning of the first track, 
+
+    # Insert a set_tempo event at the beginning of the first track, 
     # (just to be sure)
-    # with standard tempo. Deltas will be adjusted to this tempo.
+    # with the standard tempo. Deltas will be adjusted to this tempo.
     track0.append( mido.MetaMessage( type="set_tempo", tempo=tempo, time=0))
     
     # Insert a initial program change for all  channels
-    # to change sound to a type of flute. Can be overridden later by midi file.
+    # to change sound to a type of flute. Can be overridden later by the input midi file.
     for channel, track in trackdict.items():
         if channel == 9:
             # Standard program for drum channel (channel 10)
@@ -221,14 +229,10 @@ def reformat_midi( input_filename, output_filename, bass_correction ):
         last_time = tracktime[channel]
 
         # Now calculate the MIDI file delta time.
-        # Due to integer vs floating point precision, delta could be -1
+        # Due to integer vs floating point precision, delta could be -1 or -2
         # sometimes, so do a max(delta,0)
         delta = max(round((start_time-last_time)/tempo_secs*ticks_per_beat),0)
 
-        # If ticks per beat is 480 or higher, this can be also
-        # calculated as:
-        # delta =  mido.second2tick( start_time-last_time, ticks_per_beat, tempo ) 
-        assert delta >= 0
         if event.type == "note_on" or event.type == "note_off":
             velocity = 0
             if event.type == "note_on" and event.velocity != 0:
@@ -250,7 +254,7 @@ def reformat_midi( input_filename, output_filename, bass_correction ):
         # if not rounding/truncating errors
         # will start to propagate getting significant at the end
         # of tunes.
-        tracktime[channel] += delta*tempo_secs/ticks_per_beat
+        tracktime[channel] += delta * tempo_secs / ticks_per_beat
         # No need to output further "set tempo" meta events since event.time
         # already reflects the tempo changes
 
@@ -301,13 +305,13 @@ def compare_folder_with_tunelib( folder, tunelib_file ):
         return unicodedata.normalize( "NFC", s )
     
     TLCOL_FILENAME = 6
-    TLCOL_SIZE = 11 
+    # TLCOL_SIZE = 11
     if not tunelib_file:
         return
     with open(tunelib_file) as file:
         tunelib = json.load( file )
         
-    tunelib_files = set( nfc(tune[6]) for tune in tunelib.values())
+    tunelib_files = set( nfc(tune[TLCOL_FILENAME]) for tune in tunelib.values())
     folder_files = set( nfc(fn) for fn in os.listdir(folder) )
     print("In tunelib (microcontroller) but not in folder")
     compare( tunelib_files, folder_files )
@@ -347,7 +351,9 @@ def main():
     remove_deleted_files( input_folder, output_folder )
 
     if n == 0:
+        # No files, no statistics
         return
+    
     #print(f"Maximum decompressed size={max_decompressed_size} bytes")
     avg_output = output_blocks/n
     avg_input = input_blocks/n
@@ -355,11 +361,12 @@ def main():
     print(f"{n} files {input_blocks=} {output_blocks=} (1 block=4096 bytes)")
     print(f"average input={avg_input:4.1f} blocks/file, average output={avg_output:4.1f} blocks/file, block compression {ratio=:4.2f}")
     print(f"average input={input_bytes/n/1000:4.0f} kbytes/file, average output={output_bytes/n/1000:4.0f} kbytes/file, bytes compression ratio={output_bytes/input_bytes:4.2f}")
-	# Dic 2024: overhead is 634 bloques, 512 for Micropython
+	# As of Dic 2024: overhead is 634 blocks, 512 for Micropython
 	# rest for /data, /lib y /software
     # blocks approx including micropython, *.mpy, static, data (with compiled mpy files and compressed static files)
     # and data files, 4 error.log files, a tunelib.json and lyrics.json
     # with 2 backups each, estimated size.
+    # If static is compressed and micropython is compiled:
     application_overhead = 720
     # If static is not compressed and micropython is not compiled
     application_overhead = 840
@@ -376,32 +383,18 @@ def main():
         
 main()
     
-# Decompressing takes somewhere between 200 ms and 800ms
+# Decompressing a MIDI file to flash takes somewhere between 200 ms and 800ms
+# on the ESP32-S3. Could be faster if decompressed to RAM on the fly
+# but that raises the garbage collection time...
 
-#N16R8 os.statvfs("") with empty file system:
+# N16R8 os.statvfs("") with empty file system:
 #  os.statvfs("")
 # (4096, 4096, 3584, 3582, 3582, 0, 0, 0, 0, 255)
 # means that overhead for micropython = 512 blocks = 2MB
 
-# With ticks_per_beat = 48 and application_overhead = 670
-#Maximum decompressed size=109329 bytes
-#372 files input_blocks=1594 output_blocks=587
-#average input=4.3 blocks/file average output=1.6 blocks/file ratio=0.37
-#average input=15346 bytes/file average output=4362 bytes/file ratio=0.3
-#N8R8 : raw capacity= 322 compressed capacity= 873 midi files
-#N16R8: raw capacity= 800 compressed capacity=2171 midi files
 
-# With ticks_per_beat = 96 and application_overhead = 670
-#Maximum decompressed size=109331 bytes
-#372 files input_blocks=1594 output_blocks=633
-#average input=4.3 blocks/file average output=1.7 blocks/file ratio=0.40
-#average input=15346 bytes/file average output=4799 bytes/file ratio=0.3
-#N8R8 : raw capacity= 322 compressed capacity= 810 midi files
-#N16R8: raw capacity= 800 compressed capacity=2013 midi files
-
-
-# Quantize 10
-#quantize=10.0 ticks_per_beat=50 delta=1
+# Effect of quantization (ticks per beat) on compression
+# Quantize=10.0 ticks_per_beat=50
 #434 files input_blocks=1884 output_blocks=750 (1 block=4096 bytes)
 #average input= 4.3 blocks/file, average output= 1.7 blocks/file, block compression ratio=0.40
 #average input=  16 kbytes/file, average output=   5 kbytes/file, bytes compression ratio=0.32
@@ -409,7 +402,7 @@ main()
 #N8R8 : raw capacity= 278, compressed capacity= 699 midi files
 #N16R8: raw capacity= 750, compressed capacity=1884 midi files
 
-# Quantize 5 = ticks_per_beat = 96
+# Quantize about 5, ticks_per_beat = 96
 #434 files input_blocks=1884 output_blocks=785 (1 block=4096 bytes)
 #average input= 4.3 blocks/file, average output= 1.8 blocks/file, block compression ratio=0.42
 #average input=  16 kbytes/file, average output=   5 kbytes/file, bytes compression ratio=0.34
@@ -417,8 +410,8 @@ main()
 #N8R8 : raw capacity= 278, compressed capacity= 668 midi files
 #N16R8: raw capacity= 750, compressed capacity=1800 midi files
 
-# Quantize 3
-#quantize=3.0 ticks_per_beat=167 delta=1
+
+# Quantize=3.0 ticks_per_beat=167
 #434 files input_blocks=1884 output_blocks=822 (1 block=4096 bytes)
 #average input= 4.3 blocks/file, average output= 1.9 blocks/file, block compression ratio=0.44
 #average input=  16 kbytes/file, average output=   6 kbytes/file, bytes compression ratio=0.36

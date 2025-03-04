@@ -70,13 +70,14 @@
      * [Changes from June 2024 to October 2024](#changes-from-june-2024-to-october-2024)
      * [Changes on Oct 30, 2024](#changes-on-oct-30-2024)
      * [Changes from Oct 30, 2024 to January 2024](#changes-from-oct-30-2024-to-january-2024)
-18.  [Programming language](#18-programming-language)
-19.  [Credits](#19-credits)
-20.  [Testing](#20-testing)
-21.  [Troubleshooting](#21-troubleshooting)
-22.  [Restrictions](#22-restrictions)
-23.  [Licensing](#23-licensing)
-24.  [Affiliation](#24-affiliation)
+18.  [Changes Feb 2025](#18-changes-feb-2025)
+19.  [Programming language](#19-programming-language)
+20.  [Credits](#20-credits)
+21.  [Testing](#21-testing)
+22.  [Troubleshooting](#22-troubleshooting)
+23.  [Restrictions](#23-restrictions)
+24.  [Licensing](#24-licensing)
+25.  [Affiliation](#25-affiliation)
 # 1. Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
@@ -538,7 +539,7 @@ You select if you will have a microphone, crank sensor, neopixel led or touchpad
 
 If present, it's best to have microphone on pin 4, either touchpad or crank sensor on pin 5. Only certain pins of the ESP32-S3 support touchpad and analog-digital conversion. 
 
-Many ESP32-S3 boards have a "neopixel" RGB WS2812 led either on pin 38 or 48. See the vendor's description or schematic, or try with both values. You can use the Pin and MIDI Configuration page to redefine the pin number.
+Most ESP32-S3 boards have a "neopixel" RGB WS2812 led either on pin 38 or 48. See the vendor's description or schematic, or try with both values. You can use the Pin and MIDI Configuration page to redefine the pin number. The default pin number is 48.
 
 If you don't have, say, a microphone, leave the pin definition blank to tell the software to ignore the microphone.
 
@@ -913,15 +914,21 @@ After 15 minutes without activity, the microprocessor will shut itself down to s
 This time can be changed using the General Configuration, section "Power Management".
 
 ## The onboard RGB LED
-ESP32-S3 boards usually have a onboard red/green/blue led. This LED flashes or lights up:
-* Green/blue during start up.
+ESP32-S3 boards usually have a onboard red/green/blue led. This LED flashes or lights up. Most are just indications for normal functions:
+
+* Blue to green during start up.
 * Four white flashes when connected to WiFi.
+* Low blue flash when setlist is empty
+
+Some are for feedback of user actions:
 * White while the touchpad is down
-* Blue flash when tunes are shuffled
-* Green flash when start tune or next tune was signaled
-* Orange flash if the maximum polyphony was exceeded
-* Red blinking when there is a recoverable software problem, for example: wrong MIDI file format. Look at the error log.
-* Magenta blinking when the microcontroller stopped working, for example: a unrecoverable exception was detected. Look at the error log.
+* Green flash when start tune or next tune was signaled, or when tunes are shuffled
+* All colors cycling for reset and deep sleep buttons on "System" page.
+
+Problems:
+* Short orange flash if the maximum polyphony was exceeded (some notes were turned off)
+* Red blinking when there is a recoverable software problem, for example: wrong MIDI file format. See the error log.
+* Magenta blinking when the microcontroller stopped working, for example: a unrecoverable exception was detected. See the error log.
 
 ## Another way to do initial configuration
 
@@ -1115,8 +1122,16 @@ Optimizations, enhancements and corrections
 * Check for registers with blank name and non-blank pin
 * Use regular expressions wherever possible, correct missing backslash in patterns
 
+# 18. Changes Feb 2025
+* Corrected setlist.top  
+* Corrected bug in compress_midi.py, calculation of MIDI time was off at the end of a longer tune with many channels.
+* compress_midi.py can compare tunelib folder with tunelib.json
+* compress_midi.py can now make bass notes earlier. Very low bass notes (e.g. Bb2) can be a noticeably late, since those pipes are slow to start speaking. compress_midi.py can be enabled to correct that.
+* Blink blue if setlist is empty, updated documentation
+* Optimized transformation to bytes in MCP23017 driver
 
-# 18. Programming language
+
+# 19. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1134,7 +1149,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 19. Credits
+# 20. Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1144,12 +1159,12 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 20. Testing
+# 21. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 21. Troubleshooting
+# 22. Troubleshooting
 If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
@@ -1158,7 +1173,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 22. Restrictions
+# 23. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1182,7 +1197,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 23. Licensing
+# 24. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1208,7 +1223,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 24. Affiliation
+# 25. Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.

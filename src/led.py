@@ -32,7 +32,7 @@ class BlinkingLed:
             self.setlist = None # We don't know the setlist yet, too early
             
             self.problem_task = asyncio.create_task(self._problem_process())
-           
+            self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
 
     # Simple (permanent) led on and off
     def on(self, color):
@@ -56,6 +56,8 @@ class BlinkingLed:
                 # Problem: error or exception entry in log
                 if self.logger.get_error_count() > 0:
                     self.problem_task = self._blink_background((MEDIUM, 0, 0))
+                    self.blink_setlist_task.cancel() # type:ignore
+                else:
                     return
                 await asyncio.sleep_ms(1000)
 
@@ -141,6 +143,19 @@ class BlinkingLed:
             self.off()
             await asyncio.sleep_ms(timeoff)
 
+    def set_blink_setlist( self, value ):
+        self.blink_setlist = value 
+
+    async def _blink_setlist_process( self ):
+        self.blink_setlist = False
+        while True:
+            await asyncio.sleep_ms(900)
+            if self.blink_setlist:
+                self.on( (0,0,VERY_LOW ) )
+                await asyncio.sleep_ms(80)
+                self.off()
+
+
 def set_led( pin ):
     # Caching pin makes this module decoupled from pinout
     # and led starts sooner. led.txt is only written if
@@ -156,47 +171,3 @@ def get_led():
             return int(file.read())
     except: 
         return 48
-    
-# if __name__ == "__main__":
-#    async def test():
-#        print("led blue")
-#        led.on((0,0,32))
-#        await asyncio.sleep(1)
-#
-#        print("led touch start")
-#        led.touch_start()
-#        await asyncio.sleep(0.5)
-#
-#        print("led touch flash")
-#        led.touch_flash()
-#        await asyncio.sleep(1)
-#
-#        for _ in range(3):
-#            print("led short problem")
-#            led.short_problem()
-#            await asyncio.sleep(1)
-#
-#        for _ in range(3):
-#            print("led heartbeat")
-#            led.heartbeat()
-#            await asyncio.sleep(1)
-#
-#        print("led connected")
-#        led.connected()
-#        await asyncio.sleep(1)
-#
-#        print("led ack")
-#        led.ack()
-#        await asyncio.sleep(1)
-#
-#        print("led problem")
-#        # simulate problem
-#        led.logger.baselogger.error_count = 1
-#        await asyncio.sleep(10)
-#
-#        print("led severe")
-#        led.severe()
-#        await asyncio.sleep(1)
-#        led.off()
-#
-#    asyncio.run( test() )
