@@ -18,10 +18,14 @@ from drehorgel import timezone
 # >>> browser gets tunelib.json and lyrics.json twice sometimes
 # >>> detect deleted files PC vs microcontroller
 # >>> Sync tunelib
+# >>> make tunelist search tunelib.json
+# >>> niños
+
 
 # Define Tunelib Column names
 # Must be equal to common.js
 # tunelib.json entries are lists to get a smaller tunelib.json file
+
 TLCOL_ID = const(0) 
 TLCOL_TITLE = const(1)
 TLCOL_GENRE = const(2)

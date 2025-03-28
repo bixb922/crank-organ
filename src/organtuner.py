@@ -9,8 +9,7 @@ from math import log10
 if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")
-# >>> tune to mean frequency vs. tune to 440.
-# >>> check 48_note_custom for rogue high note when tuning
+
 
 from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery, microphone
@@ -44,6 +43,27 @@ class OrganTuner:
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
         self.logger.debug("init ok")
+
+    def get_stats( self ):
+        cents_list = [ v["cents"] for v in self.stored_tuning if v and "cents" in v and v["cents"] is not None]
+        cents_deviation = 0
+        try:
+            cents_deviation = sum( cents_list ) / len(cents_list) 
+        except ZeroDivisionError:
+            pass
+        avg_frequency = 440.0*2.0**(cents_deviation/1200.0)
+        tc = midi.tuning_cents
+        lcl = len(cents_list)
+        tok = sum( 1 for c in cents_list if abs(c) <= tc )
+        lst = len(self.stored_tuning)
+        return {
+                "tuned_ok": tok,
+                "tuned_not_ok": lcl-tok,
+                "not_tested": lst-lcl,
+                "pins": lst, 
+                "avg_frequency": round(avg_frequency,1),
+                "tuning_frequency": midi.tuning_frequency,
+                "tuning_cents": tc }
 
     def queue_tuning(self, method, arg):
         scheduler.set_playback_mode(False)
@@ -157,6 +177,8 @@ class OrganTuner:
         frequency.clear_stored_signals()
         # Recreate organtuner.json
         self._get_stored_tuning()
+        # Get the tuning frequency according to configuration
+
         self.logger.info("Stored tuning and stored signals removed")
     
     async def wait( self, duration ):
@@ -178,7 +200,6 @@ class OrganTuner:
 
                     # Queue empty, wait to be woken up
                     await self.start_tuner_event.wait() # type:ignore
-
             except Exception as e:
                 self.logger.exc(e, "exception in _organtuner_process")
             finally:
@@ -191,7 +212,7 @@ class OrganTuner:
 
     def _get_stored_tuning(self):
         self.stored_tuning:list = fileops.read_json(config.ORGANTUNER_JSON,
-                                  default={},
+                                  default=[],
                                   recreate=True)
         # Older versions use dict, delete that. 
         # If pin count is different, this organtuner.json is obsolete, delete.
@@ -222,6 +243,7 @@ class OrganTuner:
         return
 
     async def update_tuning(self, pin_index ):
+
         # Tune a single note and update organtuner.json
         self.logger.info(f"update_tuning {pin_index=}")
         # Get midi note to know nominal frequency
@@ -264,7 +286,6 @@ class OrganTuner:
         fileops.write_json(
             self.stored_tuning, config.ORGANTUNER_JSON, keep_backup=False
         )
-
         self.logger.info(f"update_tuning {midi_note} stored in flash")
 
     def calcdb(self, amp, maxamp):
@@ -273,19 +294,6 @@ class OrganTuner:
             if dbval >= config.cfg["mic_signal_low"]:
                 return dbval
 
-    def set_to_mean_frequency(self):
-        # >>> pending: set on web page
-        # >>> ?Button "set to mean?" or "set to 440?"
-        # >>> ?Button "Tune all to mean" "Tune all to 440"
-        # >>> ???check boxes "Use mean frequency" or "Use 440"
-        # >>> ???config.cfg["tune_to_mean"] = True
-        # Set tuning frequency according to the mean deviation
-        # of all notes. Zero deviation if no tuning available.
-        cents_list = [ v["cents"] for v in self.stored_tuning if v ]
-        try: 
-            midi.set_tuning_frequency( sum( cents_list ) / len(cents_list) )
-        except ZeroDivisionError:
-            pass
 
     async def _get_note_pitch(self, pin_index, midi_note):
         store_signal = config.cfg.get("mic_store_signal", False)
@@ -329,7 +337,8 @@ class OrganTuner:
                 iteration += 1
                 await asyncio.sleep_ms(10)  # yield, previous code was CPU bound
             # Store last sample in flash
-
+            # >>> FOR DEBUGGING ONLY
+            microphone.save_hires_signal(midi_note)
         except Exception as e:
             self.logger.exc(e, "Exception in _get_note_pitch")
         finally:

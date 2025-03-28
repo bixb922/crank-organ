@@ -96,7 +96,8 @@ class Config:
             "normal_rpsec": 1.2,
             "crank_lowpass_cutoff": 1.2,
             "rotary_tempo_mult": 1,
-
+            "tuning_frequency": 440,
+            "tuning_cents": 5,
         }
         # Populate missing keys from fallback
         missing_items = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
@@ -182,6 +183,7 @@ class Config:
                 "battery_heartbeat_duration",
                 "battery_heartbeat_period",
                 "automatic_delay",
+                "tuning_cents"
             ):
                 try:
                     newconfig[k] = int(v)
@@ -195,7 +197,8 @@ class Config:
                 "higher_threshold_rpsec",
                 "normal_rpsec",
                 "crank_lowpass_cutoff",
-                "rotary_tempo_mult"
+                "rotary_tempo_mult",
+                "tuning_frequency",
             ):
                 try:
                     newconfig[k] = float(v)

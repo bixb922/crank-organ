@@ -393,7 +393,7 @@ async function savePinoutFilename(){
     
     let resp = await fetch_json("/save_pinout_filename",
                         req  ) ;
-    showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash")
+    showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash, reboot needed")
     await getPinoutDetail();
     await get_available_pins();
     showHideElement( "table_list_pinout_by_midi_note", false );
@@ -482,7 +482,7 @@ async function savePinoutDetail(){
     }
     
     let resp = await fetch_json( "/save_pinout_detail/" + encodePath(currentPinoutFilenameAbs()), newpd ) ;
-    showPopup( "savePinoutDetailButton", "pinout detail saved to flash") ;
+    showPopup( "savePinoutDetailButton", "pinout detail saved to flash, reboot needed") ;
     clearMarks() ;
     await get_available_pins();
 }
@@ -662,7 +662,7 @@ async function list_pinout_by_midi_note(){
     data = await fetch_json("/list_pinout_by_midi_note/" + encodePath(currentPinoutFilenameAbs())) ;
     let thead = document.getElementById("thead_list_pinout_by_midi_note" );
     thead.innerText = "";
-    for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register", "\u{a0}Inverted"] ){
+    for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register"] ){
         let th = document.createElement( "th" );
         th.innerHTML = v;
         thead.appendChild( th );
@@ -674,7 +674,7 @@ async function list_pinout_by_midi_note(){
         let row = data[i];
         let mn = `${pad(row.program_number,3)}-${pad(row.midi_number,3)}`;
         insertRow( tbody, [ mn, row.midi_note, `${row.actuator_name}`,
-            row.actuator_rank, row.register_name, row.invert ] ) ;
+            row.actuator_rank, row.register_name] ) ;
         
     }
     showHideElement( "table_list_pinout_by_midi_note", true );

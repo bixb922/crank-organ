@@ -53,7 +53,6 @@ class ActuatorBank:
         # Increment/decrement polyphony counter.
         # Should never go below 0
         self.polyphony = max( self.polyphony + on_off, 0)
-        
         if self.polyphony > self.config_max_polyphony:
             # Exceeding polyphony could lead to battery overload
 

@@ -70,7 +70,8 @@
      * [Changes from June 2024 to October 2024](#changes-from-june-2024-to-october-2024)
      * [Changes on Oct 30, 2024](#changes-on-oct-30-2024)
      * [Changes from Oct 30, 2024 to January 2024](#changes-from-oct-30-2024-to-january-2024)
-18.  [Changes Feb 2025](#18-changes-feb-2025)
+     * [Changes Feb 2025](#changes-feb-2025)
+18.  [Changes Feb 2025 to March 28, 2025](#18-changes-feb-2025-to-march-28-2025)
 19.  [Programming language](#19-programming-language)
 20.  [Credits](#20-credits)
 21.  [Testing](#21-testing)
@@ -578,7 +579,18 @@ The definition for the 20 note scale is in /data/20_note_Carl_Frei.json. You can
 
 Please see other scale definitions in their respective json files. Several scales are provided as example. 
 
-The Pin and MIDI configuration allows to alter that the default. For example, I don't care very much which valve is connected to what pin, I just connect and then use the Test button on the Pin and Midi Configuration to find out what wiring I did, and then adjust configuration correspondingly. I don't even label the wires.
+The Pin and MIDI configuration allows to alter that the default. For example, I don't care very much which valve is connected to what pin, I just connect and then use the Test button on the Pin and Midi Configuration to find out what wiring I did, and then adjust configuration correspondingly. I usually don't even label the wires.
+
+The MIDI pin definition is ordered by the hardware layout. For each hardware pin, it specifies one or more notes that will activate each pin, possibly with the control of a register.
+
+The pin definition columns are:
+* Pin number: this cannot be altered and is the hardware pin. To change this, you will have to change the JSON template.
+* Program number/midi note indicates a MIDI note which will activate this pin. If program number is left blank, any program number in the MIDI file will do. If you specify a program number (1 to 128, 1=piano), that specific program number must be present in the MIDI file to make the note sound. If you specify 129, that MIDI note number on the percussion/drum channel (channel 10) will activate the note.
+* Rank: Any comment or description, for example a description of the location of the pipe (e.g. "accomp windchest pipe 3")
+* Register: a register (either hardware or software register) that must be active for the note to sound.
+* Test: Will test this pin. No MIDI note needs to be defined nor saved to test the pin. It will activate/deactivate the pin several times in succession.
+
+For a MIDI over serial, the pin number has no meaning, but it must be defined. See this file: /data/64_note_midi_over_serial.json for an example.
 
 
 # 11. System
@@ -1122,13 +1134,22 @@ Optimizations, enhancements and corrections
 * Check for registers with blank name and non-blank pin
 * Use regular expressions wherever possible, correct missing backslash in patterns
 
-# 18. Changes Feb 2025
+## Changes Feb 2025
 * Corrected setlist.top  
 * Corrected bug in compress_midi.py, calculation of MIDI time was off at the end of a longer tune with many channels.
 * compress_midi.py can compare tunelib folder with tunelib.json
 * compress_midi.py can now make bass notes earlier. Very low bass notes (e.g. Bb2) can be a noticeably late, since those pipes are slow to start speaking. compress_midi.py can be enabled to correct that.
 * Blink blue if setlist is empty, updated documentation
 * Optimized transformation to bytes in MCP23017 driver
+
+# 18. Changes Feb 2025 to March 28, 2025
+* Updated description of pinout definition.
+* Tuning statistics
+* Negative registers might turn off note when not intended.
+* Tuning cents and tuning frequency is now a parameter.
+* All notes off at startup
+* Allows non-numeric comment keys in drumdef.json
+* Saving signals when tuning also saves a high resolution signal fileops
 
 
 # 19. Programming language

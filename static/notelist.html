@@ -27,7 +27,14 @@
 <button type="button" onclick="allPinTest()" id="allPinTestButton">Prueba pins</button>
 <button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
 <button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
-
+<div class="middlediv"></div>
+<span>Afinar a</span> <span id="tuning_frequency">...</span>Hz, 
+<span id="tuned_ok">...</span> <span>afinados</span>,
+<span id="tuned_not_ok">...</span> <span>desafinados</span>,
+<span id="not_tested">...</span> <span>no probados</span>,
+<span>Frecuencia media</span> <span id="avg_frequency">...</span>Hz
+<span id="pins" style="display:none"></span>
+<span id="tuning_cents" style="display:none"></span>
 <div class="tableFixHead">
     <table  style="width:100%">
 		<thead>
@@ -47,9 +54,14 @@
 </body>
 
 <script>
+// gets refreshed by updateTuningStats()
+let tuning_cents = 5;
 
-async function getNoteList() {
+async function refreshNoteList() {
+	// refresh every 5 seconds
 	while( true ) {
+		// ensure tuning_cents is updated before updateNoteList()
+		await updateTuningStats();
 		updateNoteList( await fetch_json( "/data/organtuner.json" ) );
 		await sleep_ms( 5_000 ) ;
 	}
@@ -92,13 +104,16 @@ function updateNoteList( notelist ) {
         let elename = "tuning" + midi ;
         let docele = document.getElementById( elename ) ;
         if( cents != null ){
-          docele.style.visibility = "visible" ;
-		  let color = sap_green ;
-		  if(  cents >0.05 || cents < -0.05 ){
+        	docele.style.visibility = "visible" ;
+			let color = sap_green ;
+ 			if(  cents > tuning_cents/100 || cents < -tuning_cents/100 ){
+				color = fire_brick ;
+			}
+			if(  cents >0.05 || cents < -0.05 ){
 			  color = fire_brick ;
-		  }
-		  //lrBarGraph( elename, scale_cents( cents ), color, scale_divisions_cents, 20 ) ;
-		  centsBar( elename, cents, 20 );
+			}
+			//lrBarGraph( elename, scale_cents( cents ), color, scale_divisions_cents, 20 ) ;
+			centsBar( elename, cents, 20 );
         }
         else {
             docele.style.visibility = "hidden" ;
@@ -120,9 +135,8 @@ function updateNoteList( notelist ) {
 async function tuneAll() {
 	let textoOriginal = document.getElementById("tuneAllButton").innerText ;
 	textById("tuneAllButton", "\u231B") ;
-	updateNoteList( await fetch_json( "/tune_all" )  );
+	await fetch_json( "/tune_all" ) ;
 	textById("tuneAllButton", textoOriginal ) ;
-
 }
     
 async function clearTuning() {
@@ -142,8 +156,17 @@ async function allPinTest(){
 	await fetch_json( "/all_pin_test" );
 }
 
+async function updateTuningStats(){
+	let stats = await fetch_json( "/get_tuning_stats" );
+	// update global variable tuning_cents, needed for update_note_list()
+	tuning_cents = stats["tuning_cents"] ;
+	// Show results on page
+	setAllTextById( stats ) ;
+}
+
 translate_html();
-getNoteList() ;
+refreshNoteList() ;
+
 
 </script>
 </html>

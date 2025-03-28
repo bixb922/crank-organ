@@ -43,11 +43,16 @@ class Microphone:
         # Get the time between samples
         step = frequency.compute_time_step_usec( midi_note.frequency()  )
         # Calculate delay needed in loop below. The magic number
+        # when calculating delay
         # is to compensate approximately the overhead of the loop.
         # This keeps the timing within +-2.5% of the expected time.
         delay = round(step-9)
+        # Special case: if midi_note is 127, sample as fast
+        # as possible
+        if midi_note.midi_number == 127:
+            delay = 0
         n = len(self.adc_signal)
-        # Sample the mic. Should read about 30.000 samples/sec
+        # Sample the mic. Should be able to read up to 30.000 samples/sec
         read = self.adc_device.read  # type:ignore
         read()
         t0 = time.ticks_us()
@@ -82,7 +87,9 @@ class Microphone:
         step = 1/freq/spp
         duration = n * step
         # Check that step doesn't hit maximum sampling rate
-        assert step > 1/30_000
+        #assert step > 1/30_000
+        if step < 1/30_000:
+            print(f"Warning: step too small for sampling rate {freq=}, {frequency.SAMPLES_PER_PERIOD=} {step=} {1/30_000=}")
         freq_step = 1/duration
         print(f"generate debugging signal {step=:.4f}sec {freq_step=:.1f}Hz rate={1/step:.0f}samples/sec {duration=:.2f}sec samples={n} periods={duration*freq:.1f} nominal frequency={nominal_freq:.1f}Hz real frequency={freq:.1f}Hz")
         # Amplitude from 500 to 2000. Emulate a 12 bit ADC with
@@ -111,11 +118,27 @@ class Microphone:
     def frequency( self, midi_note, save_result ):
         duration, signal = self._sample_adc( midi_note )
 
-
-        # for now, no amplitude.
-        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, save_result )
-
+        freq, amplitude = frequency.frequency( signal, duration, midi_note.frequency(), fft_module, midi_note, save_result )        
         return freq, amplitude, duration
+    
+    def save_hires_signal(self, midi_note):
+        from drehorgel import config
+        if self.adc_device and config.cfg.get("mic_store_signal", False):
+            read = self.adc_device.read  # type:ignore
+            # 4000 samples at 30.000 samples/sec means 0.116 sec
+            # of data. At 100 Hz for the lowest signal, this means
+            # at least 10 periods of the signal. 
+            # At 2500 Hz for the highest signal, this means about 250 periods
+            # with about 12 samples per period.
+            print(">>>High resolution signal for", midi_note, "start" )
+            s = array("i", (0 for _ in range(4000)))
+            t0 = time.ticks_ms()
+            for i in range(len(s)):
+                s[i] = read()
+            d = time.ticks_diff(time.ticks_ms(), t0)/1000
+            frequency.save( s, d, midi_note, d/len(s), frequency.HIRES_FILE_PREFIX )
+            print(">>>High resolution signal saved for", midi_note, "duration=", d )
+            # >>> end of testing code
 
 
 # Performance test of tuner

@@ -14,7 +14,7 @@ class FauxTomDriver(BaseDriver):
     def __init__( self ):
         temp_def = fileops.read_json( config.DRUMDEF_JSON, default={})
         # Need the midi numbers used as key be an int
-        self.drum_def = { int(m): temp_def[m] for m in temp_def }
+        self.drum_def = { int(k): v for k, v in temp_def.items() if not k.startswith("comment" )}
         self.pin_list = []
 
     def save( self, new_drumdef ):

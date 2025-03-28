@@ -16,6 +16,8 @@ let translationDict = {
     ["What is your name?", "Dein Name, bitte?"],
 " a ": // note.html
 	[" to ", " bis "],
+" afinar a ": // notelist.html
+	["Tune to ", "Stimmen auf "],
 "activa": // diag.html 
 	["Active", "Active"],
 "actuación": // tunelist.html 
@@ -30,8 +32,12 @@ let translationDict = {
 	["Tuning (cents)", "Frequenzabweichung (cents)"],
 "afinador": // index.html 
 	["Tuner", "Stimmgerät"],
+"afinados": // notelist.html
+	["in tune", "gestimmt"],
 "afinar": // note.html 
 	["Tune", "Stimmen"],
+"afinar a": // notelist.html
+	["Tune to", "Stimmen auf"],
 "afinar todos": // notelist.html 
 	["Tune all", "Alle Noten stimmen"],
 "ajuste velocidad:": // play.html 
@@ -92,6 +98,8 @@ let translationDict = {
 	["Tempo control", "Temposteuerung"],
 "da capo": // play.html
 	["Da capo", "Da capo"],
+"desafinados": // notelist.html
+	["not in tune", "verstimmt"],
 "descripción": // diag.html 
 	["Description", "Beschreibung"],
 "deshabilitado por afinador, pinout": // tunelist.html play.html 
@@ -128,6 +136,8 @@ let translationDict = {
 	["Used flash", "flash belegt"],
 "frecuencia": // diag.html 
 	["Frequency", "Frequenz"],
+"frecuencia media": // diag.html
+	["average frequency", "Durchschnittsfrequenz"],
 "girando": // play.html 
 	["Turning", "Dreht"],
 "gráfico manivela": // diag.html
@@ -144,6 +154,10 @@ let translationDict = {
 	["History", "Verlauf"],
 "historia truncada": // history.html
     ["History purged", "Verlauf gekürzt"],
+"hz": // notelist.html
+	["Hz", "Hz"],	
+"hz,": // notelist.html
+	["Hz,", "Hz,"],
 "imagen micropython": // diag.html 
 	["MicroPython image", "MicroPython image"],
 "info": // tunelist.html play.html 
@@ -190,6 +204,8 @@ let translationDict = {
 	["No progress information available", "Information über Fortschritt nicht verfügbar"],
 "no hay melodía en curso": // play.html
 	["No tune in progress", "Es läuft keine Melodie"],
+"no probados": // notelist.html
+	["untested", "nicht getestet"],
 "organillo": // index.html 
 	["Crank organ", "Drehorgel"],
 "partir": // play.html 
@@ -358,7 +374,7 @@ function translate_html(){
 			continue ;
 		}
 		let innerHTML = d.innerHTML ;
-		if( innerHTML == undefined ||  innerHTML.includes("<")){
+		if( innerHTML == undefined ||  innerHTML.includes("<") ){
 			// Don't try tro translate if no text or if there is a tag
 			continue ;
 		}

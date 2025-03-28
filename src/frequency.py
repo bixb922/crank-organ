@@ -6,10 +6,12 @@ from math import sqrt
 
 import scheduler
 
+#>>> can download at most 10 files at once.
 
 SIGNAL_FOLDER = const("/signals")
 RAW_FILE_PREFIX = const("raw")
 FFT_FILE_PREFIX = const("fft")
+HIRES_FILE_PREFIX = const("hires")
 # Indicate the range around the nominal frequency to be detected
 # PLUS_MINUS_SEMITONES=3 means 3 semitones down and 3 semitones up from
 # the nominal frequency are measured. Outside that range will give no reading.
@@ -37,7 +39,6 @@ ACCEPTED_FREQUENCY_RANGE = 2**(PLUS_MINUS_SEMITONES/12)
 # is smaller, the frequency resolution suffers.
 #.
 SAMPLES_PER_PERIOD = 6*ACCEPTED_FREQUENCY_RANGE
-#assert SAMPLES_PER_PERIOD >=6*ACCEPTED_FREQUENCY_RANGE
 
 def vertex( x1, y1, x2, y2, x3, y3 ):
     # return vertex (maximum or minimum) of parabola
@@ -120,7 +121,7 @@ def save( signal, duration, midi_note, step, prefix ):
     filename = f"{SIGNAL_FOLDER}/{prefix}{midi_note.midi_number}.tsv"
     if prefix == FFT_FILE_PREFIX:
         units = "Hz"
-    elif prefix == RAW_FILE_PREFIX:
+    elif prefix == RAW_FILE_PREFIX or prefix == HIRES_FILE_PREFIX:
         units = "ms"
     else:
         units = "?"

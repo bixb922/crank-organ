@@ -173,7 +173,6 @@ class MIDIPlayer:
             # and is not affected by playback speed. Is used to calculate
             # % of s
             self.time_played_us += midi_event.delta_us # type:ignore
-
             # Turn one note on or off.
             self._process_midi(midi_event)
 

@@ -93,11 +93,10 @@ class MIDIController:
         # The key of the note dictionary is self.make_notedict_key()
         # The contents at this key is the list of actions
         # solenoid pins/registers
-        # Each action is a 4-tuple:
+        # Each action is a 3-tuple:
         #   a pin or virtual pin (that can be set .on() or .off())
         #   a register (to get it's .value())
         #   the nominal midi note (a NoteDef object) 
-        #   the invert indicator (False=don't invert, True=invert)
         #
         self.notedict = {}
 
@@ -107,16 +106,12 @@ class MIDIController:
         return program_number*256 + midi_number
     
     def add_action( self, actuator, register_name, midi_note ):
-        invert = False
-        if register_name.startswith("~"):
-            invert = True
-            register_name = register_name[1:]
         reg = self.registers.factory( register_name )
         # Add an action to the program_number/midi_number pair
         # (program number may be WILDCARD_PROGRAM or DRUM_PROGRAM too)
         key = self.make_notedict_key( midi_note.program_number, midi_note.midi_number )
         actions = self.notedict.setdefault( key, [] )
-        actions.append( (actuator, reg, midi_note, invert ) )
+        actions.append( (actuator, reg, midi_note ) )
 
 
     def get_actions( self, program_number, midi_number ):
@@ -156,9 +151,8 @@ class MIDIController:
         # Get list of actions (i.e. Solepin objects subject to registers) 
         # to activate for this midi note
         actions = self.get_actions( program_number, midi_number )
-        for actuator, register, _, invert in actions:
-            # >>> could get rid of "invert", perhaps not useful?
-            if register.value() != invert:
+        for actuator, register, _ in actions:
+            if register.value():
                 actuator.on()
         # Return truish to caller if a note was played
         return actions           
@@ -167,18 +161,16 @@ class MIDIController:
         # assert 1<=program_number <=128 
         # assert 0<=midi_number<= 127
         # Get list of  pins to turn off for this midi note
-
-        for p in self.get_actions( program_number, midi_number ):
-            # p[0] is the pin or virtual pin object
-            # Don't check register here, no damage in turning off
-            # a note.
-            p[0].off()
+        for actuator, register, _ in self.get_actions( program_number, midi_number ):
+            if register.value():
+                actuator.off()
 
     def all_notes_off( self ):
         self.actuator_bank.all_notes_off()
 
     async def play_random_note(self, duration_msec):
         if not hasattr( self, "all_midis" ):
+            # Cache a list of all MIDI notes for future use in self.play_random_note()
             self.all_midis = [ 
                 ( n//256, n&256) 
                 for n in self.notedict.keys() 

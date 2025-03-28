@@ -10,7 +10,9 @@ from driver_base import BasePin, BaseDriver
 # drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
     def __init__( self, uart, pin, channel ):
-        # Default rx is 9 for UART 0
+        # Default rx is 9 for UART1
+        # >>> Should use default pins or allow user
+        # >>> to define rxpin as well.
         # assert 1 <= uart <= 2
         # assert 0 <= channel <= 15
         self._uart = UART( uart, baudrate=31250, tx=pin )
@@ -23,12 +25,16 @@ class MIDISerialDriver(BaseDriver):
         super().__init__()
  
     def _note_message( self, midi_number, note_on ):
+        # Since the uart buffer is fairly large (256 bytes) and
+        # very unlikely to fill up, uart.write() will not block. 
+        # So there is no need to handle that case.
         if note_on:
             self._note_on[1] = midi_number
             self._uart.write( self._note_on )
         else:
             self._note_off[1] = midi_number
             self._uart.write( self._note_off )
+
    
 
     def all_notes_off( self ):
@@ -42,7 +48,7 @@ class MIDISerialDriver(BaseDriver):
         # 123 All Notes Off, releases all voices
         # For good measure send all notes off on all channels
         for channel in range(16):
-            self._uart.write( bytearray( (0xB0+channel, 123, 0) ) )
+            self._uart.write( bytes( (0xB0+channel, 123, 0) ) )
 
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )

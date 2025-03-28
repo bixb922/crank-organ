@@ -56,19 +56,16 @@ class BasePin:
         if self.on_time < 0:
             # Turn pin on
             self.value(1)  # type:ignore
-            #print(f">>>{type(self).__name__} {self.nominal_midi_note} on")
             # Record time when it was set on
             self.on_time = ticks_ms()
             # One more solenoid on now
             self._actuator_bank.compute_polyphony( 1 )
-
 
     def off( self ):
         # Set to off only when currently on
         if self.on_time >= 0:
             # Set to off
             self.value(0)  # type:ignore
-            #print(f">>>{type(self).__name__} {self.nominal_midi_note} off")
             # Accumulate time a solenoid was on
             self._actuator_bank.add_on_time(  ticks_diff(ticks_ms(), self.on_time) )
             # Remember that the pin is now off

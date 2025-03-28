@@ -93,6 +93,7 @@ async def signal_ready( controller ):
     # Tell user system ready
     await asyncio.sleep_ms(100)
     await controller.clap(8)
+    controller.all_notes_off()
     led.off()
     dt = ticks_diff(ticks_ms(), startup_time)
     print(f"Total startup time (without main, until asyncio ready) {dt} msec")

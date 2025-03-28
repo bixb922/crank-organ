@@ -162,8 +162,16 @@
 	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier:</label>
 	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
 	<br>
+	<label for="tuning_cents">When tuning a pipe, if the frequency is off more than this quantity of cents, show result in red.</label>
+	<input id="tuning_cents" type="text" size="4" oninput="markField('tuning_cents')">
+	<br>
+	<label for="tuning_frequency">Tuning frequency in Hz, normally 440. Decimal point allowed.</label>
+	<input id="tuning_frequency" type="text" size="6" oninput="markField('tuning_frequency')">
+	<br>
 	<button type="button"
-		onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec','normal_rpsec','crank_lowpass_cutoff','automatic_delay', 'rotary_tempo_mult' )">Save
+		onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec',
+		'normal_rpsec','crank_lowpass_cutoff','automatic_delay', 'rotary_tempo_mult', 
+		'tuning_frequency', 'tuning_cents')">Save
 		play tune parameters</button>
 
 	<div class="middlediv">Other parameters</div>

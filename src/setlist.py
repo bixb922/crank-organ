@@ -11,7 +11,6 @@ import touchpad
 from minilog import getLogger
 import fileops
 
-# >>> blink soft blue while setlist is empty.
 
 def del_key(key, dictionary):
     if key in dictionary:

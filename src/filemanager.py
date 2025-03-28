@@ -5,6 +5,7 @@ import time
 from drehorgel import tunemanager
 import fileops
 # >>> allow sync instead of copy?
+# >>> should invalidate tuning when uploading pinout.json?
 
 DESTINATION_FOLDERS = {
     "mid": "/tunelib",
@@ -124,7 +125,6 @@ def upload( request, path, filename  ):
     equiv = fileops.get_equivalent( path )
 
     if fileops.file_exists( equiv ):
-        print("Equivalent does not exist")
         # The equiv file is replaced by the new file
         os.remove( equiv )
         

@@ -111,7 +111,7 @@ class PinoutParser:
         # To integer. "" is returned as "",
         # a integer string is returned as int
         x = x.strip()
-        if x == "":
+        if x is None or x == "":
             return None
         try:
             return int(x)

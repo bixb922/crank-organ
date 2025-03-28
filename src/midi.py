@@ -20,11 +20,9 @@ DRUM_CHANNEL = 9 # MIDI channel 10 (physical=9)
 DRUM_PROGRAM = 129
 WILDCARD_PROGRAM = 0 # Must be zero, see basic_note_on/basic_note_off
 
-tuning_frequency = 440
-
-def set_tuning_frequency( cents_deviation ):
-    global tuning_frequency
-    tuning_frequency = 440*2**(cents_deviation/1200)
+from drehorgel import config
+tuning_frequency =  config.get_float("tuning_frequency", 440)
+tuning_cents = config.get_int("tuning_cents", 5)
 
 class NoteDef:
     # Note definition: this class is used to store note definitions
@@ -63,10 +61,6 @@ class NoteDef:
     def frequency(self):
         return tuning_frequency * 2 ** ((self.midi_number - 69) / 12)
 
-    def set_tuning_frequency( self, new_frequency ):
-        global tuning_frequency
-        tuning_frequency = new_frequency
-        
     def cents(self, measured_freq):
         # Cents difference between the measured frequency and the nominal frequency
         if not measured_freq or measured_freq <= 0:

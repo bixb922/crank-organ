@@ -42,6 +42,7 @@ try:
     open("/software/mpy").close()
 except OSError as e:
     if e.errno == errno.EISDIR:
+        # errno.EISDIR means folder /software/mpy exists, add it to path
         # This order allows to override frozen modules
         sys.path = ["/software/mpy",  ".frozen", "/lib" ]
 

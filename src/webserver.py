@@ -27,6 +27,7 @@ from drehorgel import led, wifimanager, plist
 
 
 from pinout import GPIOstatistics, SaveNewPinout
+import midi
 
 app = Microdot()
 _logger = getLogger(__name__)
@@ -353,6 +354,9 @@ async def stop_tuning(request):
     organtuner.stop_tuning()
     return respond_ok()
 
+@app.route("/get_tuning_stats")
+async def get_tuning_stats(request):
+    return organtuner.get_stats()  
 
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
@@ -709,7 +713,7 @@ async def list_by_midi_note( request, path ):
     controller = actuator_def.get_controller()
     notedef = []
     for action in controller.get_notedict().values():
-        for actuator, reg, midi_note, invert in action:
+        for actuator, reg, midi_note in action:
             notedef.append( {  
                              "program_number":midi_note.program_number, 
                              "midi_number":midi_note.midi_number, 
@@ -718,7 +722,8 @@ async def list_by_midi_note( request, path ):
                              "actuator_note": str(actuator.nominal_midi_note) if actuator.nominal_midi_note else "", 
                              "actuator_rank": actuator.get_rank_name(), 
                              "register_name": reg.name,
-                             "invert": invert } )
+                             # >>> can delete invert, not in use
+                             "invert": False } )
     notedef.sort( key=sort_key )
                 
     return notedef
