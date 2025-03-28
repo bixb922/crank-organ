@@ -410,6 +410,7 @@ class SaveNewPinout(PinoutParser):
         self.current_driver = "GPIODriver"
     
     def define_serial_driver( self, uart, pin, channel ):
+        print(f">>>{uart=} {pin=}{channel=}")
         if not( 1<=uart<=2 ):
             raise RuntimeError("UART must be 1 or 2")
         if uart in self.uart_list:

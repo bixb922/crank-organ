@@ -1150,7 +1150,7 @@ Optimizations, enhancements and corrections
 * All notes off at startup
 * Allows non-numeric comment keys in drumdef.json
 * Saving signals when tuning also saves a high resolution signal fileops
-
+* MIDI numbering on Pinout page now is 1-16 instead of 0-15 to avoid confusions
 
 # 19. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
