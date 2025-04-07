@@ -45,6 +45,7 @@
      * [Wiring from the microcontroller to the MCP23017 boards](#wiring-from-the-microcontroller-to-the-mcp23017-boards)
      * [Microcontroller for I2C control](#microcontroller-for-i2c-control)
      * [Second version](#second-version)
+     * [MIDI over serial](#midi-over-serial)
 8.  [Microphone](#8-microphone)
 9.  [Crank rotation sensor](#9-crank-rotation-sensor)
 10.  [Registers](#10-registers)
@@ -554,6 +555,12 @@ The second version has the the 12V to 5V DC-DC convertor on board, plus the conn
 * Connector for microphone
 * Connector for crank rotation sensor
 * 2x screw terminal for 12V and ground.
+
+## MIDI over serial
+
+The software supports sending MIDI over a serial connection, i.e. using the MIDI 5 pin DIN plug.
+
+See [this description how to connect a ESP32-S3 to MIDI out](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md).
 
 
 # 8. Microphone

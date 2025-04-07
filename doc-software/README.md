@@ -1152,13 +1152,14 @@ Optimizations, enhancements and corrections
 * Allows comment keys in drumdef.json
 * Saving signals when tuning also saves a high resolution signal
 * MIDI numbering on Pinout page now is 1-16 instead of 0-15 to avoid confusions
+* Corrected bugs when using SD card
 
 ## Changes March 29, 2025 to April 8, 2025
 * New "Purge tunelib" button to compare tunelib folder with ```tunelib``` folder on PC and move surplus file to ```tunelib_purged``` folder.
 * Pace downloads to avoid overload of microcontroller when doing many downloads.
-* Prevent possible issues with multinational character sets and file names
-* Fixed bug in "red blinking" when a error ocurred after startup.
-* Remove "" from pin  numbers in  somepinout files
+* Prevent issues with multinational character sets and file names. File names of MIDI files on the microcontroller are in NFC unicode normalization format.
+* Fixed bug in "red blinking" when the error ocurred after startup.
+* Remove "" from pin  numbers in 48 note pinout file
 * Clarified program number and channel description in pinout definition (html).
 
 # 18. Programming language
