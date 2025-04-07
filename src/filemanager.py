@@ -2,24 +2,27 @@ import os
 from microdot import send_file
 import time
 
-from drehorgel import tunemanager
+from drehorgel import tunemanager, config
 import fileops
-# >>> allow sync instead of copy?
-# >>> should invalidate tuning when uploading pinout.json?
+
+# >>> Should invalidate tuning when uploading pinout.json?
+# >>> Compress midi, html, css and js files in the browser: NO, bad idea.
+# >>> use tunelib to make listdir of tunelib faster
+
 
 DESTINATION_FOLDERS = {
-    "mid": "/tunelib",
-    "main.py": "", # special case
-    "json": "/data",
-    "txt": "/data", # pinout.txt
-    "py": "/software/mpy",
-    "mpy": "/software/mpy",
-    "html": "/software/static",
-    "js": "/software/static",
-    "css": "/software/static",
-    "ico": "/software/static",
-    "png": "/software/static",
-    "jpg": "/software/static",
+    "mid": config.TUNELIB_FOLDER,
+    "main.py": "/", # special case
+    "json": "/data/",
+    "txt": "/data/", # pinout.txt
+    "py": "/software/mpy/",
+    "mpy": "/software/mpy/",
+    "html": "/software/static/",
+    "js": "/software/static/",
+    "css": "/software/static/",
+    "ico": "/software/static/",
+    "png": "/software/static/",
+    "jpg": "/software/static/",
 }
 
 MIME_TYPES = {
@@ -46,51 +49,68 @@ def get_mime_type( filename ):
     return MIME_TYPES.get( fileops.get_file_type(filename), "text/plain")  + ";charset=UTF-8"
 
 def listdir(path):
-    def get_date( filename ):
-        try:
-            t = time.localtime(os.stat(filename)[7])
-        except OverflowError:
-            # This really happened.... the cause
-            # is that a file got transferred with /filemanager
-            # without having
-            # set the ntp time. Since the time zone offset was minus 3 hours
-            # this gives a negativetime. 
-            # C language interpreted that negative number as
-            # unsigned int.
-            # This means: 
-            # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
-            # which is far, far in the future... overflow.
-            return "2000-01-01 00:00"
-        return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
-
     if not path.endswith("/"):
         path += "/"
-    # 16384 means "folder" or "directory"
-    # 32768 means file
+    listing = fast_listdir(path)
+    # >>> Make this faster, for example using the tunelib if path permits it.
+    for fileinfo in listing:
+        fileinfo["date"] = get_file_date(path + fileinfo["name"]) #>>>if fileinfo["isDirectory"] else ""
+    return listing
 
+def fast_listdir(path):
+    # This function could be used in a webservice to get a faster
+    # listing of file information. 
     if not fileops.is_folder( path ):
         return []
-    return [ {"name":inode[0], 
+    # 16384 means "folder" or "directory"
+    # 32768 means file
+    return [{
+              "name":inode[0], 
               "isDirectory":1 if inode[1]==16384 else 0, 
               "size":inode[3], 
               "path":path+inode[0],
-              "date":get_date(path + "/" + inode[0]) if inode[1]!=16384 else ""
-              }
-             for inode in os.ilistdir(path) ]
-
+              "date":""
+              } for inode in os.ilistdir(path)]
+        
+def get_file_date( filename ):
+    try:
+        t = time.localtime(os.stat(filename)[7])
+    except OverflowError:
+        # This really happened.... the cause
+        # is that a file got transferred with /filemanager
+        # without having
+        # set the ntp time. Since the time zone offset was minus 3 hours
+        # this gives a negativetime. 
+        # C language interpreted that negative number as
+        # unsigned int.
+        # This means: 
+        # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
+        # which is far, far in the future... overflow.
+        return "2000-01-01 00:00"
+    return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
 
 def upload( request, path, filename  ):
     # Upload a file from the PC to the microcontroller
 
-    # Javascript must use String.normalize() for filenames
+    # Javascript must use String.normalize("NFC") for filenames
     # See filemanager.html encodePath()
-    # If not Hände can be encoded 
-    # H\xc3\xa4nde (this is wanted, Code point for a umlaut)
-    # Ha\xcc\x88nde (this is not wanted, combined a + diacritics mark)
+    # If not normalized, "Hände" can be encoded either:
+    # "H\xc3\xa4nde "(this is desirable, Code point for a umlaut, chr(0xe0)
+    # "Ha\xcc\x88nde" (this is not desirable, combined a + diacritics mark)
+    # Here \xcc\x88 = U+308 = "\u0308" is the diacritics mark, 
+    # and it is rendered top of the a.
+    # Other diacritics marks: \u0300 to \u036f
     # And we want to have it normalized to NFC! (Code points)
     # Javascript normalize("NFC") substitutes combined diacritics
     # to code points.
-
+    
+    # >>> test for diacritics marks, should be filtered
+    # >>> could be done with re
+    for z in filename:
+        if 0x300 <= ord(z) <= 0x36f:
+           print(filename.encode())
+           raise RuntimeError(f"Diacritical mark  found in {filename}")
+        
     if path != "__auto__":
         folder = path
     else:
@@ -105,7 +125,7 @@ def upload( request, path, filename  ):
     if folder is None:
         raise ValueError
 
-    path = folder + "/" + filename
+    path = folder + filename
    
     try:
         old_file_size = os.stat(path)[6]
@@ -221,6 +241,25 @@ def delete(path):
     _check_midi_file( path )
 
 def get_midi_file( request_path ): 
-    physical_name = fileops.find_decompressed_midi_filename( "/tunelib/" + request_path )
+    physical_name = fileops.find_decompressed_midi_filename( config.TUNELIB_FOLDER + request_path )
     return send_file( physical_name,
                      content_type=get_mime_type("mid") )
+
+
+def purge_tunelib_file( fn ):
+    def append( fn, n ):
+        if n:
+            fn += f"_({n})"
+        return fn
+   
+    fileops.make_folder( config.PURGED_FOLDER )
+    n = 0
+    from_fn = config.TUNELIB_FOLDER + fn
+    to_fn = config.PURGED_FOLDER + fn
+    # Don't overwrite existing files in "purged" folder
+    while fileops.file_exists( append(to_fn, n) ):
+        n += 1
+        if n > 10:
+            raise RuntimeError(f"Too many purged file versions {fn=} {n=}")
+    os.rename( from_fn, append(to_fn, n) )
+   

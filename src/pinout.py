@@ -410,13 +410,12 @@ class SaveNewPinout(PinoutParser):
         self.current_driver = "GPIODriver"
     
     def define_serial_driver( self, uart, pin, channel ):
-        print(f">>>{uart=} {pin=}{channel=}")
         if not( 1<=uart<=2 ):
             raise RuntimeError("UART must be 1 or 2")
         if uart in self.uart_list:
             raise RuntimeError("Duplicate UART definition")
         if not( 0<=channel<=15):
-            raise RuntimeError("Channel must be 0 to 15")
+            raise RuntimeError("Channel must be 1 to 16 (internally 0-15)")
         self.uart_list.append( uart )
         self._add_GPIO_to_list(pin)
         # UART 1 by default uses also pin rx=9
@@ -424,7 +423,7 @@ class SaveNewPinout(PinoutParser):
         # see https://docs.micropython.org/en/latest/esp32/quickref.html
         if uart == 1:
             self._add_GPIO_to_list(9)
-        if uart == 2:
+        elif uart == 2:
             self._add_GPIO_to_list(16)
         self.current_driver = "MIDISerialDriver"
         return

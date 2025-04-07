@@ -15,6 +15,7 @@ def init_led():
 def init_fileops():
     import fileops
     fileops.make_folder( "/data")
+    # >>> move this to frequency.py where /signals was defined
     fileops.make_folder( "/signals" )
     fileops.make_folder( "/tunelib")
 

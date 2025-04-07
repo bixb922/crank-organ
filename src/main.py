@@ -28,7 +28,7 @@ import errno
 # 16Mb = 4096 blocks/8 bits per byte=512 bytes for lookahead size, 
 # although it could be a bit lower since 
 # not all 16 MB are really available.
-
+# Largest impact is readsize=. Impact of lookahead= is low.
 os.umount("/")
 readsize = 1024
 progsize = 128

@@ -918,9 +918,9 @@ async function makeTuneTitle( tune ){
 }
 
 // Encodes a Unicode filename so that it can be
-// added to the url, like in: /delete_file/%2Fmy%20file.txt
+// added to the url
 function encodePath( path ){
-	let p = path.normalize("NFC");
+	let p = path.normalize("NFKC");
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
     return (
     encodeURIComponent(p)

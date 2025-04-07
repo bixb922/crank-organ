@@ -12,7 +12,7 @@ let translationDict = {
 	["[msec]", "[msec]"],
 "(borrado)": // history.html
 	["(deleted)", "(gelöscht)"],
-"¿cuál es tu nombre?": // tunelist.html
+"¿cuál es tu nombre?": // tunelist.html (mcserver)
     ["What is your name?", "Dein Name, bitte?"],
 " a ": // note.html
 	[" to ", " bis "],

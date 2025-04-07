@@ -22,7 +22,7 @@ led = drehorgel.led
 led.starting(0)
 
 
-# First ensure all folders are there.
+# First ensure all mandatory folders are there.
 drehorgel.init_fileops()
 
 # And get the time/timezone/ntp process going in background,

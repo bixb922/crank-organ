@@ -6,7 +6,6 @@ from math import sqrt
 
 import scheduler
 
-#>>> can download at most 10 files at once.
 
 SIGNAL_FOLDER = const("/signals")
 RAW_FILE_PREFIX = const("raw")

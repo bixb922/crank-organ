@@ -284,7 +284,7 @@ async function deleteTuneFile( tuneid, rowid ){
     let tune = tunelib[tuneid];
     if( confirm(`Do you want to delete the MIDI file ${tune[TLCOL_FILENAME]} on the microcontroller?`)){
         let path = "/tunelib/" + tune[TLCOL_FILENAME];
-        let data = await fetch_json("/delete_file/" + encodePath( path ) );
+        let data = await fetch_json("/delete_file", {"delete_filename": path } );
         // empty response means ok, file was deleted
         if( data["error"] == undefined ){
             // make row vanish from table

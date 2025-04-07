@@ -396,10 +396,12 @@ async def diag(request):
         async with scheduler.RequestSlice("webserver diag", 5000, 10_000):
             gc.collect()
             t0 = ticks_ms()
+            # gc.collect() takes 50 to 100 ms.
             gc.collect()  # measure optimal gc.collect() time
             t1 = ticks_ms()
             gc_collect_time = ticks_diff(t1, t0)
-
+            # mem_free and mem_alloc are quite slow, similar to
+            # gc.collect()
             free_ram = gc.mem_free()  # This is rather slow with 8MB
             used_ram = gc.mem_alloc()  # This is rather slow with 8MB
             # statvfs takes 1.5 sec
@@ -747,6 +749,9 @@ async def filemanager_listdir(request, path=""):
         return respond_error_alert("Use /filemanager")
     return filemanager.listdir( listpath )
 
+@app.route("/listdir_tunelib")
+async def listdir_tunelib(request):
+    return filemanager.fast_listdir( config.TUNELIB_FOLDER )
 
 @app.post('/upload/<path_filename>')
 @authorize
@@ -781,15 +786,25 @@ async def get_midi_file( request, path ):
 async def filemanager_status(request):
     return filemanager.status()
 
-@app.route("/delete_file/<path>")
+@app.post("/delete_file")
 @authorize
-async def filemanager_delete(request, path):
+async def filemanager_delete(request):
     # Delete a file
+    path = request.json["delete_filename"]
     try:
         filemanager.delete( decodePath( path )  )
     except Exception as e:
         # Can happen if there are 2 browser windows, which shouldn't
         return respond_error_alert(f"Error {e} deleting file {path}")
+    return respond_ok()
+
+@app.post("/purge_tunelib_file")
+@authorize
+async def purge_tunelib_file(request ):
+    # This filename was issued by this microcontroller.
+    # No decoding necessary.
+    filename = request.json["purge_filename"]
+    filemanager.purge_tunelib_file(  filename )
     return respond_ok()
 
 @app.route("/filemanager")

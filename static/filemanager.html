@@ -25,8 +25,10 @@
 
     <div>
         <input type="file" id="fileDialogButton" multiple style="display: none;" onchange="processFileDialog()">
+        <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
         <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
         <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
+        <button onclick="purgeTunelib()">Purge tunelib</button>
         <button id="downloadFilesButton" onclick="downloadSelectedFiles()">Download</button>
         <button id="deleteFilesButton" onclick="deleteFiles()">Delete</button>
         <button onclick="clearSelection()">Clear selection</button>
@@ -221,7 +223,6 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        // asyncio on server will serialize the requests
         // seems to be no way to get notification of download done?
     }
 
@@ -346,6 +347,7 @@
             rownum += 1;
 
         };
+        
         document.getElementById("thisFolderSize").innerText =
             `This folder: ${files.length} files, ${formatIfNumber(sumsize)} bytes net, ${formatIfNumber(sumblocks)} bytes on flash.`;
         return sumblocks;
@@ -404,11 +406,15 @@
         sortTable();
     }
 
-    function downloadSelectedFiles() {
+    async function downloadSelectedFiles() {
         closeLogWindow();
         for (let file of SELECTED_FILES) {
             logNotification(`Starting to download ${file}`);
             downloadFile(file);
+            // Pace downloads a bit... if not they are launched
+            // all at once and let the server on the microcontroller
+            // run out of sockets.
+            await sleep_ms(1000);
         };
         logNotification("Check browser downloads for result");
         clearSelection();
@@ -434,7 +440,7 @@
         }
         for (let file of SELECTED_FILES) {
             try {
-                let data = await fetch_json("/delete_file/" + encodePath(file));
+                let data = await fetch_json("/delete_file", {"delete_filename": file });
                 logNotification(`File "${file}" deleted`);
                 body.innerHTML = "";
                 sizeTitle.innerHTML = "";
@@ -486,7 +492,100 @@
         }
     }
 
+    function purgeTunelib(){
+        closeLogWindow();
+        // Calls processFileDialog() when user pushes OK
+        document.getElementById("folderDialogButton").click();
 
+    }
+
+    async function processFolderDialog(){
+        // >>> Could be interesting to add button only visible
+        // >>> when in tunelib_purged to move selected files back
+        // >>> to tunelib? Or a general "move" button?
+        function fn_to_key( fn ){
+            // Leave only ascii chars to make an approximate
+            // comparison to avoid problems with NFC/NFD comparison
+            // As a result, may be not all files candidates for purge
+            // will be purged.
+            // Normalize to NFD and then replace dieresis, accents, etc
+            // so only the base character remains.
+            // Example ä -> a+¨ -> a
+            let k = fn.normalize("NFD");
+            k = k.replace(/[\u0300-\u036f]/g, "");
+            // .gz suffix is irrelevant for file name comparison
+            if( k.endsWith(".gz") ){
+                return k.substring(0,k.length-3);
+            }
+            return k;
+        }
+
+
+        // Compression here will not be optimal since we
+        // would have to optimize the MIDI too.
+        // Sync could be done using the date (in local time),
+        // but upload is easy that the only missing thing is
+        // to delete surplus files.
+        // pcfile.lastModified: time stamp integer
+        // pcfile.lastModifiedDate: Date() object
+        // pcfile.name: a.mid
+        // pcfile.size: 17460 (bytes)
+        // pcfile.type: "audio/midi"
+        // pcfile.webkitRelativePath: "tunelib/a.mid"
+        // Folder dialog is now complete, get list of files on the PC
+        let pcList = document.getElementById("folderDialogButton").files;
+        if( pcList.length == 0 ){
+            logError("No files selected or folder empty.");
+            return;
+        }
+        // Sanity check: if comparing with a random folder, most files will be moved.
+        if( !pcList[0].webkitRelativePath.startsWith("tunelib")){
+            logError("You must compare with a folder with name starting with 'tunelib'.");
+            return;
+        }
+        let pcMap = new Map();
+        for( let pcFile of pcList) {
+            // Only .mid files compared
+            let pcl = pcFile.name.toLowerCase();
+            if( pcl.endsWith(".mid") || pcl.endsWith(".mid.gz")){
+                pcMap.set( fn_to_key(pcFile.name),  pcFile);
+            }  
+        }
+        if( pcMap.size == 0 ){
+            logNotification("No midi files found on PC.");
+            return;
+        }
+        
+        // espfile.name
+        // espfile.isDirectory (1=directory, 0=file, should all be files)
+        // espfile.size in bytes (0 for folders)
+        // espfile.path full path, e.g. software/static/index.html
+        // espfile.date in yyyy/mm/dd hh:mm format for files ("" for folders
+
+        logNotification(`Waiting for microcontroller to list files on tunelib folder...`);
+        // New webservice is necessary because brower doesn't know where tunelib is (might be on sd)
+        // Unlike /listdir, this sevice does not return the file createion date
+        let espList = await fetch_json( "/listdir_tunelib");
+        logNotification("Microcontroller listing complete.")
+
+
+        // Check files on the ESP32 but deleted on the PC.
+        let n = 0;
+        for( let espFile of espList ){
+            let k = fn_to_key( espFile.name );
+            let pcFile = pcMap.get( k );
+            if( pcFile == undefined ){
+                // File is on microcontroller but not on PC, purge file.
+                // Use post, don't encodePath() file names to ensure they are
+                // the names the microcontroller is using
+                // let resp = await fetch_json( "/purge_tunelib_file",  {"filename":espFile.name} );
+                let resp = await fetch_json( "/purge_tunelib_file", {"purge_filename": espFile.name });
+                logNotification(`File "${espFile.name}" moved to "tunelib_purged" folder`);
+                n += 1;
+            }   
+        }
+        logNotification(`${n} files moved, purge complete.`);
+    }
 
     refreshAll();
 

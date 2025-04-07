@@ -28,10 +28,12 @@ class Config:
         self.cfg = {}
 
         # Data file/folder names used in the software
+        self.TUNELIB_FOLDER = "tunelib/"
+        self.PURGED_FOLDER = "tunelib_purged/"
         if fileops.file_exists("/sd"):
-            self.TUNELIB_FOLDER = "/sd/tunelib/"
-        else:
-            self.TUNELIB_FOLDER = "tunelib/"
+            self.TUNELIB_FOLDER = "/sd/" + self.TUNELIB_FOLDER
+            self.PURGED_FOLDER = "/sd/" + self.PURGED_FOLDER
+    
         
         # minilog folder/filenames defined in minilog module, not here
         # Timezone file/folder defined in timezone module, not here

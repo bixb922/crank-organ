@@ -87,6 +87,7 @@ def get_all_backup_files(filename):
     # Search for filenames like "config.json-2023-10-23"
     # Compare strings up to the "-", i.e. "config.json-"
     search_for = filename + "-"
+    # ilistdir() takes same time as listdir(). 
     for fn in os.listdir(folder):
         f = folder + fn
         if f.startswith( search_for ):
@@ -102,6 +103,9 @@ def find_latest_backup(filename):
 
 def make_folder( folder ):
     # Create folder if not there
+    if folder.endswith("/"):
+        folder = folder[:-1]
+
     try:
         os.mkdir( folder )
     except OSError:

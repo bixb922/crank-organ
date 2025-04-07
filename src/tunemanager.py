@@ -15,11 +15,7 @@ from drehorgel import timezone
 # >>> print setlist with lyrics
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
-# >>> browser gets tunelib.json and lyrics.json twice sometimes
-# >>> detect deleted files PC vs microcontroller
-# >>> Sync tunelib
-# >>> make tunelist search tunelib.json
-# >>> niños
+# >>> browser fetches tunelib.json and lyrics.json twice sometimes
 
 
 # Define Tunelib Column names

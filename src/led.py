@@ -55,9 +55,15 @@ class BlinkingLed:
             while True:
                 # Problem: error or exception entry in log
                 if self.logger.get_error_count() > 0:
+                    # Replace this task with a blinking task
                     self.problem_task = self._blink_background((MEDIUM, 0, 0))
-                    self.blink_setlist_task.cancel() # type:ignore
-                else:
+                    # Don't blink for setlist empty anymore, could be confusing
+                    if self.blink_setlist:
+                        self.blink_setlist_task.cancel() # type:ignore
+                        self.blink_setlist_task = None
+                    # No way to exit red blinking, no need to test again.
+                    # But the blinking task created here could be superceded
+                    # by a sever error blinking....
                     return
                 await asyncio.sleep_ms(1000)
 

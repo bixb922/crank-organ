@@ -291,7 +291,7 @@ async function getPinoutDetail( ) {
                     title, "", "MIDI note",
                     "Rank", "Register"] );
                 row.cells[1].colSpan = 2;
-                row.cells[1].innerHTML = `Program number<br>or ${DRUM_PROGRAM}=drum`;
+                row.cells[1].innerHTML = `Program number (1-128)<br>or ${DRUM_PROGRAM}=drum or blank for any`;
                 row.cells[2].colSpan = 2 ;
                 rownum += 1;
             }
@@ -359,12 +359,12 @@ async function getPinoutDetail( ) {
             currentDriver = "MCP23017";
         }
         else if( pdtype == "serial" ){
-            insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "MIDI channel (1-16)"] );
+            insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "Output MIDI channel (1-16)"] );
             rownum += 1;
             insertFormRow( tbody, `row_${f}_serial`, [
                 makeInput( `serial.uart.${f}`, 3, pd[1]),
                 makeInput( `serial.pin.${f}`, 3, parseInt(pd[2])),
-                // Change channel from physical number (0-15) to MIDI numbering (1-16)
+                // Change channel from internal/physical number (0-15) to MIDI numbering (1-16)
                 makeInput( `serial.channel.${f}`, 3, pd[3]+1 ),
             ]);
             currentDriver = "MIDISerial";
