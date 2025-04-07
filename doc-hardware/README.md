@@ -560,7 +560,7 @@ The second version has the the 12V to 5V DC-DC convertor on board, plus the conn
 
 The software supports sending MIDI over a serial connection, i.e. using the MIDI 5 pin DIN plug.
 
-See [this description how to connect a ESP32-S3 to MIDI out](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md).
+See [this description how to connect a ESP32-S3 to MIDI out](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md). There is a schematic, photos and explanation.
 
 
 # 8. Microphone
