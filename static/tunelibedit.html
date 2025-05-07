@@ -282,6 +282,9 @@ async function showAsTable(){
 async function deleteTuneFile( tuneid, rowid ){
     let tunelib = await fetch_json( "/data/tunelib.json" ) ;
     let tune = tunelib[tuneid];
+    if( tune == undefined ){
+        return;
+    }
     if( confirm(`Do you want to delete the MIDI file ${tune[TLCOL_FILENAME]} on the microcontroller?`)){
         let path = "/tunelib/" + tune[TLCOL_FILENAME];
         let data = await fetch_json("/delete_file", {"delete_filename": path } );

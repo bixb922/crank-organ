@@ -65,7 +65,7 @@ class Setlist:
         player.set_tempo_follows_crank(False)
         
     
-    async def wait_for_start( self ):
+    async def _wait_for_start( self ):
 
         # Record that we are waiting for tune to start
         # for progress.
@@ -107,9 +107,14 @@ class Setlist:
             # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
 
-            # Wait for music to start
-            await self.wait_for_start()
+            # Wait for music to start (crank turns, or touch pad
+            # was touched or web button or automatic playback or whatever)
+            await self._wait_for_start()
             
+            # Check again if still enabled for playback
+            if not scheduler.is_playback_enabled():
+                break
+
             # User signalled start of tune
             # Get a current setlist by shuffling if no setlist
             if self.shuffle_if_empty():
@@ -171,13 +176,18 @@ class Setlist:
         # If not in setlist: add
         # If in setlist: delete
         # Each tune may be only once in setlist
+        changed = False
         if tuneid in self.current_setlist:
             i = self.current_setlist.index(tuneid)
             del self.current_setlist[i]
             del_key(tuneid, self.tune_requests)
+            changed = True
         else:
+            # Append to setlist. 
             self.current_setlist.append(tuneid)
-        self._write_current_setlist()
+            changed = True
+        if changed:
+            self._write_current_setlist()
 
     def add_tune_requests(self, request_dict):
         self.tune_requests.update(request_dict)
@@ -219,41 +229,67 @@ class Setlist:
         self.current_setlist = fileops.read_json(
                 config.STORED_SETLIST_JSON,
                 default=[])
-        self._write_current_setlist()
+
         self.logger.debug(f"Setlist loaded {len(self.current_setlist)} elements")
 
     def clear(self):
         self.current_setlist = []
         self._write_current_setlist()
 
+    def _get_pos(self, tuneid):
+        # Get position of tuneid in current setlist
+        # If not found, raise ValueError. 
+        # This may happen if file added without using filemanager.
+        # Or if page/tunelib needs refreshing in the browser.
+        return self.current_setlist.index(tuneid) 
+
     def _interchange( self, pos1, pos2 ):
-        # Interchange tunes at positions pos1 and pos2
+        # Interchange tunes at positions pos1 and pos2 of the setlist
         cs = self.current_setlist
         cs[pos1], cs[pos2] = cs[pos2], cs[pos1]
         self._write_current_setlist()
 
-    def up(self, pos):
-        # Move this tune one up in setlist
-        self._interchange( pos, pos - 1 )
+    def up(self, tuneid):  
+        try:  
+            pos = self._get_pos(tuneid)
+            # Move this tune one up in setlist
+            self._interchange( pos, pos - 1 )
+        except (ValueError, IndexError):
+            # _get_pos can raise ValueError if the element is not in setlist.
+            # Example: delete, then move without updating page.
+            # _interchange() can raise IndexError (same reason)
+            # This will correct itself after the next refresh of the page.
+            pass
 
-    def down(self, pos):
-        # Move this tune one down in setlist
-        self._interchange( pos, pos + 1)
+    def down(self, tuneid):
+        try:
+            # Move this tune one down in setlist
+            pos = self._get_pos(tuneid)
+            self._interchange( pos, pos + 1 )
+        except (ValueError, IndexError):
+            pass
 
-    def top(self, pos):
+    def top(self, tuneid):
         # Move this tune to top of setlist
-        # Move to top
-        s = self.current_setlist[pos]
-        del self.current_setlist[pos]
-        self.current_setlist.insert(0, s)
-        self._write_current_setlist()
+        try:
+            pos = self._get_pos(tuneid)
+            # Move to top
+            s = self.current_setlist[pos]
+            del self.current_setlist[pos]
+            self.current_setlist.insert(0, s)
+            self._write_current_setlist()
+        except (ValueError, IndexError):
+            pass
 
-    # >>> add bottom() function?
+    def drop(self, tuneid):
+        try:
+            pos = self._get_pos(tuneid)
+            del self.current_setlist[pos]
+            self._write_current_setlist()
+        except (ValueError, IndexError):
+            pass
 
-
-    def drop(self, pos):
-        del self.current_setlist[pos]
-        self._write_current_setlist()
+# >>> add bottom function?
 
     def to_beginning_of_tune(self):
         # Restart current tune, called by "da capo"
@@ -266,7 +302,7 @@ class Setlist:
             self._write_current_setlist()
 
     def shuffle(self):
-        # Shuffle current setlist
+        # Shuffle current setlist (no builtin shuffle)
         # Fisher-Yates shuffle https://en.wikipedia.org/wiki/Random_permutation
         permutation = self.current_setlist
         n = len(permutation)
@@ -342,3 +378,18 @@ class Setlist:
             led.set_blink_setlist( self._is_empty() )
             await asyncio.sleep_ms(300) # type:ignore
 
+    def sync( self, tunelib ):
+        for tuneid in set(self.current_setlist)-set(tunelib):
+            self.drop( tuneid )
+
+        stored_setlist = fileops.read_json(
+                config.STORED_SETLIST_JSON,
+                default=[])
+        changed = False
+        for tuneid in set(stored_setlist)-set(tunelib):
+            del stored_setlist[stored_setlist.index(tuneid)]
+            changed = True
+        if changed:
+            fileops.write_json(
+                stored_setlist, config.STORED_SETLIST_JSON, keep_backup=False
+            )

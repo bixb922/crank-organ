@@ -179,6 +179,9 @@ def get_filename_stem( filename ):
         keep = -2
     return ".".join( parts[0:keep] )
 
+def get_basename( path ):
+    return path.split("/")[-1]
+
 def get_equivalent( filename ):
     # For foo.mpy return foo.py
     # For foo.py return foo.mpy

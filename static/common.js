@@ -378,7 +378,12 @@ async function fetch_json( url, post_data ){
     
 	// If there is an alert, show to user and reraise exception
 	if( json_result["alert"]) {
-		alert( json_result["alert"] ) ;
+		let alert_message = json_result["alert"];
+		// Translate but only on pages where tlt is defined by translations.js
+		if( typeof tlt === 'function' ) {
+			alert_message = tlt( alert_message ) ;
+		}
+		alert( alert_message ) ;
 	}
 	if(json_result["error"]){
 			throw new Error("Error signalled by server: " + json_result.alert + " url " + url ) ;
@@ -739,15 +744,23 @@ setPageTitle() ;
 
 async function commonGetProgress() {
 	let stored_boot_session = sessionStorage.getItem( "boot_session" );
+	let stored_tunelib_signature = sessionStorage.getItem( "tunelib_signature" );
 	let progress = await fetch_json( "/get_progress/" + stored_boot_session  );
 	console.log("get progress", progress );
 	// This is a good place to check, progress is used
 	// with tunelib and lyrics...
-	if( progress.boot_session != stored_boot_session ){
+	// Cache is refreshed on boot and when tunelib key data changes.
+	if( progress.tunelib_signature != stored_tunelib_signature ||
+	    progress.boot_session != stored_boot_session
+	){
 		// Force refresh of tunelib and lyrics on reboot.
 		drop_tunelib();
 		drop_lyrics();
-		sessionStorage.setItem(  "boot_session", progress.boot_session) ;
+		sessionStorage.setItem( "boot_session", progress.boot_session) ;
+		sessionStorage.setItem( "tunelib_signature", progress.tunelib_signature) ;
+		// and reload current page (at least), this commonGetProgess
+		// is called by tunelist.html and play.html, both will benefit from reloading
+		location.reload();
 	}
 	return progress ;
 }

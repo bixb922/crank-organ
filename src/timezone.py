@@ -91,7 +91,7 @@ class TimeZone:
     def set_time_zone( self, newtz ):
         # Called from webserver with /set_time_zone
         # Which in turn is called from common.js for each hard page load
-        
+        # >>> it seems time zone is not updated...????
         if self.tzinfo["longName"] ==  NO_TZ_INFO:
             self.tzinfo = newtz
             fileops.write_json( newtz, TZFILE, keep_backup=False )
@@ -108,6 +108,7 @@ class TimeZone:
         if self.has_time():
             return # NTP or browser has already set time.
         self.set_rtc( newtz["timestamp"] - 946_684_800)
+        self.logger.info("Time set by browser") # type:ignore
         
     def get_time_zone_info( self ):
         return self.tzinfo

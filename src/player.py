@@ -72,7 +72,13 @@ class MIDIPlayer:
             # get_info_by_id() could fail in case tunelib
             # has not been correctly updated. 
             midi_file, duration = tunemanager.get_info_by_tuneid(tuneid)
-
+            if not midi_file:
+                # tuneid not in tunelib
+                self.logger.info(f"{tuneid} not found in tunelib")
+                self.progress.report_exception("tuneid not found in tunelib.json")
+                # Note that finally: will run anyhow
+                return
+            
             controller.all_notes_off()
             self.progress.tune_started(tuneid)
 
@@ -87,9 +93,12 @@ class MIDIPlayer:
             self.progress.tune_cancelled()
         except OSError as e:
             if e.errno == errno.ENOENT:
-                self.logger.error(f"File {midi_file=} or .gz {tuneid=} file not found")
+                self.logger.info(f"File {midi_file=} or .gz {tuneid=} file not found")
                 self.progress.report_exception("file not found")
+                # It may be that tunelibedit must be run to sync tunelib
+                tunemanager.queue_tunelib_change( midi_file, -1 )
             else:
+                # OSError that isn't file not found - strange.
                 self.logger.exc(e, f"Exception playing {midi_file=} or .gz {tuneid=}")
                 self.progress.report_exception(
                     "exception in play_tune! " + str(e)
@@ -156,7 +165,7 @@ class MIDIPlayer:
                 continue
 
             # midi_time is the calculated MIDI time since the start of the MIDI file
-            # Without tachometer: midi_time += midi_event.delta_us
+            # Without tachometer: midi_time += midi_event.delta_us      
             midi_time += await self._calculate_tachometer_dt( midi_event.delta_us )
 
             # playing_time is the wall clock time since playing started

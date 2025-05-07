@@ -246,7 +246,7 @@ async def background_garbage_collector( ):
             # should be plenty of RAM with 8Mb
             gc.collect()
 
-# This has to go somewhere
+# This has to go somewhere. Used by pcnt.py and minilog.py
 def singleton(cls):
     instance = None
     def getinstance(*args, **kwargs):

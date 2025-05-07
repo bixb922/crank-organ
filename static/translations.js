@@ -206,6 +206,8 @@ let translationDict = {
 	["No tune in progress", "Es läuft keine Melodie"],
 "no probados": // notelist.html
 	["untested", "nicht getestet"],
+"archivo midi fue borrado": // webserver.py (server side alert)
+	["MIDI file has been deleted", "MIDI-Datei wurde gelöscht"],
 "organillo": // index.html 
 	["Crank organ", "Drehorgel"],
 "partir": // play.html 

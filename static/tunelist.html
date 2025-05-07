@@ -369,6 +369,9 @@ function trunc( text, n ){
 async function showFullInfo(tuneid){
     let tunelib = await get_tunelib() ;
     let tune = tunelib[tuneid] ;
+    if( tune == undefined ){
+        return;
+    }
     let info = tune[TLCOL_INFO] ;
     showPopup( "", info ) ;
 }

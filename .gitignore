@@ -8,4 +8,5 @@ doc-software/README_editable.md
 doc-hardware/battery_editable.md
 README_editable.md
 *.pyc
-development.md
+design_and_development/design_and_development_editable.md
+

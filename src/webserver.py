@@ -264,17 +264,15 @@ async def clear_setlist(request):
     setlist.clear()
     return get_progress()
 
-# >>> better to pass tuneid instead of position, for the (very uncommon) case
-# of two users updating the setlist at the same time.
-@app.route("/up_setlist/<int:pos>")
-async def up_setlist(request, pos):
-    setlist.up(pos)
+@app.route("/up_setlist/<tuneid>")
+async def up_setlist(request, tuneid):
+    setlist.up(tuneid)
     return get_progress()
 
 
-@app.route("/down_setlist/<int:pos>")
-async def down_setlist(request, pos):
-    setlist.down(pos)
+@app.route("/down_setlist/<tuneid>")
+async def down_setlist(request, tuneid):
+    setlist.down(tuneid)
     return get_progress()
 
 
@@ -498,15 +496,15 @@ async def set_velocity_relative(request, change):
 def tacho_irq_report(request):
     return crank.td.irq_report()
 
-@app.route("/top_setlist/<int:pos>")
-async def top_setlist(request, pos):
-    setlist.top(pos)
+@app.route("/top_setlist/<tuneid>")
+async def top_setlist(request, tuneid):
+    setlist.top(tuneid)
     return get_progress()
 
 
-@app.route("/drop_setlist/<int:pos>")
-async def drop_setlist(request, pos):
-    setlist.drop(pos)
+@app.route("/drop_setlist/<tuneid>")
+async def drop_setlist(request, tuneid):
+    setlist.drop(tuneid)
     return get_progress()
 
 #
@@ -794,7 +792,8 @@ async def filemanager_delete(request):
     try:
         filemanager.delete( decodePath( path )  )
     except Exception as e:
-        # Can happen if there are 2 browser windows, which shouldn't
+        # Can happen if there are 2 browser windows
+        _logger.error(f"Error deleting file {path}: {e}")
         return respond_error_alert(f"Error {e} deleting file {path}")
     return respond_ok()
 

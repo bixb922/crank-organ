@@ -73,13 +73,14 @@
      * [Changes Feb 2025](#changes-feb-2025)
      * [Changes Feb 2025 to March 28, 2025](#changes-feb-2025-to-march-28-2025)
      * [Changes March 29, 2025 to April 8, 2025](#changes-march-29-2025-to-april-8-2025)
-18.  [Programming language](#18-programming-language)
-19.  [Credits](#19-credits)
-20.  [Testing](#20-testing)
-21.  [Troubleshooting](#21-troubleshooting)
-22.  [Restrictions](#22-restrictions)
-23.  [Licensing](#23-licensing)
-24.  [Affiliation](#24-affiliation)
+18.  [Changes April 9, 2025 to May 10, 2025](#18-changes-april-9-2025-to-may-10-2025)
+19.  [Programming language](#19-programming-language)
+20.  [Credits](#20-credits)
+21.  [Testing](#21-testing)
+22.  [Troubleshooting](#22-troubleshooting)
+23.  [Restrictions](#23-restrictions)
+24.  [Licensing](#24-licensing)
+25.  [Affiliation](#25-affiliation)
 # 1. Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
@@ -333,7 +334,7 @@ MIDI files without long Meta messages are best. Use the ```compress_midi.py``` u
 
 Use the [File Manager](#file-manager) to upload files to the /tunelib folder of the microcontroller. Both the File Manager and the Tunelib Editor can be used to delete files from the MIDI folder.
 
-MIDI files become visible after entering the Tunelib Editor once.
+MIDI files become visible after a few seconds (10 or 20 seconds). You may need to refresh the tunelist or play page to make changes visible. You also can enter the "Edit Tunelib" button to force a check for all changed files.
 
 You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB. 
 
@@ -369,7 +370,7 @@ The configuration parameters explained in detail on the configuration page. Afte
 
 ![Configuration](general_configuration.jpg)
 
-THis page is long and is best used on a PC or MAC.
+THis page is long and wide and is best used on a PC or MAC.
 
 Any configuration change needs a reboot of the microcontroller after saving changes to become effective.
 
@@ -377,9 +378,9 @@ Any configuration change needs a reboot of the microcontroller after saving chan
 This is the first configuration parameter to change.
 
 When configuring the microcontroller (see below) you assign a host name, say "organillo".
-Once connected, you start the Chrome or Firefox and enter ```organillo.local```. This will navigate to the microcontroller. In other words, the microcontroller is always at ```http://organillo.local``` (or whatever name you assign).
+Once connected, you start the Chrome or Firefox and enter ```organillo.local``` as the web site address. This will navigate to the microcontroller. In other words, the microcontroller is always at ```http://organillo.local``` (or whatever name you assign).
 
-Sometimes, the browser changes the http:// prefix to https://, verify that the prefix is http since https does not work.
+Sometimes, the browser changes the ```http://``` prefix ```to https://```, verify that the prefix is ```http``` since ```https``` does not work.
 
 ## Configurations you should change: WiFi connections
 A initial configuration file is supplied. This is what you should modify:
@@ -618,7 +619,7 @@ The error log records events of class INFO, ERROR and EXCEPTION. The MicroPython
 
 Press the "Update files" button on the index page, and the File Manager will show up.
 
-You can navigate to all folders, and view text, MIDI and image files.
+You can navigate to all folders, and view text, MIDI and image files, but the main purpose is to update MIDI files (i.e. tunelib) and software.
 
 ![File manager screenshot](file_manager.png)
 
@@ -634,17 +635,17 @@ When uploading files to the microcontroller, you can select a folder with subfol
 When navigating to the tunelib folder, some useful information about the MIDI files will also appear.
 
 ## Update MIDI files
-Use the "Update to auto folder" button to upload MIDI files, then run the "Tunelib editor" to make the files visible.
+Use the "Update to auto folder" button to upload MIDI files. After some seconds, the tunelib will also update automatically. Use the "Edit Tunelib" option to add title, genre, author, rating, etc.
 
 ## Update software
-Use the "Update to auto folder" button to upload a new software version (.py or .mpy files. .html and .js files), then reboot to make the new version take effect.
+Use the "Update to auto folder" button to upload a new software version (.py or .mpy files. .html and .js files), then reboot to make the new version take effect. You can reboot with the "Reset" button on the "System" page, or by pressing the reset button on the microcontroller.
 
 ## View files
-Files that are "underlined" in the File Manager can be clicked to view their content. Click on MIDI files is supported.
+Files that are "underlined" in the File Manager can be clicked to view their content. Click on MIDI files is supported, try that!
 
 # 13. Turning the system on
 
-TLDR: turn on, and turn the crank or touch the touchpad 3 times in a row and music starts.
+TLDR: turn on, and turn the crank or touch the touchpad and music starts.
 
 It takes about 5 to 8 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed the boot.
 
@@ -652,7 +653,7 @@ If a RGB (neopixel) LED is on the board and configured, it will show changing bl
 
 The software will automatically load the current setlist, or if empty, the saved setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
 
-If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad  will shuffle all tunes randomly (first all tunes with 3 starts, if none, all tunes). 
+If there is no setlist stored (empty setlist), turning the crank or releasing the touchpad  will shuffle all tunes randomly (first all tunes with 3 stars rating, if none, all tunes). 
 
 
 If you have the tune list or performance page open in your cell phone previously to reboot, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. There should be no need to reload the page. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running.
@@ -1162,7 +1163,19 @@ Optimizations, enhancements and corrections
 * Remove "" from pin  numbers in 48 note pinout file
 * Clarified program number and channel description in pinout definition (html).
 
-# 18. Programming language
+# 18. Changes April 9, 2025 to May 10, 2025
+
+* New: Queue changes to MIDI files done with the File Manager and update tunelib in background, no need to "Edit tunelib"
+* Bug fixes and minor enhancements:
+* Added another check if playback is enabled before starting tune. 
+* Better multinational character support in compress_midi.py for file names
+* Log when time was set by browser.
+* Allow two users to change setlist at the same time (avoid exception).
+* Turn off all related notes immediately if register is turned off.
+
+
+
+# 19. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1180,7 +1193,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 19. Credits
+# 20. Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1190,13 +1203,13 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 20. Testing
+# 21. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 21. Troubleshooting
-If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the Edit Tunelib button on the main page to have the new files and any changes to the existing files recognized.
+# 22. Troubleshooting
+If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
 * Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
@@ -1204,7 +1217,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 22. Restrictions
+# 23. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1228,7 +1241,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 23. Licensing
+# 24. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1254,7 +1267,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 24. Affiliation
+# 25. Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.

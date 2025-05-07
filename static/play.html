@@ -167,35 +167,45 @@ async function updateProgress( progress ) {
 	}
 	else {
 		let tune = tunelib[CURRENT_TUNEID] ;
-		showHideElement( "main_info_table", true );
-		showHideElement( "no_tune_span", false ) ;
+		console.log(">>>current tuneid=", CURRENT_TUNEID, "tune=", tune);
+		if( tune != undefined ){
+			showHideElement( "main_info_table", true );
+			showHideElement( "no_tune_span", false ) ;
 
-        let spectator_name = tune_requests[CURRENT_TUNEID];
-		textById( "spectator_name",  spectator_name );
-		showHideElement( "request_row", spectator_name );
+			let spectator_name = tune_requests[CURRENT_TUNEID];
+			textById( "spectator_name",  spectator_name );
+			showHideElement( "request_row", spectator_name );
 
-		textById( "title",  await makeTuneTitle( tune )) ;
+			textById( "title",  await makeTuneTitle( tune )) ;
 
-		textById( "genre", tune[TLCOL_GENRE]) ;
-		showHideElement( "genre_row", tune[TLCOL_GENRE]) ;
+			textById( "genre", tune[TLCOL_GENRE]) ;
+			showHideElement( "genre_row", tune[TLCOL_GENRE]) ;
 
-		textById( "author", tune[TLCOL_AUTHOR] ) ;
-		showHideElement( "author_row", tune[TLCOL_AUTHOR ] );
+			textById( "author", tune[TLCOL_AUTHOR] ) ;
+			showHideElement( "author_row", tune[TLCOL_AUTHOR ] );
 
-		textById( "duration",formatMilliMMSS( tune[TLCOL_TIME] ));
+			textById( "duration",formatMilliMMSS( tune[TLCOL_TIME] ));
 
-		textById( "year", tune[TLCOL_YEAR]) ;
-		showHideElement( "year_row", tune[TLCOL_YEAR]) ;
+			textById( "year", tune[TLCOL_YEAR]) ;
+			showHideElement( "year_row", tune[TLCOL_YEAR]) ;
 
-		textById( "info", tune[TLCOL_INFO]) ;
-		showHideElement( "info_row", tune[TLCOL_INFO]) ;
+			textById( "info", tune[TLCOL_INFO]) ;
+			showHideElement( "info_row", tune[TLCOL_INFO]) ;
 
-		let rating = get_rating(tune);
-		textById( "rating", rating ) ;
-		showHideElement( "rating_row", rating ) ;
+			let rating = get_rating(tune);
+			textById( "rating", rating ) ;
+			showHideElement( "rating_row", rating ) ;
+			// Update progress bar every second, first call
+			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
+			status_text = make_status_text( progress["status"], percent ) ;
+			textById("progress", status_text) ;
+			progressBar( "timebar", percent, 60 );
+			// >>> may be interesting to show air consumption graph
+			// >>> to alert of more air needed ahead of time.
+			// see if instant air consumption is useful.
+		}
 
 		let lyrics = await formatLyrics() ;
-		
 		if( lyrics == "" ){
 			// No lyrics, no toggle button and setlist controls only
 			// If lyrics were showing, switch to setlist
@@ -208,15 +218,7 @@ async function updateProgress( progress ) {
 			toggle_button.classList.remove("inactive"); ;
 		}
 		
-		// Update progress bar every second, first call
-		let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
-		status_text = make_status_text( progress["status"], percent ) ;
-		textById("progress", status_text) ;
 		
-		progressBar( "timebar", percent, 60 );
-		// >>> may be interesting to show air consumption graph
-		// >>> to alert of more air needed ahead of time.
-		// see if instant air consumption is useful.
 	}
 	let setlist = progress["setlist"] ;
 	let setlistBody = document.getElementById("setlistBody");
@@ -236,7 +238,7 @@ async function updateProgress( progress ) {
 		let row = insertRow( setlistBody, [""+(i+1), await makeTuneTitle(pls) + " " + duration, "","","","",""] );
 		// All lines have wastebasket
 		let b5 = document.createElement("a");
-		b5.onclick = function(){ dropSetList(i) };
+		b5.onclick = function(){ dropSetList(tuneid) };
 		b5.style.cursor = "pointer";
 		b5.innerText = " 🗑️ "; // Wastebasket  &#128465;
 		b5.classList.add("anohref");
@@ -245,14 +247,14 @@ async function updateProgress( progress ) {
 		if( i != 0 ) {
 			// All lines except the first have up and top icon
 			let b2 = document.createElement("a");
-			b2.onclick = function(){ upSetList(i) };
+			b2.onclick = function(){ upSetList(tuneid) };
 			b2.style.cursor = "pointer";
 			b2.innerText = " 🔼 "; // &#128316; Upwards button
 			b2.classList.add("anohref");
 			row.cells[2].appendChild( b2 );
 
 			let b4 = document.createElement("a");
-			b4.onclick = function(){ topSetList(i) };
+			b4.onclick = function(){ topSetList(tuneid) };
 			b4.style.cursor = "pointer";
 			b4.innerText = " 🔝 "; //&#128285; "top arrow" icon
 			b4.classList.add("anohref");
@@ -262,7 +264,7 @@ async function updateProgress( progress ) {
 		if( i != setlist.length-1 ){
 			// All lines except the last have down icon
 			let b3 = document.createElement("a");
-			b3.onclick = function(){ downSetList(i) };
+			b3.onclick = function(){ downSetList(tuneid) };
 			b3.style.cursor = "pointer";
 			b3.innerText = " 🔽 "; // &#128317; Downwards button
 			b3.classList.add("anohref");
@@ -397,20 +399,20 @@ async function clearSetList() {
 	await updateProgress( await fetch_json("/clear_setlist" ) ) ;
 }
 
-async function upSetList(pos) {
-	await updateProgress( await fetch_json("/up_setlist/" + pos ) ) ;
+async function upSetList(tuneid) {
+	await updateProgress( await fetch_json("/up_setlist/" + tuneid ) ) ;
 }
 
-async function downSetList(pos) {
-	await updateProgress( await fetch_json("/down_setlist/" + pos ) ) ;
+async function downSetList(tuneid) {
+	await updateProgress( await fetch_json("/down_setlist/" + tuneid ) ) ;
 }
 
-async function dropSetList(pos) {
-	await updateProgress( await fetch_json("/drop_setlist/" + pos ) ) ;
+async function dropSetList(tuneid) {
+	await updateProgress( await fetch_json("/drop_setlist/" + tuneid ) ) ;
 }
 
-async function topSetList(pos) {
-	await updateProgress( await fetch_json("/top_setlist/" + pos ) ) ;
+async function topSetList(tuneid) {
+	await updateProgress( await fetch_json("/top_setlist/" + tuneid ) ) ;
 }
 
 async function set_velocity( increment ) {
@@ -462,7 +464,9 @@ function go_history(){
 
 async function toggleSetlistLyrics( what ){
 	lyrics = await get_lyrics( CURRENT_TUNEID );
-	
+	if( lyrics == undefined ){
+		return;
+	}
 	// Toggle whether lyrics or setlist is shown
 	let setlist_span =  document.getElementById( "setlist_span") ;
 	let lyrics_span =  document.getElementById( "lyrics_span") ;
@@ -492,6 +496,9 @@ async function formatLyrics(){
 	let col1 = document.getElementById( "col1") ;
 	let col2 = document.getElementById( "col2") ;
 	let lyrics = await get_lyrics( CURRENT_TUNEID ) ;
+	if( lyrics == undefined ){
+		return;
+	}
 	if( LYRIC_COLUMNS == 1 ){
 		col1.innerText = lyrics ;
 		col1.colSpan = 2 ;

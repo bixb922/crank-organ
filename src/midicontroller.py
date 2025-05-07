@@ -56,10 +56,15 @@ class Register:
     
                 self.set_value( not pv )
                 last_value = pv
+    
+    def set_controller( self, controller ):
+        self.controller = controller 
 
     def set_value( self, new_value ):
         self.current_value = new_value
-
+        if new_value == 0 and self.name:
+            self.controller.all_register_notes_off( self.name )
+        
 # Class for all registers
 class RegisterBank:
     # Register factory, holds all defined Register objects
@@ -81,14 +86,20 @@ class RegisterBank:
             (r.name, r.value()) 
             for r in self.register_dict.values() if r.name]
     
+    def set_midicontroller( self, controller ):
+        # Set the MIDI controller for all registers
+        # This is done here to avoid circular imports
+        # and to keep the register class simple
+        for reg in self.register_dict.values():
+            reg.set_controller( controller )
 
 class MIDIController:
     # The MIDI controller takes care of MIDI note on
     # and note off events, heeding registers
     # and drum notes, and sending note on and off events
     # to the actuator drivers.
-    def __init__( self, registers ):
-        self.registers = registers
+    def __init__( self, register_bank ):
+        self.register_bank = register_bank
         # The main data structure here is self.notedict
         # The key of the note dictionary is self.make_notedict_key()
         # The contents at this key is the list of actions
@@ -106,7 +117,7 @@ class MIDIController:
         return program_number*256 + midi_number
     
     def add_action( self, actuator, register_name, midi_note ):
-        reg = self.registers.factory( register_name )
+        reg = self.register_bank.factory( register_name )
         # Add an action to the program_number/midi_number pair
         # (program number may be WILDCARD_PROGRAM or DRUM_PROGRAM too)
         key = self.make_notedict_key( midi_note.program_number, midi_note.midi_number )
@@ -143,7 +154,7 @@ class MIDIController:
         driver.set_actuator_bank( actuator_bank )
         for virtual_pin in driver:
             self.add_action( virtual_pin, "", virtual_pin.nominal_midi_note )
-        return
+        self.register_bank.set_midicontroller( self )
          
     def note_on( self, program_number, midi_number ):
         # assert WILDCARD_PROGRAM<=program_number <=DRUM_PROGRAM
@@ -191,3 +202,9 @@ class MIDIController:
         # Used by webserver to list pinout
         return self.notedict
 
+    def all_register_notes_off( self, register_name ):
+       # This takes about 1 or 2 msec, so no much gain if optimized
+        for actions in self.notedict.values():
+           for actuator, register, _ in actions:
+                if register.name == register_name:
+                    actuator.off()

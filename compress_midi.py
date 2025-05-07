@@ -59,7 +59,7 @@ def parse_arguments():
     if len(args.folders) >= 3:
         print("Can only specify two folders, the input and the output folder")
         sys.exit(1)
-        
+
     try:
         with open(this_file_json) as file:
             j = json.load(file)
@@ -308,7 +308,8 @@ def compare_folder_with_tunelib( folder, tunelib_file ):
     # TLCOL_SIZE = 11
     if not tunelib_file:
         return
-    with open(tunelib_file) as file:
+
+    with open(tunelib_file,encoding="utf8") as file:
         tunelib = json.load( file )
         
     tunelib_files = set( nfc(tune[TLCOL_FILENAME]) for tune in tunelib.values())

@@ -39,10 +39,10 @@ MIME_TYPES = {
     "js": "javascript"
 }
 
-def _check_midi_file( path ):
+def _check_midi_file( path, file_size=-1 ):
     if "tunelib/" in path and fileops.get_file_type( path ) == "mid":
         # Changing or deleting MIDI file requires sync of tunelib at next reboot
-        tunemanager.remember_to_sync_tunelib( path )
+        tunemanager.queue_tunelib_change( path, file_size )
 
 def get_mime_type( filename ):
     # Default MIME type is text/plain
@@ -104,7 +104,7 @@ def upload( request, path, filename  ):
     # Javascript normalize("NFC") substitutes combined diacritics
     # to code points.
     
-    # >>> test for diacritics marks, should be filtered
+    # >>> test for diacritics marks, these must be filtered for consistency Mac/Windows/Javascript/MicroPython/browsers
     # >>> could be done with re
     for z in filename:
         if 0x300 <= ord(z) <= 0x36f:
@@ -136,7 +136,7 @@ def upload( request, path, filename  ):
         new_file_size = len(data)
         file.write( data )
 
-    _check_midi_file( path )
+    _check_midi_file( path, new_file_size )
 
     # If a compressed file is replaced with a uncompressed one
     # delete the replaced file. Same with .py and .mpy
@@ -166,7 +166,7 @@ def download(path):
                     break
                 yield mvb[0:length]
 
-    filename = path.split("/")[-1]
+    filename = fileops.get_basename(path)
     
     return serve_file(path), 200, {
         "Content-Type": "application/octet-stream",
