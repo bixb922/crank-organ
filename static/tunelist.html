@@ -101,30 +101,21 @@ document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
 
 // keep sorted list in global page context
 let TUNELIST = [] ;
-    
+let TUNELIST_SIGNATURE = "";
+
 let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let header = [ tlt("Título"), tlt("Género"), tlt("Autor"), "mm:ss", tlt("Año"), tlt("Hist"), tlt("Info"), tlt("Fecha"), tlt("Pts")] ;
 let sortColumn = 0 ;
 direction = 1 ;
 
+
 // Called when loading page:
-async function setTuneList( ) {
-    console.log("setTuneList cookie=", document.cookie );
+async function startPageRefreshProcess( ) {
+    console.log("startPageRefreshProcess cookie=", document.cookie );
     if( isUsedFromServer() ){
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
         document.getElementById( "startButton").style.display = "none" ;
     }
-    // get_tunelib() will cache tunelib in tab storage
-    // so it is not costly to call get_tunelib() again
-    let tunelib = await get_tunelib() ;
-    TUNELIST = [];
-    for( const [key, tune] of Object.entries(tunelib)) {
-        TUNELIST.push( tune ) ;
-    }
-    sortTunelist( 0 );
-    // Now update tunelist html
-    updateTunelistTable( );
-    
     // Refresh progress periodically
 	await updateProgressEvery() ;
 }
@@ -166,7 +157,7 @@ async function fillBody( ) {
                 tune[TLCOL_AUTHOR], formatMilliMMSS( tune[TLCOL_TIME] ),
                 tune[TLCOL_YEAR], tune[TLCOL_HISTORY],
                 "", tune[TLCOL_DATEADDED], get_rating(tune)] );
-        row.cells[0].id = `${tuneid}.title` ;
+        row.cells[0].id = `title.${tuneid}` ;
         
         // span "queued.tuneid" hour glass if queued and (n) queue position if queued
         // span "playing.tuneid" music notes if playing
@@ -242,10 +233,23 @@ async function queueTune( tuneid ) {
 async function updateProgressEvery() {
 	while( true ) {
         let progress = await commonGetProgress();
-        updateThisPage( progress );
-        if( progress == undefined ){
-            showPopup( "", "No hay información de avance disponible");
+        // Load TUNELIST the first time and if tunelist changed.
+        if( TUNELIST_SIGNATURE == "" || TUNELIST_SIGNATURE != progress.tunelib_signature ){
+            // get_tunelib() will cache tunelib in tab storage
+            // so it is not costly to call get_tunelib() again
+            console.log("Get tunelib, signature new or different");
+            let tunelib = await get_tunelib() ;
+            TUNELIST = [];
+            for( const [key, tune] of Object.entries(tunelib)) {
+                TUNELIST.push( tune ) ;
+            }
+            sortTunelist( 0 );
+            // Now update tunelist html
+            await updateTunelistTable( );
+        
+            TUNELIST_SIGNATURE = progress.tunelib_signature ;
         }
+        updateThisPage( progress );
         await sleep_ms( 2_000 );
 	}
 }
@@ -382,9 +386,9 @@ async function startTune() {
 
 translate_html();
 
-// setTuneList will call updateProgressEvery the first time,    
+// startPageRefreshProcess will call updateProgressEvery the first time,    
 // and updateProgressEvery will continue refreshing
-setTuneList() ;
+startPageRefreshProcess() ;
 
 
 </script>

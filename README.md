@@ -14,6 +14,7 @@ MIDI based crank organ software and hardware
 
 
 This animation shows how a crank organ with MIDI control works:
+
 ![animated gif for crank organ](animacion_organillo.gif)
 
 The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 100 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores a MIDI files that have the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 

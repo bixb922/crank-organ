@@ -185,19 +185,11 @@ class TuneManager:
             except KeyError:
                 self.logger.info(f"File {filename} was already removed from tunelib.json")
             return "Deleting"
-        elif tune := newtunelib.get(tuneid): 
-            operation = "Adding"
-        # Update only if different name or different size.
-        # Different name with same tuneid can happen with xxx.mid and xxx.mid.gz
-        # because .gz is disregarded for the the tuneid
-        elif (filesize != tune[TLCOL_SIZE] or
-                filename != tune[TLCOL_FILENAME]):
-                operation = "Updating"
-        else:
-            return # No change
-        # Get tune info from newtunelib, if not there, create new
+        
+        # Is it a new tune or a tune update?
         tune = newtunelib.setdefault(tuneid, [""] * TLCOL_COLUMNS)
-        if not tune[TLCOL_ID]:
+        if not tune[TLCOL_ID]: 
+            operation = "Adding"
             # New tune
             tune[TLCOL_ID] = tuneid
             # Add new tune
@@ -205,13 +197,22 @@ class TuneManager:
             tune[TLCOL_TITLE] = ("~" + fileops.get_filename_stem(filename)).replace("-", " ").replace("_"," ").replace("  "," ")
             tune[TLCOL_AUTOPLAY] = True
             tune[TLCOL_INFO] = self.get_initial_info( tune[TLCOL_TITLE] )
+        # Update only if different name or different size.
+        # Different name with same tuneid can happen with xxx.mid and xxx.mid.gz
+        # because these two are considered equal.
+        elif filesize != tune[TLCOL_SIZE] or filename != tune[TLCOL_FILENAME]:
+                operation = "Updating"
+        else:
+            # Tune in tunelib but neither filesize nor filename changed
+            return # No change
+
         # Update tune info both for updated and new files
         tune[TLCOL_SIZE] = filesize
         tune[TLCOL_DATEADDED] = timezone.now_ymd()
-        # This will take some time!!!
+        # This can take some time!!! (up to 3 seconds per tune)
         tune[TLCOL_TIME] = self._get_duration(filename)
         # Update filename, the file could now
-        # have (or not) .gz suffix and be different from before
+        # have (or not) a .gz suffix and be different from before
         tune[TLCOL_FILENAME] = filename
         return operation
 
@@ -224,12 +225,10 @@ class TuneManager:
             except asyncio.TimeoutError:
                 pass
             self.sync_event.clear()
-            self.logger.debug(">>>_sync wakeup")
             # If no file there, don't sync
             # If empty file there, sync all
             # If non-empty file there, sync files in sync_tunelib_filename
             if not fileops.file_exists( self.sync_tunelib_filename):
-                self.logger.debug(">>>no sync file found, continue waiting")
                 continue
 
             log_info = self.logger.info
@@ -240,7 +239,6 @@ class TuneManager:
             # sync is working.
             self.forget_sync_pending()
 
-            self.logger.debug(f">>>{change_queue=}")
             if not change_queue:
                 # Change list is there but empty, must do a complete refresh
                 log_info = self._sync_progress
@@ -262,12 +260,10 @@ class TuneManager:
 
                 # Queue all existing files to see if some sync'ing is needed
                 change_queue = [ _ for _ in filedict.items() ]
-                self.logger.debug(f">>>change_queue for all files= {len(change_queue)}")
                 # and queue all files that have been deleted
                 change_queue.extend( [ (tune[TLCOL_FILENAME], -1 ) 
                                     for tune in newtunelib.values() 
                                     if tune[TLCOL_FILENAME] not in filedict ] )
-                self.logger.debug(">>>change_queue now with deleted files {len(change_queue)}")
 
             for filename, filesize in change_queue:
                 operation = self._sync_one_file( newtunelib, filename, filesize )
@@ -350,27 +346,29 @@ class TuneManager:
         # field names are translated with HEADERLIST to column numbers
         for k, v in update.items():
             tuneid, tlcol_number = k.split(".")
-            tune = tunelib[tuneid]
-            index = int(tlcol_number)
-            # Don't allow to change the key fields
-            if index != TLCOL_FILENAME and index != TLCOL_ID and 0 <= index < TLCOL_COLUMNS:
-                tune[index] = v
+            tune = tunelib.get(tuneid)
+            if tune:
+                index = int(tlcol_number)
+                # Don't allow to change the key fields and avoid index out of range
+                if index != TLCOL_FILENAME and index != TLCOL_ID and 0 <= index < TLCOL_COLUMNS:
+                    tune[index] = v
 
         self._write_tunelib_json(tunelib)
         del tunelib
 
     def register_comment( self, tuneid, comment ):
         tunelib = self._read_tunelib()
-        tune = tunelib[tuneid]
-        # Rating goes to TLCOL_RATING field
-        # Info goes to TLCOL_INFO field
-        if comment in ("*","**","***"):
-            # Put stars in rating field
-            tune[TLCOL_RATING] = comment
-        else:
-            tune[TLCOL_INFO] +=  "/" + comment
-        self._write_tunelib_json( tunelib )
-        del tunelib
+        tune = tunelib.get(tuneid)
+        if tune:
+            # Rating goes to TLCOL_RATING field
+            # Info goes to TLCOL_INFO field
+            if comment in ("*","**","***"):
+                # Put stars in rating field
+                tune[TLCOL_RATING] = comment
+            else:
+                tune[TLCOL_INFO] +=  "/" + comment
+            self._write_tunelib_json( tunelib )
+            del tunelib
 
     def save_lyrics( self, tuneid, new_lyrics ):
         # Save lyrics for one tune
@@ -393,13 +391,13 @@ class TuneManager:
 
     def add_one_to_history( self, tuneid ):
         tunelib = self._read_tunelib()
-        tune = tunelib[tuneid]
-        tune[TLCOL_HISTORY] = tune[TLCOL_HISTORY] + 1 if tune[TLCOL_HISTORY] else 1 
-        self._write_tunelib_json( tunelib )
+        tune = tunelib.get(tuneid)
+        if tune:
+            tune[TLCOL_HISTORY] = tune[TLCOL_HISTORY] + 1 if tune[TLCOL_HISTORY] else 1 
+            self._write_tunelib_json( tunelib )
 
     # This is called to queue an file to be sync'd individually
     def queue_tunelib_change( self, path, file_size ):
-        self.logger.debug(f">>>Remember to sync file by file {path=} {file_size=}")
         # Remember that something in the tunelib folder has changed
         # and that sync must be run
         # file_size is -1 if file was deleted.
@@ -409,7 +407,7 @@ class TuneManager:
         fileops.write_json(change_queue, self.sync_tunelib_filename, keep_backup=False)
         # sync process will wake up and process this file
         # Don't kick process - that way several changes are processed in one go
-        # >>> postpone sync process to wait at least 5 seconds more
+        # >>> This is a possible optimization: postpone sync process to wait at least 5 seconds more
         # >>> for possible next file.
 
     def sync_tunelib_pending( self ):

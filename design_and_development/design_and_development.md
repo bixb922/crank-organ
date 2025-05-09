@@ -1,10 +1,10 @@
-
-I want to share a project of mine that uses MicroPython. Here you can hear it:
+Here is a hear and tell, not a show and tell:
 
 http://www.youtube.com/@bixb922
 
-This is a MIDI controlled crank organ. MicroPython is behind the scenes.
-See here for a description and animation on how this works: https://github.com/bixb922/crank-organ.
+This is my MIDI controlled crank organ. I designed and built the organ because as a kid I liked to hear crank organ music. MicroPython is behind the scenes.
+
+See here for a description and animation on how this works: https://github.com/bixb922/crank-organ#1-overview.
 
 I wrote the software in MicroPython. The documentation, source code and hardware plans are here: https://github.com/bixb922/crank-organ (MIT license). You only need to build the crank organ and you are ready to go :wink:
 
@@ -13,39 +13,38 @@ By design, the microcontroller and the software are quite invisible. A crank org
 As said, the code is in MicroPython. It wasn't necessary to add C routines (I rather like using the stock MicroPython images):
 
 * The microcontroller is an ESP32-S3 N16R8 (16 MB flash, 8 MB RAM) and runs in headless mode. The user interface is a standard browser. Tunes are stored in MIDI files on the flash of the microcontroller. With a cell phone, tablet or PC, you can search the tune list and queue them in a setlist. If you don't, the software shuffles all available tunes when starting to turn the crank.
-* When turning the crank, a crank rotation sensor activates MIDI file playback. Music tempo can be influenced by crank rotation speed.
-* This crank organ has 48 pipes, meaning that 48 solenoid valves and 48 GPIO/MCP23017  ports were needed. The software allows configuration for any number of pipes and MIDI instruments, allowing even to send MIDI over serial (DIN plug).
+* A crank rotation sensor activates MIDI file playback. Music tempo can be influenced by crank rotation speed.
+* This crank organ has 48 pipes, meaning that 48 solenoid valves and 48 GPIO/MCP23017 ports were needed. The software allows configuration for any number of pipes and MIDI instruments, allowing even to send MIDI over serial (DIN plug).
 * The MIDI file parser is published separately here: http://www.github.com/bixb922/umidiparser
-* Crank organs have to be tuned often. The software includes a  tuner using FFT (yes, FFT in MicroPython, the speed was more than adequate).
+* Crank organs have to be tuned often. The software includes a tuner using FFT (yes, FFT in MicroPython, the speed was more than adequate).
 * The software includes a PCNT (pulse count) driver using ESP32's hardware PCNT module (also full MicroPython, compatible with the upcoming driver in PR #12346)
 * No interrupt handling - everything is done with asyncio: register buttons, MIDI file playback, crank sensor, touchpad driver, neopixel blinking, battery level monitor, web server/Microdot, touchpad sensor, purging old files, getting NTP time, WiFi fallback management, deep sleep when idle for long time.
-* Gets time zone and fallback UTC time using Javascript code in the browser
+* Gets time zone and UTC time using Javascript code in the browser
 * During MIDI file playback, CPU intensive tasks such as garbage collection are scheduled to run in the pauses between MIDI events. There are about 20 or 25 asyncio tasks running and their effect on music playback is unnoticeable.
 * Compresses MIDI files (using both MIDI features and using gzip), can store about 1800 tunes on the 16Mb ESP32-S3.
 * Low battery usage: a 10000 mAh USB battery pack lasts for a whole day of playing music
 * Connected to the internet: this is an IOT crank organ
 
-I have programmed microcontrollers in assembly and C language years ago. This was lots easier. I wish I had had asyncio back then, or an easy way to debug a frozen microcontroller.
+I had programmed microcontrollers in assembly and C language years ago. This was lots easier. I wish I had had asyncio back then, or even an easy way to debug a frozen microcontroller, like MicroPython provides.
 
-Many thanks to the MicroPython team for their outstanding effort, to Peter Hinch for his asyncio and MicroPython docs and to Miguel Grinberg for Microdot. Also thanks to mcauser for the MCP23017 driver, although I finally wrote a small driver with the needed functions only. Thanks also to @glenn20 for his mp-image-tool-esp32, which allowed me to skip any MP image generations.
+Many thanks to the MicroPython team for their outstanding effort, to @peterhinch for his asyncio tutorials and MicroPython docs and to Miguel Grinberg for Microdot. Also thanks to @mcauser for the MCP23017 driver and @glenn20 for his mp-image-tool-esp32, which allowed me to skip many MP image generations.
 
-I hope you'll find a tune that you enjoy on my youtube channel: http://www.youtube.com/@bixb922
+I wrote some notes about the design and development process with MicroPython here: https://www.github.com/bixb922/crank-organ/design_and_development.md . There are also other descriptions in that repository related to software use, hardware design and plans, crank sensor, battery load measurement.
 
-I wrote some notes about the design and development process here https://www.github.com/bixb922/crank-organ/design_and_development.md
-
-I wrote some stuff about the sensor selection and sofware development of the crank rotation sensor here: https://www.github.com/bixb922/crank-organ/development.md
-
-
+I hope you'll find some tune on the Youtube channel that you enjoy. 
 
 # Software design and development for the crank organ
 
-See [here](https://github.com/bixb922/crank-organ) for a description on how a MIDI crank organ works.
+See https://github.com/bixb922/crank-organ#1-overview for a description on how a MIDI crank organ works.
 
-See [here](http://www.github.com/bixb922/crank-organ) for complete source of the software and hardware description.
+See http://www.github.com/bixb922/crank-organ for complete source of the software and hardware schematics and instructions.
 
-See [here](https://www.youtube.com/@bixb922) to see and hear the crank organ playing music.
+See https://www.youtube.com/@bixb922 to see and hear the crank organ playing music.
 
-What I don’t have here is a description on how to build a crank organ. Sorry. You'll have to search the internet for this trifle. See [here](http://drehorgel.pythonanywhere.com/iot/static/howitworks.html) how it works. Please translate the text to a language of your liking with the browser.
+See https://www.tapatalk.com/groups/buskerorgan/what-organ-plans-are-available-t38.html for a list of organ plans.
+
+See http://drehorgel.pythonanywhere.com/iot/static/gallery.html for a photo log of the construction of my crank organ.
+
 
 # Contents
 1.  [General requirements](#1-general-requirements)
@@ -70,11 +69,12 @@ What I don’t have here is a description on how to build a crank organ. Sorry. 
 16.  [Stability](#16-stability)
 17.  [File manager](#17-file-manager)
 18.  [Battery load measurement](#18-battery-load-measurement)
-19.  [Language](#19-language)
-20.  [Passwords and security](#20-passwords-and-security)
-21.  [A IOT crank organ](#21-a-iot-crank-organ)
-22.  [Some metrics](#22-some-metrics)
-23.  [About my crank organ](#23-about-my-crank-organ)
+19.  [Logging](#19-logging)
+20.  [Language](#20-language)
+21.  [Passwords and security](#21-passwords-and-security)
+22.  [A IOT crank organ](#22-a-iot-crank-organ)
+23.  [Some metrics](#23-some-metrics)
+24.  [About my crank organ](#24-about-my-crank-organ)
 
 
 
@@ -486,12 +486,22 @@ With that information, the software makes a correlation with the solenoid use an
 
 This allows a quite precise indicator of battery load, without using an additional circuit such as a INA220 or similar. 
 
-# 19. Language
+# 19. Logging
+
+There is a logging module available in MicroPython. As far as I could see, that had some inconveniences:
+* The log file is not closed/flushed automatically (that was easy to add)
+* The log files may fill the available flash
+
+The logger could be extended to handle that, I finally adapted the module (https://github.com/bixb922/crank-organ/tree/main/src/minilog.py). Now it opens a new logfile when the current logfile exceeds some size (say: 20 kb) and purges old logfiles, keeping, for example, 3 log files. Debug level goes to console, info level and higher go to log file and flash. 
+
+So no way of filling up flash if there is a error loop.
+
+# 20. Language
 
 The user interface is available in spanish, german and english, selected by the browser language. The language phrase substitutions are done all in Javascript.  Only pages that are for daily use have translation. This is not the textbook way of handling internationalization, but the strategy makes translation feasible for a microcontroller. See https://github.com/bixb922/crank-organ/blob/main/static/translations.js
 
 
-# 20. Passwords and security
+# 21. Passwords and security
 
 For this application, maybe the only asset that needs some protection are the WiFi passwords. There is really no secure way to protect passwords on the ESP32 on a DEVKITC board, since USB always is available. But AES is installed in MicroPython, so a AES key is generated in NVS storage with the TRNG provided via MicroPython, and the WiFi keys ciphered with that key. To hack the keys, code needs to be injected into the microcontroller, but if that's possible, security is breached anyhow. The files on the microcontroller are visible with the file manager, but the AES keys are not stored in any file. Modifying the configuration requires the user password.
 
@@ -499,13 +509,13 @@ Microdot also allows to manage cookies and this enables to manage sessions and a
 
 I wouldn't put this microcontroller with it's web server directly on the internet. The goal is to connect to a home network (relatively protected behind a router) or to a cell phone hotspot (behind the firewall the cell phone provides).
 
-# 21. A IOT crank organ
+# 22. A IOT crank organ
 
 I believe this is the only IOT crank organ there is. There is a module that connects to a website. Spectators can scan a QR code, have access to the tune list, and can request tunes. The microcontroller polls this website and adds the request to the setlist.
 
 Tune list and lyrics are also synchronized to this web site. The current tune, with info and lyrics, can be seen on the tune list.
 
-# 22. Some metrics
+# 23. Some metrics
 
 The code size is about 5400 lines of MicroPython code (not counting Microdot), plus about 20 HTML pages with 3200 lines of Javascript.
 
@@ -516,15 +526,15 @@ Average CPU usage while playing music is about 10% of a 240Mhz ESP32-S3 with PSR
 Start up time is about 5 seconds until ready to play, a time very adequate for this applicaation. Includes the time to load ```mpy``` modules from flash. ALl modules are loaded at start up. If ```.py``` files are used instead of ```.mpy``` files, start up time increases about 1 second (i.e. MicroPython is rather fast to compile). The load time could be shortened loading non-critical modules on demand.
 
 
-# 23. About my crank organ
+# 24. About my crank organ
 
 My crank organ has 48 notes. The crank moves the bellows for the air pressure. There are 48 pipes, each for one note, 35 bourdon pipes and 13 piccolo pipes. Under each pipe is a solenoid valve that opens and closes the air flow.
 
 The electronics comprise a hand-soldered board for the ESP32-S3, microphone on a breakout board, hand-soldered boards for the MCP23017 plus the ULN2008 drivers. The MCP23017 boards are inside each windchest, connected via cables that carry I2C signals, 3.3V and 13.5V.
 
-The crank organ was designed and built by me. Most of the musical arrangements were made either by my sons or by me. 
+The crank organ was designed and built by me. Most of the musical arrangements and adaptations were made by us (i.e. family members).
 
-Well, that's the whole point, isn't it? To make some music for enjoyment.
+Well, that's the whole point, isn't it? To make some music for our enjoyment.
 
 
 
