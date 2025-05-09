@@ -1,37 +1,3 @@
-Here is a hear and tell, not a show and tell:
-
-http://www.youtube.com/@bixb922
-
-This is my MIDI controlled crank organ. I designed and built the organ because as a kid I liked to hear crank organ music. MicroPython is behind the scenes.
-
-See here for a description and animation on how this works: https://github.com/bixb922/crank-organ#1-overview.
-
-I wrote the software in MicroPython. The documentation, source code and hardware plans are here: https://github.com/bixb922/crank-organ (MIT license). You only need to build the crank organ and you are ready to go :wink:
-
-By design, the microcontroller and the software are quite invisible. A crank organ is about music, not technology. You just turn the crank and music starts.
-
-As said, the code is in MicroPython. It wasn't necessary to add C routines (I rather like using the stock MicroPython images):
-
-* The microcontroller is an ESP32-S3 N16R8 (16 MB flash, 8 MB RAM) and runs in headless mode. The user interface is a standard browser. Tunes are stored in MIDI files on the flash of the microcontroller. With a cell phone, tablet or PC, you can search the tune list and queue them in a setlist. If you don't, the software shuffles all available tunes when starting to turn the crank.
-* A crank rotation sensor activates MIDI file playback. Music tempo can be influenced by crank rotation speed.
-* This crank organ has 48 pipes, meaning that 48 solenoid valves and 48 GPIO/MCP23017 ports were needed. The software allows configuration for any number of pipes and MIDI instruments, allowing even to send MIDI over serial (DIN plug).
-* The MIDI file parser is published separately here: http://www.github.com/bixb922/umidiparser
-* Crank organs have to be tuned often. The software includes a tuner using FFT (yes, FFT in MicroPython, the speed was more than adequate).
-* The software includes a PCNT (pulse count) driver using ESP32's hardware PCNT module (also full MicroPython, compatible with the upcoming driver in PR #12346)
-* No interrupt handling - everything is done with asyncio: register buttons, MIDI file playback, crank sensor, touchpad driver, neopixel blinking, battery level monitor, web server/Microdot, touchpad sensor, purging old files, getting NTP time, WiFi fallback management, deep sleep when idle for long time.
-* Gets time zone and UTC time using Javascript code in the browser
-* During MIDI file playback, CPU intensive tasks such as garbage collection are scheduled to run in the pauses between MIDI events. There are about 20 or 25 asyncio tasks running and their effect on music playback is unnoticeable.
-* Compresses MIDI files (using both MIDI features and using gzip), can store about 1800 tunes on the 16Mb ESP32-S3.
-* Low battery usage: a 10000 mAh USB battery pack lasts for a whole day of playing music
-* Connected to the internet: this is an IOT crank organ
-
-I had programmed microcontrollers in assembly and C language years ago. This was lots easier. I wish I had had asyncio back then, or even an easy way to debug a frozen microcontroller, like MicroPython provides.
-
-Many thanks to the MicroPython team for their outstanding effort, to @peterhinch for his asyncio tutorials and MicroPython docs and to Miguel Grinberg for Microdot. Also thanks to @mcauser for the MCP23017 driver and @glenn20 for his mp-image-tool-esp32, which allowed me to skip many MP image generations.
-
-I wrote some notes about the design and development process with MicroPython here: https://www.github.com/bixb922/crank-organ/design_and_development.md . There are also other descriptions in that repository related to software use, hardware design and plans, crank sensor, battery load measurement.
-
-I hope you'll find some tune on the Youtube channel that you enjoy. 
 
 # Software design and development for the crank organ
 
