@@ -23,7 +23,7 @@ See http://drehorgel.pythonanywhere.com/iot/static/gallery.html for a photo log 
 7.  [Web server](#7-web-server)
 8.  [Asyncio](#8-asyncio)
 9.  [Garbage collection](#9-garbage-collection)
-10.  [Using stock MicroPython .bin images](#10-using-stock-micropython-bin-images)
+10.  [Using standard MicroPython .bin images](#10-using-standard-micropython-bin-images)
 11.  [Tuner](#11-tuner)
      * [Zero crossing algorithm](#zero-crossing-algorithm)
      * [FFT algorithms](#fft-algorithms)
@@ -232,9 +232,9 @@ It is a bit simple since there is only one high priority task (music playback) a
 Also, on the ESP32 family, ```asyncio.sleep_ms()``` is rather imprecise. It is not feasible to use ```asyncio.sleep_ms()``` to wait for the next MIDI event. So RequestSlice() relinquishes control to asyncio 20 milliseconds *before* the wait time expires, and then waits the remainder with time.sleep_us(). This does not impair asyncio responsiveness, and as a result, the time jitter of MIDI events is around 1 millisecond and 5 milliseconds worst case. This jitter is plainly in the realm of the unnoticeable. 
 
 
-# 10. Using stock MicroPython .bin images
+# 10. Using standard MicroPython .bin images
 
-Early on I decided that, if possible, I wanted to use stock MicroPython images, avoiding generating a .bin file. I have generated .bin files, no problem with that. But I wanted to avoid that task and the dependency on tool chains. ESP-IDF changes frequently, but MicroPython versions tend to be rather compatible. And I was not thrilled to write C code.
+Early on I decided that, if possible, I wanted to use  MicroPython images with no added C code, avoiding generating a .bin file. I have generated .bin files, no problem with that. But I wanted to avoid that task and the dependency on tool chains. For example ESP-IDF changes frequently. And I was not thrilled to write C code.
 
 When PR#8381 becomes available, for sure I'll put all code and HTML pages into ROMFS.
 
@@ -242,17 +242,17 @@ When PR#8381 becomes available, for sure I'll put all code and HTML pages into R
 
 For me, tuning an instrument is crucial. A slightly untuned instrument produces a "rough" or "uneven" sound. If definitely out of tune, the result is ... cringeworthy. There are some that find an out of tune crank organ quaint (whatever that means), I'm not one of them.
 
-Tuning has to be checked about once a month or if temperature changes. The resonant frequency of the pipes depends on the speed of propagation of sound in air, and that changes with temperature.
+Tuning has to be checked about once a month or if temperature changes. 
 
 The microcontroller in the crank organ has a microphone to record the sound. The correct frequency for each MIDI note is known, and the real frequency has to be measured. This is: you mark a note on a note list on the browser, turn the crank, the note will sound, the sound is then recorded on the ESP32 and can be analyzed.
 
-For instruments such as the guitar or the piano, the frequency when playing a note is very stable. Wind instruments such as clarinet or trumpet have an oscillating frequency, because human breath just cannot be controlled that well, even the heart beat causes a slight frequency deviation.
+For instruments such as the guitar or the piano, the frequency when playing a note is very stable. Wind instruments such as clarinet or trumpet have an oscillating frequency, because human breath just cannot be controlled that well, and even the heart beat causes a slight frequency deviation.
 
 A crank organ also has a varying frequency. The frequency depends ever so slightly on pressure, and the pressure varies a bit while the turning crank and with the opening and closing of the different bellows valves. 
 
 That means that for a good tuning, a full crank revolution (about 1 second) of signal has to be analyzed and averaged.
 
-That means that the tuning algorithm need not be extremely fast. Signal acquisition for one note will take at least 1 or 2 seconds anyhow (one crank revolution), so adding 0.2 or 0.4 seconds for the frequency analysis algorithm is no big deal.
+That means that the tuning algorithm need not be extremely fast. Signal acquisition for one note will take at least 1 or 2 seconds anyhow (one  or two crank revolution), so adding 0.5 seconds for the frequency analysis algorithm is no big deal.
 
 Precision: for two notes played in succession, the JND (just noticeable difference) is about 10 cents (1 cent = hundredth of a semitone) or 0.5% of the frequency ([see](https://forums.steinberg.net/t/just-noticeable-difference-engineering-concepts/95538)). (When two notes are played together, a lower difference could be heard sensing the frequency difference as beating).
 That means that the frequency measurement needs to be a bit more precise than 10 cents. It seemed reasonable to aim for about 1 cent of error, although 2 or 3 cents of error in the frequency measurement would still be enough.
@@ -298,12 +298,12 @@ This is a sample FFT of a 440Hz note on the crank organ. X-axis is frequency, y-
 
 ![graph 440Hz FFT](fft.png)
 
-These were several alternatives tested as FFT algorithms:
+There were several alternatives tested as FFT algorithms:
 * fft_arrays: In place FFT with arrays: https://rosettacode.org/wiki/Fast_Fourier_transform#C changing line for line from C to Python and using lists instead of arrays to enable the use of complex arithmetic. For this purpose, it turned out that MicroPython lists are almost as fast as arrays.
 * fft_int: FFT with integers, which makes sense because the original signals are integers between 0 and 4096, and MicroPython Viper mode can be used. See here for the code https://github.com/bixb922/viper-examples/blob/main/signal_processing/fft_int.py
 * fft_compact: A very compact algorithm from https://rosettacode.org/wiki/Fast_Fourier_transform#Python
 * ```ulab``` was not tried (https://github.com/v923z/micropython-ulab) nor other C based FFT implementations (no C here!).
-* Results were compared to CPython/numpy on a Mac to ascertain the algorithm worked.
+* Results were compared to CPython/numpy to ascertain the algorithm worked.
 
 These are some results, running the algorithm with frequencies in the needed range, generating a random distribution of frequencies, using a buffer of 1024 elements.
 
@@ -329,38 +329,29 @@ The built-in ADC was used, adding a frequency dependent delay using ```time.tick
 
 Once the FFT is done, the software searches for the peak frequency in the range of the nominal frequency plus/minus 3 semitones, and interpolates the maximum with a second degree polynomial using 3 points around the maximum. Since the sampling rate is adjusted for each frequency, the peak always appears in the same region of the spectrum, allowing a local search for a few frequencies. Also, in the search range there will be only one peak.
 
-This search an be done nicely with Python functions (which are faster than MicroPython code):
-```
-def find_max( spectrum ):
-    maxsignal = max(spectrum)
-    maxposition= spectrum.index(maxsignal)
-    return p-1, signal[p-1], p, signal[p], p+1, signal[p+1]
-```
-Once the maximum frequency is located, the three adjacent points in the spectrum are used to interpolate the maximum with a quadratic polynomial. 
+This search of the maximum can be done nicely with Python functions max() and index() which are very fast.(Once the maximum frequency is located, three points of the spectrum are used to interpolate the maximum with a quadratic polynomial. 
 
-However, there might be no maximum, so the real routine also checks that maxsignal is considerably larger than the average.
-
-At the required sample rate, the lowest note at 116 Hz needs about 1.3 seconds of signal and the highest note Eb7 at about 2500 Hz needs about 60 milliseconds of signal. 
+At the required sample rate, the lowest note at 116 Hz needs about 1.3 seconds of signal and the highest note Eb7 at about 2500 Hz needs about 60 milliseconds of signal. For low notes, 3 measurements are done, taking about 4 seconds, and for high notes, 10 measurements are donde, taking about 1.5 second.
 
 The result of the tuning is stored on flash, so the tuning can be reviewed and resumed at any time:
 
 ![tuning](notelist.jpg)
 
-So now the software assists rather well with tuning. The "Tune all" button can be run every once in a while (i.e. when temperature changes), and then the worst offenders can be tuned instead of trying to perfect the tuning for each and every note. This has been a valuable tool.
+So now the software assists rather well with tuning. The "Tune all" button can be run every once in a while (i.e. when temperature changes), and then the worst offenders can be tuned instead of trying to perfect the tuning for each and every note. 
 
 And no need for C.
 
 # 12. Installation and provisioning
 
-I do not believe there will be many users for this software. Building a crank organ takes several months or even years for an amateur, and there are not many people who do this.
+I do not believe there will be many users for this software. Building a crank organ takes several months or even years for an amateur, and there are not many people who do this. There also are few professional builders worldwide.
 
-Nevertheless I wanted some easy way to distribute a complete system with MicroPython code, HTML, .js, .css and .json files, but I did not find an easy way to distribute that. Generating an image did not allow to include non-python files easily. ```mpremote``` now has a copy -r that could do it, but when I tried this back at the time I really could not make cp -r work on my Windows PC.
+Nevertheless I wanted some easy way to distribute a complete system with MicroPython code, HTML, .js, .css and .json files, but I did not find an easy way to make a installation kit. Generating an image did not allow to include non-python files easily. ```mpremote``` now has a copy -r that could do it, but when I tried this back at the time I really could not make cp -r work on my Windows PC.
 
-With PR#8381 There is now a very useful effort under way to allow distributing a complete image with files. @glenn20 also has a nice tool [mp-image-tool-esp32](https://github.com/glenn20/mp-image-tool-esp32) to make an image with a file system for ESP32. This tool also saved me from generating MicroPython .bin files for 16 Mb. It allows to configure that with a simple command. By the way, now I can stay at a recent version of MicroPython with no difficulties. Many thanks to @glenn20.
+With PR#8381 there will be a very useful effort under way to allow distributing a complete image with files. @glenn20 also has a nice tool [mp-image-tool-esp32](https://github.com/glenn20/mp-image-tool-esp32) now also allows to add files.
 
 So I wrote a small utility program, see https://www.github.com/bixb922/freezefs to make a self-extractable file archive to distribute and update code, HTML, js and data files. It compresses a folder and subfolders into a ```.py``` file. If run with ```mpremote run``` it will extract the files to their destination folders on the microcontroller. It also allows to freeze a complete file system into the MicroPython image and mount that partition as part of the regulsar file system, but I finally did not use that optionr.
 
-Once installed the user has to configure the system, but to connect, the user needs WiFi. So the system starts up WiFi in AP mode to enable initial configuration. The user can connect with the initial node name and configure what's needed.
+Once installed, the user has to configure the system, but to connect, the user needs WiFi. So the system starts up WiFi in AP mode to enable initial configuration. The user can connect with the initial node name and configure what's needed.
 
 The AP mode is also the fallback in case there is no WiFi station available. This might happen while performing when the cell phone fails. If idle, the AP mode is disabled after a few minutes to save battery energy.
 
@@ -381,7 +372,7 @@ One of the important sensors in the crank organ is the crank sensor. It serves t
 * Starting the crank starts the MIDI file playback automatically. It is also nice to have the MIDI file playback pause when the crank is stopped.
 * The crank speed can influence the MIDI file playback. This is very realistic, since mechanical crank organs obviously work this way. However, this feature is also a bit annoying, since a higher crank speed is needed in some passages where more air is needed but higher music tempo is not. On the other hand, turning faster and slower adds some expression control to the music. Some crank organ players with mechanical organs found this feature an absolute must!
 
-Having plenty of time, I tested many sensors, [see this document here](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/crank-sensor.md)
+Having no time constraint, I tested many sensors, [see this document here](https://github.com/bixb922/crank-organ/blob/main/doc-hardware/crank-sensor.md)
 
 So I hooked up a MicroPython interrupt routine and recorded the time between interrupts, discarding very short times for debouncing. With this data it was easy to average some measurements to get a revolutions per second reading for the crank movement.
 
@@ -392,16 +383,13 @@ This means I had to look for another way to measure crank sensor pulses.
 The ESP32 family has a very nice Pulse Count (PCNT) hardware in the CPU, which is a good solution to these problems.
 There are several PRs to add PCNT support to MicroPython. PR #12346 is the latest and seems to be in the queue to be merged. But I did not want to have a custom image with that PR, depending on ESP-IDF versions and other nitty-gritties. As said, I prefer MicroPython stock .bin images.
 
-A PCNT driver entirely in MicroPython was written. It uses the ESP32's registers directly, bypassing ESP-IDF. No interrupts are needed, but the PCNT count has to be read before it overflows. In practice, since the overflow is around 32000 counts, and since it is safe to assume that it is possible to read the counter several times a second, this allows to count pulse rates of at least  100 kHz, more than enough for this purpose.
+A PCNT driver entirely in MicroPython was written. It uses the ESP32's registers directly, bypassing ESP-IDF. No interrupts are needed, but the PCNT count has to be read before it overflows. In practice, since the overflow is around 32000 counts, and since it is safe to assume that it is possible to read the counter several times a second, this allows to count pulse rates of at least 100 kHz, more than enough for this purpose.
 
 The MicroPython PCNT driver is [here](https://github.com/bixb922/crank-organ/blob/main/src/pcnt.py). The driver works with the ```Counter``` and ```Encoder``` classes of PR#12346, so should that PR be merged some day, I can drop the driver. The driver can work for both a plain ESP32 and a ESP32-S3 (the ESP32 register definitions are commented).
 
 This allows the use of an industrial quadrature encoder of 200 pulses per revolution. It also could be, say, 5000 pulses per second, but there is no gain. In 2 phase mode, this yields 400 pulses per second. Reading 10 times a second with asyncio has very low overhead and yields a precision of around 2% for each reading, which is enough for the task.
 
-Lessons learned:
-* Don't trust software interrupts on the ESP32 when using WiFi or file operations
-* Push time critical stuff to hardware
-
+L
 # 15. Local time
 
 Having the local time is really not needed for this application, but it is nice to record the date and time tunes have been played, and the date when MIDI files are updated to know which tunes are new.
@@ -434,7 +422,7 @@ Also, exception handling and other techniques allow to write resilient code. Mus
 
 # 17. File manager
 
-Initially software and tunes were uploaded with pyboard.py until I discovered that mpremote existed. Then a FTP daemon (https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD) and a FileZilla on Mac was used. This worked well but required another piece of software on the PC and wasn't quite easy to use.
+Initially software and MIDI files were uploaded with pyboard.py until I discovered that mpremote existed. Then a FTP daemon (https://github.com/robert-hh/FTP-Server-for-ESP8266-ESP32-and-PYBD) and a FileZilla on Mac was used. This worked well but required another piece of software on the PC/Mac and wasn't very easy to use.
 
 So finally a small dedicated file manager was developed. You can traverse the file tree, upload software and MIDI files, and view or download files. When uploading, the file manager sorts the file automatically to the folder where it belongs, based on type. This is very fast and easy to use.
 
@@ -455,16 +443,16 @@ This allows a quite precise indicator of battery load, without using an addition
 # 19. Logging
 
 There is a logging module available in MicroPython. As far as I could see, that had some inconveniences:
-* The log file is not closed/flushed automatically (that was easy to add)
-* The log files may fill the available flash
+* The log file is not closed/flushed automatically (that was could be added to add)
+* The log files may fill the available flash if an error loop occurs, blocking the software
 
-The logger could be extended to handle that, I finally adapted the module (https://github.com/bixb922/crank-organ/tree/main/src/minilog.py). Now it opens a new logfile when the current logfile exceeds some size (say: 20 kb) and purges old logfiles, keeping, for example, 3 log files. Debug level goes to console, info level and higher go to log file and flash. 
+The logger could be extended to handle that, but a new module (https://github.com/bixb922/crank-organ/tree/main/src/minilog.py) was written. Now it opens a new logfile when the current logfile exceeds some size (say: 20 kb) and purges old logfiles, keeping, for example, 5 log files. 
 
-So no way of filling up flash if there is a error loop.
+No way of filling up flash if there is a error loop.
 
 # 20. Language
 
-The user interface is available in spanish, german and english, selected by the browser language. The language phrase substitutions are done all in Javascript.  Only pages that are for daily use have translation. This is not the textbook way of handling internationalization, but the strategy makes translation feasible for a microcontroller. See https://github.com/bixb922/crank-organ/blob/main/static/translations.js
+The user interface is available in spanish, german and english, selected by the browser language. The language phrase substitutions are done all in Javascript.  Only pages that are for daily use have translation. This is not the textbook way of handling internationalization, but the strategy makes translation feasible for a microcontroller. See https://github.com/bixb922/crank-organ/blob/main/static/translations.js.
 
 
 # 21. Passwords and security
@@ -477,9 +465,9 @@ I wouldn't put this microcontroller with it's web server directly on the interne
 
 # 22. A IOT crank organ
 
-I believe this is the only IOT crank organ there is. There is a module that connects to a website. Spectators can scan a QR code, have access to the tune list, and can request tunes. The microcontroller polls this website and adds the request to the setlist.
+I believe this is the only IOT crank organ there is. There is a module that connects to a website. Spectators can scan a QR code, have access to the tune list, and can request tunes. The microcontroller polls this website and adds the request to the setlist automatically, showing the name of the spectator.
 
-Tune list and lyrics are also synchronized to this web site. The current tune, with info and lyrics, can be seen on the tune list.
+Tune list and lyrics are also synchronized to this web site. The current tune, with info and lyrics, can be seen in real time on the internet.
 
 # 23. Some metrics
 
@@ -496,9 +484,9 @@ Start up time is about 5 seconds until ready to play, a time very adequate for t
 
 My crank organ has 48 notes. The crank moves the bellows for the air pressure. There are 48 pipes, each for one note, 35 bourdon pipes and 13 piccolo pipes. Under each pipe is a solenoid valve that opens and closes the air flow.
 
-The electronics comprise a hand-soldered board for the ESP32-S3, microphone on a breakout board, hand-soldered boards for the MCP23017 plus the ULN2008 drivers. The MCP23017 boards are inside each windchest, connected via cables that carry I2C signals, 3.3V and 13.5V.
+The electronics comprise a hand-soldered board for the ESP32-S3, microphone on a breakout board and 3 hand-soldered boards for the MCP23017 plus the ULN2008 drivers. The MCP23017 boards are inside each windchest, connected via cables that carry I2C signals, 3.3V and 13.5V.
 
-The crank organ was designed and built by me. Most of the musical arrangements and adaptations were made by us (i.e. family members).
+The crank organ was designed and built by me. Most of the musical arrangements and adaptations were made by my family.
 
 Well, that's the whole point, isn't it? To make some music for our enjoyment.
 
