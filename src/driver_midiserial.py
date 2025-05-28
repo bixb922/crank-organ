@@ -10,13 +10,22 @@ from driver_base import BasePin, BaseDriver
 # drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
     def __init__( self, uart, pin, channel ):
+        # "pin" is the GPIO tx pin to use for MIDI output.
+        # "uart" is the UART number to use, 1 or 2.
+        # "channel" is the MIDI channel to use, 0-15.  All
+        # notes to this MIDI serial will be sent on the indicated
+        # channel. This is because some boards (for example
+        # the Organautmatech board) are configured to one channel
+        # per board, allowing several boards per MIDI serial output.
+
         # Default rx is 9 for UART1
         # >>> Should use default pins or allow user
-        # >>> to define rxpin as well.
+        # >>> to define rxpin as well?
+        # (On the pinout.html page the rx pin will show as "used")
         # assert 1 <= uart <= 2
         # assert 0 <= channel <= 15
         self._uart = UART( uart, baudrate=31250, tx=pin )
-        # Have bytearray with the command ready, format is:
+        # Have bytearray with the MIDI event ready, format is:
         # event+channel, note number, velocity
         self._note_on = bytearray( (0x90 + channel, 0, 127))
         self._note_off = bytearray((0x80 + channel, 0,   0))

@@ -21,7 +21,7 @@ class Setlist:
     def __init__(self):
         self.logger = getLogger(__name__)
         self.current_setlist = [] # for now
-
+        self.playback_enabled = True
         self.waiting_for_start_tune_event = False
 
         # Any of these will set self.music_start_event:
@@ -41,7 +41,10 @@ class Setlist:
         self.tune_requests = {}
 
         self.setlist_task = asyncio.create_task(self._setlist_process())
-        self.automatic_playback_task = asyncio.create_task( self._automatic_playback_process() )
+        self.automatic_delay = config.get_int("automatic_delay")
+        if self.automatic_delay:
+            self.automatic_playback_task = asyncio.create_task( self._automatic_playback_process() )
+
         self.blink_empty_task = asyncio.create_task( self._blink_empty() )
         self.player_task = None
         self.timeout_task = None
@@ -102,7 +105,7 @@ class Setlist:
             if self.current_setlist:
                 break    
 
-        while scheduler.is_playback_enabled():
+        while True:
 
             # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
@@ -111,8 +114,12 @@ class Setlist:
             # was touched or web button or automatic playback or whatever)
             await self._wait_for_start()
             
-            # Check again if still enabled for playback
-            if not scheduler.is_playback_enabled():
+            # Check if playback is still enabled.
+            # Both pinout and organtuner can disable plabyack
+            # to avoid interference with music playback.
+            if not self.playback_enabled:
+                # Exit loop. Only way to get back to playback
+                # is to reboot.
                 break
 
             # User signalled start of tune
@@ -135,7 +142,6 @@ class Setlist:
                 player.play_tune(tuneid, tuneid in self.tune_requests)
             )
             await self.player_task # type:ignore
-            
             # Record that this task has ended and isn't available anymore
             self.player_task = None
             self.logger.info(f"ended {tuneid=}")
@@ -165,7 +171,7 @@ class Setlist:
         # This is to avoid interference between MIDI files
         # (player.py)
         # and the tuning process (organtuner.py)
-        self.logger.debug("Not in playback mode, stop setlist process")
+        self.logger.debug("Not in playback mode, setlist process exit")
         # Progress of current tune will not be updated anymore.
 
 
@@ -340,6 +346,8 @@ class Setlist:
     def complement_progress(self, progress):
         progress["setlist"] = self.current_setlist
         progress["tune_requests"] = self.tune_requests
+        progress["automatic_delay"] = self.automatic_delay
+        progress["playback_enabled"] = self.playback_enabled
         if self.is_waiting_for_tune_start():
             # If setlist is waiting for start, the player does not
             # know the current tune yet
@@ -359,22 +367,19 @@ class Setlist:
         return self._is_empty() and self.player_task == None
 
     async def _automatic_playback_process( self ):
-        timeout_seconds = config.get_int("automatic_delay") or 0
-        if not timeout_seconds:
-            return 
-        while scheduler.is_playback_enabled():
+        while self.playback_enabled:
             # Wait for any tune to ned
             while self.player_task:
                 await asyncio.sleep_ms(500)
             # Wait the time between tunes as indicated in config.json
-            await asyncio.sleep( timeout_seconds )
+            await asyncio.sleep( self.automatic_delay )
             # If no tune playing, kick start event to get tune going
             if not self.player_task:
                 self.logger.debug("Automatic playback sets music start event")
                 self.music_start_event.set()
 
     async def _blink_empty( self ):
-        while True:
+        while self.playback_enabled:
             led.set_blink_setlist( self._is_empty() )
             await asyncio.sleep_ms(300) # type:ignore
 
@@ -393,3 +398,24 @@ class Setlist:
             fileops.write_json(
                 stored_setlist, config.STORED_SETLIST_JSON, keep_backup=False
             )
+
+    def stop_playback( self ):
+        # Called to stop playback of music immediately.
+        # Organtuner: to avoid interference with tuning
+        # Pinout: if pinout was changed to force user to reboot
+        # Test pins (pinout.html): to avoid interference with pin testing
+        if self.player_task:
+            self.player_task.cancel() # type:ignore
+            # If _setlist_process() is awaiting the  player_task,
+            # the _setlist_process() will receive the CancelledError
+            # and will abort.
+            # If not, the variable self.playback_enabled set to False
+            # will cause the _setlist_process() and other processes to exit
+
+        # And prevent playing any more tunes
+        # (if not this would interfere with tuning)
+        # self.playback_enabled is tested by the different setlist processes
+        # and these processes will exit.
+        if self.playback_enabled:
+            self.logger.debug("Playback disabled, setlist process will stop")
+        self.playback_enabled = False

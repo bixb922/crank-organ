@@ -41,7 +41,7 @@
 			<tr>
 				<th>Programa y nota</th>
 				<th colspan="2">Afinación (cents)</th>
-				<th colspan="2">Amplitud (db)</th>
+				<th colspan="2" name="amp_related">Amplitud (db)</th>
 				<th>Pin</th>
 			</tr>
 		</thead>
@@ -69,8 +69,11 @@ async function refreshNoteList() {
 
 function updateNoteList( notelist ) {
 	let noteListTable = document.getElementById("notelist");
+	let amplitude_seen = false
     // notelist is a dictionary, key=midi note number
+	// Clear table
     noteListTable.innerText = "";
+	// Populate table with values from notelist
 	for( let midi in notelist ){
 		let note = notelist[midi]  ;
         let ampdb = note["ampdb"] ;
@@ -79,6 +82,7 @@ function updateNoteList( notelist ) {
         }
         else{
             ampdb = Math.round( ampdb ) ;
+			amplitude_seen = true ;
         }
         let cents = note["cents"] ;
         if( cents == null ){
@@ -88,20 +92,37 @@ function updateNoteList( notelist ) {
             cents = Math.round( cents ) ;
         }
 		let row = insertRow( noteListTable, ["", cents, "", ampdb, "", note["pinname"]] );
+		// Column 0: note name, link to note
+		// Column 1: cents as number
+		// COlumn 2: cents as bar graph, id `tuning${midi}`
+		// Column 3: amplitude as number (amp_related)
+		// Column 4: amplitude as bar graph, id `amp${midi} (amp_related)
+		// Column 5: pin name
 		let link = document.createElement("a");
 		link.href = `/note/${midi}`;
 		link.innerText = note["name"];
 		row.cells[0].appendChild( link ) ;
 		row.cells[2].id = `tuning${midi}`;
 		row.cells[4].id = `amp${midi}`;
-		row.cells[4].id = `amp${midi}`;
-		row.cells[5].id = `pin${midi}`;
+
+		// Set name of amplitude related columns to be able to show/hide them
+		// based on whether amplitude values are present
+		row.cells[3].setAttribute( "name", "amp_related" ) ;
+		row.cells[4].setAttribute( "name", "amp_related" );
 	};
+
+	// Show/hide amplitude columns. 
+	// If no amplitude values are present, hide the columns
+	let amp_visibility = amplitude_seen ? "" : "none" ;
+	for( let ele of document.getElementsByName("amp_related") ){
+		ele.style.display = amp_visibility ;
+	}	
 
 	for( let midi in notelist ){
 		let note = notelist[midi] ;
         let cents = note["cents"]  ;
-        let elename = "tuning" + midi ;
+		// Insert tuning bar graph, if there is a cents value
+        let elename = `tuning${midi}` ;
         let docele = document.getElementById( elename ) ;
         if( cents != null ){
         	docele.style.visibility = "visible" ;
@@ -118,9 +139,9 @@ function updateNoteList( notelist ) {
         else {
             docele.style.visibility = "hidden" ;
         }
-
+		// Insert amplitude bar graph, if there is a amplitude value
         let ampdb = note["ampdb"] ;
-        elename = "amp" + midi ;
+        elename = `amp${midi}`;
         docele = document.getElementById( elename ) ;
         if( ampdb != null ){
           docele.style.visibility = "visible" ;

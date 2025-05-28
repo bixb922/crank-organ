@@ -86,6 +86,7 @@ class Config:
             "mic_test_mode": False,
             "mic_signal_low": -18,
             "mic_store_signal": False,
+            "mic_amplitude": False,
             
             "servernode": "192.168.100.19:8080", # Only used if mcserver.py is present
             "serverpassword": "password3", # Only used if mcserver.py is present
@@ -102,6 +103,7 @@ class Config:
             "tuning_cents": 5,
         }
         # Populate missing keys from fallback
+        # compute missing_items in order to show new keys in log
         missing_items = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
         self.cfg.update(missing_items)
         for k in missing_items:

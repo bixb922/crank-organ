@@ -162,32 +162,12 @@ class RequestSlice:
             )
         # Return None to re-raise any exception
 
-# Not used. Can be used to wait for player to stop.
-#async def wait_for_player_inactive():
-#    while not _run_always_flag:
-#        await asyncio.sleep_ms(1000)
+async def wait_for_player_inactive():
+    # used by mcserver
+    while not _run_always_flag:
+        await asyncio.sleep_ms(1000)
 
 
-# Enable playback: player.py/setlist.py play music
-# Disable playback: user is tuning or using pinout
-# page, don't react to "start music" requests.
-# Only way to restore is to reboot.
-playback_enabled = True
-
-
-def set_playback_mode(p):
-    global playback_enabled
-    playback_enabled = bool(p)
-
-def is_playback_enabled():
-    return playback_enabled
-
-# Add more info to progress.
-def complement_progress(progress):
-    # play_mode True: playback is enabled, can start midi files
-    # play_mode False: running tuner, don't start midi files
-    # because they will interfere with the MIDI files 
-    progress["play_mode"] = playback_enabled
 
 # Class to measure time of a group of statements, use:
 # with MeasureTime("description") as m:

@@ -15,7 +15,6 @@ from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery, microphone
 import fileops
 import frequency
-import scheduler
 import midi
 
 # Time spent for measuring frequency for each note
@@ -66,9 +65,8 @@ class OrganTuner:
                 "tuning_cents": tc }
 
     def queue_tuning(self, method, arg):
-        scheduler.set_playback_mode(False)
         from drehorgel import setlist
-        setlist.stop_tune()
+        setlist.stop_playback()
         
         #  Request is a tuple of an (async organtuner method,
         # and an argument). Normally the argument is a pin_index but can
@@ -316,14 +314,20 @@ class OrganTuner:
                     ) = microphone.frequency( midi_note, store_this )
                 except ValueError:
                     frequency = None
-                    amplitude = 0
+                    amplitude = None
                     duration = 1
-                    
+                # Configuration option mic_amplitude is True means
+                # that the amplitude is measured and stored.
+                if not config.cfg.get("mic_amplitude", False):
+                    amplitude = None 
                 nominal = midi_note.frequency()
                 # If too far away, ignore.
                 if frequency and nominal*0.9 < frequency < nominal*1.1:
                     freqlist.append(frequency)
-                    amplist.append(amplitude)
+                    if amplitude is not None:
+                        # Convert to dB
+                        amplitude = 20 * log10(amplitude)
+                        amplist.append(amplitude)
                     # Show tuning
                     cents = midi_note.cents(frequency)
                     print(
@@ -337,7 +341,6 @@ class OrganTuner:
                 iteration += 1
                 await asyncio.sleep_ms(10)  # yield, previous code was CPU bound
             # Store last sample in flash
-            # >>> FOR DEBUGGING ONLY
             microphone.save_hires_signal(midi_note)
         except Exception as e:
             self.logger.exc(e, "Exception in _get_note_pitch")

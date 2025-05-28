@@ -27,7 +27,6 @@ from drehorgel import led, wifimanager, plist
 
 
 from pinout import GPIOstatistics, SaveNewPinout
-import midi
 
 app = Microdot()
 _logger = getLogger(__name__)
@@ -200,7 +199,6 @@ def get_progress():
     # Also used by mcserver (if present)
     progress = player.get_progress()
     crank.complement_progress(progress)
-    scheduler.complement_progress(progress)
     setlist.complement_progress(progress)
     # gpio has th RegisterBank() object
     gpio.get_registers().complement_progress(progress)
@@ -555,7 +553,7 @@ async def get_index_page_info(request):
 @authorize
 async def save_pinout_filename(request):
     # Force reboot to make this take effect.
-    scheduler.set_playback_mode(False)
+    setlist.stop_playback()
     data = request.json
     plist.set_current_pinout_filename(data["pinout_filename"])
 
@@ -568,7 +566,7 @@ async def save_pinout_detail(request, path):
     # Force reboot to use the player to make definitions take effect.
     # However, it's not mandatory to stop current tune and setlist,
     # unlike organtuner.
-    scheduler.set_playback_mode(False)
+    setlist.stop_playback()
     output_filename = decodePath(path)
     try:
         # SaveNewPinout class will validate and do a init of pint
@@ -582,7 +580,7 @@ async def save_pinout_detail(request, path):
 
 @app.post("/test_mcp")
 async def test_mcp(request):
-    scheduler.set_playback_mode(False)
+    setlist.stop_playback()
     data = request.json
     from solenoid import PinTest
     await PinTest().web_test_mcp(
@@ -595,7 +593,7 @@ async def test_mcp(request):
 
 @app.post("/test_gpio")
 async def test_gpio(request):
-    scheduler.set_playback_mode(False)
+    setlist.stop_playback()
     from solenoid import PinTest
     data = request.json
     await PinTest().web_test_gpio(int(data["pin"]))
@@ -842,7 +840,17 @@ async def runtime_error(request, exception):
 # Was triggered when changing the WiFi network hotspot during operation
 # from main to secondary router of same SSID. Browser
 # reported "Network changed."
-
+#
+# Also seen with shaky WiFi connection, but this seems not to prevent
+# the webserver from running.
+#     Traceback (most recent call last):
+# File "asyncio/core.py", line 1, in run_until_complete
+# File "crank-organ/src/microdot.py", line 1227, in serve
+# File "crank-organ/src/microdot.py", line 1339, in handle_request
+# File "crank-organ/src/microdot.py", line 641, in write
+# File "asyncio/stream.py", line 1, in stream_awrite
+# File "asyncio/stream.py", line 1, in write
+# OSError: [Errno 113] ECONNABORTED
 
 @app.errorhandler(Exception)
 async def error_handler( request, exception ):

@@ -194,8 +194,9 @@ class WiFiManager:
             "description": config.cfg["description"],
         }
 
-    #def sta_isconnected(self):
-    #    return self.sta_if.isconnected()
+    def sta_isconnected(self):
+        # See mcserver
+        return self.sta_if.isconnected()
 
     def sta_if_scan(self):
         return self.sta_if.scan()

@@ -48,8 +48,7 @@ class Battery:
             "tunes_remaining": None,   # Estimation of how many tunes can still be played with this battery charge
             "low": None,       # True/False, compares percent used with low battery level
         }
-        for k, v in fallback.items():
-            self.battery_info.setdefault( k, v )
+        self.battery_info.update( fallback )
 
         self.battery_task = asyncio.create_task(self._battery_process())
 

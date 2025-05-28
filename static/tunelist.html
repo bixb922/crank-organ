@@ -16,11 +16,10 @@
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
 		&nbsp;<span id="headerTitle">Lista de melodías</span>
-        <span id="enterTunelibedit" style="display:none"><big><b>Cambios pendientes, debe entrar a Editar tunelib</b></big></span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
-<h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
+<h1 id="banner" style="display:none"></h1>
 <!-- html continues below javascript -->
 
 <script type="text/javascript" src="/static/common.js"></script>
@@ -258,23 +257,6 @@ function updateThisPage( progress ) {
     if( progress == undefined ){
         return ;
     }
-    let pm = "none";
-    if( progress["play_mode"] == false ){
-        pm = "" ;
-    }
-    document.getElementById("play_mode").style.display = pm ;
-    
-    if( progress["sync_pending"] ){
-        document.getElementById("headerTitle").style.display = "none";
-        enterTunelibedit
-        document.getElementById("enterTunelibedit").style.display = "";
-    }
-    else {
-        document.getElementById("headerTitle").style.display = "";
-        enterTunelibedit
-        document.getElementById("enterTunelibedit").style.display = "none";
-    }
-    
 	//const queue_img = "&#127775;"; // Glowing Star
     //const queue_img = "&#x1F9FA;" ; // Basket
     const queue_img = "&#x23F3"; // Hourglass

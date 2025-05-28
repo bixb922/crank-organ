@@ -1,6 +1,5 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
-# First thing: show we are starting with the led, if installed
 
 from time import ticks_ms, ticks_diff 
 startup_time = ticks_ms()
@@ -88,12 +87,13 @@ def start_mcserver():
     except ImportError:
         # No impact if mcserver not present.
         pass
+
         
 async def signal_ready( controller ):
     # Tell user system ready
     await asyncio.sleep_ms(100)
-    await controller.clap(8)
     controller.all_notes_off()
+    await controller.clap(8)
     led.off()
     dt = ticks_diff(ticks_ms(), startup_time)
     print(f"Total startup time (without main, until asyncio ready) {dt} msec")

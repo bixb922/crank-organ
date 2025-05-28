@@ -22,7 +22,6 @@ class Microphone:
         gc.collect()
         self.buffer_size = fft_module.BUFFER_SIZE
         self.adc_signal = array("i", (0 for _ in range(self.buffer_size)))
-        # Allocate memory for zero crossing/signal processing module
         self.mic_test_mode = mic_test_mode
         if gpio_microphone_pin and not mic_test_mode:
             self.adc_device = ADC(
@@ -72,7 +71,7 @@ class Microphone:
         r = random.random()
         # Randomly show some frequencies in red or out of range
         freq = nominal_freq
-        if True:# >>>__name__ != "__main__":
+        if True:
             if r<0.05:
                 freq = nominal_freq*1.18
             elif r>0.95:
@@ -81,7 +80,7 @@ class Microphone:
                 freq = nominal_freq*1.03
             elif r>0.8:
                 freq = nominal_freq/1.03
-        # Introduce some random in samples per period
+        # Introduce some randomness in samples per period
         # to compensate possible aliasing effects
         spp = frequency.SAMPLES_PER_PERIOD + random.uniform(-0.05,0.05)
         step = 1/freq/spp

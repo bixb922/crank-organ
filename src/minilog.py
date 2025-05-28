@@ -81,7 +81,11 @@ class BaseLogger:
                 # This is not a error*.log file
                 continue
             # group(0): entire string, group 1: number error<nnn>.log
-            filenumber = int(match.group(1))
+            try:
+                filenumber = int(match.group(1))
+            except ValueError:
+                # Not a number, skip this file
+                continue
             yield filenumber, _FOLDER + filename
         if filenumber is None:
             # No error*.log file yet

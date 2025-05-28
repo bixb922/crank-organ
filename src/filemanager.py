@@ -5,8 +5,7 @@ import time
 from drehorgel import tunemanager, config
 import fileops
 
-# >>> Should invalidate tuning when uploading pinout.json?
-# >>> Compress midi, html, css and js files in the browser: NO, bad idea.
+# Compress midi, html, css and js files in the browser: NO, bad idea.
 # >>> use tunelib to make listdir of tunelib faster
 
 
@@ -40,6 +39,7 @@ MIME_TYPES = {
 }
 
 def _check_midi_file( path, file_size=-1 ):
+    # file_size=-1 means "file has been deleted"
     if "tunelib/" in path and fileops.get_file_type( path ) == "mid":
         # Changing or deleting MIDI file requires sync of tunelib at next reboot
         tunemanager.queue_tunelib_change( path, file_size )

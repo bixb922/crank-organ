@@ -16,8 +16,6 @@ let translationDict = {
     ["What is your name?", "Dein Name, bitte?"],
 " a ": // note.html
 	[" to ", " bis "],
-" afinar a ": // notelist.html
-	["Tune to ", "Stimmen auf "],
 "activa": // diag.html 
 	["Active", "Active"],
 "actuación": // tunelist.html 
@@ -70,8 +68,8 @@ let translationDict = {
 	["🔍Search", "🔍Suche"],
 "cancelado": // common.js 
 	["cancelled", "gestrichen"],
-"cambios pendientes, debe entrar a editar tunelib": // tunelist.html
-	["Changes pending, must Edit tunelib","MIDI Dateien geändert, muss Tunelib bearbeiten"],
+"cambios pendientes, espere": // tunelist.html
+	["Changes pending, please wait","MIDI Dateien geändert, bitte warten"],
 "calibrar indicación batería": // index.html 
 	["Calibrate battery indicators", "Batterieanzeige eichen"],
 "cargar setlist": // play.html 
@@ -256,6 +254,8 @@ let translationDict = {
 	["Stop", "Halt"],
 "remanente": // index.html 
 	["Remaining", "Verbleibend"],
+"reproducción automática activada": // common.js
+	["Autoplay enabled", "Automatisches abspielen aktiviert"],
 "tempo sigue manivela": // play.html 
 	["Tempo follows crank speed", "Drehgeschwindingkeit beeinflusst Tempo"],
 "tiempo desde reboot": // diag.html 

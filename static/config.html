@@ -192,9 +192,13 @@
 		received. Example: -18 db. Always negative, decimal point allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')" />dB
 	<br>
+	<input type="checkbox" name="mic_amplitude" id="mic_amplitude" value="mic_amplitude"
+		oninput="markField('mic_amplitude')">
+	<label for="mic_amplitude">Measure amplitude of the microphone signal while tuning. Needs non-compressing microphone.</label>
+	<br>
 
 
-	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low' )">Save other
+	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low', 'mic_amplitude' )">Save other
 		parameters</button>
 
 	<div class="middlediv">Debug/test settings</div>
@@ -211,7 +215,7 @@
 
 	<input type="checkbox" name="mic_test_mode" id="mic_test_mode" value="mic_test_mode"
 		oninput="markField('mic_test_mode')">
-	<label for="mic_test_mode">Debug mode for microphone. Generates some signals to test tuning mode:</label>
+	<label for="mic_test_mode">Debug mode for microphone. Generates some signals to test tuning mode</label>
 	<br>
 
 	<input type="checkbox" id="mic_store_signal" value="mic_store_signal" oninput="markField('mic_store_signal')">

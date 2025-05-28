@@ -42,7 +42,6 @@ def init():
     global battery
     global organtuner
     global microphone, poweroff, battery
-    global run_webserver
 
     led.starting(1)
 
@@ -91,7 +90,8 @@ def init():
     
     from microphone import Microphone
     microphone = Microphone( gpio.microphone_pin, config.cfg["mic_test_mode"] )
-    
+    # >>> Organ tuner could be imported late. Only used by webserver.py
+    # Importing this: memory=24736bytes time=632ms
     from organtuner import OrganTuner
     organtuner = OrganTuner()
 
@@ -107,8 +107,6 @@ def init():
     from poweroff import PowerManager
     poweroff = PowerManager()
 
-    import webserver
-    run_webserver = webserver.run_webserver
 
 
 

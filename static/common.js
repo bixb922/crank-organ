@@ -762,6 +762,23 @@ async function commonGetProgress() {
 		// is called by tunelist.html and play.html, both will benefit from reloading
 		location.reload();
 	}
+	// Play.html and tunelist.html and index.html have banner
+	let banner_element = document.getElementById("banner");
+	if( banner_element ) {
+		let banner = "";
+		// Show only the most relevant of these conditions
+		if( !progress["playback_enabled"]){
+			banner = tlt("Deshabilitado por afinador, pinout");
+		}
+		else if( progress["sync_pending"]){
+			banner = tlt( "Cambios pendientes, espere");
+		}
+		else if( progress["automatic_delay"] ){
+			banner = tlt("Reproducción automática activada") + `, ${progress["automatic_delay"]}s` ;
+		}
+		banner_element.innerText = banner;
+		banner_element.style.display = banner ? "": "none" ;
+	}
 	return progress ;
 }
 

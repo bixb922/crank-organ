@@ -19,12 +19,12 @@
     &nbsp;&nbsp;&nbsp;<b>Melodía actual</b>
 	<span class="headerright" id="header_time"></span>
 </div>
+<h1 id="banner" style="display:none"></h1>
 
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
 
-<h1 id="play_mode" style="display:none">Deshabilitado por afinador, pinout</h1>
 <table id="main_info_table">
 	<tbody>
 		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
@@ -126,15 +126,11 @@ async function updateProgress( progress ) {
     // Get tunelib with local cache
     let tunelib = await get_tunelib() ;
 
-    let pm = "none";
-    if( progress["play_mode"] == false ){
-        pm = "" ;
-    }
-    document.getElementById("play_mode").style.display = pm ;
     let tune_requests = progress["tune_requests"] ;
     if( tune_requests == undefined ){
         tune_requests = {} ;
     }
+
 
 	let startButton = document.getElementById("startButton");
 	let daCapoButton = document.getElementById("daCapoButton");
@@ -167,7 +163,6 @@ async function updateProgress( progress ) {
 	}
 	else {
 		let tune = tunelib[CURRENT_TUNEID] ;
-		console.log(">>>current tuneid=", CURRENT_TUNEID, "tune=", tune);
 		if( tune != undefined ){
 			showHideElement( "main_info_table", true );
 			showHideElement( "no_tune_span", false ) ;

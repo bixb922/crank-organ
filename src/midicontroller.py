@@ -159,13 +159,15 @@ class MIDIController:
     def note_on( self, program_number, midi_number ):
         # assert WILDCARD_PROGRAM<=program_number <=DRUM_PROGRAM
         # assert 0<=midi_number<= 127 
-        # Get list of actions (i.e. Solepin objects subject to registers) 
+        # Get list of actions  
         # to activate for this midi note
         actions = self.get_actions( program_number, midi_number )
         for actuator, register, _ in actions:
             if register.value():
                 actuator.on()
-        # Return truish to caller if a note was played
+        # Return truish to caller if a note was played. This is used by
+        # the organtuner.py to determine if note played really exists in the pinout.
+        # No need to know the same in note_off()
         return actions           
 
     def note_off( self, program_number, midi_number ):
@@ -203,8 +205,12 @@ class MIDIController:
         return self.notedict
 
     def all_register_notes_off( self, register_name ):
-       # This takes about 1 or 2 msec, so no much gain if optimized
+        # Turn off all notes for a given register. 
+        # This is used when a register is turned off, to turn off
+        # all actuators related to this register.
+        # This takes about 1 or 2 msec, so no much gain if optimized
         for actions in self.notedict.values():
            for actuator, register, _ in actions:
                 if register.name == register_name:
-                    actuator.off()
+                    # Turn off even if there is pending note off count...
+                    actuator.force_off()

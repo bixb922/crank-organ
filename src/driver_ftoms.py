@@ -18,7 +18,7 @@ class FauxTomDriver(BaseDriver):
         self.pin_list = []
 
     def save( self, new_drumdef ):
-        # >>> perhaps we should validate correct contents??
+        # >>> perhaps should validate correct contents??
         fileops.write_json( config.DRUMDEF_JSON, new_drumdef )
     
     # Provide iterator for all defined drums
@@ -71,20 +71,19 @@ class VirtualDrumPin(BasePin):
             pin = self.actuator_bank.get_pin_by_midi_number( midi_number )
             if pin:
                 self.midi_virtual_pins.add( pin )
+                
         self.strong_midi_virtual_pins = set()
         for midi_number in drumdef["strong_midis"]:
             pin = self.actuator_bank.get_pin_by_midi_number( midi_number )
             if pin:
                 self.strong_midi_virtual_pins.add( pin )
-        # >>> this is probably shorter??
-        #self.strong_midi_virtual_pins = { pin for pin in
-        #    ( self.actuator_bank.get_pin_by_midi_number(m) for m in drumdef["strong_midis"])
-        #     if pin }
+        
     # Important restriction: cannot play two drum notes simultaneusly
     # They will play one after the other
     def on( self ):
         # Simulate a drum note without disturbing other notes that are be on
-        actuators_on = self.actuator_bank.actuators_that_are_on()
+        # actuators_that_are_on() returns a list, must change to set.
+        actuators_on = set(self.actuator_bank.actuators_that_are_on())
         virtual_pin_list = self.midi_virtual_pins - actuators_on
         strong_virtual_pin_list = self.strong_midi_virtual_pins - actuators_on
         # Sound all notes in the cluster

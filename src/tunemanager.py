@@ -7,7 +7,7 @@ import asyncio
 import hashlib
 import binascii
 from random import random
-import errno
+import time
 
 from minilog import getLogger
 import fileops
@@ -133,13 +133,20 @@ class TuneManager:
         fileops.write_json( [], self.sync_tunelib_filename, keep_backup=False)
         # and kick sync task to start it
         self.sync_event.set()
-        self._sync_progress("Start sync", clear=True)
+        self._sync_progress("Start sync", type="start")
 
-    def _sync_progress( self, msg, clear=False ):
+    def _sync_progress( self, msg, type="" ):
         # Show sync progress both on browser (if called by browser)
         # and on logger.
-        if clear:
-            self.tunelib_progress = ""
+        # If not called from browser, self.tunelib_progress will not be used
+        # (nobody cares)
+        if type == "start":
+            # Start sync, clear progress
+            self.tunelib_progress = "" 
+        elif type == "end":
+            # Signal browser that sync is finished
+            # by adding a special end marker
+            msg = "***end***"
         self.tunelib_progress += msg + "<br>"
         self.logger.info( msg )
 
@@ -225,13 +232,21 @@ class TuneManager:
             except asyncio.TimeoutError:
                 pass
             self.sync_event.clear()
-            # If no file there, don't sync
-            # If empty file there, sync all
-            # If non-empty file there, sync files in sync_tunelib_filename
-            if not fileops.file_exists( self.sync_tunelib_filename):
-                continue
 
-            log_info = self.logger.info
+            try:
+                file_stat = os.stat(self.sync_tunelib_filename)
+            except OSError:
+                # "no file" means: nothing pending
+                # "File exists but with empty list" would mean "sync all"
+                continue
+            # if file is young (<5 sec), wait a bit, unless file contains only
+            # a empty list [], in that case sync all files right away.
+            # This allows to process many files in one go (i.e. faster)
+            if file_stat[6] > 2 and (time.time() - file_stat[8]) < 5:
+                self.logger.debug( f"Sync file {self.sync_tunelib_filename} is too young, waiting for next cycle" )
+                continue  
+
+            # By default log to flash.
             changed = False
             newtunelib = self._read_tunelib()
             change_queue = fileops.read_json(self.sync_tunelib_filename, default=[])
@@ -241,10 +256,9 @@ class TuneManager:
 
             if not change_queue:
                 # Change list is there but empty, must do a complete refresh
-                log_info = self._sync_progress
                 # Compare tunelib.json with tunelib/*.mid
                 # and update tunelib.json.
-                log_info( "Listing files in tunelib folder" )
+                self._sync_progress( "Listing files in tunelib folder" )
                 # Yield CPU for a bit to allow webserver and other processes to run
                 await asyncio.sleep_ms(20)
                 # Make a dict with key=filename and data=file size (bytes)
@@ -269,11 +283,10 @@ class TuneManager:
                 operation = self._sync_one_file( newtunelib, filename, filesize )
                 if operation:
                     changed = True
-                    log_info( f"{operation} {filename} in tunelib.json" )
+                    self._sync_progress( f"{operation} {filename} in tunelib.json" )
                     await asyncio.sleep_ms(20)
 
-            log_info( "Synchronizing lyrics" )
-            self._sync_lyrics( newtunelib )
+            self._sync_lyrics( newtunelib  )
             await asyncio.sleep_ms(20)
 
             # Check that setlist has only valid tuneids
@@ -282,13 +295,13 @@ class TuneManager:
 
             if changed:
                 self._write_tunelib_json(newtunelib)
-                log_info("tunelib.json written" )
+                self._sync_progress("tunelib.json updated" )
 
             # Last element of tunelib_progress MUST contain
             # ***end*** for javascript in browser to know
             # that process has ended.
             
-            log_info( "***end***" )
+            self._sync_progress( "", type="end" )
 
 
 
@@ -388,6 +401,7 @@ class TuneManager:
 
         if changes:
             fileops.write_json( all_lyrics, self.lyrics_json_filename, keep_backup=True )
+            self._sync_progress( "Lyrics updated" )
 
     def add_one_to_history( self, tuneid ):
         tunelib = self._read_tunelib()
@@ -401,14 +415,13 @@ class TuneManager:
         # Remember that something in the tunelib folder has changed
         # and that sync must be run
         # file_size is -1 if file was deleted.
+        # This is triggered by file manager and web server
         change_queue = fileops.read_json(self.sync_tunelib_filename, default=[])
         # filelist is a list of [operation, path] pairs
         change_queue.append( [ fileops.get_basename(path), file_size] )
         fileops.write_json(change_queue, self.sync_tunelib_filename, keep_backup=False)
         # sync process will wake up and process this file
         # Don't kick process - that way several changes are processed in one go
-        # >>> This is a possible optimization: postpone sync process to wait at least 5 seconds more
-        # >>> for possible next file.
 
     def sync_tunelib_pending( self ):
         # Called to include in progress whether a sync is pending
@@ -431,4 +444,4 @@ class TuneManager:
             return title[p:p+4]
         except ValueError:
             return ""
-        
+     

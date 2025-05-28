@@ -97,7 +97,7 @@ class TachoDriver:
         
         # Start the sensor process
         self.counter_task = asyncio.create_task( self._sensor_process(counter) )
-        self.logger.info("init ok")
+        self.logger.debug("init ok")
 
     async def _sensor_process( self, counter ):
         # Prime the loop
@@ -310,7 +310,7 @@ class TempoEncoder:
         if tempo_switch:
             switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
             self.switch_task = asyncio.create_task( self._switch_process( switch ))
-        self.logger.info("init done")
+        self.logger.debug("init ok")
 
     async def _tempo_process(self, encoder, rotary_tempo_mult ):
         encoder.value(0)

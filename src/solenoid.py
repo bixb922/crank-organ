@@ -10,17 +10,21 @@ import minilog
 from drehorgel import led
 from midi import DRUM_PROGRAM
 
-
 _logger = minilog.getLogger(__name__)
 
 class ActuatorBank:
-    # Holds all actuator drivers
+    # Holds all actuator drivers (and all actuators) according to
+    # definition in pinout.json
     def __init__(self, max_polyphony, actuator_def ):
 
         # config_max_polyphony Controls maximum number of notes to sound simultaneously
         # so that the total current current doesn't exceed a limit.
-        self.config_max_polyphony =  max_polyphony
-        self.polyphony = 0
+        self.config_max_polyphony =  max( max_polyphony, 1)
+        # This is the list of actuators that are currently
+        # active. It is used to limit the number of actuators to
+        # self.config_max_polyphony as a maximum. List elements are
+        # actuators such as GPIOPin or MCP23017Pin or one MIDI serial actuator.
+        self.active_actuators = []
 
         # Parsing fills these definitions:
         # pin_list: a list of all actuators that have been defined
@@ -38,52 +42,49 @@ class ActuatorBank:
         # Tell the drivers that here is the actuator bank
         for drv in self.driver_list:
             drv.set_actuator_bank( self )
+
         for pin in self.pin_list:
             pin.set_actuator_bank( self )
 
         _logger.debug(f"init complete {self.device_info=}")
 
     def all_notes_off( self ):
+        # All notes off is done at two levels.
+        # Do it fast at driver level, to ensure all notes are off asap
         for drv in self.driver_list:
             drv.all_notes_off()
-        # Reset the counter of how many notes are on
-        self.polyphony = 0
 
-    def compute_polyphony( self, on_off ):
-        # Increment/decrement polyphony counter.
-        # Should never go below 0
-        self.polyphony = max( self.polyphony + on_off, 0)
-        if self.polyphony > self.config_max_polyphony:
-            # Exceeding polyphony could lead to battery overload
+        # And reset at the actuator level too, not only driver level,
+        # to ensure the actuator logic is synchronized with the driver level.
+        for actuator in self.pin_list:
+            actuator.force_off()
+        self.active_actuators = []
 
-            # Blink led
+
+    def add_active( self, actuator ):
+        # Add actuator to self.active_actuators.
+        # Check polyphony before adding another actuator.
+        # Turn off oldest note until polyphony ok.
+        while len(self.active_actuators) >= self.config_max_polyphony:
+            # Blink led (don't wait blinking to be over)
             led.short_problem()
-            # This should be checked on a PC later
+            # pop() should not raise IndexError since len(self.actuators) > 0
+            # (self.config_max_polyphony is always >= 1 at least.
+            self.active_actuators.pop(0).force_off()
+        # Now we have capacity to add another actuator
+        self.active_actuators.append( actuator )
 
-            # Turn off the oldest note. This code will
-            # only act if maximum polyphony is exceeded
-            now = ticks_ms()
-
-            # The default value of max() should not happen, it is to prevent
-            # a (very unlikely) ValueError
-            oldest_time = max(
-                (ticks_diff(p.on_time, now)
-                for p in self.actuators_that_are_on()),
-                default=-1 
-            )
-            # Turn off the oldest note(s)
-            for actuator in self.pin_list:
-                # Turn off all actuators that have been on the longest time
-                if ticks_diff(actuator.on_time, now) >= oldest_time:
-                    # This call to actuator.off() could make this method to
-                    # recur if polyphony still exceeded.
-                    actuator.off()
-                    return
- 
-    def actuators_that_are_on( self ):
-        return set( actuator for actuator in self.pin_list if actuator.on_time>=0 )
-
-    def add_on_time( self, msec ):
+    def remove_active( self, actuator ):
+        # Remove actuator from list of active actuators.
+        # If not present, ignore. This can happen with certain 
+        # sequences of exceed polyphony and duplicate note off events.
+        aa = self.active_actuators
+        try:
+            del aa[ aa.index( actuator )]
+        except ValueError:
+            pass
+                 
+    def add_operating_time( self, msec ):
         # Keep tally of time solenoids were on
         self.sumsolenoid_on_msec +=  msec      
         
@@ -119,12 +120,19 @@ class ActuatorBank:
                 m.program_number != DRUM_PROGRAM ):
                 return pin
 
-    def get_driver_list( self ):
-        return self.get_driver_list
+
+    def actuators_that_are_on(self):
+        # Return a list of actuators that are currently on
+        # This is used by the driver_ftom to avoid using notes
+        # that are already on.
+        return self.active_actuators
     
 
 # This module provides test functions WITHOUT
-# need to define a pin. This enables to play with
+# the need to define a pin object.  This level of testing
+# bypasses pinout.json, ActuatorDef byt uses the MIDI drivers
+#  driver_gpio and driver_mcp23017.
+# This enables to experiment with
 # pin numbers on the pinout.html page and test them
 # without saving the information before testing.
 #

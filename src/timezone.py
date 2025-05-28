@@ -88,13 +88,15 @@ class TimeZone:
             # Duplicate retry time for each time
             retry_time *= 2
 
-    def set_time_zone( self, newtz ):
+    def set_time_zone( self, newtz:dict ):
         # Called from webserver with /set_time_zone
         # Which in turn is called from common.js for each hard page load
-        # >>> it seems time zone is not updated...????
-        if self.tzinfo["longName"] ==  NO_TZ_INFO:
-            self.tzinfo = newtz
-            fileops.write_json( newtz, TZFILE, keep_backup=False )
+        newtimestamp = newtz["timestamp"]
+        del newtz["timestamp"]
+        if newtz != self.tzinfo:
+            # Don't replace self.tzinfo, better to show times with
+            # old timezones instead of mixing new time zone with old offet.
+            fileops.write_json( newtz, TZFILE, keep_backup=True )
             self.logger.info("Timezone info updated, takes effect next reboot") # type:ignore
         
         # If we don't have ntptime, use the timestamp provided
@@ -107,7 +109,7 @@ class TimeZone:
         # set RTC. 
         if self.has_time():
             return # NTP or browser has already set time.
-        self.set_rtc( newtz["timestamp"] - 946_684_800)
+        self.set_rtc( newtimestamp - 946_684_800)
         self.logger.info("Time set by browser") # type:ignore
         
     def get_time_zone_info( self ):

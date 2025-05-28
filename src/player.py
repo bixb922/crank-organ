@@ -85,8 +85,12 @@ class MIDIPlayer:
             self._reset_channelmap()
 
             await self._play(midi_file)
-
+            
             self.progress.tune_ended()
+
+            # Let last minute pending blinks wind down
+            await asyncio.sleep_ms(200)
+
 
         except asyncio.CancelledError:
             self.logger.debug("Player cancelled (next or da capo button, tuner)")
@@ -155,6 +159,10 @@ class MIDIPlayer:
         playing_started_at = ticks_us() + 500_000
         midi_time = 0
         for midi_event in midifile:
+            # CPU time 1076 usec/event average (May2025)
+            # Sample file with 5576 events in 102 seconds, means
+            # average CPU usage of 5.8%
+
             # Optimization: skip events that don't matter
             # in _process_midi(), only NOTE_ON, NOTE_OFF and PROGRAM_CHANGE
             # events are important.
@@ -166,7 +174,7 @@ class MIDIPlayer:
 
             # midi_time is the calculated MIDI time since the start of the MIDI file
             # Without tachometer: midi_time += midi_event.delta_us      
-            midi_time += await self._calculate_tachometer_dt( midi_event.delta_us )
+            midi_time += await self._calculate_tachometer_dt( midi_event.delta_us ) # type:ignore
 
             # playing_time is the wall clock time since playing started
             playing_time = ticks_diff(ticks_us(), playing_started_at)
@@ -174,7 +182,7 @@ class MIDIPlayer:
             # Wait for the difference between the "time that is" and 
             # the "time that should be"
             wait_time = round(midi_time - playing_time)
-# >>> medir jitter
+            # >>> measure jitter again?
             # Sleep until scheduled time has elapsed
             await scheduler.wait_and_yield_ms( wait_time )
 

@@ -21,9 +21,11 @@ _MCP_GPIO = const(0x12)  # R/W General Purpose I/O Port Register
 # Not a singleton, one instance for each MCP23017 chip
 class MCP23017Driver(BaseDriver):
     def __init__( self, i2c, i2c_number, address ):
+        # i2c is the machine.I2C instance
         self._i2c = i2c
         self._address = address
-        self._i2c_number = i2c_number # used for __repr__
+        # The number is used to identify the I2C bus in __repr__
+        self._i2c_number = i2c_number
 
         # error if device not found at i2c addr
         if self._i2c.scan().count(self._address) == 0:
@@ -36,10 +38,12 @@ class MCP23017Driver(BaseDriver):
         # IOCON is unique, no bank designation needed
         self._write( _MCP_IOCON, 0 )
         for bank in range(2):
+            # Configure MCP23017 for output
             self._write( _MCP_IODIR+bank, 0) # Direction: output
             # After power-on reset, all registers should be zero,
             # except IODIR, which is set to "input" (all ones)
-            # So it should net be necessary to initialize all these
+            # So it should not be necessary to initialize all these
+            # but let's do it anyways
             self._write( _MCP_IPOL+bank, 0) # Polarity: normal
             self._write( _MCP_GPINTEN+bank, 0 ) # Interrupts disabled
             self._write( _MCP_DEFVAL+bank, 0 )  # Default value for interrupts: 0
@@ -63,6 +67,7 @@ class MCP23017Driver(BaseDriver):
         return MCPPin( self, *args )
     
     def all_notes_off( self ):
+        # Low level "driver level" fast off of all notes
         # Set all outputs to off
         self._write( _MCP_GPIO, 0 )
         self._write( _MCP_GPIO+1, 0 )

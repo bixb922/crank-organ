@@ -74,13 +74,14 @@
      * [Changes Feb 2025 to March 28, 2025](#changes-feb-2025-to-march-28-2025)
      * [Changes March 29, 2025 to April 8, 2025](#changes-march-29-2025-to-april-8-2025)
 18.  [Changes April 9, 2025 to May 10, 2025](#18-changes-april-9-2025-to-may-10-2025)
-19.  [Programming language](#19-programming-language)
-20.  [Credits](#20-credits)
-21.  [Testing](#21-testing)
-22.  [Troubleshooting](#22-troubleshooting)
-23.  [Restrictions](#23-restrictions)
-24.  [Licensing](#24-licensing)
-25.  [Affiliation](#25-affiliation)
+19.  [Changes May 10 to May 30, 2025](#19-changes-may-10-to-may-30-2025)
+20.  [Programming language](#20-programming-language)
+21.  [Credits](#21-credits)
+22.  [Testing](#22-testing)
+23.  [Troubleshooting](#23-troubleshooting)
+24.  [Restrictions](#24-restrictions)
+25.  [Licensing](#25-licensing)
+26.  [Affiliation](#26-affiliation)
 # 1. Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
@@ -1173,9 +1174,23 @@ Optimizations, enhancements and corrections
 * Allow two users to change setlist at the same time (avoid exception).
 * Turn off all related notes immediately if register is turned off.
 
+# 19. Changes May 10 to May 30, 2025
+
+* New handling of unmatched note on and note off MIDI events. Example: note on, note on, note off, note off
+formerly turned the note off on the first note off. Now the number of 
+note ons and note offs is paired. The note is turned off when the last note off is received.
+* New configuration option: Allow to configure if amplitude should be measured. If no microphone, or if config parameter is set to false, no amplitude column is shown on Note List page.
+* Streamlined time to update tunelib when uploading files with file manager. Update now is automatic and in background.
+* tunelist.html and play.html shows more conditions: Playback disabled due to tuning, File sync pending, Automatic playback.
+* Time zone update with browser: compare all fields, if not sometimes time zone doesn't get updated.
+* Sometimes polyphony could be exceeded, leading to excess current consumption.
+* Ensure that in all cases playback stops when tuning or testing of pipes is done.
+* When doing low level "all notes off" do also a high level "all notes off".
+* Handle case if there is a error.log in data folder with incorrect name
+* Some minor optimizations
 
 
-# 19. Programming language
+# 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1193,7 +1208,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 20. Credits
+# 21. Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1203,12 +1218,12 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 21. Testing
+# 22. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 22. Troubleshooting
+# 23. Troubleshooting
 If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
@@ -1217,7 +1232,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 23. Restrictions
+# 24. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1241,7 +1256,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 24. Licensing
+# 25. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1267,7 +1282,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 25. Affiliation
+# 26. Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.
