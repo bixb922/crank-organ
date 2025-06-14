@@ -11,6 +11,7 @@ import minilog
 import fileops
 import re
 from hashlib import sha256
+# >>> new config parameter for minimum time of repetition test
 
 # One logger for both Config and PasswordManager
 _logger = minilog.getLogger(__name__)
@@ -48,7 +49,7 @@ class Config:
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data"
         self.STORED_SETLIST_JSON = "data/setlist_stored.json"
-        self.SYNC_TUNELIB = "data/sync_tunelib"
+        self.SYNC_TUNELIB = "data/sync_tunelib.json"
         self.TUNELIB_JSON = "data/tunelib.json"
         
         # Read config.json

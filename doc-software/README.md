@@ -37,6 +37,7 @@
      * [Redefine MIDI notes (only if necessary)](#redefine-midi-notes-only-if-necessary)
      * [Microphone, crank sensor, touchpad and neopixel sensor (important)](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
      * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
+     * [MIDI over serial (5 PIN DIN connector)](#midi-over-serial-5-pin-din-connector)
 11.  [System](#11-system)
      * [Error log](#error-log)
 12.  [File manager](#12-file-manager)
@@ -75,6 +76,7 @@
      * [Changes March 29, 2025 to April 8, 2025](#changes-march-29-2025-to-april-8-2025)
 18.  [Changes April 9, 2025 to May 10, 2025](#18-changes-april-9-2025-to-may-10-2025)
 19.  [Changes May 10 to May 30, 2025](#19-changes-may-10-to-may-30-2025)
+     * [Changes May 31 to June 14, 2025](#changes-may-31-to-june-14-2025)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -98,7 +100,7 @@ Please post a Github issue in this repository for any question you might have. P
 * MIDI files can be updated via WiFi or via USB connection. You can add description, author, title, year and a rating to each tune.
 * To aid tuning, playing scales and individual notes is supported. A tuner is included.
 * Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments, like a glockenspiel MIDI instrument.
-* This system is highly scalable, capable of managing a virtually unlimited number of pipes. The microcontroller can store about 1800 MIDI files in it's flash memory. With the addition of an SD card, there is virtually no limit.
+* This system is highly scalable, capable of managing a virtually unlimited number of pipes. The microcontroller can store about 1600 MIDI files in it's flash memory. With the addition of an SD card, there is virtually no limit.
 * Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
 * Allows to store lyrics
 * Unattended operation is possible too
@@ -524,6 +526,9 @@ Next to each solenoid pin definition there is a test button. If the hardware and
 
 If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here. 
 
+Pin and scale definitions must be saved before testing, but MIDI note number can be changed on the fly without saving. A "Pin not found" message can mean that the scale definition was not saved, or a MCP23017 is not detected on the I2C bus.
+
+
 ## Redefine MIDI notes (only if necessary)
 
 This is advanced configuration, should be necessary only for custom scales, or crank organs with drums/percussion or glockenspiel, where the glockenpiel have their own program number and the drums are on the percussion channel number 10.
@@ -593,8 +598,11 @@ The pin definition columns are:
 * Register: a register (either hardware or software register) that must be active for the note to sound.
 * Test: Will test this pin. No MIDI note needs to be defined nor saved to test the pin. It will activate/deactivate the pin several times in succession.
 
-For a MIDI over serial, the pin number has no meaning, but it must be defined. See this file: /data/64_note_midi_over_serial.json for an example.
+## MIDI over serial (5 PIN DIN connector)
 
+For a MIDI over serial, the pin number has no meaning, but it must be present. See this file: /data/64_note_midi_over_serial.json for an example.
+
+For MIDI over serial, it will be best that you only include the MIDI note numbers that your configuration really has, and leave the unused MIDI positions of the board with a blank MIDI note number. This will speed up the tuning.
 
 # 11. System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
@@ -1188,6 +1196,30 @@ note ons and note offs is paired. The note is turned off when the last note off 
 * When doing low level "all notes off" do also a high level "all notes off".
 * Handle case if there is a error.log in data folder with incorrect name
 * Some minor optimizations
+
+## Changes May 31 to June 14, 2025
+
+* Documentation:
+* New document with links and notes about building a crank organ [here](/building/README.md)
+
+
+* New features:
+* Implemented Test button on pinout.html for all drivers, including MIDI over serial.
+* Implemented an experimental RC Servo driver over ESP32-S3 GPIO pins. A maximum of 8 PWM drivers are allowed. This is to test RC servos before implementing driver for a 16 channel PWM board.
+* Show tune duration (in mm:ss) on history page together with percentage.
+* Better format when showing error log files
+* History page shows time played additionally to percentage
+* Do not upload files if there is less than 150 kb free to avoid flash full when updating json files such as tunelib.json or history.json
+* Compress utility: write setlist file of recent tunes, to be uploaded manually if desirable. This loads a setlist of recently changed files.
+
+
+* Corrections/optimizations:
+* Ensure neopixel LED flashes and then is off on shutdown
+* Reinstate clap when starting crank organ, reinstate heartbeat.
+* No backups for history.json to save space on flash.
+* More comments, simplify code
+* Speed up boot and use less RAM at startup. Boot takes about 4 seconds now.
+* Speed up tuning (writing organtuner.json), logger
 
 
 # 20. Programming language

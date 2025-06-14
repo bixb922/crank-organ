@@ -106,7 +106,8 @@
     let UPLOAD_MODE = "currentFolder";
 
 
-    function uploadToCurrentFolder() {
+    async function uploadToCurrentFolder() {
+        await fetch_json("/check_flash_full");
         UPLOAD_MODE = "currentFolder";
         // click hidden file dialog button
         closeLogWindow();
@@ -114,7 +115,8 @@
         document.getElementById("fileDialogButton").click();
     }
 
-    function uploadToAutoFolder() {
+    async function uploadToAutoFolder() {
+        await fetch_json("/check_flash_full");
         UPLOAD_MODE = "autoFolder";
         // click hidden file dialog button
         closeLogWindow();
@@ -149,9 +151,11 @@
             body.innerHTML = "";
             sizeTitle.innerHTML = "";
         };
-        await refreshAll();
+        // >>>> await refreshAll();
         logNotification("Upload complete");
-        document.getElementById("thisFolderSize").innerText = ""; // Refresh needed
+        document.getElementById("thisFolderSize").innerText = "Reload page to see changes to current folder."; 
+        document.getElementById("usedFlash").innerText = "";
+        document.getElementById("tunelibAvg").innerText = "";
     }
 
 
@@ -526,6 +530,7 @@
         // Sync could be done using the date (in local time),
         // but upload is easy that the only missing thing is
         // to delete surplus files.
+        // Example of pcfile object:
         // pcfile.lastModified: time stamp integer
         // pcfile.lastModifiedDate: Date() object
         // pcfile.name: a.mid

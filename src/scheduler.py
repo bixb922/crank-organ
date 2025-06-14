@@ -184,6 +184,20 @@ class MeasureTime:
         self.time_msec = ticks_diff( ticks_ms(), self.t0 )
         print(f"\tMeasureTime {self.title} {self.time_msec} msec" )
 
+# This measurement is slow!
+class MeasureMemory:
+    def __init__(self, title ):
+        self.title = title
+    def __enter__( self ):
+        gc.collect()
+        self.m0 = gc.mem_alloc()
+        return self
+    def __exit__( self, exc_type, exc_val, exc_traceback ):
+        gc.collect()
+        gc.collect()
+        self.alloc = gc.mem_alloc() - self.m0 
+        print(f"\tMeasureMemory {self.title} {self.alloc} bytes" )
+ 
 # This garbage collector does not interfere with music playback:
 # it works in the wait times between notes.
 max_gc_time = 0 # Expose maximum garbage collect time for webserver.py /diag.html

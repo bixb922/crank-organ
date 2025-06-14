@@ -55,10 +55,10 @@ class PowerManager:
         setlist.stop_tune()
         # Turn all midis off
         controller.all_notes_off()
+        led.shutdown()
         # Wait for web server to respond, led to flash, etc
         # Don't shut down microdot, need it to respond.
         await asyncio.sleep_ms(1000)
-        led.off()
         action()
 
     async def wait_and_power_off(self):

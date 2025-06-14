@@ -62,7 +62,7 @@ async function refreshNoteList() {
 	while( true ) {
 		// ensure tuning_cents is updated before updateNoteList()
 		await updateTuningStats();
-		updateNoteList( await fetch_json( "/data/organtuner.json" ) );
+		updateNoteList( await fetch_json( "/get_organtuner_json" ) );
 		await sleep_ms( 5_000 ) ;
 	}
 }
@@ -161,7 +161,7 @@ async function tuneAll() {
 }
     
 async function clearTuning() {
-    updateNoteList( await fetch_json( "/clear_tuning") ) ;
+    await fetch_json( "/clear_tuning") ;
 }
     
 async function stopTuning() {

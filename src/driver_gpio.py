@@ -25,7 +25,8 @@ class GPIODriver(BaseDriver):
         vp = GPIOPin( self, *args )
         # A pin could be twice in _gpiopins, but
         # since this code is for all_notes_off(), that does not matter,
-        # that pin could be turned off twice.
+        # the pin could be is off twice.
+        # For example: A duplicate pin happens for pins with register definitions.
         self._gpiopins.append( vp )
         return vp
 

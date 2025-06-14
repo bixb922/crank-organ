@@ -169,12 +169,7 @@ async function getDiagInfo( ) {
 	let diag = await fetch_json( "/diag" );
 	// Move corresponding (cobol?) fields from json to html page
 	setAllTextById( diag ); 
-	let sole_info = "" ;
-	let solenoid_devices = diag["solenoid_devices"] ;
-	for( const [key, value] of Object.entries(solenoid_devices)) {
-		sole_info += escapeHtml(key) + ": " + escapeHtml(value) + "<br>" ;
-	}
-	htmlById("solenoid_devices", sole_info );
+	htmlById("solenoid_devices", diag["solenoid_devices"].replace("\n", "<br>") );
     getWifiStatus() ;
 	showHideElement( "crankGraphButton", diag["crank_installed"]);
 }

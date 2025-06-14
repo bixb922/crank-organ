@@ -30,8 +30,7 @@ class HistoryManager:
         # use timestamp instead of full ascii date to 
         # make time comparison in self.delete_old() easier.
         hlist.append((tuneid, timezone.now_timestamp(), percentage, 1 if requested else 0 ))
-        # Write with backup
-        fileops.write_json(hlist, self.history_json)
+        fileops.write_json(hlist, self.history_json, keep_backup=False)
 
     def delete_old(self, days):
         # purge indicated number of days of history

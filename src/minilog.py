@@ -134,14 +134,16 @@ class BaseLogger:
 # import minilog
 # logger = minilog.getLogger( __name __ )
 # logger.debug("debug message")
+# logger.info("informational message")
+# logger.exc( exception, "exception message")
 class getLogger:
     # This class is the public interface to minilog
     # Instead of making BaseLogger a singleton,
     # we pass it as a optional keyword argument to getLogger
     # to ensure it is only created once.
-    def __init__(self, module ):
+    def __init__(self, module, baselogger=BaseLogger() ):
         self.module = module
-        self.baselogger = BaseLogger()
+        self.baselogger = baselogger
 
     def debug(self, message):
         self.baselogger.log(self.module, DEBUG, message)

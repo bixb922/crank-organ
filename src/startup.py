@@ -90,15 +90,16 @@ def start_mcserver():
 
         
 async def signal_ready( controller ):
-    # Tell user system ready
-    await asyncio.sleep_ms(100)
+    dt = ticks_diff(ticks_ms(), startup_time)
+    gc.collect()
+    alloc = gc.mem_alloc()
     controller.all_notes_off()
+    print(f">>>Total startup time (without main, until asyncio ready) {dt} msec")
+    print(f">>>Memory used at startup {alloc}")
+    # Tell user system ready
     await controller.clap(8)
     led.off()
-    dt = ticks_diff(ticks_ms(), startup_time)
-    print(f"Total startup time (without main, until asyncio ready) {dt} msec")
-    gc.collect()
-    print(f"Memory used at startup {gc.mem_alloc()}")
+
 
 async def main():
     #  Establish global exception handler for asyncio
@@ -120,10 +121,8 @@ async def main():
     # Start asyncio profiler and asyncio repl if installed
     start_aiorepl()
 
-    gc.collect()
     scheduler.run_always()
     drehorgel.init()
-    gc.collect()
     import webserver 
 
     start_mcserver()   

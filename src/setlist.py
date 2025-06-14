@@ -5,12 +5,12 @@
 import asyncio
 from random import randrange
 
-import scheduler
 from drehorgel import config, tunemanager, crank, player, gpio, led
 import touchpad
 from minilog import getLogger
 import fileops
 
+# >>> could be interesting to have more stored setlist? not convinced
 
 def del_key(key, dictionary):
     if key in dictionary:
@@ -400,7 +400,7 @@ class Setlist:
             )
 
     def stop_playback( self ):
-        # Called to stop playback of music immediately.
+        # Called to stop playback of music immediately until the next reboot.
         # Organtuner: to avoid interference with tuning
         # Pinout: if pinout was changed to force user to reboot
         # Test pins (pinout.html): to avoid interference with pin testing

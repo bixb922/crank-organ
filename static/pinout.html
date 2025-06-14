@@ -58,16 +58,17 @@
         Midi note: MIDI note number, 0 to 127, for example: 69=central A4, 60=central C4. If left blank or zero, this output pin is disregarded (the MIDI note 0 C-2 can not be assigned).
     </li>
     </ul>
-    <br>
     For I2C connections, enter the SDA and SCL  GPIO pin number. SCL is the same as SCK. For each MCP23017 on that bus enter the address (must be 32 to 39). For each MCP23017 fill the out the pin definitions.
     <br>
     If the MCP23017 address is left blank, the definition is ignored. This is useful to test the software and configuration without having MCP23017 connected.
     <br>
     Use the transpose button to transpose up/down until the scale match yours. The intervals between notes are kept. 
     <br>
-    Save pinout definitions to make changes permanent.
+    For MIDI over serial (5 pin DIN) leave unused MIDI note numbers blank.
     <br>
-    The test button will activate the port (GPIO or MCP27013) several times, to see if the connection is working. 
+    Save pinout definitions to make changes permanent, then reboot.
+    <br>
+    The Test button will activate the port several times.
     <br>
     <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
     <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
@@ -103,9 +104,9 @@
         <tbody id="tbodyPinoutForm">
         </tbody>
     </table>
-
     <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()">Save pinout definitions</button>
     <br>
+
 When pressing the save button, you may be asked for the password of the microcontroller.
 <br>
 <b>  After saving pinout definitions or using the test button, reboot microcontroller.
@@ -178,22 +179,19 @@ async function getPinoutDetail( ) {
     pinoutDetailElements = pinout_detail.length ;
 	//===========
     let s = "";
-    let i2ccount = -1 ;
-    let mcpcount = -1 ;
     // save sda, scl, mcpaddr for test function
-    let sda = 0 ;
-    let scl = 0 ;
-    let mcpaddr = 0 ;
-    let pin = null;
-    let rank = "";
-    let midi = null ;
-    let instrument = null ;
-    let lasttype = null ;
+    let pininfo = new Object();
+    pininfo.type = "gpio";
+    pininfo.i2ccount = -1;
+    pininfo.mcpcount = -1 ;
+    pininfo.gpioservocount = -1;
+
     let rownum = 0;
     let lastPin = null ;
+    lastPDtype = null;
+
     let tbody = document.getElementById( "tbodyPinoutForm" );
     tbody.innerText = "";
-    let currentDriver = "GPIO";
 
     for( let z in pinout_detail ){
         let f = z + ""; // for the function closures to work.
@@ -260,18 +258,22 @@ async function getPinoutDetail( ) {
                 "Set at startup"
             ] );
         }
+        // in older versions, this may be gpio.midi, mcp.midi etc instead of just "midi"
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || 
                 pdtype == "serial.midi" || pdtype == "midi"
                ){
             let title = "Pin" ;
-            if( currentDriver == "GPIO" ){
+            if( pininfo.type == "gpio" ){
                title = "GPIO pin" ;
             }
-            else if( currentDriver == "MIDIserial" ){
+            else if( pininfo.type == "serial" ){
                 title = "This column not used";
             }
-            else if( currentDriver == "MCP23017" ){
+            else if( pininfo.type == "mcp23017" ){
                 title = "MCP pin";
+            }
+            else if( pininfo.type == "gpioservo" ){
+                title = "PWM pin";
             }
             let pin = pd[1];
             let instrument = pd[2];
@@ -286,7 +288,7 @@ async function getPinoutDetail( ) {
                 readonlyPin = "readonly='readonly'";
             }
             lastPin = pin ;
-            if( pdtype != lasttype ){
+            if( pdtype != lastPDtype ){
                 let row = insertFormRow( tbody, "", [
                     title, "", "MIDI note",
                     "Rank", "Register"] );
@@ -295,21 +297,13 @@ async function getPinoutDetail( ) {
                 row.cells[2].colSpan = 2 ;
                 rownum += 1;
             }
+            pininfo.pin = pin ;
+            pininfo.midi = midi ;
+            pininfo.f = f;
+            // Make a deep copy of the pininfo variable to make it work with the function closure.
+            let testPinArgs = JSON.parse( JSON.stringify( pininfo ) );
+            testFunction = function() { testPin( testPinArgs )} ;
             
-            let testFunction = null;
-            if( currentDriver == "GPIO" ){
-                testFunction = function() { testGPIO(pin) };
-            }
-            else if( currentDriver == "MCP23017" ){
-                // make copy of objects for testMCP() closure
-                let mcpaddr1 = parseInt(mcpaddr);
-                let sda1 = parseInt(sda);
-                let scl1 = parseInt(scl); 
-                testFunction = function() { testMCP(sda1, scl1, mcpaddr1, pin) };            
-            } 
-            else if( currentDriver == "MIDISerial" ){
-                testFunction = function() { alert("Not implemented")};
-            }
             let row = insertFormRow( tbody, `row_${f}_midi`, [
                 makeInput( `midi.pin.${f}`, 3, pin ),
                 makeInput( `midi.instrument.${f}`, 4, instrument ),
@@ -318,7 +312,8 @@ async function getPinoutDetail( ) {
                 "",
                 makeInput( `midi.rank.${f}`, 10, rank ),
                 makeInput( `midi.register.${f}`, 10, register ),
-                makeButton( null, "Test", testFunction ),
+                // Only show test button if permitted
+                makeButton( `test${f}`, "Test", testFunction ),
                 makeButton( `b${rownum}`, "Add row", function() {addRow("midi", `row_${f}_midi` )}),
 
             ]);
@@ -329,54 +324,78 @@ async function getPinoutDetail( ) {
             row.cells[4].id = `nn.${f}`;
         }
         else if( pdtype == "i2c" ){
-            i2ccount += 1 ;
-            mcpcount = -1 ;
-            sda = pd[1] ;
-            scl = pd[2] ;
+            pininfo.i2ccount += 1 ;
+            pininfo.mcpcount = -1 ;
+            pininfo.sda = pd[1] ;
+            pininfo.scl = pd[2] ;
             insertFormRow( tbody, null, ["I2C", "SDA", "SCL"] );
             rownum += 1;
             insertFormRow( tbody, `row_${f}_i2c`, [
                 "",
-                makeInput( `i2c.sda.${f}`, 3, sda),
-                makeInput( `i2c.scl.${f}`, 3, scl),
+                makeInput( `i2c.sda.${f}`, 3, pininfo.sda),
+                makeInput( `i2c.scl.${f}`, 3, pininfo.scl),
             ]);
         }
         else if( pdtype == "mcp23017" ){
-            mcpcount += 1 ;
-            mcpaddr = pd[1] ; // Override outer scope to make testMCP() closure work
-            insertFormRow( tbody, null, [`I2C bus ${i2ccount}`,
+            pininfo.type = pdtype;
+            pininfo.mcpcount += 1 ;
+            pininfo.mcpaddr = pd[1] ; // Override outer scope to make testMCP() closure work
+            insertFormRow( tbody, null, [`I2C bus ${pininfo.i2ccount}`,
                 "MCP23017", "address"
             ] );
             rownum += 1; 
             let row = insertFormRow( tbody, `row_${f}_mcp23017`, [
-                `I2C bus ${i2ccount}`,
-                `MCP ${mcpcount}`,
-                makeInput( `mcp23017.address.${f}`, 2, mcpaddr ),
+                `I2C bus ${pininfo.i2ccount}`,
+                `MCP ${pininfo.mcpcount}`,
+                makeInput( `mcp23017.address.${f}`, 2, pininfo.mcpaddr ),
                 "(32 to 39, decimal)"
 
             ]);
             row.cells[2].colSpan = 3;
-            currentDriver = "MCP23017";
         }
         else if( pdtype == "serial" ){
+            pininfo.type = pdtype;
+            pininfo.uart = pd[1];
+            pininfo.txpin = pd[2];
+            pininfo.channel = pd[3];
             insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "Output MIDI channel (1-16)"] );
             rownum += 1;
             insertFormRow( tbody, `row_${f}_serial`, [
-                makeInput( `serial.uart.${f}`, 3, pd[1]),
-                makeInput( `serial.pin.${f}`, 3, parseInt(pd[2])),
+                makeInput( `serial.uart.${f}`, 4, pininfo.uart),
+                makeInput( `serial.pin.${f}`, 3, parseInt(pininfo.txpin)),
                 // Change channel from internal/physical number (0-15) to MIDI numbering (1-16)
-                makeInput( `serial.channel.${f}`, 3, pd[3]+1 ),
+                makeInput( `serial.channel.${f}`, 3, pininfo.channel+1 ),
             ]);
-            currentDriver = "MIDISerial";
         }
         else if( pdtype == "gpio" ){
-            insertFormRow( tbody, null, [ "MIDI via GPIO ports"] );
+            pininfo.type = pdtype ;
+            insertFormRow( tbody, `row_${f}_gpio`, [ "MIDI via GPIO ports"] );
             rownum += 1;
-            currentDriver = "GPIO";
+            
         }
-        
+        else if( pdtype == "gpioservo" ){
+            pininfo.type = pdtype ;
+            pininfo.gpioservocount += 1;
+            pininfo.period = pd[1];
+            pininfo.pulse0 = pd[2];
+            pininfo.pulse1 = pd[3];
+            insertFormRow( tbody, null, [ "GPIO PWM for servos"] );
+            rownum += 1;
+            insertFormRow( tbody, null, ["Period (usec)", "Pulse width for 0 (usec)", "", "", "", "Pulse width for 1 (usec)"]);
+            rownum += 1;
+            insertFormRow( tbody, `row_${f}_gpioservo`, [
+                makeInput( `gpioservo.period.${f}`, 5, pininfo.period ),
+                makeInput( `gpioservo.pulse0.${f}`, 5, pininfo.pulse0 ),
+                "", "", "", 
+                makeInput( `gpioservo.pulse1.${f}`, 5, pininfo.pulse1 ),
+            ]);
+           
+        }
+        else {
+            console.log("Unknown pdtype", pdtype );
+        }
         rownum += 1;
-        lasttype = pdtype;
+        lastPDtype = pdtype;
     }
     // Show all  note names, eg C3, B4
     updateAllNoteNames();
@@ -478,6 +497,12 @@ async function savePinoutDetail(){
             // Show MIDI numbering but store physical chanel number
             newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel )-1 ] ) ;   
         }
+        else if( pdtype == "gpioservo" ){
+            let period = document.getElementById( `gpioservo.period.${f}` ).value ;
+            let pulse0 = document.getElementById( `gpioservo.pulse0.${f}` ).value ;
+            let pulse1 = document.getElementById( `gpioservo.pulse1.${f}` ).value ;
+            newpd.push( ["gpioservo", valnum( period ), valnum( pulse0 ), valnum( pulse1 )]);
+        }
         else {
             console.log("error found pdype=", pdtype, "while saving");
         }
@@ -517,7 +542,19 @@ function valnum( s ){
     }
     return parseInt( s );
 }
-    
+
+async function testPin( pininfo ){
+    // Get midi number in the moment Test button was pressed
+    pininfo.midi = document.getElementById(`midi.number.${pininfo.f}`).value;
+    // If pininfo.midi is blank, and if it's a MIDI over serial,
+    // then the server will reply with error message.
+    let button = document.getElementById(`test${pininfo.f}`);
+    let originalText = button.innerText;
+    button.innerText = "Testing";
+    await fetch_json( "/test_pin", pininfo );
+    button.innerText = originalText;
+}
+
 async function testGPIO( pin ){
     
     let req = { "pin": pin };
@@ -749,6 +786,7 @@ function makeCheckbox( id, checked ){
 function makeButton( id, text, onclick) {
     let button = document.createElement( "button" );
     button.onclick = onclick;
+    button.id = id;
     if( text == "Test"){
         button.classList.add( "smallbutton" );
     }

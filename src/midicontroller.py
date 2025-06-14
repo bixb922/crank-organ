@@ -185,7 +185,7 @@ class MIDIController:
         if not hasattr( self, "all_midis" ):
             # Cache a list of all MIDI notes for future use in self.play_random_note()
             self.all_midis = [ 
-                ( n//256, n&256) 
+                ( n//256, n&255) 
                 for n in self.notedict.keys() 
                 if n//256 != DRUM_PROGRAM ]
         n =  len(self.all_midis)
@@ -196,9 +196,9 @@ class MIDIController:
             self.note_off( program_number, midi_number )
 
     async def clap(self, n):
+        # Used at start up to make some noise to say that system is up.
         for _ in range(n):
             await self.play_random_note(50)
-
 
     def get_notedict(self):
         # Used by webserver to list pinout

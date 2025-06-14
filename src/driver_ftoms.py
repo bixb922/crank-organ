@@ -38,6 +38,7 @@ class FauxTomDriver(BaseDriver):
         return vdp
     
     def get_pin_list( self ):
+        # Used by webserver in a function to test drum defs.
         return self.pin_list
 
 # Virtual drum pin, virtual because it's not a hardware pin

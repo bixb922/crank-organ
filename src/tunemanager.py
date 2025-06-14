@@ -39,19 +39,20 @@ TLCOL_HISTORY = const(12)
 TLCOL_RFU = const(13)
 TLCOL_COLUMNS = const(14)
 
-
 class TuneManager:
-    def __init__(self, tunelib_folder, tunelib_filename, lyrics_json, sync_tunelib_file ):
+    def __init__(self, tunelib_folder, tunelib_filename, lyrics_json, sync_tunelib_json ):
         # tunelib_folder: /tunelib, also could be /sd/tunelib
         # tunelib_filename: data/tunelib.json
         # lyrics_json: data/lyrics.json 
-        # sync_tunelib_file: zero length file, if present force tunelib sync
+        # sync_tunelib_json: If not there: no sync pending.
+        #             If it contains [], sync checks all files
+        #             If it contains a non-empty list, sync check all queued files.
         # This file is set when the filemanager detects upload of a MIDI file to the tunelib folder.
 
         self.tunelib_folder = tunelib_folder
         self.tunelib_filename = tunelib_filename
         self.lyrics_json_filename = lyrics_json
-        self.sync_tunelib_filename = sync_tunelib_file
+        self.sync_tunelib_json = sync_tunelib_json
         # test if lyrics.json ok, if not, create empty
         ly = self._read_lyrics()
 
@@ -64,18 +65,25 @@ class TuneManager:
         tu = self._read_tunelib()
         self.logger.debug(f"init ok, {len(tu)} tunes in {tunelib_filename}, {len(ly)} lyrics in {lyrics_json}")
 
-    def _save_tunelib_signature( self, tunelib ):
+    def _compute_tunelib_signature( self, tunelib ):
         self.tunelib_signature = sum( tune[TLCOL_SIZE]+tune[TLCOL_TIME]  for tune in tunelib.values() )
 
     def _read_tunelib(self):
         tunelib = fileops.read_json(self.tunelib_filename,
                                  default={},
                                 recreate=True)
-        self._save_tunelib_signature( tunelib )
+        # check if some tunelib is in a very old format...
+        for tuneid, tune in tunelib.items():
+            if not tuneid.startswith("i") or len(tuneid) != 9:
+                self.logger.info(f"Tuneid incorrect, removing tunelib entry for {tuneid} {tune[TLCOL_FILENAME]} {tune[TLCOL_TITLE]}, must sync")
+                del tunelib[tuneid]
+                # Must sync and populate again
+
+        self._compute_tunelib_signature( tunelib )
         return tunelib
     
     def _write_tunelib_json(self, tunelib):
-        self._save_tunelib_signature( tunelib )
+        self._compute_tunelib_signature( tunelib )
         fileops.write_json(tunelib, self.tunelib_filename, keep_backup=True)
     
     def _read_lyrics( self ):
@@ -130,7 +138,7 @@ class TuneManager:
 
     def start_sync(self):
         # Ask for a complete sync by setting an empty sync file
-        fileops.write_json( [], self.sync_tunelib_filename, keep_backup=False)
+        fileops.write_json( [], self.sync_tunelib_json, keep_backup=False)
         # and kick sync task to start it
         self.sync_event.set()
         self._sync_progress("Start sync", type="start")
@@ -186,13 +194,13 @@ class TuneManager:
         operation = ""
         tuneid, filename = self._make_unique_hash(filename, newtunelib)
         if filesize == -1:
-            operation = "Deleting"
             try:
                 del newtunelib[tuneid]
             except KeyError:
                 self.logger.info(f"File {filename} was already removed from tunelib.json")
-            return "Deleting"
+            return "Deleting entry"
         
+
         # Is it a new tune or a tune update?
         tune = newtunelib.setdefault(tuneid, [""] * TLCOL_COLUMNS)
         if not tune[TLCOL_ID]: 
@@ -234,22 +242,21 @@ class TuneManager:
             self.sync_event.clear()
 
             try:
-                file_stat = os.stat(self.sync_tunelib_filename)
+                file_stat = os.stat(self.sync_tunelib_json)
             except OSError:
                 # "no file" means: nothing pending
-                # "File exists but with empty list" would mean "sync all"
                 continue
             # if file is young (<5 sec), wait a bit, unless file contains only
             # a empty list [], in that case sync all files right away.
             # This allows to process many files in one go (i.e. faster)
             if file_stat[6] > 2 and (time.time() - file_stat[8]) < 5:
-                self.logger.debug( f"Sync file {self.sync_tunelib_filename} is too young, waiting for next cycle" )
+                self.logger.debug( f"Sync file {self.sync_tunelib_json} is too young, waiting for next cycle" )
                 continue  
 
             # By default log to flash.
             changed = False
             newtunelib = self._read_tunelib()
-            change_queue = fileops.read_json(self.sync_tunelib_filename, default=[])
+            change_queue = fileops.read_json(self.sync_tunelib_json, default=[])
             # Delete file right away to allow queueing more files while
             # sync is working.
             self.forget_sync_pending()
@@ -416,21 +423,21 @@ class TuneManager:
         # and that sync must be run
         # file_size is -1 if file was deleted.
         # This is triggered by file manager and web server
-        change_queue = fileops.read_json(self.sync_tunelib_filename, default=[])
+        change_queue = fileops.read_json(self.sync_tunelib_json, default=[])
         # filelist is a list of [operation, path] pairs
         change_queue.append( [ fileops.get_basename(path), file_size] )
-        fileops.write_json(change_queue, self.sync_tunelib_filename, keep_backup=False)
+        fileops.write_json(change_queue, self.sync_tunelib_json, keep_backup=False)
         # sync process will wake up and process this file
         # Don't kick process - that way several changes are processed in one go
 
     def sync_tunelib_pending( self ):
         # Called to include in progress whether a sync is pending
         # This is then shown to user on top of play.html and tunelist.html
-        return fileops.file_exists( self.sync_tunelib_filename )
+        return fileops.file_exists( self.sync_tunelib_json )
     
     def forget_sync_pending( self ):
         try:
-            os.remove( self.sync_tunelib_filename )
+            os.remove( self.sync_tunelib_json )
         except OSError:
             pass
 

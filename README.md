@@ -17,7 +17,7 @@ This animation shows how a crank organ with MIDI control works:
 
 ![animated gif for crank organ](animacion_organillo.gif)
 
-The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 100 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores a MIDI files that have the exact time each note starts and stops, and energizes the solenoid through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 
+The crank moves the bellows. The air is pumped into a reservoir, which connects to the windchest with the pipes. A single pipe is shown, but usually a crank organ has anywhere between 15 and 100 or more pipes. Under the foot of the pipe is a electromagnetical valve (a solenoid valve). The microcontroller stores MIDI files that have the exact time each note starts and stops, and energizes the solenoid (electromagnet) through a driver (a electrical current amplifier). The solenoid opens the airflow at the foot of the pipe, air enters the pipe and vibrates, producing sound. 
 
 Here you can see my homemade crank organ: https://www.youtube.com/@bixb922. This crank organ gave origin to the electronics and software solution in this repository. The organ has 48 pipes: 35 bourdon pipes and 13 piccolo pipes. It has a crank sensor, microphone for tuning and a touch button. It has 4 electronic registers and a button to change the playback speed. Currently I have about 500 MIDI files in the organ.
 
@@ -42,7 +42,7 @@ The repository describes the complete solution:
 * a easy installation procedure for the software (no programming skills necessary)
 * ready to use configuration files for common crank organ setups
 
-There are many places on internet to describe how to build a crank organ, how to design and cut the pipes, make bellows, windchests, etc.  That description is not part of this repository.
+There are many places on internet to describe how to build a crank organ, how to design and cut the pipes, make bellows, windchests, etc.  That description is not part of this repository. However, I included a list of interesting links and some notes on building a MIDI crank organ here: [Buildng a crank organ](building/README.md).
 
 Please post an github issue for any question you might have. Please star this repository if you like what you have seen.
 

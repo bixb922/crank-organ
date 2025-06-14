@@ -148,15 +148,17 @@ class PinoutParser:
 
             # MIDI driver definitions and "midi" pin definition
             "gpio": lambda : self.define_gpio_driver(),
+
             "i2c": lambda sda, scl: self.define_i2c(
                 toi(sda), toi(scl)
             ),  # (sda, scl)
-            "mcp23017": lambda addr: self.define_mcp23017_driver(
-                toi(addr)
-            ),  # (address)
-            "serial": lambda uart, pin, channel: self.define_serial_driver( 
-                toi(uart), toi(pin), toi(channel) 
+            "mcp23017": lambda addr: 
+                self.define_mcp23017_driver( toi(addr) ),  # (address)
+            "serial": lambda uart, pin, channel: 
+                        self.define_serial_driver( toi(uart), toi(pin), toi(channel) 
             ),
+            "gpioservo": lambda period_us, pulse0_us, pulse1_us: 
+                          self.define_gpioservo_driver( toi(period_us), toi(pulse0_us), toi(pulse1_us) ),
             "midi": lambda pin,
             instrument,
             midi_num,
@@ -213,11 +215,15 @@ class PinoutParser:
     def define_serial_driver( self, uart, pin, channel ):
         self.current_driver = "MIDISerialDriver"
 
+    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
+        self.current_driver = "GPIOServoDriver"
+
     def define_midi(self, pin, midi_note, rank, register_name):
         return
     
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
         return
+        
     
     def define_complete(self):
         return
@@ -361,8 +367,9 @@ class SaveNewPinout(PinoutParser):
         self._add_GPIO_to_list(gpio_a)
         self._add_GPIO_to_list(gpio_b)
         self._add_GPIO_to_list(gpio_switch)
+
     def define_midi(self, pin, midi_note, rank, register_name):
-        if self.current_driver == "GPIODriver":
+        if self.current_driver == "GPIODriver" or self.current_driver == "GPIOServoDriver":
             if not pin:
                 raise RuntimeError("GPIO pin blank or 0")
             # Check if used as gpio elsewhere (but don't check duplicate
@@ -409,6 +416,17 @@ class SaveNewPinout(PinoutParser):
     def define_gpio_driver( self ):
         self.current_driver = "GPIODriver"
     
+    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
+        if not( 1000 <= pulse0_us <= 2000 ):
+            raise RuntimeError("Pulse 0 width for servo must be between 1000 and 2000 usec")
+        if not( 1000 <= pulse1_us <= 2000 ):
+            raise RuntimeError("Pulse 1 width for servo must be between 1000 and 2000 usec")
+        if  period_us <= 3000:
+            raise RuntimeError("Servo period must be at least 3000 usec")
+        self.current_driver = "GPIOServoDriver"
+        # Defining more than the PWM channels of the ESP32S3 (it has 8)
+        # will raise "ValueError: out of PWM channels:8" 
+
     def define_serial_driver( self, uart, pin, channel ):
         if not( 1<=uart<=2 ):
             raise RuntimeError("UART must be 1 or 2")
@@ -433,6 +451,7 @@ class SaveNewPinout(PinoutParser):
         fileops.write_json(self.new_json, self.output_filename)
         # Changes take effect at next reboot
 
+        
 
 class PinoutList:
     def __init__(self, pinout_txt_filename, pinout_folder):
@@ -600,7 +619,7 @@ class ActuatorDef(PinoutParser):
         self.register_bank = register_bank
         # The result of the parse is:
         # pin_list/pin_dict: a the complete list of SolePin objects
-        # device_info: information to show to the user.
+        # pin_info: information to show to the user.
         # These two will be accessed by Solenoid as property
         # Start parsing this pinout.json file
         super().__init__(source)
@@ -613,8 +632,7 @@ class ActuatorDef(PinoutParser):
 
     def define_start( self ):
         self.pin_dict = {}
-        # >>> device_info not necessary anymore?
-        self.device_info = OrderedDict()
+        self.pin_info = []
         self.driver_dict = {}
 
         # Pass initialized registers to MIDIController
@@ -641,11 +659,9 @@ class ActuatorDef(PinoutParser):
         device_name = "i2c" + str(self.current_i2c_number)
         if PinTest().testI2Cconnected(sda, scl):
             self.current_i2c = machine.SoftI2C(sclpin, sdapin, freq=100_000)
-            self.device_info[device_name] = "ok"
         else:
             logger.error(f"No I2C connected {sda=} {scl=}")
             self.current_i2c = None
-            self.device_info[device_name] = "not connected"
 
     def define_mcp23017_driver(self, address):
         from driver_null import NullDriver
@@ -658,7 +674,6 @@ class ActuatorDef(PinoutParser):
                 from driver_mcp23017 import MCP23017Driver
 
                 self.current_driver = self.driver_factory( MCP23017Driver(self.current_i2c, self.current_i2c_number, address) )
-                self.device_info[str(self.current_driver)] = "ok"
             except OSError as e:
                 logger.exc(
                     e,
@@ -669,6 +684,10 @@ class ActuatorDef(PinoutParser):
         from driver_gpio import GPIODriver
         self.current_driver = self.driver_factory( GPIODriver() )
 
+    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
+        from driver_gpioservo import GPIOServoDriver
+        self.current_driver = self.driver_factory( GPIOServoDriver( period_us, pulse0_us, pulse1_us ) )
+
     def define_midi(self, pin, midi_note, rank, register_name ):
         if not midi_note.is_valid():
             # midi note omitted means: disregard this entry
@@ -678,13 +697,12 @@ class ActuatorDef(PinoutParser):
         # Don't duplicate Virtual Pin definitions
         # Use repr() or str() to test for uniqueness,
         # for example: MCP23017Driver.I2C(0).3
-        pin = self.pin_dict.setdefault( str(pin), pin )
+        pin = self.pin_dict.setdefault( repr(pin), pin )
         self.controller.define_note( midi_note, pin, register_name )
 
     def define_serial_driver( self, uart, pin, channel ):
         from driver_midiserial import MIDISerialDriver
         self.current_driver = self.driver_factory( MIDISerialDriver( uart, pin, channel ) )
-        self.device_info[ self.current_driver ] = "ok"
 
         
     def define_complete( self ):
@@ -695,6 +713,8 @@ class ActuatorDef(PinoutParser):
         # (that's preferrable to turning off melody notes)
         self.pin_list.sort( key=lambda actuator: actuator.nominal_midi_number )
 
+        # No need to delete structures like self.pin_dict here, the structures
+        # actuator_def is transient and unneded structures will be freed anyhow.
 
     # Methods to return what's useful here
     # These are used by calling method to extract 
@@ -702,8 +722,8 @@ class ActuatorDef(PinoutParser):
     def get_pin_list( self ):
         return self.pin_list
     
-    def get_device_info( self ):
-        return self.device_info
+    def get_pin_info( self ):
+        return self.pin_info
     
     def get_controller( self ):
         return self.controller

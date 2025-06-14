@@ -75,6 +75,7 @@ class MCP23017Driver(BaseDriver):
     def __repr__( self ):
         # Format has this pattern: I2C(0).MCP(32)
         # Must be unique for each MCP23017 chip in the system
+        # This repr is also used in solenoid.py, web test pin
         return f"I2C({self._i2c_number}).MCP({self._address})"
     
 

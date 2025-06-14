@@ -20,25 +20,35 @@ MEDIUM = const(32)
 STRONG = const(128)
 VERY_STRONG = const(255)
 
+class NoLED:
+    def __setitem__( self, key, value ):
+        pass
+    def write(self):
+        pass
+
 class BlinkingLed:
     def __init__(self):
-        self.neopixel_led = None
-        p = get_led()
+        p = get_led()        
         if p:
             self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
-            self.off()
+        else:
+            # Using NoLED allows for a easy shutdown of the LED operation
+            self.neopixel_led = NoLED()
 
-            self.logger = None
-            self.setlist = None # We don't know the setlist yet, too early
-            
-            self.problem_task = asyncio.create_task(self._problem_process())
-            self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
+        self.off()
+
+        # Get a logger to get error count
+        self.logger = None
+
+        self.setlist = None # We don't know the setlist yet, too early
+        
+        self.problem_task = asyncio.create_task(self._problem_process())
+        self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
 
     # Simple (permanent) led on and off
     def on(self, color):
-        if self.neopixel_led:
-            self.neopixel_led[0] = color  # type:ignore
-            self.neopixel_led.write()
+        self.neopixel_led[0] = color  # type:ignore
+        self.neopixel_led.write()
 
     def off(self):
         self.on((0, 0, 0))
@@ -50,22 +60,21 @@ class BlinkingLed:
         # minilog is needed to get error count to blink red if a problem occurred
         import minilog
         self.logger = minilog.getLogger(__name__)
-        if self.neopixel_led:
             
-            while True:
-                # Problem: error or exception entry in log
-                if self.logger.get_error_count() > 0:
-                    # Replace this task with a blinking task
-                    self.problem_task = self._blink_background((MEDIUM, 0, 0))
-                    # Don't blink for setlist empty anymore, could be confusing
-                    if self.blink_setlist:
-                        self.blink_setlist_task.cancel() # type:ignore
-                        self.blink_setlist_task = None
-                    # No way to exit red blinking, no need to test again.
-                    # But the blinking task created here could be superceded
-                    # by a sever error blinking....
-                    return
-                await asyncio.sleep_ms(1000)
+        while True:
+            # Problem: error or exception entry in log
+            if self.logger.get_error_count() > 0:
+                # Replace this task with a blinking task
+                self.problem_task = self._blink_background((MEDIUM, 0, 0))
+                # Don't blink for setlist empty anymore, could be confusing
+                if self.blink_setlist:
+                    self.blink_setlist_task.cancel() # type:ignore
+                    self.blink_setlist_task = None
+                # No way to exit red blinking, no need to test again.
+                # But the blinking task created here could be superceded
+                # by a sever error blinking....
+                return
+            await asyncio.sleep_ms(1000)
 
     # Starting phases, blue->green
     def starting(self, phase):
@@ -130,8 +139,7 @@ class BlinkingLed:
     def _blink_background(
         self, colors, repeat=1_000_000_000, timeon=50, timeoff=2000
     ):
-        if self.neopixel_led:
-            return asyncio.create_task(
+        return asyncio.create_task(
                 self._blink_process(colors, repeat, timeon, timeoff)
             )
 
@@ -161,6 +169,10 @@ class BlinkingLed:
                 await asyncio.sleep_ms(80)
                 self.off()
 
+    def shutdown( self ):
+        self.off()
+        # Make sure noone can turn on the led again.
+        self.neopixel_led = NoLED()
 
 def set_led( pin ):
     # Caching pin makes this module decoupled from pinout

@@ -7,7 +7,7 @@ import fileops
 
 # Compress midi, html, css and js files in the browser: NO, bad idea.
 # >>> use tunelib to make listdir of tunelib faster
-
+# >>> put "Reload"  on filemanager page  with a link that reloads the page
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
@@ -54,7 +54,7 @@ def listdir(path):
     listing = fast_listdir(path)
     # >>> Make this faster, for example using the tunelib if path permits it.
     for fileinfo in listing:
-        fileinfo["date"] = get_file_date(path + fileinfo["name"]) #>>>if fileinfo["isDirectory"] else ""
+        fileinfo["date"] = get_file_date(path + fileinfo["name"]) 
     return listing
 
 def fast_listdir(path):
@@ -64,6 +64,9 @@ def fast_listdir(path):
         return []
     # 16384 means "folder" or "directory"
     # 32768 means file
+    # /rom returns ('rom', 16384, 0)
+    # whereas other notes return   ('data', 16384, 0, 0)
+
     return [{
               "name":inode[0], 
               "isDirectory":1 if inode[1]==16384 else 0, 
@@ -175,6 +178,7 @@ def download(path):
 
 
 def _formatLogGenerator(filename):
+    # >>>Do all this function in javascript?
     def escapeHtml( s ):
         return s.replace("&","&amp;")\
             .replace("<","&lt;")\
@@ -187,22 +191,42 @@ def _formatLogGenerator(filename):
         # Format log as HTML
         with open(filename) as file:
             yield "<!DOCTYPE html><head></head><body><title>Error log</title>"
-            yield "<body><table>"
+            yield '<body><table>'
+            current_date = "***"
             while True:
                 s = file.readline()
                 if s == "":
                     break
                 if s[0:1] == " ":
-                    # This happens for exception traceback, put traceback info in column 3
+                    # This happens for exception traceback, 
+                    # put traceback info in column 3
                     yield "<tr><td></td><td></td><td></td><td>"
                     yield escapeHtml(s) 
                     yield "</td></tr>"
                 else:
+                    p = s.split(" - ")
+                    dateparts = p[0].split(" ")
+                    if len(dateparts) == 1:
+                        # If time is not synchronized show "No Date"
+                        t = p[0]
+                        d = "No date"
+                    else:
+                        d, t = dateparts
+
+                    if d != current_date:
+                        # Show date once only
+                        yield "<tr><td style='font-size:large;font-weight:bold;text-wrap:nowrap;'>" + d + "</td></tr>"
+                        current_date = d
+
                     yield "<tr>"
-                    for p in s.split(" - "):
-                        yield "<td>" 
-                        yield escapeHtml(p)
-                        yield "</td>"
+                    try:
+                        yield "<td style='text-wrap:nowrap;'>" + t + "</td>"
+                        yield "<td>" + p[1] + "</td>"
+                        yield "<td>" + p[2] + "</td>"
+                        yield "<td>" + escapeHtml( " - ".join(p[3:]) ) + "</td>"
+                    except IndexError:
+                        pass
+                    yield "</tr>"
         yield "</table></body>"
 
     return log_generator(), 200, {"Content-Type": "text/html; charset=UTF-8"}

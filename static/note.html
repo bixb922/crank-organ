@@ -61,7 +61,7 @@
 // Refresh note info every second
 async function getNoteInfo() {
 	while( true ) {
-		updateNoteInfo( await fetch_json( "/data/organtuner.json" ) ) ;
+		updateNoteInfo( await fetch_json( "/get_organtuner_json" ) ) ;
 		await sleep_ms( 5_000 );
 	}
 }
@@ -167,7 +167,7 @@ async function nextNote(){
 	// no previous note button, can use back on browser.
 	let note_number = getResourceNumberFromURL() + 1;
 	parseInt( note_number );
-	let notelist = await fetch_json( "/data/organtuner.json" );
+	let notelist = await fetch_json( "/get_organtuner_json" );
 	if( note_number >= notelist.length ){
 		note_number = 0;
 	}

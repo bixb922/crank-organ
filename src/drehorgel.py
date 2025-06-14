@@ -40,8 +40,7 @@ def init():
     global history, player, setlist, crank, tempo_encoder, tunemanager
     global plist, gpio, controller, actuator_bank
     global battery
-    global organtuner
-    global microphone, poweroff, battery
+    global poweroff, battery
 
     led.starting(1)
 
@@ -56,9 +55,8 @@ def init():
     
     # Parse actuator definitions: GPIO/MCP23017/MIDI Serial and
     # all midi elements in the pinout.json
-    actuator_def = ActuatorDef( current_pinout_file, gpio.get_registers()) # It's not necessary to store actuator_def
-
     from solenoid import ActuatorBank
+    actuator_def = ActuatorDef( current_pinout_file, gpio.get_registers()) # It's not necessary to store actuator_def
     actuator_bank = ActuatorBank( 
         config.cfg.get("max_polyphony",10), 
         actuator_def )
@@ -88,12 +86,6 @@ def init():
         config.BATTERY_CALIBRATION_JSON,
     )
     
-    from microphone import Microphone
-    microphone = Microphone( gpio.microphone_pin, config.cfg["mic_test_mode"] )
-    # >>> Organ tuner could be imported late. Only used by webserver.py
-    # Importing this: memory=24736bytes time=632ms
-    from organtuner import OrganTuner
-    organtuner = OrganTuner()
 
     from tunemanager import TuneManager
     tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON, config.LYRICS_JSON, config.SYNC_TUNELIB )

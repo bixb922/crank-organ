@@ -5,14 +5,13 @@
 import os
 import zlib
 import sys
-from collections import OrderedDict
 import json
 import argparse
 from pathlib import Path
 import unicodedata
 import mido
-
-
+from datetime import datetime, timedelta
+import hashlib, binascii
 
 this_file_py = Path(__file__).name
 this_file = Path(__file__).stem
@@ -261,6 +260,7 @@ def reformat_midi( input_filename, output_filename, bass_correction ):
     midifile.save( output_filename )
 
 
+input_filelist = []
 
 def compress_midi_file( input_folder, filename, output_folder, force_compress, bass_correction ):
     pf = Path( filename )
@@ -268,6 +268,7 @@ def compress_midi_file( input_folder, filename, output_folder, force_compress, b
     output_filename = (Path(output_folder) / pf).with_suffix( pf.suffix + ".gz")
     input_size, input_date = file_info(input_filename)
     output_size, output_date = file_info(output_filename)
+    input_filelist.append( (filename, input_size, input_date) )
     if input_date >= output_date or force_compress:
         print("Input file", filename, "processing...")
         print("    input", input_size, "bytes")
@@ -313,12 +314,50 @@ def compare_folder_with_tunelib( folder, tunelib_file ):
         tunelib = json.load( file )
         
     tunelib_files = set( nfc(tune[TLCOL_FILENAME]) for tune in tunelib.values())
-    folder_files = set( nfc(fn) for fn in os.listdir(folder) )
+    folder_files = set( nfc(fn) for fn in os.listdir(folder) if fn.lower().endswith(".mid") or fn.lower().endswith(".mid.gz") )
     print("In tunelib (microcontroller) but not in folder")
     compare( tunelib_files, folder_files )
     print("In folder but not in tunelib (microcontroller)")
     compare( folder_files, tunelib_files )
-    
+
+def make_setlist_newest( output_folder, input_filelist ):
+    def _compute_hash(filename):
+        filename = unicodedata.normalize("NFKC", filename )
+
+        # Each tune has a unique hash derived from the filename
+        # This is the tuneid. By design it is made unique (see _make_unique_hash)
+        # and stable.
+        if filename.endswith(".gz"):
+            filename = filename[:-3]
+        digest = hashlib.sha256(filename.encode("utf-8")).digest()
+        folded_digest = bytearray(6)
+        i = 0
+        for n in digest:
+            folded_digest[i] ^= n
+            i = (i + 1) % len(folded_digest)
+        hash = binascii.b2a_base64(folded_digest).decode()
+        # Make result compatible with URL encoding
+        return hash.replace("\n", "").replace("+", "-").replace("/", "_")
+
+    input_filelist.sort( key=lambda x:x[2], reverse=True )
+    two_weeks = datetime.now() - timedelta(weeks=2)
+    i = 0
+    setlist = []
+    for i, (filename, file_size, mtime ) in enumerate(input_filelist):
+        modified = datetime.fromtimestamp(mtime)
+        if modified >= two_weeks:
+            print("Adding", filename, "to setlist file on PC")
+            setlist.append( "i" + _compute_hash(filename) )
+        i += 1
+
+    # >>> better: current setlist, but setlist.py does not react
+    # >>> to someone else setting the file, needs new method.
+    setlist_name = "setlist_stored.json"
+    with open(output_folder + "/" + setlist_name,"w") as file:
+        json.dump( setlist, file )
+    print("Setlist for modified in last 2 weeks written to", setlist_name, " folder=", output_folder)
+
+
 def main():
     input_folder, output_folder, force_compress, bass_correction, tunelib_file = parse_arguments()
     print(f"Input folder", input_folder)
@@ -355,6 +394,11 @@ def main():
         # No files, no statistics
         return
     
+    # Store setlist with newest files
+    # global input_filelist was already populated by compress_midi_file
+    make_setlist_newest( output_folder, input_filelist )
+
+    # Print statistics
     #print(f"Maximum decompressed size={max_decompressed_size} bytes")
     avg_output = output_blocks/n
     avg_input = input_blocks/n
@@ -393,6 +437,9 @@ main()
 # (4096, 4096, 3584, 3582, 3582, 0, 0, 0, 0, 255)
 # means that overhead for micropython = 512 blocks = 2MB
 
+# May 2025, with installed /software, /data, /lib but empty tunelib:
+# (4096, 4096, 3584, 3438, 3438, 0, 0, 0, 0, 255)
+# about 600.000 bytes (144 blocks)
 
 # Effect of quantization (ticks per beat) on compression
 # Quantize=10.0 ticks_per_beat=50
@@ -413,10 +460,17 @@ main()
 
 
 # Quantize=3.0 ticks_per_beat=167
-#434 files input_blocks=1884 output_blocks=822 (1 block=4096 bytes)
-#average input= 4.3 blocks/file, average output= 1.9 blocks/file, block compression ratio=0.44
-#average input=  16 kbytes/file, average output=   6 kbytes/file, bytes compression ratio=0.36
-#Estimated capacities based on current average MIDI file size, no lyrics:
-#N8R8 : raw capacity= 278, compressed capacity= 638 midi files
-#N16R8: raw capacity= 750, compressed capacity=1719 midi files
+# 434 files input_blocks=1884 output_blocks=822 (1 block=4096 bytes)
+# average input= 4.3 blocks/file, average output= 1.9 blocks/file, block compression ratio=0.44
+# average input=  16 kbytes/file, average output=   6 kbytes/file, bytes compression ratio=0.36
+# Estimated capacities based on current average MIDI file size, no lyrics:
+# N8R8 : raw capacity= 278, compressed capacity= 638 midi files
+# N16R8: raw capacity= 750, compressed capacity=1719 midi files
 
+# As of June 2025, ticks_per_beat = 96
+# 519 files input_blocks=2311 output_blocks=1003 (1 block=4096 bytes)
+# average input= 4.5 blocks/file, average output= 1.9 blocks/file, block compression ratio=0.43
+# average input=  16 kbytes/file, average output=   6 kbytes/file, bytes compression ratio=0.36
+# Estimated capacities based on current average MIDI file size, no lyrics:
+# N8R8 : raw capacity= 271, compressed capacity= 625 midi files
+# N16R8: raw capacity= 731, compressed capacity=1685 midi files

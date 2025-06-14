@@ -10,12 +10,15 @@ if __name__ == "__main__":
     import sys
     sys.path.append("/software/mpy/")
 
-
 from minilog import getLogger
-from drehorgel import config, controller, actuator_bank, battery, microphone
+from drehorgel import config, controller, actuator_bank, battery
 import fileops
 import frequency
 import midi
+
+from microphone import Microphone
+    
+
 
 # Time spent for measuring frequency for each note
 _TARGET_DURATION = 0.8 # seconds
@@ -33,14 +36,21 @@ def avg(lst):
         return sumval / n
     # Return none if no values in list
 
-
+# OrganTuner acts as singleton, it is instantiated on demand by webserver.py
+# That saves some time at startup and saves 85 kb of memory until needed,
+# reducing garbage collection time from 58 to 38 msec. 
+# It also saves about 2 seconds at startup time.
+# As of June 1, 2025, boot time is 4100ms, memory 231,000 kb, gc time 38 msec (when idle)
+# After loading organtuner and friends, memory 326,000 kb gc time 52 msec (when idle)
 class OrganTuner:
-    def __init__(self):
+    def __init__(self, microphone_pin ):
         self.logger = getLogger(__name__)
         self._get_stored_tuning()
         self.tuner_queue = []
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
+        self.microphone = Microphone( microphone_pin, config.cfg["mic_test_mode"] )
+
         self.logger.debug("init ok")
 
     def get_stats( self ):
@@ -94,10 +104,11 @@ class OrganTuner:
             60  # Let's start with quarter notes in a largo at 60 bpm
         )
         fastest_note = 30  # 30 milliseconds seems to be a good lower limit on note duration
-        play_during = 2000  # play during 2 seconds
+        play_during = 4000  # play during 4 seconds
         silence_percent = 10  # approximate percent of time assigned to a note
         minimum_silence = 30  # milliseconds, seems good limit
         tempo = initial_tempo
+        log_times = ""
         while True:
             quarter = 60 / tempo * 1000
             if quarter < fastest_note:
@@ -106,12 +117,16 @@ class OrganTuner:
             silence = max(minimum_silence, quarter * silence_percent / 100)
             self.logger.debug(f"repeat note {note_duration=:.1f} {silence=:.1f}")
             t = 0
+            log_times += f"{note_duration:.0f}/{silence:.0f} "
             while t <= play_during:
                 # Queue notes, that makes repeat note interruptible
                 self.queue_tuning( self.play_pin, ( pin_index, note_duration, silence) )
                 t += note_duration + silence
             tempo *= 1.414  # double speed every 2
+            # >>> unsure of a pause is better or using silence
+            # >>> a pause allows to count
             self.queue_tuning( self.wait, 500 )
+        self.logger.info(f"Repeat test, note/silence in ms= {log_times}")
 
     async def all_pin_test(self, _):
         # Play all pìns
@@ -209,44 +224,49 @@ class OrganTuner:
 
 
     def _get_stored_tuning(self):
+        import scheduler
         self.stored_tuning:list = fileops.read_json(config.ORGANTUNER_JSON,
-                                  default=[],
-                                  recreate=True)
-        # Older versions use dict, delete that. 
-        # If pin count is different, this organtuner.json is obsolete, delete.
+                                    default=[],
+                                    recreate=True)
+        # Older versions used dict, delete that format of the organtuner.json. 
+        # Also: if pin count is different, this organtuner.json is obsolete, delete.
         if (not isinstance( self.stored_tuning, list ) or 
             len(self.stored_tuning) != actuator_bank.get_pin_count()):
-            self.stored_tuning = [ None for _ in range(actuator_bank.get_pin_count())]
+            self.stored_tuning = [{}]*actuator_bank.get_pin_count()
 
 
         # Update stored tuning, if necessary
+        changed = False
         for pin_index, actuator in enumerate(actuator_bank.get_all_pins()):
-            d:dict = self.stored_tuning[pin_index] or  {
-                    "centslist": [],
-                    "amplist": [],
-                    "amplistdb": []
-                }
+            # Make a copy to see if there was a change
+            v:dict =  dict(self.stored_tuning[pin_index] )
             # Update with current pin definition, just to be sure
             # it's up to date
             midi_note = actuator.nominal_midi_note
-            d["name"] = str(midi_note)
-            d["midi_number"] = midi_note.midi_number
-            d["pinname"] = str(actuator) + " " + actuator.get_rank_name()
-            d["frequency"] = round(actuator.nominal_midi_note.frequency(),1)
-            self.stored_tuning[pin_index] = d
-
-        fileops.write_json(
-            self.stored_tuning, config.ORGANTUNER_JSON, keep_backup=False
-        )
+            v["name"] = str(midi_note)
+            v["midi_number"] = midi_note.midi_number
+            v["pinname"] = str(actuator) + " " + actuator.get_rank_name()
+            v["frequency"] = round(actuator.nominal_midi_note.frequency(),1)
+            if self.stored_tuning[pin_index] != v:
+                v["centlists"] = []
+                v["amplist"] = []
+                v["amplistdb"] = []
+                v["cents"] = None
+                self.stored_tuning[pin_index] = v
+                changed = True
+        if changed:
+                fileops.write_json(
+                    self.stored_tuning, config.ORGANTUNER_JSON, keep_backup=False
+                )
         return
 
     async def update_tuning(self, pin_index ):
 
         # Tune a single note and update organtuner.json
-        self.logger.info(f"update_tuning {pin_index=}")
         # Get midi note to know nominal frequency
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         midi_note = actuator.nominal_midi_note
+        self.logger.info(f"start update_tuning {actuator=} {midi_note=}")
         # Do the tuning
         _, amp, freqlist, amplist = await self._get_note_pitch(
             pin_index, midi_note
@@ -280,11 +300,13 @@ class OrganTuner:
                     v["centslist"][i] = None
 
             v["cents"] = avg(v["centslist"])
-
+            
+        # >>>Update takes about 500 msec, so it could be interesting
+        # >>> delay updating by writing several changes at once.
         fileops.write_json(
             self.stored_tuning, config.ORGANTUNER_JSON, keep_backup=False
         )
-        self.logger.info(f"update_tuning {midi_note} stored in flash")
+        self.logger.info(f"completed update_tuning {actuator=} {midi_note=} stored in flash")
 
     def calcdb(self, amp, maxamp):
         if amp is not None and maxamp:
@@ -311,7 +333,7 @@ class OrganTuner:
                 # Save signal only for iteration 0
                 try:
                     ( frequency, amplitude, duration,
-                    ) = microphone.frequency( midi_note, store_this )
+                    ) = self.microphone.frequency( midi_note, store_this )
                 except ValueError:
                     frequency = None
                     amplitude = None
@@ -341,7 +363,7 @@ class OrganTuner:
                 iteration += 1
                 await asyncio.sleep_ms(10)  # yield, previous code was CPU bound
             # Store last sample in flash
-            microphone.save_hires_signal(midi_note)
+            self.microphone.save_hires_signal(midi_note)
         except Exception as e:
             self.logger.exc(e, "Exception in _get_note_pitch")
         finally:
@@ -354,3 +376,6 @@ class OrganTuner:
         amplitude = avg( amplist )
         return frequency, amplitude, freqlist, amplist
 
+    def get_organtuner_json( self ):
+        # Return updated tuning, the browser does not fetch organtuner.json
+        return self.stored_tuning

@@ -148,8 +148,16 @@ class WiFiManager:
 
         try:
             self.sta_if.active(True)
+            # Power modes for WiFi
+            # Hard reset default is  network.WLAN.PM_PERFORMANCE=1
+            # print(f"{self.sta_if.config('pm')=} {network.WLAN.PM_NONE=} {network.WLAN.PM_PERFORMANCE=} {network.WLAN.PM_POWERSAVE=} ")
+            # this can be slightly faster or less variable. PM_NONE
+            # leads to browser response times for get_progress() of about 200ms
+            # while PM_PERFORMANCE varies from 200 upwards to sometimes 1000 or more ms
+
             try:
                 self.sta_if.connect(access_point, password)
+
                 start_time = ticks_ms()
                 while (not self.sta_if.isconnected() and 
                        ticks_diff(ticks_ms(), start_time) < _STATION_WAIT_FOR_CONNECT):

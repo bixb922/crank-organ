@@ -46,4 +46,17 @@ except OSError as e:
         # This order allows to override frozen modules
         sys.path = ["/software/mpy",  ".frozen", "/lib" ]
 
+# Startup from flash filesystem (software/mpy):
+# MPY folder has a total of 41 mpy files = 123_173 bytes
+#    Total startup time (without main, until asyncio ready) 3236 msec
+#    Memory used at startup 216288
+#    gc.collect() times around 38 ms
+# Same with romfs:
+# Image size is 123998 bytes 
+# ROMFS0 partition has size 131072 bytes (32 blocks of 4096 bytes each)
+#    Total startup time (without main, until asyncio ready) 1669 msec
+#    Memory used at startup 134736
+#    gc.collect() times around 10 ms
+#    Image size is the sum of MPY files with an overhead of 0.6%
+
 import startup # type: ignore

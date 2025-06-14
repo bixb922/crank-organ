@@ -3,14 +3,19 @@
 #  
 from time import ticks_ms, ticks_diff
 
-
 class BaseDriver:
     def set_actuator_bank( self, actuator_bank ):
         self._actuator_bank = actuator_bank
 
     def __repr__( self ):
-        # Must be unique!!!
+        # Must be unique, determines how many instances of the driver
+        # have to be instantiated. Example: GPIO driver = only one instance.
+        # MCP23017 driver = one instance for each MCP.
+        # serial driver = one instance for each UART
+        # GPIO servo driver = one instance for each set of period/pulse
+        # This repr is also used in solenoid.py, web test pin
         return type(self).__name__.replace("Driver", "")
+    
     
 class BasePin:
     # Abstract class for driver_*.py MIDI device actuator drivers
@@ -38,7 +43,7 @@ class BasePin:
         # the number of note_offs, but is never allowed to go negative.
         self._count = 0
         # self._start_time is the last time when an actuator has been turned on..
-        
+
     def on( self ):
         # Set to on only when currently off
         if self._count == 0:
@@ -79,8 +84,8 @@ class BasePin:
         return self._rank
     
     def __repr__( self ):
-        # Must be unique!!!! This can be used as key in a dictionaries.
-        return  f"{str(self._driver)}.{self._pin}"
+        # Must be unique!!!!
+        return  f"{repr(self._driver)}.{self._pin}"
 
     def set_actuator_bank( self, actuator_bank ):
         self._actuator_bank = actuator_bank

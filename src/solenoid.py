@@ -2,6 +2,7 @@
 # MIT License
 # Solenoid note on/note off, hides difference between GPIO and MCP23027
 # Uses MIDIdict to search efficently for the pin function given a MIDI Note
+
 from time import ticks_diff, ticks_ms, sleep_ms
 import machine
 import asyncio
@@ -30,23 +31,32 @@ class ActuatorBank:
         # pin_list: a list of all actuators that have been defined
         # in the pinout.
         self.pin_list = []
-        # device_info is info about MCP devices, to show to the user.
-        self.device_info = {}
+        # pin_info is info about MCP devices, to show to the user.
+        self.pin_info = []
 
         self.sumsolenoid_on_msec = 0
 
         # Get the results from actuator_def
         self.pin_list = actuator_def.get_pin_list()
         self.driver_list = actuator_def.get_driver_list() 
-        self.device_info = actuator_def.get_device_info()
+        self.pin_info = actuator_def.get_pin_info()
         # Tell the drivers that here is the actuator bank
+
         for drv in self.driver_list:
             drv.set_actuator_bank( self )
 
         for pin in self.pin_list:
             pin.set_actuator_bank( self )
 
-        _logger.debug(f"init complete {self.device_info=}")
+        self.pin_info = []
+        for drv in self.driver_list:
+            drv_repr = repr(drv)
+            count = 0
+            for pin in self.pin_list:
+                if repr(pin).startswith(drv_repr):
+                    count += 1
+            self.pin_info.append( (drv_repr,count) )
+        _logger.debug(f"init complete {self.pin_info=}")
 
     def all_notes_off( self ):
         # All notes off is done at two levels.
@@ -95,7 +105,7 @@ class ActuatorBank:
 
     def get_status(self):
         # Get summary of current devices for display
-        return self.device_info
+        return self.pin_info
 
     def get_actuator_by_pin_index(self, pin_index):
         # organtuner.py refers to a pin with it's index
@@ -114,6 +124,8 @@ class ActuatorBank:
         return len( self.pin_list )
     
     def get_pin_by_midi_number( self, midi_number ):
+        # This is used during initalization only, it's not very important
+        # for this code to be fast
         for pin in self.pin_list:
             m = pin.nominal_midi_note
             if (m.midi_number == midi_number and
@@ -127,14 +139,15 @@ class ActuatorBank:
         # that are already on.
         return self.active_actuators
     
-
-# This module provides test functions WITHOUT
-# the need to define a pin object.  This level of testing
-# bypasses pinout.json, ActuatorDef byt uses the MIDI drivers
-#  driver_gpio and driver_mcp23017.
-# This enables to experiment with
-# pin numbers on the pinout.html page and test them
-# without saving the information before testing.
+    def get_pin_by_repr( self, name ):
+        # We could keep pin_dict to make this faster
+        # but it is fast enough as it is.
+        for pin in self.pin_list:
+            if repr(pin) == name:
+                return pin
+        raise KeyError
+    
+# This module provides test functions at pin level.
 #
 # There is also the testi2cconnected() function that
 # can detect if NO I2C IS CONNECTED to a pair of pins.
@@ -179,27 +192,39 @@ class PinTest:
         sclok = self._testGPIO(scl) == "I2C"
         return sdaok and sclok
 
-    # can be used here...
-    # Used by web page to test one pin - physical chip level
-    async def web_test_gpio(self, gpio_pin):
-        gpio = machine.Pin(gpio_pin, machine.Pin.OUT)
+    async def web_test_pin( self, pininfo ):
+        # Called by web server to test a pin, expects a "pininfo" dict
+        # with info filled out by pinout.html
+        # The "pininfo" dictionary has all fields about the pin,
+        # some fields may be superfluous.
+
+        driver_type = pininfo["type"]
+
+        # Compute a pinout repr to search for that pin.
+        driver_dict = { 
+            "gpio":      lambda: f"GPIO.{pininfo['pin']}",
+            # Note that MIDISerial uses midi note number and NOT a "pin" number,
+            # there is no "pin" for MIDISerial.
+            "serial":    lambda: f"MIDISerial.UART({pininfo['uart']}).{pininfo['midi']}",
+            "mcp23017":  lambda: f"I2C({pininfo['i2ccount']}).MCP({pininfo['mcpaddr']}).{pininfo['pin']}",
+            "gpioservo": lambda: f"GPIOServo({pininfo['period']},{pininfo['pulse0']},{pininfo['pulse1']}).{pininfo['pin']}"
+        }    
+        try:
+            pin_repr = driver_dict[driver_type]()
+        except:
+            return f"Unknown driver: {driver_type}"
+        
+        # Now get the actuator for that pin.
+        from drehorgel import actuator_bank
+        try:
+            actuator = actuator_bank.get_pin_by_repr(pin_repr) 
+        except KeyError:
+             return f"Pin not found: {pin_repr}"
+
         for _ in range(8):
-            gpio.value(1)
+            actuator.value(1)
             await asyncio.sleep_ms(500)
-            gpio.value(0)
+            actuator.value(0)
             await asyncio.sleep_ms(500)
 
-    # Used by web page to test one pin of MCP23017 - physical chip level
-    async def web_test_mcp(self, sda, scl, mcpaddr, mcp_pin):
-        from driver_mcp23017 import MCP23017Driver
-        from drehorgel import actuator_bank
-        i2c = machine.SoftI2C(scl=machine.Pin(scl), sda=machine.Pin(sda))
-        mcp = MCP23017Driver(i2c, 0, mcpaddr)
-        pin = mcp.define_pin(mcp_pin, "", None )
-        pin.set_actuator_bank( actuator_bank )
-        pin.off()
-        for _ in range(8):
-            pin.on()
-            await asyncio.sleep_ms(500)
-            pin.off()
-            await asyncio.sleep_ms(500)
+        

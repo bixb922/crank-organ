@@ -2,6 +2,8 @@
 # MIT License
 # Webserver module, serves all http requests.
 
+# >>> redirect 404 to index page or to own page.
+
 import os
 import sys
 import gc
@@ -22,9 +24,8 @@ import fileops
 import filemanager
 # Everything is needed here
 from drehorgel import battery, tunemanager, config, history, player, setlist, crank
-from drehorgel import organtuner, gpio, actuator_bank, timezone, poweroff
-from drehorgel import led, wifimanager, plist
-
+from drehorgel import gpio, actuator_bank, timezone, poweroff
+from drehorgel import led, wifimanager, plist, gpio
 
 from pinout import GPIOstatistics, SaveNewPinout
 
@@ -118,7 +119,17 @@ def authorize(func):
         # for password.
         return respond_error_alert("Password required"), 401
     return wrapper
+
+organtuner_instance = None
+def get_organ_tuner():
+    global organtuner_instance
+    if not organtuner_instance:
+        from organtuner import OrganTuner
+        organtuner_instance = OrganTuner( gpio.microphone_pin )
+    return organtuner_instance
+# call get_organ_tuner() in run_webserver() to load tuner at startup.    
    
+
 @app.post("/verify_password")
 async def verify_password( request ):
     # This is a "login" service: if password is correct
@@ -293,6 +304,9 @@ async def shuffle_3stars(request):
 #
 # Organ tuner web requests
 #
+@app.route("/get_organtuner_json")
+async def get_organtuner_json( request ):
+    return get_organ_tuner().get_organtuner_json();
 
 @app.route("/note/<int:pin_index>")
 async def note_page(request, pin_index):
@@ -304,55 +318,55 @@ async def start_tune_all(request):
     # just queue the operation and respond, so
     # it's not of interest to return organtuner.json
     # in these functions
-    organtuner.tune_all()
+    get_organ_tuner().tune_all()
     return respond_ok()
 
 
 @app.route("/start_tuning/<int:pin_index>")
 async def start_tuning(request, pin_index):
     # Tune one note
-    organtuner.queue_tuning(organtuner.wait, 1000 )
-    organtuner.queue_tuning(organtuner.update_tuning, pin_index)
+    get_organ_tuner().queue_tuning(get_organ_tuner().wait, 1000 )
+    get_organ_tuner().queue_tuning(get_organ_tuner().update_tuning, pin_index)
     return respond_ok()
 
 
 @app.route("/sound_note/<int:pin_index>")
 async def sound_note(request, pin_index):
-    organtuner.queue_tuning(organtuner.sound_note, pin_index)
+    get_organ_tuner().queue_tuning(get_organ_tuner().sound_note, pin_index)
     return respond_ok()
 
 
 @app.route("/sound_repetition/<int:pin_index>")
 async def sound_repetition(request, pin_index):
-    organtuner.queue_tuning(organtuner.repeat_note, pin_index)
+    get_organ_tuner().queue_tuning(get_organ_tuner().repeat_note, pin_index)
     return respond_ok()
 
 
 @app.route("/scale_test")
 async def scale_test(request):
-    organtuner.queue_tuning(organtuner.scale_test, 0)
+    get_organ_tuner().queue_tuning(get_organ_tuner().scale_test, 0)
     return respond_ok()
 
 @app.route("/all_pin_test")
 async def all_pin_test(request):
-    organtuner.queue_tuning(organtuner.all_pin_test, 0)
+    get_organ_tuner().queue_tuning(get_organ_tuner().all_pin_test, 0)
     return respond_ok()
 
 
 @app.route("/clear_tuning")
 async def clear_tuning(request):
-    organtuner.clear_tuning()
-    return send_file(config.ORGANTUNER_JSON)
+    get_organ_tuner().clear_tuning()
+    return respond_ok()
 
 
 @app.route("/stop_tuning")
 async def stop_tuning(request):
-    organtuner.stop_tuning()
+    get_organ_tuner().stop_tuning()
     return respond_ok()
 
 @app.route("/get_tuning_stats")
 async def get_tuning_stats(request):
-    return organtuner.get_stats()  
+    return get_organ_tuner().get_stats()  
 
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
@@ -433,7 +447,7 @@ async def diag(request):
         "used_ram": used_ram,
         "gc_collect_time": gc_collect_time,
         "max_gc_collect_time": scheduler.max_gc_time,
-        "solenoid_devices": actuator_bank.get_status(),
+        "solenoid_devices": "".join(f"{drv} {pins} pins\n" for drv, pins in actuator_bank.get_status()),
         "midi_files": midi_files,
         "tunelib_folder": config.TUNELIB_FOLDER,
         "logfilename": _logger.get_current_log_filename(),
@@ -577,28 +591,15 @@ async def save_pinout_detail(request, path):
         _logger.debug(f"save_pinout_detail exception {repr(e)}")
         return respond_error_alert(f"pinout not saved: {repr(e)}")
 
-
-@app.post("/test_mcp")
-async def test_mcp(request):
-    setlist.stop_playback()
-    data = request.json
-    from solenoid import PinTest
-    await PinTest().web_test_mcp(
-        int(data["sda"]),
-        int(data["scl"]),
-        int(data["mcpaddr"]),
-        int(data["pin"]),
-    )
-    return respond_ok()
-
-@app.post("/test_gpio")
-async def test_gpio(request):
+@app.post("/test_pin")
+async def test_pin( request ):
     setlist.stop_playback()
     from solenoid import PinTest
-    data = request.json
-    await PinTest().web_test_gpio(int(data["pin"]))
+    alert_message = await PinTest().web_test_pin( request.json )
+    if alert_message:
+        return respond_error_alert( alert_message )
     return respond_ok()
-
+    
 @app.post("/test_drumdef")
 async def test_drumdef( request ):
     # Drum definition does not stop playback, it's desirable
@@ -720,7 +721,6 @@ async def list_by_midi_note( request, path ):
                              "actuator_note": str(actuator.nominal_midi_note) if actuator.nominal_midi_note else "", 
                              "actuator_rank": actuator.get_rank_name(), 
                              "register_name": reg.name,
-                             # >>> can delete invert, not in use
                              "invert": False } )
     notedef.sort( key=sort_key )
                 
@@ -748,6 +748,18 @@ async def filemanager_listdir(request, path=""):
 @app.route("/listdir_tunelib")
 async def listdir_tunelib(request):
     return filemanager.fast_listdir( config.TUNELIB_FOLDER )
+
+@app.route("/check_flash_full")
+async def check_flash_full(request):
+    fstat = filemanager.status()
+    # Leave at leat 150 kb free when uploading.
+    # Updating a file like tunelib.json or history.json needs to write the complete
+    # file a second time, so there must at least be space for one additional copy of the file.
+    # >>> calculate space depending on largest file in /data?
+    if fstat["total_flash"]-fstat["used_flash"] < 150_000:
+        return respond_error_alert("No se puede subir archivo, memoria flash casi llena")
+    return respond_ok()
+
 
 @app.post('/upload/<path_filename>')
 @authorize

@@ -9,7 +9,7 @@ from driver_base import BasePin, BaseDriver
 # Not a singleton, there could be different serial
 # drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
-    def __init__( self, uart, pin, channel ):
+    def __init__( self, uart, txpin, channel ):
         # "pin" is the GPIO tx pin to use for MIDI output.
         # "uart" is the UART number to use, 1 or 2.
         # "channel" is the MIDI channel to use, 0-15.  All
@@ -24,7 +24,7 @@ class MIDISerialDriver(BaseDriver):
         # (On the pinout.html page the rx pin will show as "used")
         # assert 1 <= uart <= 2
         # assert 0 <= channel <= 15
-        self._uart = UART( uart, baudrate=31250, tx=pin )
+        self._uart = UART( uart, baudrate=31250, tx=txpin )
         # Have bytearray with the MIDI event ready, format is:
         # event+channel, note number, velocity
         self._note_on = bytearray( (0x90 + channel, 0, 127))
@@ -35,8 +35,9 @@ class MIDISerialDriver(BaseDriver):
  
     def _note_message( self, midi_number, note_on ):
         # Since the uart buffer is fairly large (256 bytes) and
-        # very unlikely to fill up, uart.write() will not block. 
-        # So there is no need to handle that case.
+        # very unlikely to fill up, uart.write() should never block. 
+        # To fill that, more 1000 messages must be sent in 1 second.
+        # So there is little need to handle that case.
         if note_on:
             self._note_on[1] = midi_number
             self._uart.write( self._note_on )
@@ -65,8 +66,14 @@ class MIDISerialDriver(BaseDriver):
     def __repr__( self ):
         # One MIDISerial driver for each UART, there can be more
         # than 1 UART.
+        # This repr is also used in solenoid.py, web test pin
         return "MIDISerial." + str(self._uart)[0:6] + ")"
     
 class VirtualMIDIPin(BasePin):
     def value( self, val ):
         self._driver._note_message( self.nominal_midi_number, val )
+
+    def __repr__( self ):
+        # Must be same definition as solenoid.web_test_pin()
+        return  f"{repr(self._driver)}.{self.nominal_midi_number}"
+
