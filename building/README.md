@@ -111,16 +111,14 @@ I designed for 8 to 9 cmH2O pressure (about 780 Pascal), which is a relatively l
 
 # 5. Build pipes
 
-Here is a spreadsheed with pipe measurements (german: Mensuren): [spreadsheed](pipe_dimensions.xls). On second sheet in the file are some explanations. The original is here: https://orgue-bernard.blog4ever.com/, open the Downloads section. The original is way better than my simplified version. 
+Here is a spreadsheed with pipe measurements (german: Mensuren): [spreadsheed](/building/pipe_dimensions.xlsx). On second sheet in the file are some explanations. The original is here: https://orgue-bernard.blog4ever.com/, open the Downloads section. The original is way better than my simplified version. 
 
-This is one of the simplest ways to make a block: http://www.melright.com/busker/jsart136.htm
+This is one of the simplest ways to make a pipe foot: http://www.melright.com/busker/jsart136.htm
 
-I don't have a band saw. So I made a similar pipe foot block out of wood with a small table saw. Later I found out that the exact shape of the inner chamber in the pipe foot is not very relevant (it sure is for a large church organ). So a even easier pipe foot is:
-* One block for the foot where the toe pipe goes (i.e. at the bottom of the pipe). This needs to be 1.5cm in height so the toe pipe fits well in. The width and depth are according to the spreadsheet (interior width).
-* A second block to form the windsheet (the small slit where the air exits in front of the mouth), also called air band.  Same width and depth as first block.
-* A third block to keep the walls in place while gluing. This block is then thrown away.
+I made the walls of the pipes of balsa wood. It is very easy to cut. But beware: balsa is very porous and needs 3 or 4 layers of varnish to seal. Even the smallest pore makes the sound dull.
 
-Maybe someday I make a drawing.
+The easiest stopper is this one: https://orgue-bernard.blog4ever.com/les-tampons-en-silicone. As with all pages of this site, use the translation box provided by the page. It works well with balsa since the pressure of the stopper does not need to be strong to seal.
+
 
 # 6. Crank
 
