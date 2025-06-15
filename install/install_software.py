@@ -16394,7 +16394,7 @@ direntries = const(( ( '/main.py',  ( _f60, True, 2367 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2025/06/15 01:15:35' )
+date_frozen = const( '2025/06/15 01:46:05' )
 
 sum_size = const(669454)
 files_folders = const(64)

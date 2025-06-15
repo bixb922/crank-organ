@@ -4,6 +4,17 @@ This is a collection of links and random thoughts on building a crank organ.
 
 # Contents
 1.  [Links](#1-links)
+     * [Forum](#forum)
+     * [Crank organ plans](#crank-organ-plans)
+     * [Websites related to building organs](#websites-related-to-building-organs)
+     * [Links about pipes](#links-about-pipes)
+     * [MIDI files](#midi-files)
+     * [MIDI file editors for crank organs](#midi-file-editors-for-crank-organs)
+     * [Associations](#associations)
+     * [Arranging for crank organ](#arranging-for-crank-organ)
+     * [The standard organ scales](#the-standard-organ-scales)
+     * [MIDI Files](#midi-files)
+     * [Kits (i.e parts + plans to build a crank organ yourself)](#kits-ie-parts-plans-to-build-a-crank-organ-yourself)
 2.  [MIDI vs. rolls/books](#2-midi-vs-rolls-books)
 3.  [MIDI organ construction as compared to roll/book organs](#3-midi-organ-construction-as-compared-to-roll-book-organs)
 4.  [Bellows and spring](#4-bellows-and-spring)
@@ -17,46 +28,89 @@ This is a collection of links and random thoughts on building a crank organ.
 
 If the page is not in your language, use the browser's translation. 
 
+## Forum
 * https://www.tapatalk.com/groups/buskerorgan/ forum in english, active.
 * https://forum.drehorgelbauen.de/ forum mainly in german, little activity. https://www.drehorgelbauen.de has information about Höffle plans, photos, tips for building crank organ
 * https://hobbydraaiorgel.nl/schaduwforum/schaduwforum/ An archive of the seemingly extinct forum in Dutch.
-* http://www.melright.com/busker/ Melvin Wright's site. He sells nice arrangements for crank organ, both in roll and MIDI format. There also are many, many building tips, links to books, etc.
-*  https://www.castlewoodorgans.com.au/ offers a kit (although not MIDI)
-* https://orgue-bernard.blog4ever.com/ with translation option in the pages. Many, many insightful articles on different aspects of the organs, including physics, musical aspects, techniques, and even jokes. Very insightful and thorough. 
-* There is a good spreadsheed for pipe dimensions: https://static.blog4ever.com/2006/01/91095/artfichier_91095_54200_201004125515667.xls. See for details here https://orgue-bernard.blog4ever.com/construction-d-un-diapason (a "diapason" in french is a stopped flute/gedackte Pfeife)
-* This is my favorite for pipe stoppers: https://orgue-bernard.blog4ever.com/les-tampons-en-silicone 
-* https://hobbydraaiorgel.nl/ in dutch, english, german and polski, by Piet Pardekaam, good stuff. 
-* http://uli.stille.biz/index.htm (german, french). Uli Stille shows several build logs, many good photos, also offers plans
-* http://www.wallace-venable.name/mechanical-music/ (many links, good stuff)
-* https://www.haraldmmueller.de offers MIDI files. Very good article on arranging MIDI files
-+ https://coaa.us The Crank Organ Association of America. Look for the PDF files of their past journals. Lots of good stuff in there.
-* https://coaa.us/index_archive/Issues_41_to_50/Using%20MIDIBoek%20as%20an%20Analytic%20Tool%20in%20Arranging,%20Wally%20Venable%20_49%20music%20band%20crank%20organ%20rolls%20MIDI.pdf. An article on arranging music for crank organs.
-* http://www.wallace-venable.name/mechanical-music/Resources-4-Noteurs.html.Links to free MIDI files, editors
-* http://www.hobbydraaiorgel.nl/subdir/en_downloads.htm. Free MIDI files for 20 note crank organs
+* https://www.mmdigest.com/ an active forum on Mechanical Music, the archive has many interesting posts.
+
+## Crank organ plans
+
+* A favorite: http://orguesquimperois.free.fr/ has very comprehensive, complete and free plans. No MIDI, but very complete. And funny. And free!!!
+* https://ppweb.synology.me/orgelforum/download/file.php?id=5225 PDF file for download with plans by Hans Beijer, in dutch. I can't find the plans in another language.
+
+These plans are for sale:
+
 * https://www.tapatalk.com/groups/buskerorgan/what-organ-plans-are-available-t38.html has a discussion showing several plans
 * http://www.johnsmithbusker.co.uk/ sells the John Smith plans for several sizes of organs. The Universal and Topsy models have MIDI options. Good stuff.
-* Another favorite: http://orguesquimperois.free.fr/ has very comprehensive, complete and free plans. No MIDI, but very complete. And funny.
-* http://www.melright.com/busker/jsmenu.htm I believe there are more than 100 tips about crank organ building
-* https://ppweb.synology.me/orgelforum/download/file.php?id=5225 plans by Hans Beijer, in dutch. I can't find the plans in another language.
-* https://www.bluemich.net/drehorgel/beijer/index.htm Photos and instruction for the plans by Hans Beijer
 * http://www.hobbydraaiorgel.nl/subdir/en_hoeffle.htm  the Höffle plans in dutch, english and german.
-* https://www.mmdigest.com/ an active forum on Mechanical Music, the archive has many interesting posts.
-* https://www.mmdigest.com/Sounds/mueller3.html standard organ scales. Make sure you use one of these scales in whatever you build (or use a superset) to ensure that you can get MIDI files for the organ. 20 note Carl Frei, 26 note and 31 note Raffin scales are the most common scales.
-* http://www.hobbydraaiorgel.nl/subdir/en_midiboek10.htm free MIDI file editor specifically for crank organs (piano roll format)
-* http://www.melright.com/busker/editor.htm editor for MIDI files for crank organs (piano roll format)
-* https://www.tapatalk.com/groups/buskerorgan/looking-for-sources-of-20-note-midi-files-t793.html. Free MIDI files for crank organs
-* https://www.thomas-sterk.nl/en/midi-files/. Offers MIDI files for crank organs
+
+
+## Websites related to building organs
+
+* http://www.melright.com/busker/ Melvin Wright's site. He sells nice arrangements for crank organ, both in roll and MIDI format. There also are many, many building tips, links to books, etc. Look at the John Smith section.
+* https://orgue-bernard.blog4ever.com/ with translation option in the pages. Many, many insightful articles on different aspects of the organs, including physics, musical aspects, techniques, and even jokes. Very insightful and thorough. 
+* https://hobbydraaiorgel.nl/ in dutch, english, german and polski, by Piet Pardekaam, good stuff. 
+* http://uli.stille.biz/index.htm (german, french). Uli Stille shows several build logs, many good photos, also offers plans
+* http://www.melright.com/busker/jsmenu.htm I believe there are more than 100 tips about crank organ building
+* https://www.bluemich.net/drehorgel/beijer/index.htm Photos and instruction for the plans by Hans Beijer
 *  Here are at least several articles about Melvin Wright's bellows: http://www.melright.com/busker/jsmenu.htm. They are *much* simpler to build than other bellows types.
 * Here is a interesting list of parts, with costs: https://www.tapatalk.com/groups/buskerorgan/my-busker-build-in-los-angeles-t288.html.
 * This is related to the previous link: It is a interesting blog about building a beautiful crank organ. Look at the hardware he uses for the crank: http://organcrank.blogspot.com/2012_12_16_archive.html. The planning and design is impressive, as is the beauty of the result.
 * These are simple pipe foots: http://www.melright.com/busker/jsart136.htm. They can be even simpler, just two square blocks, one at the bottom for the toe hole, one about 1.5 cm apart to form the wind channel. The wind chamber inside the pipe foot can be just square, no one will notice.
+
+## Links about pipes
+* There is a good spreadsheed for pipe dimensions: https://static.blog4ever.com/2006/01/91095/artfichier_91095_54200_201004125515667.xls. See for details here https://orgue-bernard.blog4ever.com/construction-d-un-diapason (a "diapason" in french is a stopped flute/gedackte Pfeife)
+* This is my favorite for pipe stoppers: https://orgue-bernard.blog4ever.com/les-tampons-en-silicone
+* http://www.orgel-info.de/Pfeifen-pd.htm parameters for organ pipes. Read here if you want to know what's influences the sound of organ pipes.
+* http://www.melright.com/busker/jsart09.htm how to make piccolo pipes
+* http://www.fonema.se/valvetime/valvetime.html reaction times of pallet valves. This site (www.fonema.se) has several interesting articles about fundamentals of pipes, too. There is also spreadsheet, later used by other sites.
+* There are many of the pages of https://https://orgue-bernard.blog4ever.com/ dedicated to pipes.
+
+
+## MIDI files
+* https://www.haraldmmueller.de offers MIDI files. Very good article on arranging MIDI files
+* http://www.wallace-venable.name/mechanical-music/ (many links, good stuff)
+
+## MIDI file editors for crank organs
+
+* http://www.wallace-venable.name/mechanical-music/Resources-4-Noteurs.html.Links to free MIDI files, editors
+* http://www.hobbydraaiorgel.nl/subdir/en_downloads.htm. Free MIDI files for 20 note crank organs
+* http://www.hobbydraaiorgel.nl/subdir/en_midiboek10.htm free MIDI file editor specifically for crank organs (piano roll format)
+* http://www.melright.com/busker/editor.htm editor for MIDI files for crank organs (piano roll format)
+
+There are also general purpose score editors that generate MIDI files.
+* Musescore (there is a free version)
+* EasyABC
+* I suppose systems like Sibelius also fit the bill
+
+## Associations
+
++ https://coaa.us The Crank Organ Association of America. Look for the PDF files of their past journals. Lots of good stuff in there.
+
+## Arranging for crank organ
+
+* https://coaa.us/index_archive/Issues_41_to_50/Using%20MIDIBoek%20as%20an%20Analytic%20Tool%20in%20Arranging,%20Wally%20Venable%20_49%20music%20band%20crank%20organ%20rolls%20MIDI.pdf. An article on arranging music for crank organs.
+
+
+
+## The standard organ scales
+
+* https://www.mmdigest.com/Sounds/mueller3.html standard organ scales. Make sure you use one of these scales in whatever you build (or use a superset) to ensure that you can get MIDI files for the organ. 20 note Carl Frei, 26 note and 31 note Raffin scales are the most common scales.
+
+
+## MIDI Files
+
+* https://www.tapatalk.com/groups/buskerorgan/looking-for-sources-of-20-note-midi-files-t793.html. Free MIDI files for crank organs
+* https://www.thomas-sterk.nl/en/midi-files/. Offers MIDI files for crank organs
 * https://grind-organ.com/ sells rolls and MIDI files for crank organ.
 * https://coaa.us/index_archive/Issues_31_to_40/20-Note%20Music%20Arranger%20Roundup,%20Gordie%20Davidson_%20_38.pdf is a curated a list of crank organ arrangers with interesting comments about each one. Alas, several of the sites do not exist anymore. The article is from 2009.
 * http://pianola.co.nz/public/ more scanned piano and organ rolls
-* http://www.orgel-info.de/Pfeifen-pd.htm parameters for organ pipes. Read here if you want to know what's influences the sound of organ pipes.
-* http://www.melright.com/busker/jsart09.htm how to make piccolo pipes
-* http://www.fonema.se/valvetime/valvetime.html reaction times of pallet valves. This site (www.fonema.se) has several interesting articles about fundamentals of pipes, too.
 
+## Kits (i.e parts + plans to build a crank organ yourself)
+*  https://www.castlewoodorgans.com.au/ offers a kit (although not MIDI)
+* https:///www.melright.com/ also sells kits
+* http://berliner-drehorgel.de/barrelorgan/organs/kit/
 
 Please let me know your favorite links to include them here.
 
@@ -86,6 +140,20 @@ Here are many links about the topic of actuators to open the air flow of crank o
 Some have used RC Servo motors (those used for radiocontrolled model airplanes or cars). I would like to test this and have no definitive results. I believe these may be to slow for fast and short notes. Paper roll based organs can handle 30 milliseconds on/30 milliseconds off repetition rates, while even the fastest RC servos need more time. Experimentation is the only way to solve this.
 
 With non-MIDI organs, on many plans the pipes are connected with plastic tubes to the windchest. This is excellent to save space and completely appropriate for pneumatic valves. For MIDI organs, however, I think the easiest is to put the pallet valves direcly under the pipe foot, dispensing with tubes. There is also less chance of air escaping. It will be more difficult to fit the resulting windchest in a small space. I believe  the resulting organ will be a bit larger than using plastic tubes, but easier to build.
+
+So essentially a MIDI crank organ has:
+* Bellows and a pipe to send the pressurized air to the windchests
+* Crank and crank shaft to move the bellows
+* Windchest containing the pallet valves (a windchest is essentialy a sealed box where the pipes are mounted)
+* Pipes, normally only bourdon (closed, gedackt) pipes
+* The frame that holds all parts together
+* The MIDI controller and the valve drivers (driver=current amplifier)
+* And the decoration/outer walls
+
+Optional crank organ elements are for example violin pipes, piccolo pipes, registers and percussion.
+
+Optional electronic elements are for example crank sensor, electronic register buttons, microphone, touchpad. 
+
 
 # 4. Bellows and spring
 
