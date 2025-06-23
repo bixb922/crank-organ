@@ -1,12 +1,6 @@
 .DS_Store
 static/check_translations.py
-static/testtranslate.html
 commit.log
-doc-hardware/crank-sensor_editable.md 
-doc-hardware/README_editable.md
-doc-software/README_editable.md
-doc-hardware/battery_editable.md
-README_editable.md
+*_editable.md
 *.pyc
-design_and_development/design_and_development_editable.md
-
+temp.txt

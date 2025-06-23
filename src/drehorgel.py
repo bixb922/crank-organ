@@ -44,7 +44,7 @@ def init():
 
     led.starting(1)
 
-      # Get lis of pinout.json files
+      # Get list of pinout.json files
     from pinout import PinoutList, GPIODef, ActuatorDef
     plist = PinoutList(config.PINOUT_TXT, config.PINOUT_FOLDER)
     current_pinout_file = plist.get_current_pinout_filename()

@@ -38,6 +38,7 @@
      * [Microphone, crank sensor, touchpad and neopixel sensor (important)](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
      * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
      * [MIDI over serial (5 PIN DIN connector)](#midi-over-serial-5-pin-din-connector)
+     * [Available GPIO pins](#available-gpio-pins)
 11.  [System](#11-system)
      * [Error log](#error-log)
 12.  [File manager](#12-file-manager)
@@ -77,13 +78,14 @@
 18.  [Changes April 9, 2025 to May 10, 2025](#18-changes-april-9-2025-to-may-10-2025)
 19.  [Changes May 10 to May 30, 2025](#19-changes-may-10-to-may-30-2025)
      * [Changes May 31 to June 14, 2025](#changes-may-31-to-june-14-2025)
-20.  [Programming language](#20-programming-language)
-21.  [Credits](#21-credits)
-22.  [Testing](#22-testing)
-23.  [Troubleshooting](#23-troubleshooting)
-24.  [Restrictions](#24-restrictions)
-25.  [Licensing](#25-licensing)
-26.  [Affiliation](#26-affiliation)
+20.  [Changes June 15 to June 23, 2025](#20-changes-june-15-to-june-23-2025)
+21.  [Programming language](#21-programming-language)
+22.  [Credits](#22-credits)
+23.  [Testing](#23-testing)
+24.  [Troubleshooting](#24-troubleshooting)
+25.  [Restrictions](#25-restrictions)
+26.  [Licensing](#26-licensing)
+27.  [Affiliation](#27-affiliation)
 # 1. Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
@@ -108,10 +110,13 @@ Please post a Github issue in this repository for any question you might have. P
 * Crank turning speed sets MIDI playback speed (optional)
 * Simulated percussion: drums are simulated playing several pipes together during a very short time
 * Shows remaining battery capacity on browser
-* Drivers to move solenoid valves via GPIO pins, via "MCP23017 16 port expander" and via MIDI over serial output.
+* Many options to move valves, percussion and other devices:
+   - solenoids or solenoid valves via GPIO pins
+   - solenoids or solenoid valves via via "MCP23017 16 port expander". Either several MCP23017 on one I2C bus or one bus per port expander.
+   - third party driver boards via MIDI over serial output. There are several manufacturers of boards for 32 or 64 or more outputs that can be connected to a "5 pin DIN MIDI over serial" connector.
+   - RC servos (radio control servos) via GPIO ports (up to 8 supported on ESP32-S3) 
+   - RC servos (radio control servos) via  "PCA9685 16 port RC control board". Either several PCA9685 on one I2C or one I2C for each PCA9685
 
-
-The organ has to be equipped with electric solenoid valves for the pipes, see hardware description.
 
 # 3. If you want to try out the software
 To see this software in operation, there is a demo here: https://drehorgel.pythonanywhere.com/demo/.
@@ -331,7 +336,8 @@ Note on and note off will act on solenoids.  Set tempo events are interpreted fo
 
 Be sure to play any MIDI file at least once on your PC to see if it works.
 
-MIDI files without long Meta messages are best. Use the ```compress_midi.py``` utility program to make the MIDI files lean and to compress them to almost one third of the original size.
+MIDI files without long Meta messages are best. Use the ```compress_midi.py``` utility program to make the MIDI files lean and to compress them to almost one third of the original size. See [here](#increase-midi-file-capacity).
+
 
 ## Adding and deleting MIDI tunes
 
@@ -496,20 +502,22 @@ Any Pin and MIDI configuration change needs a reboot of the microcontroller afte
 
 Go to "MIDI configuration" to select the scale of the organ:
 
-* 20 note Carl Frei scale (the default)
+* 20 note Carl Frei scale (the default, very common)
 * 26 note Alderman/Melvin Wright scale
-* 31 note Raffin scale
+* 31 note Raffin scale (a very common scale for larger crank organs)
 * 35 note custom (a custom scale)
+* 40 note RC servo (radio control servo)
 * 64 note scale for MIDI over serial
 
 What you select is a template that allows to see and change pin assignment for different hardware configurations:
 * Use GPIO pins only (useful for 20 note organs), only ULN2803 drivers necessary for the solenoids
 * Use MCP23017 16 port expander for larger configurations
 * Use a MIDI over serial driver to send the data to a DIN type MIDI connector
+* Use RC servos to move valves or percussion
 
 If you need another scale or hardware configuration, post an issue in this Github repository or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 and 48 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file, so you can add your own file here.
 
-You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander.
+You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander, and yet others that turn on RC servos.
 
 You also specify additional hardware you connect to the microcontroller:
 * A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller)
@@ -526,7 +534,7 @@ Next to each solenoid pin definition there is a test button. If the hardware and
 
 If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here. 
 
-Pin and scale definitions must be saved before testing, but MIDI note number can be changed on the fly without saving. A "Pin not found" message can mean that the scale definition was not saved, or a MCP23017 is not detected on the I2C bus.
+Pin and scale definitions must be saved before testing, but MIDI note number can be changed on the fly without saving. A "Pin not found" message can mean that the scale definition was not saved, or a MCP23017/PCA9685 is not detected on the I2C bus.
 
 
 ## Redefine MIDI notes (only if necessary)
@@ -603,6 +611,26 @@ The pin definition columns are:
 For a MIDI over serial, the pin number has no meaning, but it must be present. See this file: /data/64_note_midi_over_serial.json for an example.
 
 For MIDI over serial, it will be best that you only include the MIDI note numbers that your configuration really has, and leave the unused MIDI positions of the board with a blank MIDI note number. This will speed up the tuning.
+
+## Available GPIO pins
+This page provides summary of available GPIO pins. The summary is updated when loading the page or after saving changes. This is an example:
+
+Category|List of pin numbers | Count
+Used GPIO pins	|4,5,48|	(3 )|
+-----------------|-------|-----|
+Available GPIO pins	|1-3,6-18,21,38-42,47|	(23 )|
+Reserved GPIO pins|	0,19,20,22-37,43-46	|(23 )|
+Available GPIO ADC1 pins	|1-3,6-10	(8 )|
+Available GPIO Touchpad pins|	1-3,6-14	(12 )|
+
+
+* Used GPIO pins: ESP32-S3 pins used as input or output pins on the "Pinout and MIDI configuration page" such as microphone, touchpad, I2C bus and GPIO output
+* Available GPIO pins: ESP32-S3 pins that can be assigned. They can be used as input or output pins. Not all can used for microphone and touchpad, see below. But all can be used as output pins for MIDI.
+* Reserved GPIO pins: some pins of the ESP32-S3 cannot be used or interfere with the inner working of the chip. For example, some of these are used for WiFi or for the flash. THese cannot be used for crank organ functions.
+* Available GPIO ADC1 pins: ESP32-S3 Analog-Digital-Converter bank 1. Select the microphone pin from this list. (Bank 2 cannot be used, this bank is reserved for WiFi)
+* Available GPIO Touchpad pins: Select a pin for the touchpad function from this list.
+
+The output pins of the ESP32-S3 cannot drive solenoids (electromagnets) directly. The current they supply is not enough, and solenoids produce high currents when turned off that must be absorbed with a "kick back diode". Always connect the GPIO output to a driver such as the ULN2803 IC, which will amplify the current and provide kick back diodes.
 
 # 11. System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
@@ -825,6 +853,8 @@ The software accepts compressed MIDI files. With average size crank organ music 
 
 The ```compress_midi.py``` utility included here runs on your PC. It compresses all MIDI files in an input folder to an ouput folder. The input files are not changed. The output folder should start empty. If ```compress_midi.py``` is run again, only changed files are processed.
 
+The ```compress_midi.py``` is in the ```tools``` folder of the repository and runs on your PC or Mac or Linux (not on the microcontroller). You need to do: ```pip install mido``` as a prerrequisite (pip is a Python utility on the PC to install software packages. mido is package to read and write MIDI files).
+
 The compression is done in several steps by ```compress_midi.py```:
 * Only note on, note off and program change MIDI events are kept, the rest of the MIDI events are discarded. Set tempo meta events are processed and incorporated into the MIDI times. All meta messages are discarded. Pulses per beat is set to a lower (standard) value of 96, which should be precise enough for mechanical music. All this makes the MIDI file much faster to process and considerably smaller.
 * All note on and note off events are converted to note on events with running status. This can give in a significant file size reduction.
@@ -838,6 +868,8 @@ The music player will automatically recognize either the .mid file or the .mid.g
 Use ```compress_midi.py --help``` for help with the utility program. Input and output folder name need to be specified only once because they are kept in ```compress_midi.json``` in your current folder on the PC.
 
 Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes.
+
+There is an additional feature of compress_midi.py: it leaves a file named ```setlist_stored.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same upload in file manager). Then recall the stored playlist in the Play page and you will have a setlist of the last 2 weeks of modifications. This allows to check and play recent tunes.
 
 ## SD card
 
@@ -871,7 +903,7 @@ The provided configuration has defined 64 notes from MIDI 48 to MIDI 111. You ca
 
 No program change messages are sent. In fact, only note on and note off messages are sent, and with fixed velocity, as it is normal for pipes. If you have another requirement, please post an issue in this repository.
 
-MIDI output can be combined with valves or actuators connected via GPIO or MCP23017 pins.
+MIDI output over serial can be combined with valves or actuators connected via GPIO outputs, MCP23017 outputs or RC servo outputs.
 
 This option has little testing. Please report any problem.
 
@@ -1218,11 +1250,18 @@ note ons and note offs is paired. The note is turned off when the last note off 
 * Reinstate clap when starting crank organ, reinstate heartbeat.
 * No backups for history.json to save space on flash.
 * More comments, simplify code
-* Speed up boot and use less RAM at startup. Boot takes about 4 seconds now.
-* Speed up tuning (writing organtuner.json), logger
+* Speed up boot and use less RAM at startup (meaning shorter gc). Boot takes about 4 seconds now.
+* Speed up tuning, logger
 
+# 20. Changes June 15 to June 23, 2025
+* Added PCA9685 support for radio control (RC) servo motors
+* Allows multiple "servopulse" entries in pinout.json to set different pulse times for groups of servos or individual servos
+* Missing and added: Check if touchpad gpio pin is used elsewhere
+* 404 page not found error now shows a default page with link to home
+* Now development tools are also in respository, tools folder: Makefile, check_translations.py, countlines.py, update-toc.py, write_compiledate.py
+* Updated documentation
 
-# 20. Programming language
+# 21. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1240,7 +1279,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 21. Credits
+# 22. Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1250,12 +1289,12 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 22. Testing
+# 23. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 23. Troubleshooting
+# 24. Troubleshooting
 If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
@@ -1264,7 +1303,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 24. Restrictions
+# 25. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1288,7 +1327,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 25. Licensing
+# 26. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1314,7 +1353,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 26. Affiliation
+# 27. Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.

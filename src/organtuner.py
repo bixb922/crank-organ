@@ -125,6 +125,8 @@ class OrganTuner:
             tempo *= 1.414  # double speed every 2
             # >>> unsure of a pause is better or using silence
             # >>> a pause allows to count
+            # >>> on the other hand, this allows the notelist and note pages
+            # >>> to get all changes soon.
             self.queue_tuning( self.wait, 500 )
         self.logger.info(f"Repeat test, note/silence in ms= {log_times}")
 

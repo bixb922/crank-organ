@@ -21,6 +21,8 @@ _MCP_GPIO = const(0x12)  # R/W General Purpose I/O Port Register
 # Not a singleton, one instance for each MCP23017 chip
 class MCP23017Driver(BaseDriver):
     def __init__( self, i2c, i2c_number, address ):
+        super().__init__(  i2c_number, address )
+
         # i2c is the machine.I2C instance
         self._i2c = i2c
         self._address = address
@@ -30,7 +32,7 @@ class MCP23017Driver(BaseDriver):
         # error if device not found at i2c addr
         if self._i2c.scan().count(self._address) == 0:
             raise OSError(
-                "MCP23017 not found at I2C address {:#x}".format(self._address)
+                f"MCP23017 not found at I2C address {address:#x}"
             )
         
         # The MCP23017 operates in bank mode 0 here,
@@ -72,12 +74,6 @@ class MCP23017Driver(BaseDriver):
         self._write( _MCP_GPIO, 0 )
         self._write( _MCP_GPIO+1, 0 )
     
-    def __repr__( self ):
-        # Format has this pattern: I2C(0).MCP(32)
-        # Must be unique for each MCP23017 chip in the system
-        # This repr is also used in solenoid.py, web test pin
-        return f"I2C({self._i2c_number}).MCP({self._address})"
-    
 
 class MCPPin(BasePin):
     def __init__( self,  driver, pin_number, rank, nominal_midi_note ):
@@ -93,6 +89,8 @@ class MCPPin(BasePin):
 
     def value( self, val ):
         # Turn this pin on/off according to value
+        # The code is  more stable reading the current state from the
+        # MCP than caching state in memory.
         r = self._driver._read( self._gpioreg )
         if val:
             self._driver._write( self._gpioreg, r | self._bit )

@@ -68,12 +68,20 @@
     <br>
     Save pinout definitions to make changes permanent, then reboot.
     <br>
-    The Test button will activate the port several times.
+    The Test button will activate the port several times. 
+    <br>
+    After changing any value, save and reload page to use test button and to see refreshed GPIO pin use information.
     <br>
     <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
     <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
     <br>
     <table>
+        <thead><tr>
+            <td>Category</td>
+            <td>List of pin numbers</td>
+            <td>Count</td>
+        </tr></thead>
+        <tbody>
         <tr>
             <td>Used GPIO pins</td>
             <td id="usedGPIO"></td>
@@ -99,6 +107,7 @@
             <td id="availableTouchpad"></td>
             <td>(<span id="availableTouchpadcount"></span> )</td>
         </tr>
+        </tbody>
     </table>
     <table>
         <tbody id="tbodyPinoutForm">
@@ -179,11 +188,13 @@ async function getPinoutDetail( ) {
     pinoutDetailElements = pinout_detail.length ;
 	//===========
     let s = "";
-    // save sda, scl, mcpaddr for test function
     let pininfo = new Object();
+
+    // pininfo carries information over from one line to the next of pinout.json
     pininfo.type = "gpio";
     pininfo.i2ccount = -1;
     pininfo.mcpcount = -1 ;
+    pininfo.pcacount = -1 ;
     pininfo.gpioservocount = -1;
 
     let rownum = 0;
@@ -201,9 +212,9 @@ async function getPinoutDetail( ) {
         if( pdtype == "description" ){
             let row = insertFormRow( tbody, `row_${f}_description`, [
                 "Description",
-                makeInput( `description.${f}`, 20, pd[1] )
+                makeInput( `description.${f}`, 50, pd[1] )
             ] );
-            row.colSpan = 4;
+            row.cells[1].colSpan = 6;
         }
         else if( pdtype == "neopixel"){
             insertFormRow( tbody,`row_${f}_neopixel`, [
@@ -258,22 +269,22 @@ async function getPinoutDetail( ) {
                 "Set at startup"
             ] );
         }
-        // in older versions, this may be gpio.midi, mcp.midi etc instead of just "midi"
+        // in older versions, this was be gpio.midi, mcp.midi etc instead of just "midi"
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || 
                 pdtype == "serial.midi" || pdtype == "midi"
                ){
             let title = "Pin" ;
-            if( pininfo.type == "gpio" ){
+            if( pininfo.type == "gpio" || pininfo.type == "gpioservo"){
                title = "GPIO pin" ;
             }
             else if( pininfo.type == "serial" ){
-                title = "This column not used";
+                title = "Row number";
             }
             else if( pininfo.type == "mcp23017" ){
                 title = "MCP pin";
             }
-            else if( pininfo.type == "gpioservo" ){
-                title = "PWM pin";
+            else if( pininfo.type =="pca9685" ){
+                title = "PCA pin";
             }
             let pin = pd[1];
             let instrument = pd[2];
@@ -300,7 +311,7 @@ async function getPinoutDetail( ) {
             pininfo.pin = pin ;
             pininfo.midi = midi ;
             pininfo.f = f;
-            // Make a deep copy of the pininfo variable to make it work with the function closure.
+            // Make a deep copy of the pininfo variable to prepare for the function closure.
             let testPinArgs = JSON.parse( JSON.stringify( pininfo ) );
             testFunction = function() { testPin( testPinArgs )} ;
             
@@ -326,50 +337,73 @@ async function getPinoutDetail( ) {
         else if( pdtype == "i2c" ){
             pininfo.i2ccount += 1 ;
             pininfo.mcpcount = -1 ;
+            pininfo.pcacount = -1 ;
             pininfo.sda = pd[1] ;
             pininfo.scl = pd[2] ;
-            insertFormRow( tbody, null, ["I2C", "SDA", "SCL"] );
-            rownum += 1;
-            insertFormRow( tbody, `row_${f}_i2c`, [
-                "",
+            let row = insertFormRow( tbody, `row_${f}_i2c`, [
+                `I2C.${pininfo.i2ccount}`,
+                "SDA",
                 makeInput( `i2c.sda.${f}`, 3, pininfo.sda),
+                "SCL",
                 makeInput( `i2c.scl.${f}`, 3, pininfo.scl),
             ]);
+            titlerow( row );
+            rownum += 1;
         }
         else if( pdtype == "mcp23017" ){
             pininfo.type = pdtype;
             pininfo.mcpcount += 1 ;
-            pininfo.mcpaddr = pd[1] ; // Override outer scope to make testMCP() closure work
-            insertFormRow( tbody, null, [`I2C bus ${pininfo.i2ccount}`,
-                "MCP23017", "address"
-            ] );
-            rownum += 1; 
+            pininfo.mcpaddr = pd[1] ; 
             let row = insertFormRow( tbody, `row_${f}_mcp23017`, [
-                `I2C bus ${pininfo.i2ccount}`,
-                `MCP ${pininfo.mcpcount}`,
+                `I2C.${pininfo.i2ccount}`,
+                `MCP23017.${pininfo.mcpcount}`,
+                "Address",
                 makeInput( `mcp23017.address.${f}`, 2, pininfo.mcpaddr ),
                 "(32 to 39, decimal)"
 
             ]);
-            row.cells[2].colSpan = 3;
+            titlerow( row );
+            rownum += 1; 
+        }
+        else if (pdtype == "pca9685"){
+            pininfo.type = pdtype;
+            pininfo.pcacount += 1 ;
+            pininfo.pcaaddr = pd[1] ; 
+            pininfo.period = pd[2];
+            let row = insertFormRow( tbody, `row_${f}_pca9685`, [
+                `I2C.${pininfo.i2ccount}`,
+                `PCA9685.${pininfo.pcacount}`,
+                "Address",
+                makeInput( `pca9685.address.${f}`, 2, pininfo.pcaaddr ),
+                "Period (μsec)",
+                makeInput( `pca9685.period.${f}`, 5, pininfo.period ),
+
+            ]);
+            titlerow( row );
+            rownum += 1; 
         }
         else if( pdtype == "serial" ){
             pininfo.type = pdtype;
             pininfo.uart = pd[1];
             pininfo.txpin = pd[2];
             pininfo.channel = pd[3];
-            insertFormRow( tbody, null, [ "UART (1-2)", "GPIO pin for tx", "Output MIDI channel (1-16)"] );
-            rownum += 1;
-            insertFormRow( tbody, `row_${f}_serial`, [
+            let row = insertFormRow( tbody, `row_${f}_serial`, [
+                "MIDI over serial",
+                "UART (1-2)",
                 makeInput( `serial.uart.${f}`, 4, pininfo.uart),
+                "GPIO txpin",
                 makeInput( `serial.pin.${f}`, 3, parseInt(pininfo.txpin)),
+                "Output MIDI channel (1-16)",
                 // Change channel from internal/physical number (0-15) to MIDI numbering (1-16)
                 makeInput( `serial.channel.${f}`, 3, pininfo.channel+1 ),
             ]);
+            titlerow( row );
+            rownum += 1;
         }
         else if( pdtype == "gpio" ){
             pininfo.type = pdtype ;
-            insertFormRow( tbody, `row_${f}_gpio`, [ "MIDI via GPIO ports"] );
+            let row = insertFormRow( tbody, `row_${f}_gpio`, [ "GPIO output"] );
+            titlerow(row);
             rownum += 1;
             
         }
@@ -377,19 +411,36 @@ async function getPinoutDetail( ) {
             pininfo.type = pdtype ;
             pininfo.gpioservocount += 1;
             pininfo.period = pd[1];
-            pininfo.pulse0 = pd[2];
-            pininfo.pulse1 = pd[3];
-            insertFormRow( tbody, null, [ "GPIO PWM for servos"] );
+            let row = insertFormRow( tbody, `row_${f}_gpioservo`, [ "GPIO servos (PWM)",
+                "Period (μsec)",
+                makeInput( `gpioservo.period.${f}`, 5, pininfo.period )
+            ] );
+            titlerow( row );
             rownum += 1;
-            insertFormRow( tbody, null, ["Period (usec)", "Pulse width for 0 (usec)", "", "", "", "Pulse width for 1 (usec)"]);
-            rownum += 1;
-            insertFormRow( tbody, `row_${f}_gpioservo`, [
-                makeInput( `gpioservo.period.${f}`, 5, pininfo.period ),
-                makeInput( `gpioservo.pulse0.${f}`, 5, pininfo.pulse0 ),
-                "", "", "", 
-                makeInput( `gpioservo.pulse1.${f}`, 5, pininfo.pulse1 ),
-            ]);
-           
+        }
+        else if( pdtype == "servopulse" ){
+            let period = pininfo.period;
+            let pulse0box = makeInput( `servopulse.pulse0.${f}`, 5, pd[1] );
+            let pulse1box = makeInput( `servopulse.pulse1.${f}`, 5, pd[2] );
+            let angle0span = document.createElement("span");
+            angle0span.id = `angle0.${f}`;
+            let angle1span = document.createElement("span");
+            angle1span.id = `angle1.${f}`;
+
+            pulse0box.oninput = function() {calculate_angle( period, pulse0box, angle0span )};
+            pulse1box.oninput = function() {calculate_angle( period, pulse1box, angle1span )};
+            let row = insertFormRow( tbody, `row_${f}_servopulse`, [
+                 "Servo pulse duration (PWM)",
+                 "Off (μsec)", 
+                 pulse0box,
+                 "On (μsec)",
+                 pulse1box]
+                );
+            row.cells[2].appendChild( angle0span );
+            row.cells[4].appendChild( angle1span );
+            // Show current values too
+            calculate_angle( period, pulse0box, angle0span );
+            calculate_angle( period, pulse1box, angle1span );
         }
         else {
             console.log("Unknown pdtype", pdtype );
@@ -499,9 +550,18 @@ async function savePinoutDetail(){
         }
         else if( pdtype == "gpioservo" ){
             let period = document.getElementById( `gpioservo.period.${f}` ).value ;
-            let pulse0 = document.getElementById( `gpioservo.pulse0.${f}` ).value ;
-            let pulse1 = document.getElementById( `gpioservo.pulse1.${f}` ).value ;
-            newpd.push( ["gpioservo", valnum( period ), valnum( pulse0 ), valnum( pulse1 )]);
+            newpd.push( ["gpioservo", valnum( period )]);
+        }
+        else if( pdtype == "servopulse"){
+            let pulse0 = document.getElementById( `servopulse.pulse0.${f}` ).value ;
+            let pulse1 = document.getElementById( `servopulse.pulse1.${f}` ).value ;
+            newpd.push( ["servopulse", pulse0, pulse1 ]);
+        }
+        else if ( pdtype == "pca9685"){
+            let addr = document.getElementById( `pca9685.address.${f}` ).value ;           
+            let period = document.getElementById( `pca9685.period.${f}` ).value ;
+            newpd.push( ["pca9685", valnum(addr), valnum( period )]);
+
         }
         else {
             console.log("error found pdype=", pdtype, "while saving");
@@ -555,21 +615,22 @@ async function testPin( pininfo ){
     button.innerText = originalText;
 }
 
-async function testGPIO( pin ){
+// >>> replaced by testPin
+// async function testGPIO( pin ){
     
-    let req = { "pin": pin };
-    // test_gpio is with a physical pin number, disregarding
-    // pinout definition
-    await fetch_json( "/test_gpio", req ) ;
-}
+//     let req = { "pin": pin };
+//     // test_gpio is with a physical pin number, disregarding
+//     // pinout definition
+//     await fetch_json( "/test_gpio", req ) ;
+// }
 
-async function testMCP( sda, scl, mcpaddr, pin ){
+// async function testMCP( sda, scl, mcpaddr, pin ){
    
-    let req = { "sda": sda, "scl": scl, "mcpaddr": mcpaddr, "pin": pin };
-    // test_mcp is with physical pin/mcpaddress/mcp pin number
-    // and pinout.json does not matter here, we want to test.
-    await fetch_json( "/test_mcp", req ) ;
-}
+//     let req = { "sda": sda, "scl": scl, "mcpaddr": mcpaddr, "pin": pin };
+//     // test_mcp is with physical pin/mcpaddress/mcp pin number
+//     // and pinout.json does not matter here, we want to test.
+//     await fetch_json( "/test_mcp", req ) ;
+// }
     
 function note_name( midi ){
     let note_list = [ "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B" ];
@@ -850,6 +911,25 @@ function sortTable() {
 
     })));
 
+}
+function titlerow( row ){
+    for( c of row.cells ){
+        c.style.fontWeight = "bold";
+    }
+}
+
+function calculate_angle( period, pulseCell, angleSpan ){
+    let angle = 0;
+    try{
+        angle = (parseInt(pulseCell.value)-1000)/1000*180;
+    }
+    catch(e){
+        // could not parse pulseCell.value
+        angleSpan.innerText = "???";
+        return;
+    }
+    angle = Math.round(angle*10)/10;
+    angleSpan.innerText = "=" + angle + "°";
 }
 
 </script>

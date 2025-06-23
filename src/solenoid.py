@@ -3,10 +3,9 @@
 # Solenoid note on/note off, hides difference between GPIO and MCP23027
 # Uses MIDIdict to search efficently for the pin function given a MIDI Note
 
-from time import ticks_diff, ticks_ms, sleep_ms
 import machine
 import asyncio
-
+from time import sleep_ms
 import minilog
 from drehorgel import led
 from midi import DRUM_PROGRAM
@@ -53,7 +52,7 @@ class ActuatorBank:
             drv_repr = repr(drv)
             count = 0
             for pin in self.pin_list:
-                if repr(pin).startswith(drv_repr):
+                if repr(pin).startswith(drv_repr + "."):
                     count += 1
             self.pin_info.append( (drv_repr,count) )
         _logger.debug(f"init complete {self.pin_info=}")
@@ -201,19 +200,26 @@ class PinTest:
         driver_type = pininfo["type"]
 
         # Compute a pinout repr to search for that pin.
+        from driver_gpio import GPIODriver
+        from driver_midiserial import MIDISerialDriver
+        from driver_mcp23017 import MCP23017Driver
+        from driver_gpioservo import GPIOServoDriver
+        from driver_pca9685 import PCA9685Driver
+        # These calls here must mirror the super().__init__() parameters in the
+        # constructors of the respective classes:
         driver_dict = { 
-            "gpio":      lambda: f"GPIO.{pininfo['pin']}",
+            "gpio":      lambda: GPIODriver.make_repr() + str(pininfo['pin']),
             # Note that MIDISerial uses midi note number and NOT a "pin" number,
             # there is no "pin" for MIDISerial.
-            "serial":    lambda: f"MIDISerial.UART({pininfo['uart']}).{pininfo['midi']}",
-            "mcp23017":  lambda: f"I2C({pininfo['i2ccount']}).MCP({pininfo['mcpaddr']}).{pininfo['pin']}",
-            "gpioservo": lambda: f"GPIOServo({pininfo['period']},{pininfo['pulse0']},{pininfo['pulse1']}).{pininfo['pin']}"
+            "serial":   lambda: MIDISerialDriver.make_repr(pininfo['uart']) + "." + str(pininfo['midi']),
+            "mcp23017": lambda: MCP23017Driver.make_repr(pininfo['i2ccount'],pininfo['mcpaddr']) + "." + str(pininfo['pin']),
+            "gpioservo": lambda: GPIOServoDriver.make_repr() + "." + str(pininfo['pin']),
+            "pca9685":   lambda: PCA9685Driver.make_repr(pininfo['i2ccount'],pininfo['pcaaddr']) + "." + str(pininfo['pin'])
         }    
         try:
             pin_repr = driver_dict[driver_type]()
         except:
             return f"Unknown driver: {driver_type}"
-        
         # Now get the actuator for that pin.
         from drehorgel import actuator_bank
         try:

@@ -12,6 +12,8 @@ from driver_base import BaseDriver, BasePin
 # defined in BaseDriver, it is unique.
 class FauxTomDriver(BaseDriver):
     def __init__( self ):
+        super().__init__()
+
         temp_def = fileops.read_json( config.DRUMDEF_JSON, default={})
         # Need the midi numbers used as key be an int
         self.drum_def = { int(k): v for k, v in temp_def.items() if not k.startswith("comment" )}

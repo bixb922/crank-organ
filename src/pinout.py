@@ -1,6 +1,7 @@
 # (c) 2023 Hermann Paul von Borries
 # MIT License
 # Manage ESP32-S3 GPIO pin definitions and port expander MCP23017 pin definitios
+# and all other actuator definitions in the pinout files.
 
 # This module parses the pinout files, e.g. 20_notes_Carl_Frei.json
 # The parsed file is fed into several classes each of which 
@@ -157,8 +158,12 @@ class PinoutParser:
             "serial": lambda uart, pin, channel: 
                         self.define_serial_driver( toi(uart), toi(pin), toi(channel) 
             ),
-            "gpioservo": lambda period_us, pulse0_us, pulse1_us: 
-                          self.define_gpioservo_driver( toi(period_us), toi(pulse0_us), toi(pulse1_us) ),
+            "gpioservo": lambda period_us: 
+                          self.define_gpioservo_driver( toi(period_us) ),
+            "pca9685": lambda addr, period_us:
+                self.define_pca9685_driver( toi(addr), toi(period_us)),
+            "servopulse": lambda pulse0_us, pulse1_us:
+                self.define_servopulse( toi(pulse0_us), toi(pulse1_us) ),
             "midi": lambda pin,
             instrument,
             midi_num,
@@ -212,14 +217,20 @@ class PinoutParser:
     def define_mcp23017_driver(self, address):
         self.current_driver = "MCP23017Driver"
 
+    def define_pca9685_driver(self, address, period_us):
+        self.current_driver = "PCA9685Driver"
+
     def define_serial_driver( self, uart, pin, channel ):
         self.current_driver = "MIDISerialDriver"
 
-    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
+    def define_gpioservo_driver( self, period_us ):
         self.current_driver = "GPIOServoDriver"
 
+    def define_servopulse( self, pulse0_us, pulse1_us ):
+        pass
+    
     def define_midi(self, pin, midi_note, rank, register_name):
-        return
+        pass
     
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
         return
@@ -360,6 +371,13 @@ class SaveNewPinout(PinoutParser):
         if gpio not in ESP32_S3_ADC1_PINS:
             raise RuntimeError(f"Pin {gpio} must be ADC1 pin (3 to 10)")
 
+    def define_touchpad( self, gpio ):
+        if not gpio:
+            return
+        self._add_GPIO_to_list(gpio)
+        if gpio not in ESP32_S3_TOUCHPAD_PINS:
+            raise RuntimeError(f"Pin {gpio} must be TouchPad pin (1 to 14)")
+
     def define_register( self, gpio, name, initial_value ):
         self._add_GPIO_to_list(gpio)
 
@@ -371,14 +389,14 @@ class SaveNewPinout(PinoutParser):
     def define_midi(self, pin, midi_note, rank, register_name):
         if self.current_driver == "GPIODriver" or self.current_driver == "GPIOServoDriver":
             if not pin:
-                raise RuntimeError("GPIO pin blank or 0")
+                raise RuntimeError("GPIO pin blank or 0 for {self.current_driver}")
             # Check if used as gpio elsewhere (but don't check duplicate
             # use as gpio midi, because that's allowed)
             if pin in self.gpiolist:
                 raise RuntimeError(f"MIDI GPIO pin already in use: {pin}")
-        elif self.current_driver == "MCP23017Driver":
+        elif self.current_driver == "MCP23017Driver" or self.current_driver == "PCA9685Driver":
             if not( 0 <= pin <= 15 ):
-                raise RuntimeError( f"MCP pin number not 0-15 {pin}")
+                raise RuntimeError( f"{self.current_driver} pin number not 0-15 {pin}")
             if pin is None:
                 raise RuntimeError("MCP pin blank")
         elif self.current_driver == "MIDISerialDriver":
@@ -413,14 +431,26 @@ class SaveNewPinout(PinoutParser):
         )
         self.current_driver = "MCP23017Driver"
 
+    def define_pca9685_driver( self, address, period_us):
+        if self.current_I2C == -1:
+            raise RuntimeError("PCA9685 definition must be preceded by I2C definition")
+        if address is None:
+            raise RuntimeError("PCA9685 address blank")
+        self._add_to_list(
+            f"{self.current_I2C}.{address}",
+            self.mcplist,
+            f"Duplicate PCA9685, I2C {self.current_I2C} address {address}",
+        )
+        if  period_us <= 3000:
+            raise RuntimeError("Servo period must be at least 3000 usec")
+
+        self.current_driver = "PCA9685Driver"
+
+
     def define_gpio_driver( self ):
         self.current_driver = "GPIODriver"
     
-    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
-        if not( 1000 <= pulse0_us <= 2000 ):
-            raise RuntimeError("Pulse 0 width for servo must be between 1000 and 2000 usec")
-        if not( 1000 <= pulse1_us <= 2000 ):
-            raise RuntimeError("Pulse 1 width for servo must be between 1000 and 2000 usec")
+    def define_gpioservo_driver( self, period_us  ):
         if  period_us <= 3000:
             raise RuntimeError("Servo period must be at least 3000 usec")
         self.current_driver = "GPIOServoDriver"
@@ -444,7 +474,11 @@ class SaveNewPinout(PinoutParser):
         elif uart == 2:
             self._add_GPIO_to_list(16)
         self.current_driver = "MIDISerialDriver"
-        return
+    
+    def define_servopulse( self, pulse0_us, pulse1_us ):
+        if not( 600 <= pulse0_us <= 2400 )or \
+          not ( 600 <= pulse1_us <= 2400 ):
+            raise RuntimeError("Servo pulse with must be 600 to 2400")
     
     def define_complete(self):
         # Write updated info back to flash
@@ -656,7 +690,6 @@ class ActuatorDef(PinoutParser):
         sclpin = machine.Pin(scl)
         sdapin = machine.Pin(sda)
 
-        device_name = "i2c" + str(self.current_i2c_number)
         if PinTest().testI2Cconnected(sda, scl):
             self.current_i2c = machine.SoftI2C(sclpin, sdapin, freq=100_000)
         else:
@@ -679,21 +712,38 @@ class ActuatorDef(PinoutParser):
                     e,
                     f"MCP23027 at {self.current_i2c=} {address=} not found, disabled",
                 )
+    def define_pca9685_driver(self, address, period_us ):
+        from driver_null import NullDriver
+        # Default in case PCA9685 is not installed
+        self.current_driver = self.driver_factory( NullDriver() )
+
+        if self.current_i2c and address is not None :
+            logger.debug(f"Try PCA9685 {self.current_i2c=} {address=}")
+            try:
+                from driver_pca9685 import PCA9685Driver
+
+                self.current_driver = self.driver_factory( PCA9685Driver(
+                    self.current_i2c, self.current_i2c_number, address, period_us
+                    ) )
+            except OSError as e:
+                logger.exc(
+                    e,
+                    f"PCA9685 at {self.current_i2c=} {address=} not found, disabled",
+                )
 
     def define_gpio_driver( self ):
         from driver_gpio import GPIODriver
         self.current_driver = self.driver_factory( GPIODriver() )
 
-    def define_gpioservo_driver( self, period_us, pulse0_us, pulse1_us ):
+    def define_gpioservo_driver( self, period_us ):
         from driver_gpioservo import GPIOServoDriver
-        self.current_driver = self.driver_factory( GPIOServoDriver( period_us, pulse0_us, pulse1_us ) )
+        self.current_driver = self.driver_factory( GPIOServoDriver( period_us  ) )
 
     def define_midi(self, pin, midi_note, rank, register_name ):
         if not midi_note.is_valid():
             # midi note omitted means: disregard this entry
             return
         pin = self.current_driver.define_pin( pin, rank, midi_note ) 
-
         # Don't duplicate Virtual Pin definitions
         # Use repr() or str() to test for uniqueness,
         # for example: MCP23017Driver.I2C(0).3
@@ -704,7 +754,10 @@ class ActuatorDef(PinoutParser):
         from driver_midiserial import MIDISerialDriver
         self.current_driver = self.driver_factory( MIDISerialDriver( uart, pin, channel ) )
 
-        
+    def define_servopulse( self, pulse0_us, pulse1_us ):
+        # Drivers that do not implement pulse width will just ignore this call
+        self.current_driver.set_servopulse( pulse0_us, pulse1_us )
+
     def define_complete( self ):
         self.pin_list = list( self.pin_dict.values() )
         # Organ tuner uses pin index (index to pin_list)

@@ -86,8 +86,8 @@ let translationDict = {
 	["General configuration", "Allgemeine Konfiguration"],
 "configuración pins/midi": // index.html 
 	["Pin and MIDI configuration", "Pin und MIDI Konfiguration"],
-"configuración solenoides": // diag.html 
-	["Solenoid configuration", "Solenoidkonfiguration"],
+"configuración actuadores": // diag.html 
+	["Actuator configuration", "Aktuatorkonfiguration"],
 "configuración wifi": // diag.html 
 	["WIFI configuration", "WIFI-Konfiguration"],
 "contadores batería en cero": // index.html 

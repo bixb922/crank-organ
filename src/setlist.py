@@ -11,6 +11,11 @@ from minilog import getLogger
 import fileops
 
 # >>> could be interesting to have more stored setlist? not convinced
+# >>> automatic setliss? 
+# setlist_new.json = recent additions
+# setlist_history.json = all tunes played today
+# "Save" and "load" would need to ask for setlist. 
+# Makes things more complicated...?
 
 def del_key(key, dictionary):
     if key in dictionary:

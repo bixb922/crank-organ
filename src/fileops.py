@@ -149,7 +149,7 @@ def open_midi( filename ):
     # A buffer size of > 1000 means almost no impact on CPU and
     # uses a relatively small amount of RAM
     # >>> could push decompress to MidiFile() and decompress on the
-    # fly, but that would require buffer_size=0 (i.e. buffer complete file)
+    # >>> fly, but that would require buffer_size=0 (i.e. buffer complete file)
     return MidiFile(find_decompressed_midi_filename( filename ),
                     buffer_size=5000,
                     reuse_event_object=True)

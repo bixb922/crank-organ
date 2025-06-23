@@ -16,7 +16,10 @@ from driver_base import BasePin, BaseDriver
 # Does not need to be declared @singleton. Since __repr__ is
 # defined in BaseDriver, it is unique, see ActuatorDef.driver_factory()
 class GPIODriver(BaseDriver):
+
     def __init__( self ):
+        super().__init__()
+
         # Need a list of all pins for .all_notes_off() function
         self._gpiopins = []
 

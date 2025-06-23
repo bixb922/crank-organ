@@ -21,7 +21,7 @@ class Microphone:
         # Allocate memory as a first step to ensure availability
         gc.collect()
         self.buffer_size = fft_module.BUFFER_SIZE
-        self.adc_signal = array("i", (0 for _ in range(self.buffer_size)))
+        self.adc_signal = array("i", (0 for _ in range(self.buffer_size))) # type:ignore
         self.mic_test_mode = mic_test_mode
         if gpio_microphone_pin and not mic_test_mode:
             self.adc_device = ADC(
@@ -130,7 +130,7 @@ class Microphone:
             # At 2500 Hz for the highest signal, this means about 250 periods
             # with about 12 samples per period.
             print(">>>High resolution signal for", midi_note, "start" )
-            s = array("i", (0 for _ in range(4000)))
+            s = array("i", (0 for _ in range(4000))) # type:ignore
             t0 = time.ticks_ms()
             for i in range(len(s)):
                 s[i] = read()

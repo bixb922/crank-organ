@@ -4,18 +4,36 @@
 from time import ticks_ms, ticks_diff
 
 class BaseDriver:
+    # The repr() of each driver MUST be unique
+    # However, there will be one driver instance for GPIO
+    # There will be one driver instance for each servo driver with different period/pulse parameters
+    # There will be one driver instance for each MCP address
+    # There will be one instance for each UART of MIDISerial
+    # There will be one instance for each PCA9685 address and set of period/pulse parameters
+    @classmethod
+    def make_repr( cls, *args ):
+        # make_repr allows solenoid.py to find a actuator based on characteristics
+        # This is used for the actuator tests provided by the pinout.html page.
+        # The format of the repr is for example:
+        # MCP23017(0,32)
+        # GPIOServo(5000,1000,1100)
+        # i.e. the servername without "Driver" plus the part of the
+        # constructor arguments that make the driver unique.
+        return cls.__name__.replace("Driver", "") + str(args).replace(", ", ",").replace("()","")
+    
+    def __init__(self, *args ):
+        self._repr = self.__class__.make_repr( *args )
+
     def set_actuator_bank( self, actuator_bank ):
         self._actuator_bank = actuator_bank
 
+    def set_servopulse( self, *args ):
+        # Ignore "servopulse" if driver does not implement it
+        pass
+
+
     def __repr__( self ):
-        # Must be unique, determines how many instances of the driver
-        # have to be instantiated. Example: GPIO driver = only one instance.
-        # MCP23017 driver = one instance for each MCP.
-        # serial driver = one instance for each UART
-        # GPIO servo driver = one instance for each set of period/pulse
-        # This repr is also used in solenoid.py, web test pin
-        return type(self).__name__.replace("Driver", "")
-    
+        return self._repr
     
 class BasePin:
     # Abstract class for driver_*.py MIDI device actuator drivers
@@ -88,5 +106,9 @@ class BasePin:
         return  f"{repr(self._driver)}.{self._pin}"
 
     def set_actuator_bank( self, actuator_bank ):
+        # Set in solenoid.py during initialization
+        # also all drivers get the actuator_bank set
         self._actuator_bank = actuator_bank
-     
+    
+    def get_driver( self ):
+        return self._driver

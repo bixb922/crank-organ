@@ -9,9 +9,12 @@ from driver_base import BasePin, BaseDriver
 # Not a singleton, there could be different serial
 # drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
-    def __init__( self, uart, txpin, channel ):
+
+    def __init__( self, uart_number, txpin, channel ):
+        super().__init__( txpin )
+
         # "pin" is the GPIO tx pin to use for MIDI output.
-        # "uart" is the UART number to use, 1 or 2.
+        # "uart_number" is the UART number to use, 1 or 2.
         # "channel" is the MIDI channel to use, 0-15.  All
         # notes to this MIDI serial will be sent on the indicated
         # channel. This is because some boards (for example
@@ -24,14 +27,13 @@ class MIDISerialDriver(BaseDriver):
         # (On the pinout.html page the rx pin will show as "used")
         # assert 1 <= uart <= 2
         # assert 0 <= channel <= 15
-        self._uart = UART( uart, baudrate=31250, tx=txpin )
+        self._uart = UART( uart_number, baudrate=31250, tx=txpin )
         # Have bytearray with the MIDI event ready, format is:
         # event+channel, note number, velocity
         self._note_on = bytearray( (0x90 + channel, 0, 127))
         self._note_off = bytearray((0x80 + channel, 0,   0))
         # Could store channel number here to send all_notes_off
         # only on the defined channel.
-        super().__init__()
  
     def _note_message( self, midi_number, note_on ):
         # Since the uart buffer is fairly large (256 bytes) and
@@ -63,12 +65,6 @@ class MIDISerialDriver(BaseDriver):
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )
    
-    def __repr__( self ):
-        # One MIDISerial driver for each UART, there can be more
-        # than 1 UART.
-        # This repr is also used in solenoid.py, web test pin
-        return "MIDISerial." + str(self._uart)[0:6] + ")"
-    
 class VirtualMIDIPin(BasePin):
     def value( self, val ):
         self._driver._note_message( self.nominal_midi_number, val )

@@ -2,8 +2,6 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-# >>> redirect 404 to index page or to own page.
-
 import os
 import sys
 import gc
@@ -101,6 +99,14 @@ def respond_error_alert( alert_message ):
     # Currently no way to show alert with "error":False.
     return { "error":True, "alert": alert_message }
 
+def respond_not_found( ):
+    # Returning an error page makes it clearer what error
+    # occurred, if not it's easy to mistake for a connection error.
+    error_page = "<big>404 page not found. <a href='/'>To index page.</a>"
+    # Must return 404 error in case the caller of the
+    # file is fetch_json(), for example for json files in data folder.
+    return error_page, 404, {'Content-Type': 'text/html'}
+
 # Define own (async) decorator to check authorization
 # func MUST be a async function 
 def authorize(func):
@@ -187,7 +193,7 @@ def static_files( request, path ):
         ct = filemanager.get_mime_type( filename )
         return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
     _logger.info(f"static_files {filename} not found")
-    return "", 404
+    return respond_not_found()
 
 
 @app.route("/data/<filepath>")
@@ -195,7 +201,10 @@ async def send_data_file(request, filepath):
     filename = DATA_FOLDER + filepath
     if not fileops.file_exists(filename):
         _logger.info(f"send_data_file {filename} not found")
-        return "", 404
+        # Since a data file is requested (normally) by fetch_json() 
+        # in Javascript, respond_not_found() will also
+        # return a 404 error.
+        return respond_not_found()
     return send_file(filename, max_age=0)
 
 @app.route("/get_description")
@@ -834,7 +843,7 @@ async def get_permission( request ):
 @app.get('/<path:path>')
 async def catch_all(request, path):
     _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))
-    return "", 404
+    return respond_not_found()
 
 @app.errorhandler(RuntimeError)
 async def runtime_error(request, exception):

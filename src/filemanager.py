@@ -8,6 +8,8 @@ import fileops
 # Compress midi, html, css and js files in the browser: NO, bad idea.
 # >>> use tunelib to make listdir of tunelib faster
 # >>> put "Reload"  on filemanager page  with a link that reloads the page
+# >>> show compilation date on filemanager root to aid software upload.
+# >>> should there be a  "upgrade software" with root and subfolders and compare dates?
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,

@@ -89,18 +89,21 @@ async function getHistory( ) {
         }
         // Get title (if still in tunelib...)
         let tunelib = await get_tunelib();
+        let tuneid = hist_element[0];
     	let tune = tunelib[hist_element[0]]; // may be undefined if tune was deleted
 
-        let text = await make_history_title( tune );
+        let title = await make_history_title( tune );
         let completion = await make_history_percentage(  tune, hist_element[2] );
      
-        let row = insertRow( body, [time, text, completion, user_request]);
+        let row = insertRow( body, [time, title, completion, user_request]);
         row.cells[2].style.textAlign = "right";
         let commentIcon = document.createElement("a");
-        commentIcon.onclick = function(){register_comment(""+tt[1], ""+tt[2])};
-        commentIcon.innerHTML= "&nbsp;&#x1f4dd;" ;// non blank space, memo=📝
-        commentIcon.classList.add( "anohref" );
-        row.cells[1].appendChild( commentIcon );
+        commentIcon.onclick = function(){register_comment(""+title, ""+tuneid)};
+        if( tune ){
+            commentIcon.innerHTML= "&nbsp;&#x1f4dd;" ;// non blank space, memo=📝
+            commentIcon.classList.add( "anohref" );
+            row.cells[1].appendChild( commentIcon );
+        }
     }
 }
 
@@ -136,7 +139,7 @@ async function make_history_title( tune ){
         return text;
 	}
     // So sorry if tune is not in tunelib anymore... no info available
-    return [tlt("(borrado)"), "", tuneid] ;
+    return tlt("(borrado)") ;
 }
 
 async function make_history_percentage( tune, percentage ){
@@ -153,7 +156,6 @@ async function register_comment(title, tuneid){
 	if( comment != null ){
 		j = { "tuneid": tuneid, "comment": comment };
 		await fetch_json( "/register_comment", j );
-        drop_tunelib() ;
         showPopup("", tlt("Información actualizada")); 
         drop_tunelib();
         await sleep_ms(1000);

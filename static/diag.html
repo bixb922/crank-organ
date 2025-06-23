@@ -58,7 +58,7 @@
         <tr><td>Tiempo para gc</td>		<td id="gc_collect_time"></td><td>[mseg]</td></tr>
 		<tr><td>Máximo tiempo para gc</td>		<td id="max_gc_collect_time"></td><td>[mseg]</td></tr>
 		<tr><td>Fecha/hora compilación</td> <td id="compile_date"></td><td></td></tr>
-		<tr><td>Configuración solenoides</td> <td id="solenoid_devices"></td></tr>
+		<tr><td>Configuración actuadores</td> <td id="solenoid_devices"></td></tr>
 		<tr><td>Archivos MIDI</td>		<td id="midi_files"></td></tr>
 		<tr><td>Carpeta música</td>		<td id="tunelib_folder"></td></tr>
 		<tr><td>Manivela instalada</td>	<td id="crank_installed"></td></tr>
@@ -169,7 +169,7 @@ async function getDiagInfo( ) {
 	let diag = await fetch_json( "/diag" );
 	// Move corresponding (cobol?) fields from json to html page
 	setAllTextById( diag ); 
-	htmlById("solenoid_devices", diag["solenoid_devices"].replace("\n", "<br>") );
+	htmlById("solenoid_devices", diag["solenoid_devices"].replaceAll("\n", "<br>") );
     getWifiStatus() ;
 	showHideElement( "crankGraphButton", diag["crank_installed"]);
 }

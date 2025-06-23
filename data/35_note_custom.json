@@ -3,6 +3,7 @@
 ["microphone", 10], 
 ["tachometer", ""], 
 ["touchpad", 9], 
+["tempo", "", "", ""],
 ["register", "", ""],
 ["register", "", ""],
 ["gpio"],
