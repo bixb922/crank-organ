@@ -118,8 +118,6 @@ async def main():
     # already connected
     await drehorgel.init_wifimanager()
 
-    await asyncio.sleep(1000)
-    
     # Start asyncio profiler and asyncio repl if installed
     start_aiorepl()
 
