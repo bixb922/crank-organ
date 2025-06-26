@@ -33,13 +33,13 @@ class MyHTMLParser(HTMLParser):
             return 
         text = stripped_data.lower()
         if text not in self.translations:
-            print(f"not found page {self.pagename} tag <{self.tag}> data='{stripped_data}'")
+            print(f"    not found page {self.pagename} tag <{self.tag}> data='{stripped_data}'")
         else:
             self.translations_used.append( text )
 
 def check_script( script, translations, pagename, tag, translations_used ):
     if "ttl(" in script:
-        print("Error, there is a ttl() in script!")
+        print("    Error, there is a ttl() instead of tlt() in script!")
     while "tlt(" in script:
         p = script.index("tlt(")
         while script[p] != '"':
@@ -52,13 +52,13 @@ def check_script( script, translations, pagename, tag, translations_used ):
         tlt_text = script[p:q].lower()
         script = script[q:]
         if tlt_text not in translations:
-            print(f"script tlt not found page {pagename} tag <{tag}> data='{tlt_text}'")
+            print(f"    tlt() in javascript not found page {pagename} tag <{tag}> data='{tlt_text}'")
         else:
             translations_used.append( tlt_text )
 
-def read_translations():
+def read_translations(filename):
     t = {}
-    with open("translations.js") as file:
+    with open(filename) as file:
         copy = False
         while True:
             line = file.readline()
@@ -91,12 +91,16 @@ def read_translations():
     return t
 
 def main():
-    translations = read_translations()
+    filelist = []
+    for folder in [ "crank-organ/static/", "server/mysite/iot/static/"]:
+        filelist.extend( [folder + fn for fn in os.listdir(folder) if fn.endswith(".html")] )
+    analyze_translations(folder, filelist)
+
+
+def analyze_translations(folder, filelist):
+    translations = read_translations(folder + "translations.js")
     translations_used = []
-    filelist = os.listdir()
-    folder = "../../server/mysite/iot/static/"
-    filelist.extend( [folder + fn for fn in os.listdir( folder )])
-    for filename in filelist:
+    for filename in  filelist:
         if not filename.endswith(".html"):
             continue
         pagename = filename.replace("/",".").split( ".")[-2]
@@ -108,17 +112,23 @@ def main():
             print(f"Error in {filename}: either translations.js ({there_is_translations_js}) or translate_html() ({there_is_translate_html}) is missing")
             continue
         if not there_is_translations_js and not there_is_translate_html:
-            print("File skipped: ", filename )
+            print("File skipped, no translations: ", filename )
             continue
-        print("checking", filename, "...")
+        print("Checking:                      ", filename )
         parser = MyHTMLParser(pagename, translations)
         parser.feed(data)
         translations_used.extend( parser.translations_used)
-    with open("common.js") as file:
+
+    with open(folder + "common.js") as file:
         check_script( file.read(), translations, "common.js", "-", translations_used )
 
-    print("Check for unused translations...")
+    print("Check for unused translations:")
+    unused = False
     for k in translations.keys():
         if k not in translations_used:
-            print("unused translation", k)
+            print("Unused translation", k)
+            unused = True
+    if not unused:
+        print("    No unused translations")
+
 main()

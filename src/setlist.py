@@ -11,8 +11,8 @@ from minilog import getLogger
 import fileops
 
 # >>> could be interesting to have more stored setlist? not convinced
-# >>> automatic setliss? 
-# setlist_new.json = recent additions
+# >>> automatically created setlist?
+# >>> add to setlist from history page?
 # setlist_history.json = all tunes played today
 # "Save" and "load" would need to ask for setlist. 
 # Makes things more complicated...?
@@ -386,7 +386,7 @@ class Setlist:
     async def _blink_empty( self ):
         while self.playback_enabled:
             led.set_blink_setlist( self._is_empty() )
-            await asyncio.sleep_ms(300) # type:ignore
+            await asyncio.sleep_ms(370) # type:ignore
 
     def sync( self, tunelib ):
         for tuneid in set(self.current_setlist)-set(tunelib):

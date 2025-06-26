@@ -66,8 +66,6 @@ let translationDict = {
 	["Clear setlist", "Setlist löschen"],
 "🔍búsqueda": // tunelist.html 
 	["🔍Search", "🔍Suche"],
-"cancelado": // common.js 
-	["cancelled", "gestrichen"],
 "cambios pendientes, espere": // tunelist.html
 	["Changes pending, please wait","MIDI Dateien geändert, bitte warten"],
 "calibrar indicación batería": // index.html 
@@ -118,16 +116,12 @@ let translationDict = {
 	["errors)", "Fehler)"],
 "escala de prueba": // notelist.html 
 	["Play scale", "Notenskala"],
-"esperando": // common.js 
-	["waiting", "erwartet Start"],
 "fecha": // tunelist.html history.html 
 	["Date", "Datum"],
 "fecha/hora": // diag.html 
 	["Date/Time", "Datum/Zeit"],
 "fecha/hora compilación": // diag.html 
 	["Compilation date/time", "Kompilationsdatum"],
-"fin": // common.js 
-	["end", "Ende"],
 "flash libre": // diag.html 
 	["Free flash", "Flash frei"],
 "flash usada": // diag.html 
@@ -194,8 +188,6 @@ let translationDict = {
 	["Level must be between 0 and 100", "Level muss zwischen 0 und 100 liegen"],
 "nivel debe ser numérico": // index.html 
 	["Level must be numeric", "Level muss eine Zahl sein"],
-"no conectado": // common.js 
-	["Not connected", "nicht angeschlossen"],
 "no gira": // play.html 
 	["Not turning", "Dreht nicht"],
 "no hay información de avance disponible": // tunelist.html play.html 
@@ -204,10 +196,6 @@ let translationDict = {
 	["No tune in progress", "Es läuft keine Melodie"],
 "no probados": // notelist.html
 	["untested", "nicht getestet"],
-"archivo midi fue borrado": // webserver.py (server side alert)
-	["MIDI file has been deleted", "MIDI-Datei wurde gelöscht"],
-"organillo": // index.html 
-	["Crank organ", "Drehorgel"],
 "partir": // play.html 
 	["Start", "Start"],
 "pedido": // history.html 

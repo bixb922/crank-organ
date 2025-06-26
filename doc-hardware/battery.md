@@ -1,6 +1,11 @@
 # Batteries
 
+## Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
+
 # Contents
+     * [Feedback](#feedback)
 1.  [Fuse and security](#1-fuse-and-security)
 2.  [Requirements](#2-requirements)
 3.  [Battery technologies](#3-battery-technologies)
@@ -9,6 +14,9 @@
 6.  [AA batteries](#6-aa-batteries)
 7.  [USB battery packs](#7-usb-battery-packs)
 8.  [Tool battery packs](#8-tool-battery-packs)
+
+
+
 # 1. Fuse and security
 Always use a fuse for batteries, except when the manufacturer states clearly that the battery pack has a short circuit and overload protection.
 
@@ -159,7 +167,7 @@ The cons are:
 Many of these units are rated to deliver 22.5W or more, and that is enough to power a crank organ. To coax the USB battery pack to deliver that power, a special circuit must be used called commonly a "decoy trigger". These little circuits use the standard QC (Quick Charge) or PD (Power Delivery) standards, that can set the voltage to 12V or 18V. With these voltages, the current (amperes) is lower, so there are very little losses in the USB connectors and cables.
 
 This is a typical decoy trigger:
-![decoy trigger](decoy_trigger.jpg)
+![decoy trigger](decoy_trigger.png)
 
 The switches on this trigger allow to select the voltage. The recommended setting is 12V or 18V.
 

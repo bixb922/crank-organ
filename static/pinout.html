@@ -37,9 +37,9 @@
     <button type="button" id="savePinoutFilenameButton" onclick="savePinoutFilename()">Save scale</button>
     
 <div class="middlediv">Pin to MIDI mapping</div>
-    Modify or enter GPIO pin numbers for microphone (typically GPIO 4), tachometer or touchpad (typically GPIO 5) and neopixel (typically GPIO 38 or 48, see schematic of your board).  Leave empty if nothing is connected.
+    Modify or enter GPIO pin numbers for microphone (typically GPIO 4), crank sensor or touchpad (typically GPIO 5) and neopixel (typically GPIO 38 or 48, see schematic of your board).  Leave empty if nothing is connected.
     <br>
-    If there is no tachometer sensor, it may be useful to define a touchpad pin instead. Defining both is redundant.
+    If there is no crank sensor, it may be useful to define a touchpad pin instead. Defining both is redundant.
     <br>
     Microphone pin and touchpad must be from ADC bank 1 (see ESP32-S3 specs).
     <br>
@@ -231,9 +231,9 @@ async function getPinoutDetail( ) {
             // If a simple counter is installed: define only one pin
             // If a rotary encoder is installed: define two pins
             insertFormRow( tbody,`row_${f}_tachometer`, [
-                "Tachometer counter pin",
+                "Crank rotation sensor",
                 makeInput( `tachometer_counter.${f}`, 3, pd[1] ),
-                "2nd pin only for rotary encoder",
+                "second output (optional)",
                 makeInput( `tachometer_encoder.${f}`, 3, second_pin )
             ] );
         }
@@ -252,7 +252,7 @@ async function getPinoutDetail( ) {
         }
         else if( pdtype == "tempo" ){
             insertFormRow( tbody,`row_${f}_tempo`, [
-                "Tempo encoder pins A and B",
+                "Tempo encoder knob pins A and B",
                 makeInput( `tempo_a.${f}`, 3, pd[1] ),
                 makeInput( `tempo_b.${f}`, 3, pd[2] ),
                 "Switch",

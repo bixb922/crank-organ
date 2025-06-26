@@ -1,6 +1,11 @@
 # Software for crank organs
 
+## Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
+
 # Contents
+     * [Feedback](#feedback)
 1.  [Purpose](#1-purpose)
 2.  [Features](#2-features)
 3.  [If you want to try out the software](#3-if-you-want-to-try-out-the-software)
@@ -86,6 +91,31 @@
 25.  [Restrictions](#25-restrictions)
 26.  [Licensing](#26-licensing)
 27.  [Affiliation](#27-affiliation)
+1. [Purpose](#purpose)
+2. [Features](#features)
+3. [If you want to try out the software](#if-you-want-to-try-out-the-software)
+4. [Main menu and navigation](#main-menu-and-navigation)
+5. [Crank organ: tune list and performance page](#crank-organ-tune-list-and-performance-page)
+6. [Tuner](#tuner)
+7. [History](#history)
+8. [Edit Tunelib](#edit-tunelig)
+9. [General configuration](#general-configuration)
+10. [Pin and MIDI configuration](#pin-and-midi-configuration)
+11. [System](#system)
+12. [File manager](#file-manager)
+13. [Turning the system on](#turning-the-system-on)
+14. [Installation](#installation)
+15. [Other stuff](#other-stuff)
+16. [Backup](#backup)
+17. [Recent changes](#recent-changes)
+18. [Programming language](#programming-language)
+19. [Credits](#credits)
+20. [Testing](#testing)
+21. [Troubleshooting](#troubleshooting)
+22. [Restrictions](#restrictions)
+23. [Licensing](#licensing)
+24. [Affiliation](#affiliation)
+
 # 1. Purpose
 The purpose of this software is to power a microcontroller (see schematic in this repository) enabling it to play music in MIDI format on a crank organ by operating solenoid valves.
 
@@ -133,7 +163,7 @@ I believe the software is relatively intuitive to use. Don't feel overwhelmed wi
 # 4. Main menu and navigation
 The home page has the main menu and shows detailed battery use information.
 
-![home page](homepage1.jpg) 
+![home page](homepage-1.jpg) 
 
 ![home page](homepage-battery.jpg)
 
@@ -484,7 +514,7 @@ Even without calibration, some useful information will show on the home page (in
 * Time solenoids energized
 * Set to zero (date/time)
 
-![battery section](homepage_battery.jpg)
+![battery section](homepage-battery.jpg)
 
 
 

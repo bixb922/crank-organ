@@ -1,4 +1,3 @@
-
 # Software design and development for the crank organ
 
 See https://github.com/bixb922/crank-organ#1-overview for a description on how a MIDI crank organ works.
@@ -41,9 +40,6 @@ See http://drehorgel.pythonanywhere.com/iot/static/gallery.html for a photo log 
 22.  [A IOT crank organ](#22-a-iot-crank-organ)
 23.  [Some metrics](#23-some-metrics)
 24.  [About my crank organ](#24-about-my-crank-organ)
-
-
-
 # 1. General requirements
 
 * Invisible technology: turn the power on and turn the crank, and music starts.
@@ -63,7 +59,9 @@ MIDI files are the ideal format to store music for mechanical instruments. In es
 
 The solenoid valves used for a crank organ can be made with solenoids, but for best result church organ valves are used, like this one:
 
-![organ valves](organ_valves.jpg)
+![organ valves](organ_valves1.png)
+![organ valves](organ_valves2.jpg)
+![organ valves](organ_valves3.jpg)
 
 
 
@@ -288,7 +286,9 @@ Unfortunately the algorithm did not work well for bass notes (below 150 Hz). The
 
 Here is the waveform of a bass note. You can see that for each cycle, there is an additional dip of the signal that crosses the zero line two times more:
 
-![bass note signal with dip](signal-dip.png)
+![bass note signal with dip](bass-signal.png)
+
+This graph shows the signal after autocorrelation to get rid of noise. 
 
 Although a low pass filter helped a bit, sometimes the frequency measurements were off. More tinkering might do it, but it was time to test another algorithm: FFT (https://en.wikipedia.org/wiki/Fast_Fourier_transform) or rather its digital counterpart DFT. FFT makes low pass filters and noise filtering obsolete.
 

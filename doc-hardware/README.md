@@ -2,6 +2,7 @@
 
 # Contents
 1.  [Introduction](#1-introduction)
+     * [Feedback](#feedback)
 2.  [Controller for a  20 note crank organ.](#2-controller-for-a-20-note-crank-organ)
 3.  [Description](#3-description)
 4.  [The ESP32-S3](#4-the-esp32-s3)
@@ -53,14 +54,15 @@
 12.  [Copyright and license](#12-copyright-and-license)
 # 1. Introduction
 
-
 This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue or open a discussion item in this repository.
 
 Contents:
 * Controller for a 20 note crank organ. This design allows to control up to 20 solenoid valves, like the 90 Ohm valves typically used in organs. It is as simple as it can get.
 * Controller for more valves (virtually no limit). This design uses a central microcontroller and valve controller boards in the windchests. 
 
-Skip [here](#crank-rotation-sensor)
+## Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 # 2. Controller for a  20 note crank organ.
 20 voice organs are very common, so here is a design for these:
@@ -155,7 +157,8 @@ Of course, you will need solenoid valves. These are used in big organs (church o
 ### ESP32-S3 N8R8 or N16R8 DEVKIT-C on 44 pin board
 Here is an example:
 
-![esp32s3](esp32-s3-upper-side.jpg) ![esp32s3 underside](esp32-s3-underside.jpg)
+![esp32s3](esp32-s3-upper-side.jpg)
+![esp32s3 underside](esp32-s3-underside.jpg)
 
 Make sure it is a N8R8 or N16R8 board. N8R8V (with a V in the designator) have less pins available.
 
@@ -217,7 +220,8 @@ Current rating should be 2A but can be higher. These circuits are called "buck c
 
 This is a possiblity:
 
-![DC-DC-converter](DC-DC-converter.png)
+![DC-DC converter](DC-DC-converter.png)
+
 
 You might wish to have a fancier converter with leds or voltage display, that's fine.
 
@@ -348,7 +352,8 @@ It's useful to use colors:
 
 Here is an example of how to insert the wires, seen from above and from underside
 
-![inserting wires above](solder-wire-above.jpg) ![solder wires below](solder-wire-underside.jpg)
+![inserting wires above](solder-wire-above.jpg)
+![solder wires below](solder-wire-underside.jpg)
 
 The wires for GPIO pins of the opposite side of the ESP32-S3 are best put below the board. However, soldering should be still from below, use a U-bend like this for these wires:
 
@@ -520,7 +525,7 @@ This is a photo of one controller boards I made. The 4 pin connector at the uppe
 
 Outside view of windchest with the DB9 male:
 
-![windchest with DB9](controller-board-in-chest-and-DB9.jpg )
+![windchest with DB9](controller-board-in-chest-and-DB9.jpg)
 
 
 The MCP23017 controllers can be wired point to point (one controller per I2C bus) to the microcontroller. The only limit here is the number of pins, but any pair of available GPIO pins can control a board.
@@ -547,10 +552,10 @@ Once wired I found it too cramped but it works well:
 
 ![crowded microcontroller board](mcboard-crowded.jpg)
 
-The 12V to 5V DC-DC converter is not on board, this is not very convenient.
+The 12V to 5V DC-DC converter did not fit on board. If a small converter is used, that's a good option.
 
 ## Second version
-The second version has the the 12V to 5V DC-DC convertor on board, plus the connectors:
+The second version has the the 12V to 5V DC-DC converter on board, plus the connectors:
 * 3 connectors for DB9 ribbon cables for 3 I2C buses, for a total of 48 solenoids. 
 * Connector for microphone
 * Connector for crank rotation sensor
@@ -584,7 +589,8 @@ The software (and the ESP32-S3) currently support connecting a crank rotation se
 
 This optical sensor with a slotted disk cut of 3mm (1/8") plywood or MDF is a simple solution to detect crank movement:
 
-![simple optical sensor](optical-crank-sensor.png) ![slotted disk](slotted-wheel.jpg)
+![simple optical sensor](optical-crank-sensor.png)
+![slotted disk](slotted-wheel.jpg)
 
 ![slotted disk](slotted-sensor1.jpg) ![slotted disk](slotted-sensor2.jpg)
 
@@ -614,7 +620,7 @@ The sensor has 5 contacts:
 
 This is how the crank sensor looks when installed:
 
-![crank sensor installed](crank-sensor-installed.jpg)
+![crank sensor installed](crank_sensor_installed.jpg)
 
 The position of the sensor can be adjusted with two bolts to a reasonable belt tension. The gears are fixed in position with hexagonal key nuts. 
 
@@ -636,7 +642,7 @@ You can connect any switch as a register, to enable/disable ranks of pipes just 
 
 I have used automotive headlight switches for this purpose:
 
-![register switch](headlight-switch.png)
+![register switch](headlight-switch.jpg)
 
 The white light symbol is only printed on this switch, so it was easy to sand away with very fine paper.
 

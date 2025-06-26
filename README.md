@@ -10,6 +10,7 @@ MIDI based crank organ software and hardware
 4.  [Folders](#4-folders)
 5.  [License](#5-license)
 6.  [Disclaimer](#6-disclaimer)
+7.  [Feedback](#7-feedback)
 # 1. Overview
 
 
@@ -129,6 +130,10 @@ SOFTWARE.
 # 6. Disclaimer
 
 The information provided here is for general informational purposes only. All information on this repository is provided in good faith, however I make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability or completeness of any information in this repository. 
+
+# 7. Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 
 

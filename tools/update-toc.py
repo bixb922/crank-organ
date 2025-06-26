@@ -3,6 +3,7 @@
 import sys
 import re
 import os
+from glob import glob
 
 level0 = 0
 
@@ -82,16 +83,10 @@ def process( filename ):
 
 def main():
     global level0
-    files = [   "crank-organ/doc-hardware/crank-sensor.md", 
-                "crank-organ/doc-hardware/README.md",
-                "crank-organ/doc-software/README.md",
-                "crank-organ/doc-hardware/battery.md",
-                 "crank-organ/doc-hardware/servos.md",
-                "crank-organ/README.md",
-			 	"crank-organ/building/README.md",
-                "crank-organ/design_and_development/design_and_development.md"]
-    for output_filename in files:
-        input_filename = output_filename.replace(".md", "_editable.md")
+    input_files = [ f for f in glob("crank-organ/**", recursive=True)
+             if f.endswith("_editable.md") ]
+    for input_filename in input_files:
+        output_filename = input_filename.replace("_editable", "")
         print("Processing", input_filename )
         level0 = -2
         output = process( input_filename )

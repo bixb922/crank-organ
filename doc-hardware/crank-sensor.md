@@ -1,5 +1,11 @@
 # A crank sensor journey
+
+## Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
+
 # Contents
+     * [Feedback](#feedback)
 1.  [Introduction](#1-introduction)
 2.  [The sensors and the slotted wheels](#2-the-sensors-and-the-slotted-wheels)
 3.  [Hall sensor](#3-hall-sensor)
@@ -14,6 +20,8 @@
 12.  [A rotating encoder](#12-a-rotating-encoder)
 13.  [Costs](#13-costs)
 14.  [Conclusion](#14-conclusion)
+
+
 # 1. Introduction
 
 TL;DR: read[this](README.md#9-crank-rotation-sensor).
@@ -65,6 +73,8 @@ When stopping the wheel, the revolutions/second had to be inferred by the absenc
 
 Finally, after some trying, I found that the combination of  the large slot optical sensor (1 cm slot) with a wheel with 12 slots worked best. A normal crank speed is around 1.2 revolutions/second, so 12 slots give about 10 to 15 pulses a second when using only one edge of the pulse and the double when using both edges. This means one interrupt every 50 milliseconds or so.  Interrupt processing took 20 microseconds, so everything seemed ok. 
 
+![installed](ir_sensor_installed.jpg)
+
 # 6. Integration
 
 But then I tried this on the real organ with a crank instead of on the breadboard with my electric screwdriver. And it did not work... I could make the microcontroller sense crank starting and stopping but could get no consistent revolutions/second readings. Interrupts got lost, and the crank speed reading was very irregular. What had happened?
@@ -100,6 +110,8 @@ But: Unfortunately at the time of this writing (January 2025), MicroPython has n
 So now everything was ready to test the new sensor. I connected everything, and.... smoke came out of the microcontroller! Well, finally I found out that only the microcontroller failed. I had connected a GPIO port of the microcontroller to 12V by mistake.  Ok, now I had to order a new microcontroller, plus some spares. A good thing was that this happened just on a Cyberday, so I could order several brand ESP32-S3 boards for the price of a no-name brand board. And then I had to check all connections, cables and what not to make sure there was no further damage. 
 
 So now this works well! The encoder has nice ball bearings, so it’s no effort at all to rotate it. It has to be powered by more than 5V (exactly 5V is not enough). The 13.5V I had available did the job. It has two outputs, since it is a quadrature encoder that can sense forward and backward rotation. The outputs are open collector, so they can be connected directly to the ESP32-S3 GPIO ports. The software enables the internal pullup resistors. No voltage level shifter needed.
+
+![Crank sensor installed](crank_sensor_installed.jpg)
 
 # 9. Settings
 
