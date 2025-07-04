@@ -1295,6 +1295,10 @@ note ons and note offs is paired. The note is turned off when the last note off 
 # 21. Changes June 24 to July 5, 2025
 * New document about RC servos
 * Fixed missing dot in GPIO pin names for pinout test
+* RC servo template has servo position for each pin
+* Show repeat test note length to user
+* Foundation for support of MicroPython's romfs
+* Test servo pin does not need to save pulse with info
 
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
