@@ -35,6 +35,7 @@
 		<tr><td>Cents</td><td id="cents"></td></tr>
 		<tr><td>Amplitud</td><td id="amplitude"></td></tr>
 		<tr><td>Pin</td><td id="pin_name"></td></tr>
+		<tr id="repeat_times_row" style="display:none"><td>Repetición largo nota/silencio [msec]</td><td id="repeat_times"></td></tr>
 	</tbody>
 </table>
 
@@ -156,7 +157,9 @@ async function soundNote() {
 }
 
 async function soundRepetition() {
-	await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
+	let resp = await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
+	setAllTextById( resp ); // repeat_times
+	showHideElement( "repeat_times_row", true );
 }
 
 async function stopTuning() {

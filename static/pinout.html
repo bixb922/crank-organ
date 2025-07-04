@@ -68,9 +68,7 @@
     <br>
     Save pinout definitions to make changes permanent, then reboot.
     <br>
-    The Test button will activate the port several times. 
-    <br>
-    After changing any value, save and reload page to use test button and to see refreshed GPIO pin use information.
+    The Test button will activate the port several times.
     <br>
     <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
     <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
@@ -419,16 +417,11 @@ async function getPinoutDetail( ) {
             rownum += 1;
         }
         else if( pdtype == "servopulse" ){
+            pininfo.pulse0 = pd[1];
+            pininfo.pulse1 = pd[2];
             let period = pininfo.period;
             let pulse0box = makeInput( `servopulse.pulse0.${f}`, 5, pd[1] );
             let pulse1box = makeInput( `servopulse.pulse1.${f}`, 5, pd[2] );
-            let angle0span = document.createElement("span");
-            angle0span.id = `angle0.${f}`;
-            let angle1span = document.createElement("span");
-            angle1span.id = `angle1.${f}`;
-
-            pulse0box.oninput = function() {calculate_angle( period, pulse0box, angle0span )};
-            pulse1box.oninput = function() {calculate_angle( period, pulse1box, angle1span )};
             let row = insertFormRow( tbody, `row_${f}_servopulse`, [
                  "Servo pulse duration (PWM)",
                  "Off (μsec)", 
@@ -436,11 +429,6 @@ async function getPinoutDetail( ) {
                  "On (μsec)",
                  pulse1box]
                 );
-            row.cells[2].appendChild( angle0span );
-            row.cells[4].appendChild( angle1span );
-            // Show current values too
-            calculate_angle( period, pulse0box, angle0span );
-            calculate_angle( period, pulse1box, angle1span );
         }
         else {
             console.log("Unknown pdtype", pdtype );
@@ -604,6 +592,20 @@ function valnum( s ){
 }
 
 async function testPin( pininfo ){
+    // Update pininfo with values from the form
+    if( pininfo.type == "gpioservo" || pininfo.type == "pca9685"){
+        for( let r = pininfo.f; r >= 0; r-- ){
+            // Only rescue servo pulse width
+            let pulse0 = document.getElementById( `servopulse.pulse0.${r}` );
+            if( !pulse0 ){
+                continue;
+            }
+            let pulse1 = document.getElementById( `servopulse.pulse1.${r}` );
+            pininfo.pulse0 = pulse0.value ;
+            pininfo.pulse1 = pulse1.value ;
+            break
+        }
+    }
     // Get midi number in the moment Test button was pressed
     pininfo.midi = document.getElementById(`midi.number.${pininfo.f}`).value;
     // If pininfo.midi is blank, and if it's a MIDI over serial,
@@ -916,20 +918,6 @@ function titlerow( row ){
     for( c of row.cells ){
         c.style.fontWeight = "bold";
     }
-}
-
-function calculate_angle( period, pulseCell, angleSpan ){
-    let angle = 0;
-    try{
-        angle = (parseInt(pulseCell.value)-1000)/1000*180;
-    }
-    catch(e){
-        // could not parse pulseCell.value
-        angleSpan.innerText = "???";
-        return;
-    }
-    angle = Math.round(angle*10)/10;
-    angleSpan.innerText = "=" + angle + "°";
 }
 
 </script>

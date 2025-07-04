@@ -69,13 +69,20 @@ def fast_listdir(path):
     # /rom returns ('rom', 16384, 0)
     # whereas other notes return   ('data', 16384, 0, 0)
 
+    def get_size( dir_entry ):
+        try:
+            return dir_entry[3]  # size in bytes
+        except IndexError:
+            # This happens for /rom, which has no size
+            return 0
+        
     return [{
-              "name":inode[0], 
-              "isDirectory":1 if inode[1]==16384 else 0, 
-              "size":inode[3], 
-              "path":path+inode[0],
+              "name":dir_entry[0], 
+              "isDirectory":1 if dir_entry[1]==16384 else 0, 
+              "size": get_size( dir_entry), 
+              "path":path+dir_entry[0],
               "date":""
-              } for inode in os.ilistdir(path)]
+              } for dir_entry in os.ilistdir(path)]
         
 def get_file_date( filename ):
     try:

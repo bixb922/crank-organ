@@ -27,9 +27,6 @@ class PCA9685Driver(BaseDriver):
         self.pin_list = [] 
 
     def set_servopulse( self, pulse0_us, pulse1_us ):
-        if not( 600 <= pulse0_us <= 2400 and
-                600 <= pulse1_us <= 2400 ):
-            raise ValueError("Pulse width not 600 to 2400")
         # Store temporarily here. This is
         # valid for define_pin() calls done until next set_servopulse()
         self.pulse0_us = pulse0_us
@@ -51,6 +48,15 @@ class PCAPin(BasePin):
 
     def set_device( self, pca, period_us, pulse0_us, pulse1_us ):
         self.pca = pca
+        self.set_servopulse( period_us, pulse0_us, pulse1_us )
+        
+    def value( self, val ):
+        self.pca.set_pwm( self._pin, self._pulse_on, self._pulse_off1 if val else self._pulse_off0 )
+ 
+    def set_servopulse( self, period_us, pulse0_us, pulse1_us ):
+        if not( 1000 <= pulse0_us <= 2000 and
+                1000 <= pulse1_us <= 2000 ):
+            raise ValueError("Pulse width not 1000 to 2000")
         # self._pulse_on = PCA count (0-4095) when the pulse has to start 
         # self._pulse_offx = PCA count (0-4095) when the pulse has to stop, x in [0,1]
         # It is valid if off is smaller than on (i.e. the pulse times operate
@@ -66,10 +72,7 @@ class PCAPin(BasePin):
         # Calculate pulse end for 1
         length1 = round(pulse1_us/period_us*4096)
         self._pulse_off1 = (self._pulse_on + length1) % 4096
-        
-    def value( self, val ):
-        self.pca.set_pwm( self._pin, self._pulse_on, self._pulse_off1 if val else self._pulse_off0 )
- 
+
 # Low level driver
 # Derived from 
 # https://github.com/mcauser/deshipu-micropython-pca9685

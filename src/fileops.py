@@ -37,6 +37,12 @@ def file_exists(filename):
     except OSError:
         return False
 
+def folder_exists(folder):
+    # Check if folder exists, i.e. is a directory
+    try:
+         open(folder).close()
+    except OSError as e:
+        return e.errno == errno.EISDIR
 
 def read_json(filename, default=None, recreate=False):
     # Read json file, or backups if error.
@@ -105,11 +111,27 @@ def make_folder( folder ):
     # Create folder if not there
     if folder.endswith("/"):
         folder = folder[:-1]
-
     try:
         os.mkdir( folder )
     except OSError:
         pass
+
+def copy_file( source, destination ):
+    # Copy file from source to destination
+    # If destination exists, it will be overwritten.
+    # If source does not exist, OSError is raised.
+    with open(source, "rb") as src:
+        print(">>>Copy file", source, "to", destination)
+        with open(destination, "wb") as dst: # type:ignore
+            dst.write(src.read())
+
+def copy_folder( src_folder, dst_folder, overwrite=False ):
+        for fn in  os.listdir(src_folder):
+            src_file = src_folder + "/" + fn
+            dst_file = dst_folder + "/" + fn
+            if overwrite or not file_exists(dst_file):
+                copy_file(src_file, dst_file)
+
 
 def is_folder( folder_name ):
     return os.stat( folder_name )[0] == 16384

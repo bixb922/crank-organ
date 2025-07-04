@@ -31,6 +31,9 @@ app = Microdot()
 _logger = getLogger(__name__)
 DATA_FOLDER = "data/"
 STATIC_FOLDER = "software/static/"
+if fileops.file_exists("/rom/static/index.html.gz"):
+    STATIC_FOLDER = "/rom/static/"
+print(">>>static folder:", STATIC_FOLDER )
 
 boot_session_id = hex(getrandbits(24))[2:]
 
@@ -78,6 +81,7 @@ def func_after_req( request, response ):
     dt = ticks_diff( ticks_ms(), request.g.t0 )
     _logger.debug(f"{request.method} {request.url} {response.status_code}, {dt} msec")
     return response
+
 
 def is_active(since_msec=60_000):
     # This is used by poweroff.py
@@ -348,7 +352,8 @@ async def sound_note(request, pin_index):
 @app.route("/sound_repetition/<int:pin_index>")
 async def sound_repetition(request, pin_index):
     get_organ_tuner().queue_tuning(get_organ_tuner().repeat_note, pin_index)
-    return respond_ok()
+    # >>> Will be shown second time the button is pressed
+    return { "repeat_times": get_organ_tuner().get_repeat_times() }
 
 
 @app.route("/scale_test")

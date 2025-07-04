@@ -208,7 +208,7 @@ class PinTest:
         # These calls here must mirror the super().__init__() parameters in the
         # constructors of the respective classes:
         driver_dict = { 
-            "gpio":      lambda: GPIODriver.make_repr() + str(pininfo['pin']),
+            "gpio":      lambda: GPIODriver.make_repr() + "." + str(pininfo['pin']),
             # Note that MIDISerial uses midi note number and NOT a "pin" number,
             # there is no "pin" for MIDISerial.
             "serial":   lambda: MIDISerialDriver.make_repr(pininfo['uart']) + "." + str(pininfo['midi']),
@@ -216,14 +216,25 @@ class PinTest:
             "gpioservo": lambda: GPIOServoDriver.make_repr() + "." + str(pininfo['pin']),
             "pca9685":   lambda: PCA9685Driver.make_repr(pininfo['i2ccount'],pininfo['pcaaddr']) + "." + str(pininfo['pin'])
         }    
+        from drehorgel import actuator_bank
+        print(f"{driver_type=}")
+        print(f"{pininfo=}")
         try:
             pin_repr = driver_dict[driver_type]()
+            print(f"{pin_repr=}")
         except:
             return f"Unknown driver: {driver_type}"
         # Now get the actuator for that pin.
-        from drehorgel import actuator_bank
         try:
             actuator = actuator_bank.get_pin_by_repr(pin_repr) 
+            print(">>>pin found", actuator)
+            try:
+                actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]))
+                print(">>>pulse set", pininfo["pulse0"], pininfo["pulse1"])
+            except AttributeError:
+                # This is not a RC servo pin, no pulse0/pulse1
+                pass
+
         except KeyError:
              return f"Pin not found: {pin_repr}"
 

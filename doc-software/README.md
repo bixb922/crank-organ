@@ -84,13 +84,14 @@ Feedback is welcome. Please post questions, corrections or comments here: https:
 19.  [Changes May 10 to May 30, 2025](#19-changes-may-10-to-may-30-2025)
      * [Changes May 31 to June 14, 2025](#changes-may-31-to-june-14-2025)
 20.  [Changes June 15 to June 23, 2025](#20-changes-june-15-to-june-23-2025)
-21.  [Programming language](#21-programming-language)
-22.  [Credits](#22-credits)
-23.  [Testing](#23-testing)
-24.  [Troubleshooting](#24-troubleshooting)
-25.  [Restrictions](#25-restrictions)
-26.  [Licensing](#26-licensing)
-27.  [Affiliation](#27-affiliation)
+21.  [Changes June 24 to July 5, 2025](#21-changes-june-24-to-july-5-2025)
+22.  [Programming language](#22-programming-language)
+23.  [Credits](#23-credits)
+24.  [Testing](#24-testing)
+25.  [Troubleshooting](#25-troubleshooting)
+26.  [Restrictions](#26-restrictions)
+27.  [Licensing](#27-licensing)
+28.  [Affiliation](#28-affiliation)
 1. [Purpose](#purpose)
 2. [Features](#features)
 3. [If you want to try out the software](#if-you-want-to-try-out-the-software)
@@ -1291,7 +1292,11 @@ note ons and note offs is paired. The note is turned off when the last note off 
 * Now development tools are also in respository, tools folder: Makefile, check_translations.py, countlines.py, update-toc.py, write_compiledate.py
 * Updated documentation
 
-# 21. Programming language
+# 21. Changes June 24 to July 5, 2025
+* New document about RC servos
+* Fixed missing dot in GPIO pin names for pinout test
+
+# 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
@@ -1309,7 +1314,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser, no installation required, a recent development.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 22. Credits
+# 23. Credits
 
 Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
 
@@ -1319,12 +1324,12 @@ These components are (c) Copyright by their respective authors and are available
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
 
-# 23. Testing
+# 24. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I like to correct those as soon as possible. Please report problems as Github issue on this repository.
 
 
-# 24. Troubleshooting
+# 25. Troubleshooting
 If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized.
 
 If you the microcontroller's browser does not respond:
@@ -1333,7 +1338,7 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 
-# 25. Restrictions
+# 26. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1357,7 +1362,7 @@ No https is available. Please raise an issue if you think this is vital. https n
 The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 
-# 26. Licensing
+# 27. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023 Hermann Paul von Borries
@@ -1383,7 +1388,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# 27. Affiliation
+# 28. Affiliation
 I have no affiliation nor relationship with any vender of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get benefits by promoting them.
 
 In any case, I believe that software products mentioned on this page are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources.

@@ -19,17 +19,16 @@ class GPIOServoDriver(BaseDriver):
         self._frequency = round(1_000_000/period_us)
 
     def set_servopulse( self, pulse0_us, pulse1_us ):
-        # Store duty cycle that is valid from this point on
-        if not( 1000 <= pulse0_us <= 2000 ) or not( 1000 <= pulse1_us <= 2000):
-            raise ValueError("Pulse width must be between 1000 and 2000")
-        self._duty0 = round(pulse0_us/self.period_us*65536)
-        self._duty1 = round(pulse1_us/self.period_us*65536)
+        # Store duty cycle that is valid from this point on while
+        # reading pinout.json
+        self._pulse0 = pulse0_us
+        self._pulse1 = pulse1_us
 
     def define_pin( self, *args ):
         # Return a individual pin
         # If no servopulse was entered, self._duty0 and _duty1 will be unassigned
         # leading to a NameError
-        sp = GPIOServoPin( self, self._frequency, self._duty0, self._duty1, *args )
+        sp = GPIOServoPin( self, self._frequency, self._pulse0, self._pulse1, *args )
         # Same pin could be twice in pwm_pins because of register definitions
         self._pwm_pins.append( sp )
         return sp
@@ -40,13 +39,19 @@ class GPIOServoDriver(BaseDriver):
 
 
 class GPIOServoPin(BasePin):
-    def __init__( self, driver, frequency, duty0, duty1, pin_number, rank, nominal_midi_note ):
-        self._duty0 = duty0
-        self._duty1 = duty1
+    def __init__( self, driver, frequency, pulse0, pulse1, pin_number, rank, nominal_midi_note ):
+        super().__init__(driver, pin_number, rank, nominal_midi_note )
+        self.set_servopulse( pulse0, pulse1 )
         self._pwm = PWM( Pin(pin_number), 
                             freq=frequency,
-                            duty_u16=duty0 )
-        super().__init__(driver, pin_number, rank, nominal_midi_note )
-
+                            duty_u16=self._duty0 )
+        
     def value( self, val ):
         self._pwm.duty_u16( self._duty1 if val else self._duty0 )
+
+    def set_servopulse( self, pulse0_us, pulse1_us ):
+        # Set new duty cycle
+        if not( 1000 <= pulse0_us <= 2000 ) or not( 1000 <= pulse1_us <= 2000):
+            raise ValueError("Pulse width must be between 1000 and 2000")
+        self._duty0 = round(pulse0_us/self._driver.period_us*65536)
+        self._duty1 = round(pulse1_us/self._driver.period_us*65536)

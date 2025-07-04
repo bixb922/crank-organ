@@ -5,6 +5,7 @@ from micropython import const
 import os
 import asyncio
 from math import log10
+import time
 
 if __name__ == "__main__":
     import sys
@@ -50,7 +51,7 @@ class OrganTuner:
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
         self.microphone = Microphone( microphone_pin, config.cfg["mic_test_mode"] )
-
+        self.repeat_times = "(wait)"
         self.logger.debug("init ok")
 
     def get_stats( self ):
@@ -103,32 +104,57 @@ class OrganTuner:
         initial_tempo = (
             60  # Let's start with quarter notes in a largo at 60 bpm
         )
-        fastest_note = 30  # 30 milliseconds seems to be a good lower limit on note duration
-        play_during = 4000  # play during 4 seconds
-        silence_percent = 10  # approximate percent of time assigned to a note
-        minimum_silence = 30  # milliseconds, seems good limit
+        # Organ roll specifications have a hole size of 2 to 3 mm
+        # and advance at a speed of 4 to 6 cm per second.
+        # This means that a hole takes about 45 milliseconds end-to-end
+        # although the hole opens gradually...
+        # I'll use that as the shortest slence too
+        # Analyzing organ MIDI files gives these approximate values:
+        #    40-50 ms note length approximate minimum
+        #    50-60 ms silence approximate minimum
+        fastest_note = 40  
+        silence_percent = 15  # approximate percent of time assigned to a note at the beginning
+        minimum_silence = 50  
         tempo = initial_tempo
-        log_times = ""
+        self.repeat_times = ""
+        # These are duration/time with these parameters
+        # >>> show this in browser
+# Repeat test, note/silence in ms= 850/150 601/106 425/75 301/53 213/50 150/50 106/50 75/50 53/50 40/50 30/30
         while True:
             quarter = 60 / tempo * 1000
             if quarter < fastest_note:
                 break
-            note_duration = quarter * (1 - silence_percent / 100)
+            note_duration = max( fastest_note, quarter * (1 - silence_percent / 100) )
             silence = max(minimum_silence, quarter * silence_percent / 100)
-            self.logger.debug(f"repeat note {note_duration=:.1f} {silence=:.1f}")
-            t = 0
-            log_times += f"{note_duration:.0f}/{silence:.0f} "
-            while t <= play_during:
-                # Queue notes, that makes repeat note interruptible
-                self.queue_tuning( self.play_pin, ( pin_index, note_duration, silence) )
-                t += note_duration + silence
+            self.repeat_times += f"{note_duration:.0f}/{silence:.0f} "
+            # Queue repeat, don't queue play_pin(), that makes repeat not interruptible but more precise
+            self.queue_tuning( self.repeat_pin, ( pin_index, note_duration, silence) )
+            # Each 2 loops divide note length by 2
             tempo *= 1.414  # double speed every 2
-            # >>> unsure of a pause is better or using silence
-            # >>> a pause allows to count
-            # >>> on the other hand, this allows the notelist and note pages
-            # >>> to get all changes soon.
-            self.queue_tuning( self.wait, 500 )
-        self.logger.info(f"Repeat test, note/silence in ms= {log_times}")
+        self.queue_tuning( self.repeat_pin, ( pin_index, 30, 30) )
+        self.logger.info(f"Repeat test, note/silence in ms= {self.repeat_times}")
+
+
+    def get_repeat_times(self):
+        return self.repeat_times
+    
+    async def repeat_pin( self, arg):
+        pin_index, duration, silence = arg
+        # Repeat notes for 4 seconds
+        actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
+        play_during = 4000 # milliseconds
+        self.logger.debug(f"repeat note {duration=:.1f} {silence=:.1f}")
+        t0 = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), t0) < play_during:
+            actuator.on()
+            # time.sleep_us() is precise (but blocks asyncio loop)
+            time.sleep_us( round(duration * 1000)  )
+            actuator.off()
+            time.sleep_us( round(silence * 1000)  ) 
+        # Let queued async task do their job now, make a bit of
+        # silence before the next note
+        await asyncio.sleep_ms(500)
+ 
 
     async def all_pin_test(self, _):
         # Play all pìns
@@ -165,6 +191,8 @@ class OrganTuner:
     async def play_pin( self, arg ):
         #  Make a pipe sound
         pin_index, duration, silence = arg
+        # >>> that should go to browser! Timing?
+        print(f">>>play pin for {duration=} {silence=}")
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         actuator.on()
         await asyncio.sleep_ms(round(duration))
@@ -250,7 +278,7 @@ class OrganTuner:
             v["pinname"] = str(actuator) + " " + actuator.get_rank_name()
             v["frequency"] = round(actuator.nominal_midi_note.frequency(),1)
             if self.stored_tuning[pin_index] != v:
-                v["centlists"] = []
+                v["centslist"] = []
                 v["amplist"] = []
                 v["amplistdb"] = []
                 v["cents"] = None
@@ -289,19 +317,21 @@ class OrganTuner:
         # Now calculate all amplitudes in dB relative to maxamp
         for v in self.stored_tuning:
             # Calculate an average amplitude, convert to db
-            avgamp = avg(v["amplist"])
+            amplist = v.setdefault("amplist", [])
+            centslist = v.setdefault("centslist", [])
+            avgamp = avg(amplist)
             v["ampdb"] = self.calcdb(avgamp, maxamp)
 
             # Make a list of all amplitudes converted to db
-            v["amplistdb"] = [self.calcdb(amp, maxamp) for amp in v["amplist"]]
+            v["amplistdb"] = [self.calcdb(amp, maxamp) for amp in amplist]
 
             # If amp is None, the signal was too weak
             # Delete cents of weak signals
-            for i in range(min(len(v["centslist"]), len(v["amplist"]))):
-                if v["amplist"][i] is None:
-                    v["centslist"][i] = None
+            for i in range(min(len(centslist), len(amplist))):
+                if amplist[i] is None:
+                    centslist[i] = None
 
-            v["cents"] = avg(v["centslist"])
+            v["cents"] = avg(centslist)
             
         # >>>Update takes about 500 msec, so it could be interesting
         # >>> delay updating by writing several changes at once.

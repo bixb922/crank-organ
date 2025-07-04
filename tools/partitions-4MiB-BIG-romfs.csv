@@ -1,0 +1,16 @@
+# Notes: the offset of the partition table itself is set in
+# $IDF_PATH/components/partition_table/Kconfig.projbuild.
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+# Factory now has 0x20000 = 131_072 bytes less.
+# New length 0x1B0000=1_769_472 bytes. esptool.py says that image is 1_678_544 bytes,
+# means that nearly 90_000 bytes are still available for MicroPython code growth.
+#
+#factory, app,  factory, 0x10000, 0x1D0000,
+factory,  app,  factory, 0x10000, 0x1B0000,
+# Leave 0x40000=262_144 bytes for romfs. 
+# Image size with mpy+gz+data=221_592, about 40_000 bytes left for growth.
+# 
+#romfs,   data, 0x8f,    0x1E0000, 0x20000,
+romfs,    data, 0x8f,    0x1C0000, 0x40000,

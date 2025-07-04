@@ -5,7 +5,7 @@ import os
 from math import sqrt
 
 import scheduler
-
+import fileops
 
 SIGNAL_FOLDER = const("/signals")
 RAW_FILE_PREFIX = const("raw")
@@ -117,6 +117,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
 
 def save( signal, duration, midi_note, step, prefix ):
     # Save a signal, can be raw or FFT in /signals folder 
+    fileops.make_folder( SIGNAL_FOLDER )
     filename = f"{SIGNAL_FOLDER}/{prefix}{midi_note.midi_number}.tsv"
     if prefix == FFT_FILE_PREFIX:
         units = "Hz"

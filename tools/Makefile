@@ -2,8 +2,8 @@
 # Use gmake -fcrank-organ/tools/Makefile
 # Run from folder just above crank-organ
 
-# Target compile: default, updates MC with changes, updates device/...
-# Target freeze: to generate install files. No need to compile first.
+# Target compile: compiles .py and compresses html/js/css
+# Target update: compiles/compresses and updates microcontroller
 
 # Target cleanpc: removes device folder with compiled files
 # on PC,
@@ -25,12 +25,9 @@
 
 # MPY_CROSS = mpy-cross-multi --micropython 1.24
 MPY_CROSS = mpy-cross
-PCFOLDER := "/Users/hermannvonborries/Google Drive/My Drive/midi/tunelib"
-# MPREMOTE := python3 "/Users/hermannvonborries/Google Drive/My Drive/cosas/micropython/mpremote_chunk_15/mpremote.py"
 MPREMOTE := mpremote
 
-# Get device name testing WiFi MAC.
-####x:=$(shell $(MPREMOTE) exec "import network;n='drehorgel' if network.WLAN(network.STA_IF).config('mac')==b'\xf4\x12\xfa\xe7\x29\x80' else 's3n8';print(n)">temp.txt)
+# Get device name via WiFi MAC.
 x:=$(shell $(MPREMOTE) exec "import network;print(network.WLAN(network.STA_IF).config('hostname'))">temp.txt)
 DEVICENAME := $(strip $(file < temp.txt))
 #x=$(shell rm temp.txt)
@@ -40,136 +37,119 @@ NOW := $(shell date "+%Y%m%d-%H%M%S")
 # Set date on microcontroller
 x:=$(shell $(MPREMOTE) rtc --set)
 
-define COPYFILE
-	$(MPREMOTE) cp $< :$(subst \,/,$(subst device/root,,$@))
-	cp $< $@
-endef
-
-define COMPRESS_STATIC
-	gzip -9 -c -k $< > temp.gz
-	$(MPREMOTE) cp temp.gz :/software/static/$(notdir $@)
-	cp temp.gz $@
-endef
-
-define COMPILE
-	$(MPY_CROSS) -march=xtensawin $< -o temp.mpy
-	$(MPREMOTE) cp temp.mpy :/software/mpy/$(basename $(<F)).mpy
-	cp temp.mpy $@
-endef
-
 MPY_FILES := \
-device/root/software/mpy/compiledate.mpy \
-device/root/software/mpy/fileops.mpy \
-device/root/software/mpy/battery.mpy \
-device/root/software/mpy/config.mpy \
-device/root/software/mpy/counter.mpy \
-device/root/software/mpy/drehorgel.mpy \
-device/root/software/mpy/driver_base.mpy \
-device/root/software/mpy/driver_gpio.mpy \
-device/root/software/mpy/driver_gpioservo.mpy \
-device/root/software/mpy/driver_mcp23017.mpy \
-device/root/software/mpy/driver_midiserial.mpy \
-device/root/software/mpy/driver_null.mpy \
-device/root/software/mpy/driver_ftoms.mpy \
-device/root/software/mpy/driver_pca9685.mpy \
-device/root/software/mpy/filemanager.mpy \
-device/root/software/mpy/history.mpy \
-device/root/software/mpy/led.mpy \
-device/root/software/mpy/matrix.mpy \
-device/root/software/mpy/midi.mpy \
-device/root/software/mpy/midicontroller.mpy \
-device/root/software/mpy/minilog.mpy \
-device/root/software/mpy/microdot.mpy \
-device/root/software/mpy/organtuner.mpy \
-device/root/software/mpy/microphone.mpy \
-device/root/software/mpy/pinout.mpy \
-device/root/software/mpy/player.mpy \
-device/root/software/mpy/poweroff.mpy \
-device/root/software/mpy/scheduler.mpy \
-device/root/software/mpy/setlist.mpy \
-device/root/software/mpy/solenoid.mpy \
-device/root/software/mpy/startup.mpy \
-device/root/software/mpy/tachometer.mpy \
-device/root/software/mpy/timezone.mpy \
-device/root/software/mpy/touchpad.mpy \
-device/root/software/mpy/tunemanager.mpy \
-device/root/software/mpy/umidiparser.mpy \
-device/root/software/mpy/webserver.mpy \
-device/root/software/mpy/wifimanager.mpy \
-device/root/software/mpy/frequency.mpy \
-device/root/software/mpy/fft_arrays.mpy \
-device/root/software/mpy/pcnt.mpy \
-device/root/software/mpy/mcserver.mpy 
+compiledate.mpy \
+fileops.mpy \
+battery.mpy \
+config.mpy \
+counter.mpy \
+drehorgel.mpy \
+driver_base.mpy \
+driver_gpio.mpy \
+driver_gpioservo.mpy \
+driver_mcp23017.mpy \
+driver_midiserial.mpy \
+driver_null.mpy \
+driver_ftoms.mpy \
+driver_pca9685.mpy \
+filemanager.mpy \
+history.mpy \
+led.mpy \
+matrix.mpy \
+midi.mpy \
+midicontroller.mpy \
+minilog.mpy \
+microdot.mpy \
+organtuner.mpy \
+microphone.mpy \
+pinout.mpy \
+player.mpy \
+poweroff.mpy \
+scheduler.mpy \
+setlist.mpy \
+solenoid.mpy \
+startup.mpy \
+tachometer.mpy \
+timezone.mpy \
+touchpad.mpy \
+tunemanager.mpy \
+umidiparser.mpy \
+webserver.mpy \
+wifimanager.mpy \
+frequency.mpy \
+fft_arrays.mpy \
+pcnt.mpy \
+mcserver.mpy 
+
 
 STATIC_FILES := \
-device/root/software/static/common.js.gz \
-device/root/software/static/config.html.gz \
-device/root/software/static/diag.html.gz \
-device/root/software/static/crank.jpg \
-device/root/software/static/drums.html.gz \
-device/root/software/static/favicon.ico \
-device/root/software/static/favicon.png \
-device/root/software/static/filemanager.html.gz \
-device/root/software/static/index.html.gz \
-device/root/software/static/history.html.gz \
-device/root/software/static/note.html.gz \
-device/root/software/static/notelist.html.gz \
-device/root/software/static/pinout.html.gz \
-device/root/software/static/play.html.gz \
-device/root/software/static/tunelibedit.html.gz \
-device/root/software/static/tunelist.html.gz \
-device/root/software/static/show_midi.html.gz \
-device/root/software/static/skeleton.css.gz \
-device/root/software/static/translations.js.gz 
+common.js.gz \
+config.html.gz \
+diag.html.gz \
+drums.html.gz \
+filemanager.html.gz \
+index.html.gz \
+history.html.gz \
+note.html.gz \
+notelist.html.gz \
+pinout.html.gz \
+play.html.gz \
+tunelibedit.html.gz \
+tunelist.html.gz \
+show_midi.html.gz \
+skeleton.css.gz \
+translations.js.gz 
 
-DATA_FILES := \
-device/data/20_note_Carl_Frei.json \
-device/data/35_note_custom.json \
-device/data/48_note_custom.json \
-device/data/26_note_Alderman_Wright.json \
-device/data/31_note_Raffin.json \
-device/data/drumdef.json \
-device/data/pinout.txt 
 
-all_inputs :  compiledate device/root/main.py $(MPY_FILES) $(STATIC_FILES) $(DATA_FILES)
+# Target "update": compile py to mpy, compress html/js to gz
+# and copy to device and device/update folder. 
+# device/update is used to test if file was copied to device.
+# Does NOT update: *.jpg, *.ico, *.png, /data/*
+update: compile device/update/main.py $(addprefix device/update/, $(MPY_FILES)) $(addprefix device/update/,  $(STATIC_FILES))
+
+device/update/main.py: crank-organ/src/main.py
+	$(MPREMOTE) cp $< :main.py
+	cp $< device/update/$(notdir $<)
+
+device/update/%.mpy: device/mpy/%.mpy
+	$(MPREMOTE) cp $< :software/mpy/$(notdir $<)
+	cp $< device/update/$(notdir $<)
+
+device/update/%.gz : device/static/%.gz
+	$(MPREMOTE) cp $< :software/static/$(notdir $<)
+	cp $< device/update/$(notdir $<)
+
+
+# Target "compile": compile py to mpy, compress html/js to gz
+# Compilation results to device/mpy
+# Compression results to device/static
+compile : $(addprefix device/mpy/, $(MPY_FILES)) $(addprefix device/static/,  $(STATIC_FILES))
 
 compiledate:
 	echo $(NOW) $(DEVICENAME) $(CONFIGFOLDER) 
 	python3 crank-organ/tools/write_compiledate.py
-	# echo compiledate=""`date +\%Y-\%m-\%d\ \%H:\%M:\%S`"" > crank-organ/src/compiledate.py
+	$(MPY_CROSS) -march=xtensawin crank-organ/src/compiledate.py -o device/mpy/compiledate.mpy
 
-device/root/main.py: crank-organ/src/main.py
-	$(MPREMOTE) cp $< :main.py
-	cp $< $@
-
-device/root/software/mpy/mcserver.mpy: server/mcserver.py
-	$(COMPILE)
+device/mpy/mcserver.mpy: server/mcserver.py
+	$(MPY_CROSS) -march=xtensawin $< -o $@
 	
-device/root/software/mpy/%.mpy: crank-organ/src/%.py
-	$(COMPILE)
+device/mpy/%.mpy: crank-organ/src/%.py
+	$(MPY_CROSS) -march=xtensawin $< -o $@
 
-device/data/%.json: crank-organ/data/%.json
-	cp $< $@
+device/static/%.js.gz: crank-organ/static/%.js
+	gzip -9 -c -k $< > $@
 
-device/data/%.txt: crank-organ/data/%.txt
-	cp $< $@
+device/static/%.html.gz: crank-organ/static/%.html
+	gzip -9 -c -k $< > $@
 
-device/root/software/static/%.gz: crank-organ/static/%
-	$(COMPRESS_STATIC)
+device/static/%.css.gz: crank-organ/static/%.css
+	gzip -9 -c -k $< > $@
 
-device/root/software/static/%.jpg: crank-organ/static/%.jpg
-	$(COPYFILE)
-	
-device/root/software/static/%.png: crank-organ/static/%.png
-	$(COPYFILE)
 
-device/root/software/static/%.ico: crank-organ/static/%.ico
-	$(COPYFILE)
-
-prepare_git: 
+prepare_git: compiledate
 	python3 crank-organ/tools/update-toc.py
-	-rm device/root/software/mpy/mcserver.mpy
-	-rm device/root/software/mpy/mcserver.py
+	-rm device/mpy/mcserver.mpy
+	-rm device/mpy/mcserver.py
 	python3 -m freezefs crank-organ/data crank-organ/install/install_data.py --target=/data --on-import=extract --overwrite=always --compress
 	-rm -r freezetemp/
 	-mkdir freezetemp/
@@ -190,62 +170,39 @@ deepcleandevice: backupdata
 
 cleandevice: backupdata
 	-$(MPREMOTE) exec "import shutil;shutil.rmtree('software')"
-	-$(MPREMOTE) exec "import os;print('remove signal*.tsv files', len([os.remove(f) for f in os.listdir() if f.startswith('signal') and f.endswith('.tsv')]))"
+	-$(MPREMOTE) exec "import shutil;shutil.rmtree('signals')"
 	-$(MPREMOTE) rm /main.py
-	$(MPREMOTE) mkdir software
-	$(MPREMOTE) mkdir software/mpy
-	$(MPREMOTE) mkdir software/static
+	-$(MPREMOTE) mkdir software
+	-$(MPREMOTE) mkdir software/mpy
+	-$(MPREMOTE) mkdir software/static
 	-$(MPREMOTE) mkdir lib
-	-$(MPREMOTE) mkdir data
-	-$(MPREMOTE) mkdir tunelib
 	echo "/tunelib /lib and /data were kept"
 	
 
 	
 cleanpc:
-	-rm -r device/root
-	-rm -r device/data
+	-rm -r -f device
 	-mkdir device
-	mkdir device/root
-	mkdir device/root/software
-	mkdir device/root/software/mpy
-	mkdir device/root/software/static
-	mkdir device/data
+	-mkdir device/mpy
+	-mkdir device/static
+	-mkdir device/update
 
 initdevice:
-	$(MPREMOTE) mkdir software
-	$(MPREMOTE) mkdir software/static
-	$(MPREMOTE) mkdir software/mpy
-	$(MPREMOTE) mkdir data
-	$(MPREMOTE) mkdir lib
-	$(MPREMOTE) mkdir tunelib
-	$(MPREMOTE) mip install aiohttp
+	-$(MPREMOTE) mkdir software
+	-$(MPREMOTE) mkdir software/static
+	-$(MPREMOTE) mkdir software/mpy
 	$(MPREMOTE) mip install shutil
 
 initpc:
-	mkdir device/root/software
-	mkdir device/root/software/mpy
-	mkdir device/root/software/static
-	mkdir device/root/data
-	mkdir device/tunelib
+	mkdir device
+	mkdir device/mpy
+	mkdir device/static
 
 installdevice: 
 	$(MPREMOTE) mip install shutil
-	#curl https://raw.githubusercontent.com/micropython/micropython-lib/refs/heads/master/python-stdlib/datetime/datetime.py --output datetime.py
-	#curl https://raw.githubusercontent.com/micropython/micropython-lib/refs/heads/master/python-stdlib/datetime/localtz.patch --output localtz.patch
-	#patch -p2 < localtz.patch
-	#$(MPREMOTE) cp datetime.py :/lib/
-	#rm -r datetime.py.orig
-	#rm -r localtz.patch
 	$(MPREMOTE) run crank-organ/install/install_software.py  
 	$(MPREMOTE) run crank-organ/install/install_data.py 
 
-updatedevice:
-	$(MPREMOTE) mip install shutil
-	$(MPREMOTE) cp device/root/software/mpy/* :/software/mpy/
-	$(MPREMOTE) cp device/root/software/static/* :/software/static/
-	$(MPREMOTE) cp device/root/main.py :/
-	echo don't update /data nor /tunelib
 
 backupdata:
 	-mkdir $(CONFIGFOLDER)
@@ -259,3 +216,45 @@ backupdata:
 	-$(MPREMOTE) cp :data/battery_calibration.json $(CONFIGFOLDER)/$(NOW)/
 	-$(MPREMOTE) cp :data/tunelib.json $(CONFIGFOLDER)/$(NOW)/
 	-$(MPREMOTE) cp :data/lyrics.json $(CONFIGFOLDER)/$(NOW)/
+
+romfs: compile
+	-mkdir micropython_bin
+	# To generate micropython 1.26.preview image:
+	# git rebase -i f77fd62... and edit file 
+	# to remove commit d737112 "esp32/esp32_common.cmake: Use the tinyusb source files from ESP-IDF"
+	# Replace _boot.py
+	# add partitions-4MiB-BIG-romfs.csv file
+	# add these lines to boards/ESP32_GENERIC_S3/sdkconfig.board
+	# 		CONFIG_PARTITION_TABLE_CUSTOM=y
+	#		CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-4MiB-BIG-romfs.csv"
+	#  #define MICROPY_VFS_ROM (1)  in mpconfigboard.h
+	# (I also defined in mpconfigport.h, but should not...)
+	# rm -f -r build-ESP32_GENER.... folders
+	# make clean	
+	# make submodules
+	# make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT
+	# Once .bin was flashed, run this.
+	rm -r romfs_temp
+	mkdir romfs_temp
+	mkdir romfs_temp/static
+	# use compiled/compressed files for py and static
+	cp device/mpy/* romfs_temp/
+	cp device/static/* romfs_temp/static/
+	# use uncompiled/uncompressed files for main.py and data
+	cp crank-organ/src/main.py romfs_temp/
+	python3 -m freezefs crank-organ/data temp.py --target=/data --on-import=extract --compress
+	$(MPY_CROSS) temp.py -o romfs_temp/install_data.mpy
+	mpremote romfs --no-mpy -o micropython_bin/romfs.bin build romfs_temp 
+
+	# To generate image with romfs included:
+	# press boot for long time with a short reset
+	# esptool.py read_flash 0 0x200000 ESP32S3.bin
+	# To test:
+	# esptool.py write_flash 0 ESP32S3.bin
+	# 
+	# To make image:
+	# python -m esptool --chip esp32s3 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin 0x8000 build-ESP32_GENERIC_S3-SPIRAM_OCT/partition_table/partition-table.bin 0x10000 build-ESP32_GENERIC_S3-SPIRAM_OCT/micropython.bin
+	-cp -n /Users/hermannvonborries/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin micropython_bin/
+	-cp -n /Users/hermannvonborries/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/partition_table/partition-table.bin micropython_bin/
+	-cp -n /Users/hermannvonborries/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/micropython.bin micropython_bin
+	python3 -m esptool --chip esp32s3 merge_bin -o micropython_bin/organillo.bin --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 micropython_bin/bootloader.bin 0x8000 micropython_bin/partition-table.bin 0x10000 micropython_bin/micropython.bin 0x1C0000 micropython_bin/romfs.bin

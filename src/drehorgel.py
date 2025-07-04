@@ -7,6 +7,7 @@
 #   timezone is needed for minilog, and minilog
 #   is needed for most modules
 #
+import os
 def init_led():
     global led
     from led import BlinkingLed
@@ -14,9 +15,11 @@ def init_led():
 
 def init_fileops():
     import fileops
-    fileops.make_folder( "/data")
-    # >>> move this to frequency.py where /signals was defined
-    fileops.make_folder( "/signals" )
+    if not fileops.folder_exists("/data"):
+        fileops.make_folder( "/data")
+    if fileops.folder_exists("/rom/data"):
+        fileops.copy_folder("/rom/data", "/data", overwrite=False)
+
     fileops.make_folder( "/tunelib")
 
 def init_timezone():

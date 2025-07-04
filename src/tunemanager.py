@@ -247,7 +247,7 @@ class TuneManager:
                 # "no file" means: nothing pending
                 continue
             # if file is young (<5 sec), wait a bit, unless file contains only
-            # a empty list [], in that case sync all files right away.
+            # an empty list [], in that case sync all files right away.
             # This allows to process many files in one go (i.e. faster)
             if file_stat[6] > 2 and (time.time() - file_stat[8]) < 5:
                 self.logger.debug( f"Sync file {self.sync_tunelib_json} is too young, waiting for next cycle" )

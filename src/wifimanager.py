@@ -20,6 +20,7 @@ from minilog import getLogger
 import scheduler
 
 
+
 # 15 seconds waiting for this device in station mode to connect to an AP
 # After this time, the device will try with the other AP
 _STATION_WAIT_FOR_CONNECT = 15_000
@@ -64,6 +65,7 @@ class WiFiManager:
             self.start_station_task = asyncio.create_task(
                 self._start_station_interface()
             )
+            await asyncio.sleep_ms(100)
             # In parallel start the access point interface
             await self._start_ap_interface()
         except Exception as e:
@@ -154,6 +156,8 @@ class WiFiManager:
             # this can be slightly faster or less variable. PM_NONE
             # leads to browser response times for get_progress() of about 200ms
             # while PM_PERFORMANCE varies from 200 upwards to sometimes 1000 or more ms
+            print(">>>>network.WLAN.PM_NONE")
+            self.sta_if.config(pm=network.WLAN.PM_NONE)
 
             try:
                 self.sta_if.connect(access_point, password)
@@ -176,7 +180,6 @@ class WiFiManager:
             if self.sta_if.isconnected():
                 self.sta_if_status = access_point + " connected"
                 return
-
             # Problems? Get the status and log it
             status = self.sta_if.status()
             self.sta_if_status = access_point + " " + str(status) + " " + STATUS_CODE_DICT.get( status, "" )
