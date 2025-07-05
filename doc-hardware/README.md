@@ -653,6 +653,7 @@ One side of the switch must be connected to ground and the other side to a GPIO 
 
 [Crank sensor](crank-sensor.md)
 
+[Valves with RC servos instad of pallet valves](/doc-servo/servos.md)
 
 # 12. Copyright and license
 

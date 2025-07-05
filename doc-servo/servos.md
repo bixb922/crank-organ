@@ -1,24 +1,23 @@
 # RC servos for crank organ valves
 
-## Feedback
-
-This is the first version of this writeup. Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
-
 # Contents
-     * [Feedback](#feedback)
-1.  [RC Servos](#1-rc-servos)
-2.  [Valve for servos](#2-valve-for-servos)
+1.  [Feedback](#1-feedback)
+2.  [RC Servos](#2-rc-servos)
+3.  [Valve for servos](#3-valve-for-servos)
      * [Requirements for valve movement](#requirements-for-valve-movement)
      * [Selection of a servo](#selection-of-a-servo)
      * [Building the valve](#building-the-valve)
      * [Testing the servo in a voicing box](#testing-the-servo-in-a-voicing-box)
-3.  [Connecting the servos to the microcontroller](#3-connecting-the-servos-to-the-microcontroller)
+4.  [Connecting the servos to the microcontroller](#4-connecting-the-servos-to-the-microcontroller)
      * [GPIO ports](#gpio-ports)
      * [PCA9685 ports](#pca9685-ports)
-4.  [Power supply](#4-power-supply)
-5.  [Software parameters for servo motors](#5-software-parameters-for-servo-motors)
+5.  [Power supply](#5-power-supply)
+6.  [Software parameters for servo motors](#6-software-parameters-for-servo-motors)
+# 1. Feedback
 
-# 1. RC Servos
+This is the first version of this document. Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
+
+# 2. RC Servos
 
 RC (Radio Control) servo motors are compact actuators commonly used in robotics, model aircraft, and other hobbyist applications. They are designed to precisely control angular position, making them ideal for tasks such as steering, controlling flaps, or moving robotic joints.
 
@@ -26,45 +25,45 @@ Servos are mass produced, so are (mostly) cheap and readily available.
 
 ![examples of servo motors](Servo-motor-examples.jpg)
 
-See also here: https://en.wikipedia.org/wiki/Servo_(radio_control)
+See also here: https://en.wikipedia.org/wiki/Servo_(radio_control) or for a good technical discussion here: https://forum.digikey.com/t/arduino-and-rc-servos-frequently-asked-questions/51162
 
-Servos are slower than pallet valves (like Peterson or Reisner), but there are some cheap servos out there. If you can tolerate a bit slower valves and prefer not to pay for pallet valves, here you go.
+Servos are slower than pallet valves (like Peterson or Reisner), but there are some cheap servos out there. If you can tolerate a bit slower valves and want to spend less, here you go.
 
 Also, with servos you will have to build the valve yourself.
 
-# 2. Valve for servos
+# 3. Valve for servos
 ## Requirements for valve movement
-Servos normally produce a torque of more than 1 kg-cm. That yields more than enough force to open/close a valve.
+Servos normally produce a torque of more than 1 kg-cm (lift of 1 kg at 1cm distance from the axis). That yields more than enough force to open/close a valve.
 
 The aperture of a valve needed is equal to the 1/4 of the diameter of the toe hole of the pipe. For example, for a 8mm toe hole, a minimum of 2mm is needed, better: 3 or 4 mm. If the arm measures 15mm, the arm has to rotate by atan(3/15)=11°. This will take about 0.12sec*11°/60°=0.02 seconds = 20 milliseconds.
 
-On organ paper rolls, the small holes measures:
+On organ paper rolls, the small holes have these sizes:
 * 1.85 mm for Wurlitzer organs, and paper advances at 8.4 feet/sec = 42mm/sec, for a note length of 44 msec
 * 3mm for Carl Frei organs, and paper advances at about 6 or 7 cm/sec, for a note length of 42 msec
 
-This is consistent with an analysis of about 1800 MIDI files scanned from large organ rolls, that show short notes take about 40 millisecond and short silences take about 50 milliseconds.
+This is consistent with an analysis of about 1800 MIDI files scanned from  organ rolls. The analysis shows that short notes take about 40 millisecond and short silences take about 50 milliseconds.
 
 ## Selection of a servo
 
-A very cheap and Ubiquitous servo is the TowerPro SG90. Maximum (stall) torque is 1.2kg-cm and speed is 0.12 sec for 60°
+A very cheap and ubiquitous servo is the TowerPro SG90. Maximum (stall) torque is 1.2kg-cm and speed is 0.12 sec for 60°.
 It does the job, but is a bit slow. Nevertheless, I measured that 40 msec open and 50 msec closed is achievable, but the arm has to move at most about 10°.
 
 ![SG90](SG90.jpeg)
 
-166 beats/minute is a nice Allegro. A quarter note (negra, crotchet, Viertelnote) will take 360 milliseconds. Dividing that by 4 gives sixteenth notes (semicorchea, semiquaver, Sechzehtnelote) of 90 milliseconds each. That seems to be the limit for note repetition for a SG90.
+What does 50 or 40 milliseconds mean? 166 beats/minute is a nice Allegro. A quarter note (negra, crotchet, Viertelnote) will take 360 milliseconds. Dividing that by 4 gives sixteenth notes (semicorchea, semiquaver, Sechzehntelnote) of 90 milliseconds each. That seems to be the limit for note repetition for a SG90.
 
-Regular organ pallet valves are faster than that, I have measured them handle repeated sixteenth notes at 240 beats/minute.
+Regular organ pallet valves are faster than that, I have measured them handle repeated sixteenth notes at 240 beats/minute. 
 
-Now, bear in mind that all this talk of sixteenth is in the case  the *same* note is repeated. If sixteenth notes are played in a scale, this restriction does apply and much faster tempos can be played with a simple servo. A very staccato semiquaver at a fast tempo will not be sufficient to open the servo. In that case you have to edit the MIDI file and lengthen the notes until you have a musically acceptable MIDI file.
+Now, bear in mind that all this talk of sixteenth refers to the case  the *same* note is repeated. If sixteenth notes are played in a scale, this restriction does _not_ apply and much faster tempos can be played with a simple servo. A staccato sixteenth note at a fast tempo will probably not be sufficient to open the servo. In that case you have to edit the MIDI file and lengthen the notes until you have a musically acceptable MIDI file.
 
 If you feel like you can afford it, you can select a servo that:
-* is digital as oppsed to the SG90 which is analog. Digital responds faster.
+* is digital as opposed to the SG90 which is analog. Digital responds faster.
 * has a faster speed. A very good speed is 60° in 0.06 seconds
 * has metal gears. The SG90 has plastic gears that will break if too much force is exerted. I don't have information about durability, but I suspect metal gears last longer. 
 
-But then, the price of such a servo may be already similar to the price of an organ pallet valve. Plus you don't have the hassle of building the valve. Pallet valves are very reliable.
+But then, the price of such a servo may be similar to the price of an organ pallet valve. Plus you don't have the hassle of building the valve. Pallet valves are very reliable.
 
-Power consumption of a pallet valve is higher that a servo. But even with pallet valves, the crank organ can run at least 6 hours (or a little bit more than 100 tunes) with a 10000 mAh battery pack that weighs 200g. With a servo, the same battery should last 5 times longer than that.
+Power consumption of servos is even less than what pallet valves need. So the battery of the crank organ will a long time.
 
 
 ## Building the valve
@@ -119,11 +118,11 @@ The voicing box is connected to the microcontroller on a breadboard plus power s
 
 ![board](test_board.jpg)
 
-Here is the valve moving.
+Here is the valve moving:
 
-![valve moves](valve_moves.mp4)
+<video src="valve_moves.mp4" width="300" height="600" controls></video>
 
-I use the repetition test in the software (on the Tuning page) to test repetition of the same note. Test starts with 850 msec note/150 msec silence, then goes gradually down until it gets to 40 msec note and 50 msec silence. Then a extreme test of 30 msec note/30 msec silence is added. Servos will not respond at this speed.
+I use the repetition test in the software (on the Tuning page) to test repetition of the same note. The test starts with 850 msec note/150 msec silence, then goes gradually down until it gets to 40 msec note and 50 msec silence. Then a extreme test of 30 msec note/30 msec silence is added. This last test exceeds what a servo can do.
 
 This is the waveform seen when recording the sound and activating the servo for 40 milliseconds then turning off for 50 milliseconds.
 
@@ -131,10 +130,10 @@ This is the waveform seen when recording the sound and activating the servo for 
 
 The slowness of the servo makes the note about 20 milliseconds longer.
 
-The regular pallet valves (Peterson in my case) handle these tests very well.
+The regular pallet valves (Peterson in my case) handle these tests very well, even at the fastest speed.
 
 
-# 3. Connecting the servos to the microcontroller
+# 4. Connecting the servos to the microcontroller
 
 Servos have a connecting cable with 3 wires:
 * Yellow: signal
@@ -152,7 +151,7 @@ Then configure the GPIO ports in the "Pinout and MIDI configuration", using the 
 
 There is a nice board that has all the electronics to drive servos:
 
-![PCA9685 board](pca9685_board.jpeg)
+![PCA9685 board](pca9685-board.jpg)
 
 For detailed information on how to connect this to a microcontroller and other details see here: https://www.adafruit.com/product/815. Look for a Download button on the documentation page, and download that PDF. 
 
@@ -174,20 +173,21 @@ Some day I'll post a circuit here. The Adafruit link above should explain most o
 
 ![dupont cable](dupont6.jpg)
 
-For 20 note crank organs, 1 PCA9685 is needed. The ESP32-S3 can provide up to 8 additional ports. It may be easier to just use 2 PCA9685 boards and leave some outputs unused.
+For 20 note crank organs, 1 PCA9685 is needed. The ESP32-S3 can provide up to 8 additional ports. It may be easier to just use 2 PCA9685 boards and leave some outputs unused. That may simplify the main board.
 
-PCA9685 can be connected in series (see the Adafruit writeup), but each board needs another address. The software can handle that. Several boards can be connected to one I2C bus of the ESP32-S3. The restriction here is that each board provides pull up resistors and there is a limit for the I2C bus on how many pull up resistors there can be. There is no speed impact when connecting several boards to the same I2C bus.
+PCA9685 can be connected in series (see the Adafruit writeup), but each board needs another address. The software can handle that. Several boards can be connected to one I2C bus of the ESP32-S3. The restriction here is that each board provides pull up resistors and there is a limit for the I2C bus on how many pull up resistors there can be, but 2 or 3 PCA9685 on the same I2C bus are definitely ok. There is no speed impact when connecting several boards to the same I2C bus.
 
-# 4. Power supply
+# 5. Power supply
 
-The SG90 needs a good 5V power supply. The USB output of a PC can drive only a few SG90. See [here](/doc-hardware/battery.md) for an article about power supplies. A power supply of 5V 2A should be enough. Don't forget to use fuse next to the battery.
+The SG90 needs a 5V power supply. The USB output of a PC can drive only a few SG90. See [here](/doc-hardware/battery.md) for an article about power supplies. A power supply of 5V 2A should be enough. Don't forget to use fuse next to the battery.
 
-In standby (not exerting any force) a SG90 draws less than 5mA. When moving, say 250g of force at 1.5cm of the axis, the current drawn is about 30 mA. So the servos will draw current when moving and while holding the valve open.
+In standby (not exerting any force) a SG90 draws less than 5mA. When moving, say 250g of force at 1.5cm of the axis, the current drawn is about 30 mA. So the servos will draw current only when moving and while holding the valve open.
 
 With normal music, it is very uncommon to move 10 servos at the same time. Even having 10 notes on at the same time is uncommon and will have other problems, such as a dwindling air supply. The peak consumption will be about 1A. Leaving some margin, a 5V 2A power supply should be enough.
 
+A RC servo motor should never have it's arm blocked or held in place. This situation will consume lots of energy and may break the gears inside the servo. 
 
-# 5. Software parameters for servo motors
+# 6. Software parameters for servo motors
 
 Use the "40 note RC servo: 8 GPIO PWM and  2x16 PCA9685" template. Select that template in the "Pinout and MIDI configuration" page. 
 

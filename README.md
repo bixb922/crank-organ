@@ -1,6 +1,4 @@
-# crank-organ
-
-MIDI based crank organ software and hardware
+# MIDI based crank organ software and hardware
 
 # Contents
 1.  [Overview](#1-overview)
@@ -75,7 +73,7 @@ Specific documents
 * [Battery](doc-hardware/battery.md)
 * [Crank sensor](doc-hardware/crank-sensor.md) with a summary [here](doc-hardware/README.md#9-crank-rotation-sensor)
 * [How to connect an ESP32-S3 to MIDI over serial (MIDI over 5 pin DIN plug) ](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md)
-* *NEW* Use of RC servos for valves here: ![servos](/doc-servo/servos.md)
+* **NEW** Use of RC servos for valves here: ![servos](/doc-servo/servos.md)
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the "issue" section or start a discussion in this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
