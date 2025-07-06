@@ -333,7 +333,7 @@ _f36 = const(
 # /software/mpy/compiledate.py size=34
 _f40 = const(
   b"compiledate='202"\
-  b'5-07-05 18:08:00'\
+  b'5-07-05 21:34:45'\
   b"'\n"\
   b'')
 # /software/mpy/config.py size=13670, compressed level=9 wbits=10 compressed size=4928
@@ -16035,7 +16035,7 @@ direntries = const(( ( '/main.py',  ( _f60, True, 2956 ) ),
 ))
 
 version = const(2)
-date_frozen = const( '2025/07/05 18:08:01' )
+date_frozen = const( '2025/07/05 21:34:46' )
 
 sum_size = const(672964)
 files_folders = const(64)

@@ -1,11 +1,7 @@
 # A crank sensor journey
 
-## Feedback
-
-Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 # Contents
-     * [Feedback](#feedback)
 1.  [Introduction](#1-introduction)
 2.  [The sensors and the slotted wheels](#2-the-sensors-and-the-slotted-wheels)
 3.  [Hall sensor](#3-hall-sensor)
@@ -20,8 +16,7 @@ Feedback is welcome. Please post questions, corrections or comments here: https:
 12.  [A rotating encoder](#12-a-rotating-encoder)
 13.  [Costs](#13-costs)
 14.  [Conclusion](#14-conclusion)
-
-
+15.  [Feedback](#15-feedback)
 # 1. Introduction
 
 TL;DR: read[this](README.md#9-crank-rotation-sensor).
@@ -165,6 +160,10 @@ Being able to start and stop the music with the crank is very nice. I can have a
 
 YMMV.
 
+
+# 15. Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 
 

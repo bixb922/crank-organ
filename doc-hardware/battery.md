@@ -1,11 +1,7 @@
 # Batteries
 
-## Feedback
-
-Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 # Contents
-     * [Feedback](#feedback)
 1.  [Fuse and security](#1-fuse-and-security)
 2.  [Requirements](#2-requirements)
 3.  [Battery technologies](#3-battery-technologies)
@@ -14,9 +10,7 @@ Feedback is welcome. Please post questions, corrections or comments here: https:
 6.  [AA batteries](#6-aa-batteries)
 7.  [USB battery packs](#7-usb-battery-packs)
 8.  [Tool battery packs](#8-tool-battery-packs)
-
-
-
+9.  [Feedback](#9-feedback)
 # 1. Fuse and security
 Always use a fuse for batteries, except when the manufacturer states clearly that the battery pack has a short circuit and overload protection.
 
@@ -216,5 +210,9 @@ I like that the current can be quite high. 2A is not very much if you want to so
 
 I haven't tested these battery packs yet. Make sure that they have a BMS included.
 
+
+# 9. Feedback
+
+Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
 
 
