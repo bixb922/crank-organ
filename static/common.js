@@ -1,12 +1,27 @@
-// Copyright (c) 2023 Hermann von Borries
+// Copyright (c) 2023-2025 Hermann von Borries
 // MIT License
+let clt0 = Date.now();
+let clt00 = clt0;
+function consoledebug( ...args  ){
+	let clt1 = Date.now();
+	args.unshift( clt1-clt0 );
+	args.unshift((clt1-clt00)/1000);
+	console.debug(args.join(" "));
+	clt0 = clt1;
+}
+consoledebug("common.js start");
+// also using console.error(), console.warn() and console.assert()
 
-let MAX_DB = -20 ;
-let MIN_DB = -0 ;
+let MAX_DB = 0 ;
+let MIN_DB = -20 ;
 
 let MAX_CENTS = 50 ;
-let CENTS_LIMIT = 5 ;
 
+// >>>define colors in root class of css instead of here
+// :root {
+//   --primary-color: #007bff;
+//   --font-size-base: 16px;
+// }
 light_gold = "#B29700";
 american_gold = "#D4AF37";
 sunray = "#E1C158";
@@ -23,45 +38,38 @@ fire_brick = "#B22222" ;
 
 meter_green_color = "#95bb00" ; 
 meter_red_color = "#C36922";
-meter_grey = "#e8e8e8" ;
+meter_gray = "#e8e8e8" ;
 progress_color = "#3EA8A3" ; 
 
 
-// Many useful functions
+
 function is_no_number( n ){
-	// Is it enough to check isNaN()?
-	return n == null || n == undefined || isNaN(n) ;
+	return n == null || typeof n === "undefined" || isNaN(n) ;
 }
 
-function format02i( n ) {
-	if( is_no_number(n)){
-		return "-"
-	};
-    // to be used in formatMilliMMSS and format_secHHMM
-	let ss = "" + Math.round( n );
-	if( ss.length == 1 ) {
-			ss = "0" + ss ;
-	} 
-	return ss ;
+function format02i(n) {
+	if (is_no_number(n) || n < 0 ) return "-";
+	const num = Math.round(n);
+	return (num < 10 ? "0" : "") + num;
 }
 
-function formatMilliMMSS( msec ){
-	if( is_no_number(msec)){
-		return "-"
-	};
-	let t = msec / 1_000 ;
-	let ss = format02i( t%60 ) ;
-	return "" + Math.floor(t/60) + ":" + ss ;
+
+function formatMilliMMSS(msec) {
+	if(is_no_number(msec) || msec < 0) return "-";
+	const totalSeconds = Math.round(msec / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = format02i(totalSeconds % 60);
+	return `${minutes}:${seconds}`;
 }
 
-function format_secHHMM( sec ) {
-	if( is_no_number(sec)){
-		return "-"
-	};
-	let t = sec/60 ;
-	let mm = format02i( t%60 );
-	return "" + Math.floor(t/60) + ":" + mm ;
+function format_secHHMM( seconds ) {
+	if(is_no_number(seconds) || seconds < 0){ return "-" };
+	const totalMinutes = Math.round(seconds / 60) ;
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = format02i( totalMinutes % 60 ) ;
+	return `${hours}:${minutes}`;
 }
+
 
 function getResourceFromURL(){
 	let page_url = new URL(window.location.href) ;
@@ -83,289 +91,217 @@ function getResourceNumberFromURL(){
         return "";
     }
     else {
-        return r*1 ;
+        return parseInt(r) ;
     }
 }
 
-
-
-//>>> still used for velocity
-function barGraph( container_name, value, color, scale_divisions, alignment, width_percent ) {
-	// barGraph on container, must create canvas
-	let canvas_name = container_name + "canvas" ;
-	let canvas = document.getElementById(canvas_name) ;
-	if( canvas === null ) {
-		let cd = document.getElementById( container_name );
-		let w = Math.round( window.innerWidth * width_percent/100 *0.98);
-		let h = 15 ;
-		let s = '<canvas id="' + canvas_name + '" width=' + w + ' height=' + h + '>' + 'canvas dentro de ' + container_name + '</canvas>' ;
-		cd.innerHTML = s ;
-		canvas = document.getElementById(canvas_name) ;
-	}
-	canvasBarGraph( canvas, value, color, scale_divisions, alignment ) ;
-}
-
-
-function canvasBarGraph(canvas, value, color, scale_divisions, 
-	alignment ) {
-	// low level bar graph, on canvas
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	let ch = canvas.height ;
-	ctx.beginPath();
-	ctx.lineWidth = 0;
-	// Erase rectangle (fill with white)
-	ctx.fillStyle = "#ffffff" ;
-	ctx.fillRect(0,0,cw,ch) ;
-	// Paint bar
-	ctx.fillStyle = color ;
-	let c = value ;
-	if( c > 1 ){
-		c = 1 ;
-	}
-	if( c < -1 ) {
-		c = -1 ;
-	}
-	if( alignment === "left" ) {
-		ctx.fillRect(0,0, c*cw, ch) ;
-	}
-	else {
-		ctx.fillRect((1-c)*cw, 0, cw, ch) ;
-	}
-
-	ctx.strokeStyle = "#ffffff" ;
-	ctx.lineWidth = 4 ;
-	for( let i = 0 ; i < scale_divisions ; i++ ){
-		w = cw*i/scale_divisions ;
-		ctx.moveTo( w, ch ) ;
-		ctx.lineTo( w, ch*0.75) ;
-	}
-	ctx.stroke() ;	
-
-	ctx.beginPath() ;
-	ctx.strokeStyle = color ;
-	ctx.fillStyle = color ;
-	ctx.lineWidth = 2 ;
-	ctx.rect( 0, 0, cw, ch) ;
-	ctx.stroke() ;	
-}
-
-function drawNeedle( ctx, needle_pos, cw, ch ){
-	if( needle_pos < 2 ){
-		needle_pos = 2 ;
-	}
-	if( needle_pos > cw-2 ) {
-		needle_pos = cw-2 ;
-	}
-	ctx.beginPath();
-	ctx.lineWidth = 1 ;
-	ctx.lineStyle = "#FFFFFF" ;
-	ctx.moveTo( needle_pos-1, ch-5 ) ;
-	ctx.lineTo( needle_pos, ch*0.2 ) ;
-	ctx.lineTo( needle_pos+1, ch-5 ) ;
-	ctx.closePath() ;
-	ctx.fillStyle = "#000000" ;
-	ctx.fill() ;
-	ctx.stroke();
-	ctx.beginPath();
-	ctx.lineWidth = 1 ;
-	ctx.lineStyle = "#000000" ;
-	ctx.fillStyle = "#FFFFFF"
-	ctx.arc( needle_pos, ch-4, 3, 0, 6.3 ) ;
-	ctx.fill();
-	ctx.stroke();
-}
-function getCanvas( container_name, canvas_id, width_percent ){
-	let canvas_name = container_name + canvas_id ;
-	if( document.getElementById(canvas_name) === null ) {
-		let cd = document.getElementById( container_name ) ;
-		// compute width for graphics and text
-		let w = window.innerWidth*width_percent/100*0.98 ;
-		let h = 20 ;
-		let s = `<canvas id="${canvas_name}"  width="${w}" height="${h}"></canvas>`;
-		cd.innerHTML = s ;
-	}
-	
-	return document.getElementById( canvas_name ) ;	
-}
-function centsBar( container_name, cents, width_percent ) {
-
-	let canvas = getCanvas( container_name, "_centsBarCanvas", width_percent ) ;
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	
-	let ch = canvas.height ;
-	let limit_pos = cw*CENTS_LIMIT/MAX_CENTS/2;
-	
-	ctx.fillStyle = meter_grey ;
-	ctx.beginPath();
-	ctx.lineWidth = 0;
-	// 0.8 to leave space for needle
-	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
-	ctx.stroke();
-
-	let needle_pos = cw/2 + cw*cents/MAX_CENTS/2 ;
+class BarGraph extends HTMLCanvasElement {
+    constructor(){
+        super();
+        this.height = 16;
+        this.backColor = meter_gray;
+        this.barColor = progress_color ;
+    }
     
-	if( cents < -CENTS_LIMIT  ) {
-		ctx.fillStyle = meter_red_color ;
+    setParam( widthPercent=50, minvalue=0,  maxvalue=100 ){
+        this.widthPercent = widthPercent;
+        this.maxvalue = maxvalue;
+        this.minvalue = minvalue;
+        // Origin of BarGraph is always at left end of bar
+    }
+	draw(value) {
+		const ctx = this.getContext("2d");
+        this.width = Math.round(window.innerWidth*this.widthPercent/100);
+		const cw = this.width;
+		const ch = this.height;
 		ctx.beginPath();
-		ctx.lineWidth = 0;
-		ctx.fillRect( needle_pos,0, cw/2-needle_pos, ch*0.8 ) ;
+		ctx.clearRect(0, 0, cw, ch);
+
+		// Erase rectangle (fill with gray)
+		ctx.fillStyle = meter_gray;
+		ctx.fillRect(0, 0, cw, ch);
+		// Paint bar
+		ctx.fillStyle = this.barColor;
+		let c = Math.max(this.minvalue, Math.min(this.maxvalue, value));
+        c = (c-this.minvalue)/(this.maxvalue-this.minvalue);
+        ctx.fillRect(0, 0, c * cw, ch);
+		ctx.stroke();
+        
+        //Draw border
+		ctx.beginPath();
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 1;
+		ctx.rect(0, 0, cw, ch);
 		ctx.stroke();
 	}
-	else if( cents > CENTS_LIMIT  ) {
-		ctx.fillStyle = meter_red_color ;
+}
+customElements.define("bar-graph", BarGraph, { extends: "canvas" });
+
+class NeedleBar extends HTMLCanvasElement {
+	constructor() {
+		super();
+        this.height = 18;
+        this.barHeight = this.height - 3;
+        
+        this.barColor = meter_green_color;
+        this.backColor = meter_gray;
+        this.thresholdColor = meter_red_color ;
+    }
+    setParam(widthPercent=50, minvalue=0, maxvalue=100, threshold=0){
+        this.widthPercent = widthPercent;
+        this.threshold = threshold;
+        this.minvalue = minvalue;
+        this.maxvalue = maxvalue;
+    }
+    normalize( value ){
+        // normalize to interval 0 to 1
+        let v = Math.round((value-this.minvalue)/(this.maxvalue-this.minvalue)*this.width);
+        return v;
+    }
+    draw( value ){
+        const ctx = this.getContext("2d");
+        this.width = Math.round(window.innerWidth*this.widthPercent/100);
+        this.drawBackground( ctx );
+        this.drawBar( ctx, value );
+        this.drawThresholdInterval(ctx );
+        this.drawBorder(ctx);
+        this.drawNeedle(ctx, value  );
+    }
+    drawBackground(ctx){
 		ctx.beginPath();
+        ctx.fillStyle = this.backColor;
 		ctx.lineWidth = 0;
-		ctx.fillRect( cw/2,0, needle_pos-cw/2, ch*0.8 ) ;
+		ctx.fillRect(0, 0, this.width, this.barHeight);
+		ctx.stroke();
+        
+    }
+    drawBar(ctx, value){
+        const v = this.normalize( value );
+        if( this.threshold && Math.abs(value) <= this.threshold ){
+            return;
+        }
+        const center = this.normalize( 0 );
+        ctx.beginPath();
+        ctx.fillStyle = this.barColor;
+        if( this.threshold ){
+            ctx.fillStyle = this.thresholdColor;
+        }
+        ctx.lineWidth = 0;
+        if( value >= 0){
+            ctx.fillRect( center, 0,  v-center, this.barHeight);
+        }
+        else {
+            ctx.fillRect( v, 0, center-v, this.barHeight);
+        }
+        ctx.stroke();
+    }
+    drawThresholdInterval(ctx){
+        if( !this.threshold ){
+            return;
+        }
+        const center = this.normalize( 0 );
+        const t1 = this.normalize( this.threshold );
+        const tw = (center-t1)*2;
+        ctx.beginPath();
+        ctx.fillStyle = this.barColor;
+        ctx.lineWidth = 0;
+        ctx.fillRect(t1, 0, tw  , this.barHeight);
+        ctx.stroke();
+    }
+	drawNeedle(ctx,value) {
+		if( value <= this.minvalue || value >= this.maxvalue ){
+			return; // don't draw needle if out of range or at limit
+		}
+		const ch = this.height;
+        let needlePos = this.normalize( value );
+		// if value exceeds min/max, bar will cover canvas but
+        // needle wil be in canvas, i.e. in the colored part.
+		ctx.beginPath();
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "black";
+		ctx.moveTo(needlePos - 2, ch - 5);
+		ctx.lineTo(needlePos, ch * 0.15);
+		ctx.lineTo(needlePos + 2, ch - 5);
+		ctx.closePath();
+		ctx.fillStyle = "black";
+		ctx.fill();
+		ctx.stroke();
+
+		ctx.beginPath();
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "white";
+		ctx.arc(needlePos, ch - 4, 3, 0, 6.3);
+		ctx.fill();
 		ctx.stroke();
 	}
-	
-	ctx.beginPath() ;
-	ctx.fillStyle = meter_green_color ;
-	ctx.fillRect( cw/2-limit_pos, 0, limit_pos*2, ch*0.8 ) ;
-	ctx.stroke() ;
-	
-	
-
-	drawNeedle( ctx, needle_pos, cw, ch );
-	
+    drawBorder(ctx){
+		ctx.beginPath();
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 0.2;
+		ctx.rect(0, 0, this.width, this.barHeight );
+		ctx.stroke();
+    }
 }
+customElements.define("needle-bar", NeedleBar, { extends: "canvas" });
 
-function dbBar( container_name, db, width_percent ) {
-	let MINVALUE = MAX_DB ;
-	let MAXVALUE = MIN_DB ;
-
-	let canvas = getCanvas( container_name, "_dbBarCanvas", width_percent ) ;
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	let ch = canvas.height ;
-	
-	ctx.fillStyle = meter_grey ;
-	ctx.beginPath();
-	ctx.lineWidth = 0;
-	// 0.8 to leave space for needle
-	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
-	ctx.stroke();
-	
-	let pos = cw*( db-MINVALUE)/(MAXVALUE-MINVALUE) ;
-	ctx.beginPath() ;
-	ctx.fillStyle = meter_green_color ;
-	init_pos = Math.max(pos, 3);
-	ctx.fillRect( init_pos, 0, cw-init_pos-4, ch*0.8 ) ;
-	ctx.stroke() ;
-	
-	drawNeedle( ctx, pos, cw, ch );
-}
-
-function progressBar( container_name, percent, width_percent ){
-	let canvas = getCanvas( container_name, "_progressBarCanvas", width_percent ) ;
-
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	let ch = canvas.height ;
-	
-
-	ctx.beginPath();
-	ctx.fillStyle = meter_grey ;
-	ctx.fillRect( 0, 0, cw, ch );
-	ctx.stroke() ;
-	
-	ctx.beginPath();
-	ctx.fillStyle = progress_color ;
-	pos = percent/100*cw ;
-	ctx.fillRect( 0, 0, pos, ch );
-	ctx.stroke() ;
-}
-
-
-function velocityBar( container_name, velocity, width_percent ) {
-    needleBar( container_name, velocity, width_percent, 0, 100, "_velocityBarCanvas") ;
-}
-
-function rpsecBar( container_name, rpsec, width_percent ) {
-    needleBar( container_name, velocity, width_percent, 0, 2, "_rpsecyBarCanvas") ; 
-}
-
-function needleBar( container_name, velocity, width_percent, minvalue, maxvalue, canvas_suffix) {
-
-	let canvas = getCanvas( container_name, canvas_suffix, width_percent ) ;
-	let ctx = canvas.getContext("2d") ;
-	let cw = canvas.width ;
-	let ch = canvas.height ;
-	ctx.beginPath() ;
-	ctx.fillStyle = "#ffffff";
-	ctx.fillRect( 0, 0, cw, ch );
-	ctx.stroke() ;
-	
-	ctx.beginPath() ;
-	ctx.fillStyle = meter_grey ;
-	ctx.beginPath();
-	ctx.lineWidth = 0;
-	// 0.8 to leave space for needle
-	ctx.fillRect( 0,0, cw, ch*0.8 ) ;
-	ctx.stroke();
-	
-	ctx.beginPath();
-	ctx.lineWidth = 1 ;
-	ctx.moveTo( cw/2, 0 ) ;
-	ctx.lineTo( cw/2, ch*0.8 )
-	ctx.stroke() ;
-	
-	let needle_pos = cw*(velocity-minvalue)/(maxvalue-minvalue);
-	ctx.beginPath() ;
-	ctx.fillStyle = meter_green_color ;
-	ctx.fillRect( cw/2, 0, needle_pos-cw/2, ch*0.8 ) ;
-	ctx.stroke() ;
-	
-	
-	drawNeedle( ctx, needle_pos, cw, ch );
-	
-}
 
 // Function to fetch a json from server.
 // Retries communication until successful.
+// fetch_json.isConnected() shows if the connection is active
 async function fetch_json( url, post_data ){
     let t0 ;
     let t ;
     let response ;
     let json_result ;
 	let post_arg = make_fetch_args( post_data ) ;
+	// One connect yields 0.75 but one failure still does not lower connects_ok so drastically
+	fetch_json.isConnected = ()=>{ 
+		// should be 2-3 times commonGetProgress.setSleep()
+		if( (Date.now() - fetch_json.last_ok) > 15_000 ){
+			return false; // should be some activity at least...
+		}
+		/// or if there are on average a fraction of good fetch_jsons.
+		return fetch_json.connects_ok > 0.7; }
 	while( true ) {
 		try {
             t0 = Date.now() ;  // Reports response time
+			fetch_json.last_ok = t0;
             response = {};
 			response = await fetch( url, post_arg ) ;
+			console.assert( response, "fetch() returned empty response");
 			break ;
 		}
 		catch( err ) {
-			console.log("fetch json failed", err, "url=", url ) ;
+			console.error("fetch json failed", err, "url=", url ) ;
             // In the header battery time, replace battery
             // icon and time remaining with "network connection broken"
             // symbol.
-			msg = "not connected" ;
-            htmlByIdIgnoreErrors( "header_time",
-                                 msg + " &#x1f494;") ;
+			// keep running average of connects, goes faster up than down
+		    fetch_json.connects_ok = (3*fetch_json.connects_ok + 0)/4; 
+			msg = tlt("no conectado") ;
 			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
 			showPopup( "", popupmsg );
 			await sleep_ms( 5_000 ) ;
 		}
 		// retry fetch forever until getting through to server
 	}
+	// keep running average of connects, goes faster up than down
+    fetch_json.connects_ok = (fetch_json.connects_ok + 3)/4; 
 	if( !response.ok ){
 		// Response not ok will notify error to user and abort throwing an error
         let rstatus = response.status ;
 		if( rstatus == 401 ){
-			let button = await askForPassword() ;
-			// Now we have to retry...!!!
-			if( button == "ok" ){
+			if( await new PasswordDialog().askAndVerify() ){
+				// askAndVerify() only returns true with a correct password
+				// false means: dialog cancelled, no password entered.
 				return await fetch_json( url, post_data );
 			}
 			// Fall through and generate 401 message if cancel was pressed.
 		}
         response_html = await response.text() ; 
         response_text = response_html.replace(/<[^>]*>/g, ' ');
-        console.log("Error response", rstatus, "url", url, "response", response, "text", response_text ) ;
+        console.error("Error response", rstatus, "url", url, "response", response, "text", response_text ) ;
         alert( `Server error ${rstatus} ${response_text}` ) ;
         throw new Error(`Server sent error status {response.status}`);
 		// Fetch calls and call function will abort unless
@@ -374,14 +310,13 @@ async function fetch_json( url, post_data ){
 	json_result = await response.json() ; 
    
     t = Date.now() - t0;
-	console.log("fetch_json ", url, "response time", t, "msec");
-    
+	console.info("fetch_json ", url, "response time", t, "msec");
 	// If there is an alert, show to user and reraise exception
 	if( json_result["alert"]) {
 		let alert_message = json_result["alert"];
 		// Translate but only on pages where tlt is defined by translations.js
 		if( typeof tlt === 'function' ) {
-			alert_message = tlt( alert_message ) ;
+			alert_message = tlt ( alert_message ) ;
 		}
 		alert( alert_message ) ;
 	}
@@ -393,6 +328,8 @@ async function fetch_json( url, post_data ){
 	return json_result;
 	
 }
+fetch_json.connects_ok = 0;
+fetch_json.last_ok = Date.now();
 
 function make_fetch_args( data ){
 	if( data == undefined ){
@@ -417,94 +354,285 @@ async function sleep_ms( t ){
 	await new Promise(r => setTimeout(r, t));
 }
 
-// Refresh battery info in header
-// fetch_json also updates header_time element when
-// connection to server fails.
-async function updateHeader() {
-	let d = document.getElementById( "header_time" ) ;
-	if( d === null ) {
-		// A page might have no battery time element in the header
-		return ;
+class GetProgress{
+	// Usage: instantiated in common.js only once (like a singleton)
+	// commonGetProgress.registerCallback() to register callback when progress has been updated
+	// commonGetProgress.setReloadIfTunelibChanged(v) true=reload this page if tunelib has changed, false=don't.
+	// commonGetProgress.fetchJson( "/drop_setlist", post_data ) to
+	// call some fetch_json that returns a progress and filter it, will also do callbacks.
+	// commonGetProgress.registerCache( ) to register a JsonCache for fill/drop functions
+	constructor(){
+		this.callbackList = [];
+		this.cacheList = [];
+		this.sleep_ms = 10_000;
+		this.reloadIfTunelibChanged = false;
 	}
-    // Get the normal background color of the header div
-    let elements = document.getElementsByClassName("headerdiv");
-    let normal_background = elements[0].style.backgroundColor ;
-    // Wait a bit for other requests, than show battery
-    // info on a freshly loaded page.
-	await sleep_ms( 1_000 );
-	while( true ) {
-		let battery = await fetch_json( "/battery" ) ;
-		let batteryText = "" ;
-		// Check if calibration done. percent_remaining is a number
-		// only if calibration done, as are "low" and "remaining_seconds"
-		if( is_no_number(battery["percent_remaining"])){
-			// No calibration done, don't bother requesting
-			// information about battery any more
-			htmlById( "header_time", "" ) ;
+	registerCallback( callback ){
+		this.callbackList.push( callback );
+	}
+	registerCache( cache ){
+		this.cacheList.push( cache );
+	}
+	async fillCaches(){
+		for( let cache of this.cacheList ){
+			await cache.get();
+		}
+	}
+	dropCaches(){
+		for( let cache of this.cacheList ){
+			cache.drop();
+		}
+	}
+	setReloadIfTunelibChanged( v ){
+		this.reloadIfTunelibChanged = v;
+	}
+	setSleep( v ){
+		// in milliseconds
+		this.sleep_ms = v ;
+	}
+	getSleep(){
+		return this.sleep_ms;
+	}
+	startBackground(){
+		this.#backgroundProcess();
+	}
+	async getProgress( ){
+		let progress = await this.fetchJson( "/get_progress" );
+		console.debug("progress=", progress);
+		return progress;
+	}
+
+	async fetchJson( url, post ){
+		// do a fetch_json that returns a progress, and filter it
+		// before returning.
+		let progress = await fetch_json( url, post );
+		if( !progress ){
+			throw new Error("fetch_json progress is empty, ignored");
+		}
+
+		await this.#filterProgress( progress );
+		this.#checkCaches(progress);
+		return progress;
+	}
+
+	async #filterProgress( progress ){
+		let tunelib = await tunelibCache.get();
+		// setlist could have tunes not in tunelib, filter out to make life easier.
+		progress["setlist"] = progress["setlist"].filter((ele)=>{ return ele in tunelib } );
+		// it is free to pass along tunelib in progress[] object
+		progress["tunelib"] = tunelib ;
+		for( let callback of this.callbackList){
+			callback(progress);
+		}
+	}
+
+	async #backgroundProcess(){
+		let progress;
+		while( true ){
+			// first update then wait (better response first time)
+			try{
+				progress = await this.getProgress();
+				console.assert( progress, "progress is empty");
+			}
+			catch(e){
+				console.error("GetProcess.#background process fetch failed", e);
+			}
+			await sleep_ms(this.sleep_ms);
+		}
+	}
+	#checkCaches(progress){
+		// Check if caches have to be dropped or page reloaded
+		// to reload caches with fresh information.
+		// this info is kept per page (not in tab storage)
+		// to ensure pages are reloaded when they need it
+		if( !this.stored_boot_session || !this.stored_tunelib_signature ){
+			// First time only, if undefined, get current value, no other action required.
+			this.stored_boot_session = progress.boot_session ;
+			this.stored_tunelib_signature =  progress.tunelib_signature ;
 			return ;
 		}
-		let header_time = document.getElementById( "header_time" );
-		let ht_symbol = document.getElementById ( "ht_symbol" );
-		if( !ht_symbol ){
-			let ht_symbol = document.createElement( "span" );
-			ht_symbol.id = "ht_symbol";
-			ht_symbol.style.backgroundColor = "white";
-			header_time.appendChild( ht_symbol );
-			let ht_text =  document.createElement( "ht_text" );
-			ht_text.id = "ht_text";
-			header_time.appendChild( ht_text );
-		}
-		ht_symbol = document.getElementById ( "ht_symbol" );
-		let ht_text = document.getElementById( "ht_text" );
 
-		if( battery["low"] ) {
+		// Cache is refreshed on boot and when tunelib changes significantly.
+		let tunelib_change = progress.tunelib_signature != this.stored_tunelib_signature ;
+		let reboot = progress.boot_session != this.stored_boot_session;
+		console.log("#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
+		if( tunelib_change || reboot ){
+			// Force refresh of all the (registered) JsonCache objects
+			// by calling their drop method
+			this.dropCaches();
+		}
+		if( tunelib_change ){
+			this.stored_tunelib_signature =  progress.tunelib_signature ;
+		}
+		if( reboot ){
+			this.stored_boot_session = progress.boot_session ;
+		}
+		if( reboot || (tunelib_change && this.reloadIfTunelibChanged) ){
+			// Reload page if reboot or tunelib changed EXCEPT
+			// when the page asks not to do so (like tunelist.html)
+			location.reload();
+		}
+	}
+
+}
+let commonGetProgress = new GetProgress();
+
+class PageHeader{
+	// Must be called at from each page to pass page header title,
+	// and up (back arrow on header) navigation rules.
+	constructor( ){
+		this.bannerEmpty = "";
+		this.bannerWarn = "" ; 
+
+		this.headerdiv = document.getElementById("headerdiv");
+		if( !this.headerdiv ){
+			this.headerdiv = document.createElement("span");
+			// 26px is the height of the headerdiv class
+			this.headerdiv.innerHTML = `
+<div class="headerdiv" id="headerdiv" style="line-height:25px">
+  <a id="uparrow" class="headerleft" style="color:white">&nbsp;&#11013;</a>
+  &nbsp;&nbsp;&nbsp;
+  <span id="headerTitle"></span>
+  <span class="headerright">
+	<span id="batterySymbol" style="background-color:white"></span>
+	<span id="batteryTime"></span>  
+		&nbsp;&nbsp;&nbsp;
+	<span id="connectSymbol" style="background-color:white">&#x2006;&#x2001;&#x2006;</span>
+	<span id="connectText">&#x205F;</span>
+  </span>
+</div>
+<h2 id="banner" style="display:none"></h2>`;
+			document.body.prepend(this.headerdiv);
+			document.getElementById("uparrow").addEventListener( "click", ()=>{ this.#pageUp()});
+
+			// launch getting document title (async) in parallel but don't wait here.
+			this.#setDocumentTitle();
+		}
+	}
+
+	async #setDocumentTitle(){
+		let j = await configCache.get();
+		document.title = j["description"];
+	}
+
+	// Called at the start of each page
+	setTitle( headerTitle, pageupAction ){
+		// pageupAction is one of:
+		// 		a function that handles the page up (go back), used by file manager for folders
+		// 		"back" meaning history.back() 
+		// 		a page name like "index" or "tunelist" (no /static/, no .html)
+		// 		null, meaning: this is the index page, no arrow.
+		textById( "headerTitle", headerTitle );
+		this.pageupAction = pageupAction;
+		// Hide arrow for pages like the index page which has no action here.
+		showHideElement( "uparrow", pageupAction );
+		// Launch update header background tasks
+		commonGetProgress.registerCallback( (progress)=>this.#updateBattery(progress) );
+		commonGetProgress.registerCallback( (progress)=>this.#updateBanner(progress) );
+		this.#updateConnectedProcess();
+	}
+	setBannerInfo( empty, bannerWarn ){
+		// Allow pages to set their own banner text
+		// and the prefix of warning messages. tunelibedit.html
+		// has a bit different messages in the banner.
+		this.bannerEmpty = empty; // queue empty
+		this.bannerWarn = bannerWarn ; // Warning prefix, either "" or "!"
+	}
+	#pageUp(){
+		if( typeof this.pageupAction == "function"){
+			return this.pageupAction();
+		}
+		let from = document.referrer;
+		if( from == undefined || from.includes(this.pageupAction) || this.pageupAction == "back" ){
+			// to be faster: if the previous page is the "up" page, go back
+			history.back();
+		}
+		else{
+			// Came from another page (not the parent) navigate to this page
+			window.location.href = "/static/" + this.pageupAction + ".html" ;
+		}
+	}
+	async #updateConnectedProcess( ){
+		// not depending on progress, asks fetch_json for status.
+
+		while( true ){
+			await sleep_ms( 5_000 );
+			let isConnected = fetch_json.isConnected();
+			if( isConnected ){
+				// 🛜 Wifi  💚green heart. 💕two hearts 
+				// see here for spaces https://jkorpela.fi/chars/spaces.html
+				// \u2006 thin space. \u205f medium space
+				textById("connectSymbol", "\u2006💚\u2006"); 
+				textById("connectText", "\u205F"); 
+			}
+			else{
+				// 💔 &#x1f494; broken heart + six per em space
+				textById("connectSymbol", "\u2006💔\u2006"); 
+				textById("connectText", tlt("no conectado")+"\u205F"); 
+			}
+			showHideElement( "batterySymbol", isConnected );
+			showHideElement( "batteryTime", isConnected );
+		}
+	}
+	
+	#updateBattery(progress){
+		let normal_background = sap_green ;
+		// Check if calibration done. percent_remaining is a number
+		// only if calibration done, as are "low" and "remaining_seconds"
+		if( is_no_number(progress["bat_percent_remaining"])){
+			// No calibration done, don't bother requesting
+			// information about battery any more
+			return ;
+		}	
+		let header_background = normal_background ;
+		let batterySymbol = document.getElementById("batterySymbol");
+
+		if( progress["bat_low"] ) {
 			// Low battery emoji on white background
-			ht_symbol.innerHTML = "&#x1faab;"; 
-			// Change background color if low
+			batterySymbol.innerText = "🪫"; // low battery &#x1faab;
 			header_background = meter_red_color ;
 		}
 		else {
 			// Normal green battery emoji on white background
-			ht_symbol.innerHTML = "&#x1f50b;"
+			batterySymbol.innerText = "🔋"; // full battery &#x1f50b;
 			header_background = normal_background;
 		}
-		elements = document.getElementsByClassName("headerdiv");
-		for (let i = 0; i < elements.length; i++) {
-			// Should be only one headerdiv, but this covers all
-			elements[i].style.backgroundColor = header_background;
-		} 
-		ht_text.innerHTML = "&nbsp;" + Math.round( battery["percent_remaining"] ) 
-					+ "%&nbsp;" 
-					+ format_secHHMM( battery["remaining_seconds"] ) ;
+		document.getElementById("headerdiv").style.backgroundColor = header_background;
+	
+		textById( "batteryTime",  
+					"" + Math.round( progress["bat_percent_remaining"] ) 
+					+ "% " 
+					+ format_secHHMM( progress["bat_remaining_seconds"] ) ) ;
+	}
 
-        // Battery info gets updated once a minute.
-        // Refresh display about twice a minute, that's more than enough 
-        // since battery info changes slowly.
-		await sleep_ms( 24_000 ) ;
-	}
-}
-// Run battery info update in it's own async task
-updateHeader() ; 
+	#updateBanner(progress){
+		// Banner is always present, courtesy of this class.
+		let banner_element = document.getElementById("banner");
+		let banner = "";
+		
+		// Order is by priority of message.
+	 	if( progress["sync_pending"]){
+	 		if( progress["status"] == "playing" ){
+	 			banner = this.bannerWarn + tlt( "Cambios a la espera que la música termine");
+			}
+			else{
+				banner = this.bannerWarn + tlt("Cambios almacenados, actualización pendiente")
+			}
+		}
+		else if( !progress["playback_enabled"]){
+			banner = tlt("Tocar música deshabilitado por afinador, pinout");
+		}
+	    else if( progress["automatic_delay"] ){
+	 		banner = tlt("Partida automática activada") + `, ${progress["automatic_delay"]} s` ;
+	 	}
 
-function make_status_text( progress_status, percentage ) {
-	// Transform player status to language
-    let status_text ;
-	if (progress_status === "ended") {
-		status_text = "ended" ;
+		if( banner == "" ){
+			// page (such as tunelibedit.html) can set own text here
+			banner = this.bannerEmpty;
+		}
+		banner_element.innerText = banner ;
+		banner_element.style.display = banner ? "": "none" ;
 	}
-	else if(progress_status === "playing" ) {
-		status_text = "" + Math.round(percentage) + "%" ;
-	}
-	else if(progress_status === "cancelled" ) {
-		status_text = "cancelled" ;
-	}
-    else if( progress_status == "waiting"){
-        status_text = "\u231B waiting" ;
-    }
-	else {
-		status_text = progress_status ;
-	}
-	return status_text ;
 }
 
 // Formatting of numbers with locale information
@@ -555,6 +683,7 @@ function textById( id, newText ) {
   	document.getElementById(id).innerText = formattedNewText ;
 }
 
+// DOM helper functions to show/hide, set text and html by id.
 function showHideElement(id, value ){
 	let d = document.getElementById( id );
 	if( value == "" || value == null || 
@@ -567,7 +696,13 @@ function showHideElement(id, value ){
 }
 
 function htmlById( id, htmlText ) {
-	document.getElementById(id).innerHTML = htmlText ;
+	let element = document.getElementById(id);
+	if( htmlText == "" && element.innerHTML == "" ){
+		// a bit of optimization for large lists like
+		// tunelist or history page. Saves a bit of energy
+		return;
+	}
+	element.innerHTML = htmlText ;
 }
 
 function htmlByIdIgnoreErrors( id, htmlText ){
@@ -601,17 +736,41 @@ TLCOL_DATEADDED = 9 ;
 TLCOL_RATING = 10 ;
 TLCOL_SIZE = 11 ;
 TLCOL_HISTORY = 12 ;
-TLCOL_RFU = 13 ;
+TLCOL_LYRICS = 13 ; // lyrics present
 TLCOL_COLUMNS = 14 ;
 
 
+function map_tlcol_names( header_map ){
+	// initializing here because:
+	// 1. tlt is not defined before
+	// 2. check_translations.py knows about tlt
+	if( typeof map_tlcol_names.tlcol_names == "undefined" ){
+		map_tlcol_names.tlcol_names = [
+			"", tlt("Título"), tlt("Género"), tlt("Autor"), tlt("Año"), tlt("Duración"),
+			tlt("Nombre archivo"), tlt("Autoplay"), tlt("Info"), tlt("Fecha"),
+			tlt("Puntaje"), tlt("Tamaño"), tlt("Hist"), tlt("Letra")
+		] ;
+	}
+	if( typeof header_map.map == "function"){
+		return header_map.map((ele) =>  map_tlcol_names.tlcol_names[ele]);
+	}
+	else{
+		return map_tlcol_names.tlcol_names[header_map];
+	}
+}
 async function showPopup(id_where, show_text) {
+	// show a popup message for some seconds, then hide automatically
     if( show_text === null ){
         return ;
     }
-	// needs <span id="popup" class="popuptext"></span>
-	// in some place of the <body>
 	let popup = document.getElementById("popup") ;
+	if( !popup ){
+		// <span id="popup" class="popuptext"></span>
+		popup = document.createElement("span");
+		popup.id = "popup";
+		popup.classList.add("popuptext");
+		document.body.appendChild( popup );
+	}
 	popup.innerText = show_text;
 	let saveWidth = popup.style.width ;
 	let saveHeight = popup.style.height; 
@@ -626,6 +785,7 @@ async function showPopup(id_where, show_text) {
 	}
 	else {
 		popup.style.left = "200px";
+		popup.style.left = (window.pageXOffset + window.screen.width/5);
 		popup.style.top = (window.pageYOffset + window.screen.height/3) + "px";
 	}
 
@@ -647,140 +807,88 @@ function removeSpecialHtmlChars( text ){
     return text.replace(/[&<>"']/g, "");
 }
 
-
-function currentPage(){
-    let path = window.location.pathname;
-    return path.split("/").pop();
-}
-
-// Cache a json file 
-async function cache_json( path ) {
-	let data = sessionStorage.getItem( path );
-	if( data == null || data == undefined || data == "undefined"){
-        console.log("getting json from net for cache:", path ) ;
-		let json_for_cache = await fetch_json( path );
-        sessionStorage.setItem( path, JSON.stringify( json_for_cache ) ) ;
-		return json_for_cache ;
+class JsonCache{
+	constructor(url, postOnly=false ){
+		this.url = url;
+		this.postOnly = postOnly;
+		this.reentry = 0;
+		this.theData = null;
+		// It's better to drop on reboot, to ensure configuration
+		// changes take effect here after reboot
+		commonGetProgress.registerCache( this );
 	}
-	return JSON.parse( data ) ;
-}
-
-// Drop cached json, next time cache_json() is called
-// data will be retrieved again from server
-function drop_cache( path ){
-	sessionStorage.removeItem( path );
-}
-
-// Get tunelib.json and cache in tab storage for fast access
-// drop_tunelib() is called when the tunelib is changed
-// by the user.
-async function get_tunelib() {
-	return await cache_json( "/data/tunelib.json" ) ;
-}
-
-// Drop tunelib, next time get_tunelib() is called
-// data will be retrieved again from server
-function drop_tunelib(){
-	drop_cache( "/data/tunelib.json" ) ;
-}
-
-async function get_lyrics( tuneid ){
-	data = await cache_json( "/data/lyrics.json" ) ;
-	lyrics = data[tuneid] ;
-	if( lyrics == undefined || lyrics == null ){
-		return "";
+	async get(post){
+		if( this.theData != null ){
+			return this.theData;
+		}
+		if( !post && this.postOnly ){
+			return ;
+		}
+		// avoid reentering the critical section, if not,
+		// the same element may be asked for twice, slowing down
+		// the system.
+		this.reentry += 1;
+		while( this.reentry > 1 ){
+			await sleep_ms(50);
+		}
+		let data = null;
+		try{
+			// sessionStorage is a good place: valid for multiple pages on the same tab.
+			// User can clear sessionStorage by changing tab (unlike localStorage) in case of problems.
+			// Cache API does not work since we use http and not https.
+			data = sessionStorage.getItem( this.url );
+			if( !data || typeof data != "string" || (data.substring(0,1) != "{" && data.substring(0,1) != "["))	{
+				data = JSON.stringify( await fetch_json( this.url, post ));
+				sessionStorage.setItem( this.url,  data )  ;
+			}
+		}
+		catch(e){
+			console.error("JsonCache get failed", e);
+			this.reentry -= 1;
+			throw e ;
+		}
+		this.reentry -= 1;
+		// JSON.parse takes about 1msec for 100kb tunelib with 600 tunes.
+		this.theData = JSON.parse( data ) ;
+		return this.theData;
 	}
-	return lyrics ;
-}
-function drop_lyrics() {
-	drop_cache( "/data/lyrics.json" );
-}
+	drop(){
+		console.log("cache drop", this.url );
+		sessionStorage.removeItem( this.url  );
+		this.theData = null;
+	}
 
-function pageUp(pagename){
-    from = document.referrer;
-    if( from == undefined || from.includes(pagename) || pagename == undefined ){
-        // to be faster: if the previous page is the "up" page, go back
-        // This could lead to another page of the same name in history
-        // Tough luck.
-        history.back();
-    }
-    else{
-		let p = pagename ;
-		if( !p.endsWith(".html") ){
-			p = p + ".html";
-		}
-		if( p.indexOf("static") == -1 ){
-			p = "/static/" + p ;
-		}
-        // Came from other page, navigate to this page
-        window.location.href = p ;
-    }
+}
+let tunelibCache = new JsonCache("/data/tunelib.json");
+let lyricsCache = new JsonCache("/data/lyrics.json");
+async function lyricsCacheTuneid( tuneid ){
+	// If no lyrics available, return empty string
+	return ((await lyricsCache.get())[tuneid]) || "";
+}
+let configCache = new JsonCache("/data/config.json");
+async function isMultipleSetlistsEnabled(){
+	let config = await configCache.get();
+	return config["multiple_setlists"];
 }
 
 
-function get_rating( tune ){
+function formatRating( tune ){
 	return tune[TLCOL_RATING].replace(/\*/g, "⭐"); //&#x2B50;
 }
 
+// Function for mcserver
+function isUsedFromDemo(){
+	return (""+window.location.href).includes("/demo/");
+}
+function isUsedFromIOT(){
+	return (""+window.location.href).includes("/iot/");
+}
 function isUsedFromServer(){
 	// True if this page resides on the drehorgel.pythonanywhere.com server
 	// as IOT crank organ component (via mcserver)
-	let url = ""+window.location.href;
-	return url.indexOf("/iot/") != -1;
+	return isUsedFromDemo() || isUsedFromIOT();
 }
 
-async function setPageTitle(){
-	// Set page title
-	let pt = document.getElementById( "pagetitle" );
-	if( pt == undefined || pt.innerText != "" ){
-		return ;
-	}
-	// cache description in tab storage for efficiency
-	let j = await cache_json("/get_description");
-	pt.innerText = j.description ;
-}
-setPageTitle() ;
-
-
-async function commonGetProgress() {
-	let stored_boot_session = sessionStorage.getItem( "boot_session" );
-	let stored_tunelib_signature = sessionStorage.getItem( "tunelib_signature" );
-	let progress = await fetch_json( "/get_progress/" + stored_boot_session  );
-	console.log("get progress", progress );
-	// This is a good place to check, progress is used
-	// with tunelib and lyrics...
-	// Cache is refreshed on boot and when tunelib key data changes.
-	if( progress.tunelib_signature != stored_tunelib_signature ||
-	    progress.boot_session != stored_boot_session
-	){
-		// Force refresh of tunelib and lyrics on reboot.
-		drop_tunelib();
-		drop_lyrics();
-		sessionStorage.setItem( "boot_session", progress.boot_session) ;
-		sessionStorage.setItem( "tunelib_signature", progress.tunelib_signature) ;
-		// and reload current page (at least), this commonGetProgess
-		// is called by tunelist.html and play.html, both will benefit from reloading
-		location.reload();
-	}
-	// Play.html and tunelist.html and index.html have banner
-	let banner_element = document.getElementById("banner");
-	if( banner_element ) {
-		let banner = "";
-		// Show only the most relevant of these conditions
-		if( !progress["playback_enabled"]){
-			banner = tlt("Deshabilitado por afinador, pinout");
-		}
-		else if( progress["sync_pending"]){
-			banner = tlt( "Cambios pendientes, espere");
-		}
-		else if( progress["automatic_delay"] ){
-			banner = tlt("Reproducción automática activada") + `, ${progress["automatic_delay"]}s` ;
-		}
-		banner_element.innerText = banner;
-		banner_element.style.display = banner ? "": "none" ;
-	}
-	return progress ;
-}
 
 let programNameList = [
     "any",
@@ -925,7 +1033,13 @@ function program_name( program_number ){
 			return "???";
 		}
 		
-	}
+}
+
+function noteName( midi ){
+    let note_list = [ "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B" ];
+    let nn =  note_list[ midi%12 ] + Math.floor( (midi/12) - 1 );
+    return nn;
+}
 
 function insertRow( body, data ){
 	let row = body.insertRow(-1);
@@ -938,14 +1052,6 @@ function insertRow( body, data ){
 	return row;
 }
 
-async function makeTuneTitle( tune ){
-	let mic = "" ;
-	let lyrics = await get_lyrics(tune[TLCOL_ID]);
-	if( lyrics.length > 0 ){
-		mic = "🎤";
-	}
-	return tune[TLCOL_TITLE] + mic ;
-}
 
 // Encodes a Unicode filename so that it can be
 // added to the url
@@ -970,62 +1076,82 @@ function encodePath( path ){
   );
 }
 
-// Having two browsers asking for login concurrently might not work...
-let waitingForPassword = "" ;
+class PasswordDialog{
+	static initialize(){
+		let modalDialog = document.getElementById( "modalPasswordDialog" );
+		if( modalDialog == undefined ){
+			modalDialog = document.createElement("div");
+			modalDialog.id = "modalPasswordDialog";
+			modalDialog.classList.add("modal");
+			modalDialog.innerHTML = `
+			<div class="modal-content">
+			<span id="passwordX" class="close"">&times;</span>
+			<br>
+			<span id="enter_password"></span>
+			<br>
+			<input id="passwordInput" type="password" size="20"/>
+			<br>
+			<button id="passwordOkButton"></button>
+			<button id="passwordCancelButton"></button>
+			</div>
+			`;
+			document.body.appendChild( modalDialog );
+			document.getElementById("enter_password").innerText = tlt("Password:") ;
+			document.getElementById("passwordOkButton").innerText = tlt("Aceptar");
+			document.getElementById("passwordCancelButton").innerText = tlt("Cancelar") ;
+			
+			let ok = document.getElementById( "passwordOkButton")
+			ok.addEventListener( "click", ()=>this.#clickOk() );
+			let cancel = document.getElementById( "passwordCancelButton")
+			cancel.addEventListener( "click", ()=>this.#clickCancel() );
+			let x = document.getElementById( "passwordX")
+			x.addEventListener( "click", ()=>this.#clickCancel() );
+			this.modalDialog = modalDialog;
+			this.passwordInput = document.getElementById( "passwordInput");
+			this.waitingForPassword = "";
+		}
+	}
 
-function cancelPasswordDialog(){
-	let modalPasswordDialog = document.getElementById( "modalPasswordDialog" );
-	modalPasswordDialog.style.display = "none";
-	waitingForPassword = "cancel";
-}
+	static #clickCancel(){
+		this.passwordInput.value = "";
+		this.waitingForPassword = "cancel";
+	}
 
-async function okPasswordDialog(){
-	let hp = hashWithSeed( document.getElementById( "passwordInput" ).value );
-	while( true ){
+	static async #clickOk(){
+		let hp = this.#hashPassword( this.passwordInput.value );
 		try{
-			await fetch_json( "/verify_password", { "password": hp} );
+			await fetch_json( "/verify_password", { "password": hp } );
 			// Password valid, close dialog
 			// Error 401 should  disappear next fetch_json
-			break;
+			this.waitingForPassword = "ok";
+			this.passwordInput.value = "";
+
 		}
 		catch{
-			// Wait until cancel or password entered
-			return ;
 		}
+		this.passwordInput.value = "";
+		// Continue waiting until cancel or password entered		
 	}
-	waitingForPassword = "ok";
-}
-
-async function askForPassword(){
-	waitingForPassword = "" ;
-
-    let modalPasswordDialog = document.getElementById( "modalPasswordDialog" );
-    if( modalPasswordDialog == undefined ){
-        modalPasswordDialog = document.createElement("div");
-        modalPasswordDialog.id = "modalPasswordDialog";
-		modalPasswordDialog.classList.add("modal");
-        modalPasswordDialog.innerHTML = `
-        <div class="modal-content">
-          <span class="close" onclick="cancelPasswordDialog()">&times;</span>
-          <br>
-		  Enter password:
-		  <br>
-          <input id="passwordInput" type="password" size="20"/>
-          <br>
-          <button onclick="okPasswordDialog()">OK</button>
-          <button onclick="cancelPasswordDialog()">Cancel</button>
-        </div>
-        `;
-		document.body.appendChild( modalPasswordDialog );
-    }
-
-    modalPasswordDialog.style.display = "block";
-	document.getElementById("passwordInput").value = "";
-	while( waitingForPassword == ""){
-		await sleep_ms(100);
+	static #hashPassword( password ){
+    	const data = getCookie( "session") + "_" + password ;
+    	return  buf2hex( sha256( new TextEncoder().encode( data ) ) );
 	}
-	modalPasswordDialog.style.display = "none";
-	return waitingForPassword;
+
+	constructor(){
+		PasswordDialog.initialize();
+	}
+
+	async askAndVerify(){
+		PasswordDialog.passwordInput.value = "";
+		PasswordDialog.waitingForPassword = "";
+		PasswordDialog.modalDialog.style.display = "block";
+		while( PasswordDialog.waitingForPassword == ""){
+			await sleep_ms(1000);
+		}
+		PasswordDialog.modalDialog.style.display = "none";
+		return PasswordDialog.waitingForPassword == "ok";	
+	}
+	
 }
 
 // Share current time zone information with server
@@ -1034,14 +1160,22 @@ async function setTimezone(){
 	let timeInfo = new Date().toLocaleString([], {timeZoneName:"short"}).split(" ");
 	let shortName = timeInfo[timeInfo.length-1];
 	let longName = Intl.DateTimeFormat().resolvedOptions().timeZone; 
-	await fetch_json( "/set_time_zone", 
-		post={"offset": offsetMinutes*60, 
+	// Allow only posts with this cache, this prevents race condition with index.html's cach refill
+	if( !setTimezone.cache ){
+		setTimezone.cache = new JsonCache("/set_time_zone", postOnly=true ) ;
+	}
+	// fetch_json will be done only once 
+	await setTimezone.cache.get({"offset": offsetMinutes*60, 
 			  "shortName":shortName,
 			  "longName": longName,
 			  // current time in Unix epoch seconds
-			  "timestamp": Math.round( Date.now()/1000)
-			 });	
+			  "timestamp": Math.round( Date.now()/1000 )
+			 });
+	// if get() should be called without a post (GetProgress.fillCaches)
+	// the postOnly ensures it is not sent.
 }
+// Calling this in background does not interfere with page load
+// Since the call is cached, this means effectively one call per boot session
 setTimezone();
 
 
@@ -1165,3 +1299,562 @@ function hashWithSeed( s ){
     const data = getCookie( "session") + "_" + s ;
     return hexdigest = buf2hex( sha256( new TextEncoder().encode( data ) ) );
 }
+
+
+async function queueTune( tuneid, slot ) {
+    let spectator_name = "" ;
+    if( isUsedFromIOT()  ){
+        let resp = await fetch_json( "/get_spectator_name" ) ;
+        spectator_name = resp["spectator_name"] ;
+        while( spectator_name == "" ){
+            spectator_name = window.prompt(tlt("¿Cuál es tu nombre?")).trim().replace(/<\/?[^>]+(>|$)/g, "");
+        }
+    }
+	// make a text to show in showPopup below
+	let slot_text = "";
+	if( slot ){
+		slot_text = slot;
+	}
+	showPopup( "", tlt("Actualizando setlist")+ " " + slot_text);
+    postdata = { 
+        "spectator_name": spectator_name, 
+        "tuneid": tuneid, 
+        "slot": slot } ;
+	// queue tune and update page with result
+	await commonGetProgress.fetchJson( "/queue_tune", postdata ) ;
+}
+
+
+// The title of a tune
+class TuneTitle extends HTMLSpanElement{
+	static lastProgress;
+	static updateProgress( progress ){
+		// Called by commonGetProgress.#backgroundProcess() for periodic update
+		// Called by commonGetProcess.get() on the pages to force update immediately
+		// Called by visibilityChange() below to update when scrolling uncovers tune titles.
+		if(!progress){
+			return ; // can happen if lastProgress has not been initialized yet
+		}
+		// Store progress to update titles while scrolling
+		TuneTitle.lastProgress = progress;
+		// Update only visible TuneTitle elements of this page
+		for( let element of document.getElementsByClassName("tune-title-visible")){
+			element.updateProgress( progress );
+		}
+
+	}
+	static async backgroundUpdateProgress( progress ){
+		// Wait a bit before updating to diminish forced reflow violations
+		// i.e. accumulate some changes before updating progress.
+		await sleep_ms(50);
+		TuneTitle.updateProgress( progress );
+	}
+	static visibilityChanges( entries ){
+		// Page has scrolled, update TitleTunes that entered/exited viewport.
+		for( let entry of entries ){
+			// Add/remove class according to visibility in viewport
+			if( entry.isIntersecting ){
+				entry.target.classList.add("tune-title-visible");
+			}
+			else{
+				entry.target.classList.remove("tune-title-visible");
+			}
+		}
+		
+		// Could update only elements changed to visible, but this is fast enough.
+		// since there are normally no more than 10 or 30 tune titles visible depending on zoom level.
+		TuneTitle.backgroundUpdateProgress( TuneTitle.lastProgress );
+	}
+	// Set up callback when TuneTitle enters and when it exits the viewport.
+	static observer = new IntersectionObserver( TuneTitle.visibilityChanges );
+
+	constructor(){
+		super();
+		this.options ={ beforeFormat:"", afterFormat:"", shortClick:false, menu:false }
+
+		this.setlistMenu = document.createElement( "button", {is:"setlist-menu"})
+		this.before = document.createElement( "span" );
+		this.titleLink = document.createElement("a");
+		this.titleLink.style.cursor = "pointer";
+		this.after = document.createElement( "span" );
+
+		this.appendChild( this.setlistMenu );
+		this.appendChild( this.before );
+		this.appendChild( this.titleLink );
+		this.appendChild( this.after );
+		// don't add listener twice, not even by error.
+		this.listenerAdded = false;
+
+		// Add to list of elements updated by the IntersectionObserver
+		TuneTitle.observer.observe(this);
+	}
+	connectedCallback(){
+		if( this.listenerAdded ){
+			// Allow to add this element twice to a document, needed for sort
+			return; 
+		}
+		this.listenerAdded = true ;
+		// If short click is disabled, that is handled in #shortClick()
+		// this makes assigning the event easier.
+		this.titleLink.addEventListener("click", ()=>{this.#shortClick()} );
+	}
+
+	// Set tune is designed to be called once for a tune-title
+	// and then updateProgress() is called to update the title
+	// with the current progress.
+	setTune( tune, options ){
+		this.options = options ;
+		// format characters
+		//		h =  shows hourglass symbol/musical symbol
+		//		p = setlist position
+		//		m = microphone for lyrics
+		//		t = title in bold while playing
+		//		% = percentage and bar graph
+		//		s = spectator
+		//		d = duration
+		// { beforeFormat:"hptm%sd", afterFormat:"hptm%sd", shortClick:true, menu:true }
+		// shortClick
+		//		true: allow short click
+		//		false: short click does nothing, not formatted as link
+		// menu:
+		//		true: show multiple setlist menu
+		//		false: don't show multiple setlist menu
+		// Caller must check isMultipleSetlistsEnabled().
+		// This is not done here, no opportunity for an async function.... :-(
+		this.tune = tune ;
+		this.tuneid = tune[TLCOL_ID];
+		// if there is menu leave a space &nbsp; \u00a0 before the title
+		this.titleLink.innerText =  this.options.menu ? "\u00a0"+tune[TLCOL_TITLE]:tune[TLCOL_TITLE];
+
+		if( this.options.shortClick ){
+			this.titleLink.classList.add( "anohref" ); 
+			// If setTune() needs to be called again
+			// to update the title, then remove the classes
+			//this.titleLink.classList.remove("a");
+			//this.titleLink.classList.remove("anoshortclick");
+		}
+		else{
+			this.titleLink.classList.add("anoshortclick");
+			//this.titleLink.classList.remove( "anohref" ); 
+		}
+		this.setlistMenu.setOperation( "queueTune", tune, this.options.menu );
+
+		this.setlistMenu.style.display = this.options.menu  ? "":"none";
+	}
+
+	updateProgress( progress ){
+		function format( self, c ){
+			let result = "";
+			if( c == "h"){
+				if( is_playing  ) {
+					result = "🎵"; // musical note &#127925;
+				}
+				else if( in_setlist ){
+					result =  "⏳"; // Hourglass &#x23F3;
+				}
+			}
+			else if( c == "t"){
+				if( is_playing ){
+					self.titleLink.style.fontWeight = "bold";
+				}
+				else if(self.titleLink.style.fontWeight != "normal"){
+						self.titleLink.style.fontWeight = "normal";
+				}
+			}
+			else if( c == "p"){
+				if( position>=0 ){
+					result = `(${position+1}) `;
+				}
+			}
+			else if( c == "%"){
+				if( is_playing ){
+					let percent = progress["playtime"]/self.tune[TLCOL_TIME]*100 ;
+					if( isNaN(percent)){
+						percent = 0 ;
+					}
+					// 0-10: 1 block advance, 90-99: minus 1 block
+					result =  "\u00A0" + Math.round(percent) + "%\u00A0";
+					let blocks = Math.floor(percent/10);
+					// darkBlock = "￭"    &#xffed; halfwidth Black Square
+		            // lightBlock = "･"   &#xff65; halfwidth katakana Middle Dot
+					result += "￭".repeat(blocks) + "･".repeat(10-blocks) + "\u00A0";
+				}
+			}
+			else if( c == "m"){
+				if( self.tune[TLCOL_LYRICS]){
+					result = "🎤\u00A0"; // microphone + non blank space
+				}
+			}
+			else if( c == "s"){
+				let spectator_name = tune_requests[ self.tuneid ];
+				if( spectator_name ){
+					result = "\u00A0-\u00A0" + escapeHtml(spectator_name) + "\u00A0";
+				}
+			}
+			else if( c == "d"){
+				result = "\u00A0" + formatMilliMMSS( self.tune[TLCOL_TIME] ) + "\u00A0";
+			}
+			return result;
+		}
+		const setlist = progress["setlist"]
+		const is_playing = (this.tuneid == progress["tune"] && progress["status"] == "playing");
+		let position = setlist.indexOf( this.tuneid );
+		const in_setlist = (position >= 0);
+		// Update only tunes in setlist
+		let tune_requests = progress["tune_requests"] ;
+		if( tune_requests == undefined ){
+			tune_requests = {} ;
+		}
+		let before = "";
+		let after = "";
+		for( let c of this.options.beforeFormat ){
+			before += format( this, c );
+		}
+		for( let c of this.options.afterFormat ){
+			after += format( this, c );
+		}
+		// this optimization would not work if before/after had spaces
+		// If there is a change, one TuneTitle.updateProgress takes 7msec per tune on PC
+		// If there is no change, one TuneTitle.updateProgress takes 0.02 msec per tune
+		if( this.before.innerText != before ){
+			this.before.innerText = before;
+		}
+		if( this.after.innerText != after ){
+			this.after.innerText = after ;
+		}
+
+	}
+	#shortClick(){
+		if( this.options.shortClick  ){
+			// queueTune is async, might also be await queueTune()
+			queueTune( this.tuneid, 0 );
+		}
+	}
+}
+customElements.define("tune-title", TuneTitle, { extends: "span" });
+
+class SetlistMenu extends HTMLButtonElement{
+	// implements the popup menu with all setlists.
+	// Used in the following contexts:
+	// * on a title (play.html, tunelist.html, history.html)
+	// * for the load setlist and save setlist buttons on play.html
+	static dialog = null;
+	static assignMenuHandlers = true;
+
+	// used to pass information to static handlers
+	// while menu is open (can be open only once, because
+	// it is blocking)
+	static tuneid = "";
+	static tune = [];
+	static operation = "";
+
+	static async #slotClick( slot ){
+		if( SetlistMenu.operation == "queueTune" ){
+			await queueTune( SetlistMenu.tuneid, slot );
+		}
+		else if( SetlistMenu.operation == "loadSetlist" ){
+			await fetch_json( "/load_setlist", {"slot": slot} );
+		}
+		else if( SetlistMenu.operation == "saveSetlist"){
+			await fetch_json( "/save_setlist", {"slot": slot} );
+			showPopup( "", tlt("Setlist guardada") + " " + slot);
+
+		}
+		SetlistMenu.#close();
+	}
+	static async #openTunelibChangeDialog( tlcol ){
+		let textMap = new Map();
+		// >>> redesign if all columns are prompted
+		textMap.set( TLCOL_RATING, tlt("Ingrese") + " " + map_tlcol_names(TLCOL_RATING));
+		textMap.set( TLCOL_INFO, tlt("Ingrese") + " " + map_tlcol_names(TLCOL_INFO));
+		// TLCOL_RATING, TLCOL_INFO, 
+		// TLCOL_TITLE, TLCOL_AUTHOR, TLCOL_GENRE, TLCOL_YEAR, TLCOL_AUTOPLAY
+		let text = textMap.get(tlcol);
+		let info = prompt( text + " " + SetlistMenu.tune[TLCOL_TITLE], SetlistMenu.tune[tlcol] );
+		if( info != null ){
+			const TLOP_REPLACE_FIELD = 3; // see tunemanager.py
+
+			// send a list of tuples just as /save_tunelib likes it
+			// just with one change, but its a list of lists...
+		// >>> should rating be limited to * ** and ***?
+			await fetch_json( "/save_tunelib", [[TLOP_REPLACE_FIELD, SetlistMenu.tuneid, tlcol, info]] );
+			showPopup("", tlt("Cambios almacenados, actualización pendiente")); 
+			await sleep_ms(1000);
+		}
+	}
+
+	static async #openSetlistDialog(){
+		await SetlistTitleDialog.open();
+		SetlistMenu.#close();
+	}
+
+	static #close(){
+		SetlistMenu.dialog.style.display = "none";
+	}
+
+	constructor( ){
+		
+		super();
+		this.style.cursor = "pointer";
+
+		// Share a single modal div for the pop up menu
+		SetlistMenu.dialog = document.getElementById("setlistMenu");
+		if( SetlistMenu.dialog == undefined ){
+			SetlistMenu.dialog = document.createElement("div");
+			SetlistMenu.dialog.id = "setlistMenu";
+			SetlistMenu.dialog.classList.add("modal");
+			SetlistMenu.dialog.innerHTML = `
+ <div class="modal-content">  
+	<h3><span id="menuTitle" class="tune-only"></span></h3>
+	<ul style="list-style-type:none;">
+	<li><span id="menuCaption"></span></li>
+	<li><a id="menuSlot1" class="anohref"></a></li>
+	<li><a id="menuSlot2" class="anohref"></a></li>
+	<li><a id="menuSlot3" class="anohref"></a></li>
+	<li><a id="menuSlot4" class="anohref"></a></li>
+	<li><a id="menuSlot5" class="anohref"></a></li>
+	<li><a id="menuSlot6" class="anohref"></a></li>
+	<li><a id="menuSlot7" class="anohref"></a></li>
+	<li><a id="menuSlot8" class="anohref"></a></li>
+	<li><a id="menuSlot9" class="anohref"></a></li>
+	<li>─────────</li>
+	<li><a id="menuInfo"  class="tune-only anohref"></a></li>
+	<li><a id="menuRating"  class="tune-only anohref"></a></li>
+	<li><a id="menuSetlistTitles" class="anohref"></a></li>
+	</ul>
+</div>`;
+			document.body.append( SetlistMenu.dialog );
+		}
+	}
+
+	
+	connectedCallback(){
+		// call #open() when the menu button is clicked.
+		this.addEventListener( "click", ()=>{this.#open()});
+
+		function assignMenuCallback( id, callback ){
+			document.getElementById(id).addEventListener( "click", callback );
+		}
+		if( SetlistMenu.assignMenuHandlers ){
+			// do this once only for the only only dialog shared by all instances
+			SetlistMenu.assignMenuHandlers = false;
+			for( let slot=1; slot<=9; slot++ ){
+				assignMenuCallback( "menuSlot"+slot, ()=>SetlistMenu.#slotClick(slot) );
+			}
+			assignMenuCallback( "menuInfo", ()=>SetlistMenu.#openTunelibChangeDialog(TLCOL_INFO)) ;
+			assignMenuCallback( "menuRating", ()=>SetlistMenu.#openTunelibChangeDialog(TLCOL_RATING) );			
+
+			assignMenuCallback( "menuSetlistTitles", ()=>SetlistMenu.#openSetlistDialog() );
+			// click on something that is not a menu option
+			// will close the popup
+			document.addEventListener( "click", ()=>SetlistMenu.#close() );
+		
+			// translate text only once
+			let tlcol_names = map_tlcol_names([TLCOL_INFO, TLCOL_RATING]);
+			htmlById( "menuInfo", "ℹ️ " + tlcol_names[0] + "...<br>");
+			htmlById( "menuRating", "⭐ " + tlcol_names[1] + "...<br>");
+			htmlById( "menuSetlistTitles", "🎩" + tlt("Cambiar titulos de setlists...") + "<br>");
+		}
+	}
+	setOperation( op, tune, menu ){
+		// op is one of these:
+		//		"saveSetlist"
+		//		"loadSetlist"
+		//		"queueTune"
+		// tune is a tune object for "queueTune" i.e. tune[] TLCOL indexable array
+		// menu: true if multiple setlist enabled, false if only one setlist
+		this.operation = op ;
+		this.tune = null;
+		this.tuneid = null;
+		this.menu = menu;
+		if( op == "queueTune" ){
+			this.tune = tune;
+			this.tuneid = tune[TLCOL_ID];
+			// here is the menu character
+			this.innerText = "⋮ " ; // (U+2630☰) (U+2261≡) (U+22EE⋮)
+			// Make character a bit bigger
+			this.classList.add("title-menu-button");
+			// this.style.fontSize = "110%";
+			// this.style.fontWeight = "bold";
+			// this.style.padding = "0px 0px 0px 0px";
+			// this.style.height = "100%";
+			// this.style.lineHeight = "100%"; // line height set equal to font size
+			// this.style.borderRadius = "2px";
+			// this.style.marginBottom = "2px";
+			// this.style.marginTop = "0px";
+			// this.style.marginRight = "0px";
+			// this.style.marginLeft = "0px";
+		}
+		else if( op == "loadSetlist" ){
+			// this is the button text
+			this.innerText = tlt("Cargar setlist");
+		}
+		else if( op == "saveSetlist"){
+			// thisis the button text
+			this.innerText = tlt("Guardar setlist");
+		}
+	}
+
+	async #open( ){
+		// pass the current state to the event listeners
+		// of the popup menu in here. Since only one modal dialog
+		// of this class can be active at a given time, there is no clash.
+		SetlistMenu.operation = this.operation;
+		SetlistMenu.tuneid = this.tuneid;
+		SetlistMenu.tune = this.tune;
+
+		if( !this.menu ){
+			// No menu, only one setlist, call the action right away and that's it.
+			await SetlistMenu.#slotClick(1);
+			return;
+		}
+		const keycaps = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+		let titles =  await fetch_json( "/get_setlist_titles" );
+		for( let [slot,title,tunes] of titles ){
+			// info: [slot_number 1-9, title, number of tunes in setlist]
+			// If no title use caption (no title)
+			textById("menuSlot"+slot,
+			`${keycaps[slot]} ${title||tlt("(sin título)")} (${tunes})`);
+		}
+		let caption = "???";
+		let showTuneOnly = false ;
+		if( this.operation == "queueTune" ){
+			htmlById( "menuTitle",  this.tune[TLCOL_TITLE]);
+			caption = tlt("Agregar a setlist");
+			showTuneOnly = true;
+		}
+		else if( this.operation  == "loadSetlist"){
+			// this is the popup menu caption
+			caption = tlt("Cargar setlist actual desde:");
+		}
+		else if( this.operation  == "saveSetlist"){
+			// this is the popup menu caption
+			caption = tlt("Guardar setlist actual en:");
+		}
+		// apply caption, show tune-only elements
+		for( let element of document.getElementsByClassName("tune-only")){
+			showHideElement( element.id, showTuneOnly );
+		}
+		textById( "menuCaption", caption );
+
+		SetlistMenu.dialog.style.display = "block";
+	}
+
+}
+customElements.define( "setlist-menu", SetlistMenu, { extends: "button"});
+
+class SetlistTitleDialog extends HTMLDivElement{
+	// This is the only entry point:
+	// await SetlistTitleDialog.open()
+	static async open(){
+		// Create one and only one custom DOM object with
+		// the setlist dialog and then open the dialog.
+		let sld = document.getElementById("setlistDialog")
+		if( sld == undefined ){
+			sld = document.createElement("div", {is:"setlist-title-dialog"});
+			sld.id = "setlistDialog";
+			document.body.appendChild( sld );
+		}
+		await sld.open();
+	}
+
+	constructor(){
+		super();
+		this.classList.add("modal");
+		this.innerHTML =  `
+    <div class="modal-content">   
+		<span id="setlistCloseX" class="close">&times;</span>
+	  	1️⃣ <input id="setlistTitle1" type="text" size="20"><br>
+		2️⃣ <input id="setlistTitle2" type="text" size="20"><br>
+		3️⃣ <input id="setlistTitle3" type="text" size="20"><br>
+		4️⃣ <input id="setlistTitle4" type="text" size="20"><br>
+		5️⃣ <input id="setlistTitle5" type="text" size="20"><br>
+		6️⃣ <input id="setlistTitle6" type="text" size="20"><br>
+		7️⃣ <input id="setlistTitle7" type="text" size="20"><br>
+		8️⃣ <input id="setlistTitle8" type="text" size="20"><br>
+		9️⃣ <input id="setlistTitle9" type="text" size="20"><br>
+		<button id="setlistSave"></button>
+		<button id="setlistCloseButton"></button>
+    </div>`;
+
+	}
+	connectedCallback(){
+		function assignDialogCallback( id, callback){
+			document.getElementById(id).addEventListener( "click", callback );
+		}
+		assignDialogCallback( "setlistCloseButton", ()=>this.#close() );
+		assignDialogCallback( "setlistCloseX", ()=>this.#close() );
+		assignDialogCallback( "setlistSave", ()=>this.#save() );
+		
+		textById( "setlistSave", tlt("Guardar"));
+		textById( "setlistCloseButton", tlt("Cancelar"));
+
+	}
+	async open(){
+		let titles = await fetch_json( "/get_setlist_titles" );
+		for( let info of titles ){
+			let slot = info[0];
+			// Slot is 1-9
+			document.getElementById( "setlistTitle"+slot ).value = info[1] ;
+		}
+		this.style.display = "block";
+	}
+	async #save(){
+		// titles must have 10 elements, element 0 is current setlist but
+		// never shown anywhere
+		let titles = ["current"];
+		for( let slot = 1; slot <= 9; slot++  ){
+			titles.push( document.getElementById(`setlistTitle${slot}`).value );
+		}
+		await fetch_json( "/save_setlist_titles", titles );
+		this.#close();
+		showPopup( "", tlt("Guardando setlist"));
+	}
+	#close(){
+		this.style.display = "none";
+	}
+}
+customElements.define( "setlist-title-dialog", SetlistTitleDialog, { extends: "div"});
+
+// Translation functions. Data is in translations.js
+// Translation functions tlt and translate_html are in common.js
+// Translate a string with current languge
+function tlt( s ){
+	if( typeof languageIndex === "undefined"){
+		// no translations.js present, don't translate
+		return s;
+	}
+	let tlist = translationDict[s.toLowerCase()];
+	if( tlist == undefined || tlist[languageIndex] == undefined){
+		return s ;
+	}
+    return tlist[languageIndex];
+}
+
+
+function translate_html(){
+	// Translates bottom level html DOM elements
+	// Must be run by page to be translated once the DOM
+	// elements are loaded.
+	// Dynamic DOM elements have to be translated by tlt function
+	if( typeof languageIndex === "undefined" ){
+		// no translations.js present
+		return;
+	}
+	let all = document.getElementsByTagName("*");
+	for (let i=0, max=all.length; i < max; i++) {
+		let d = all[i] ;
+		let localName = d.localName ;
+		if( ["html", "meta", "body", "script", "head", "table", "tbody", "thead", "tr"].includes(localName)){
+			continue ;
+		}
+		let innerHTML = d.innerHTML ;
+		if( innerHTML == undefined ||  innerHTML.includes("<") ){
+			// Don't try tro translate if no text or if there is a tag
+			continue ;
+		}
+		d.innerText = tlt(d.innerText) ;
+	}
+}
+
+

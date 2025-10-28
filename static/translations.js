@@ -1,7 +1,8 @@
-// Copyright (c) 2023 Hermann von Borries
+// Copyright (c) 2023-2025 Hermann von Borries
 // MIT License
 
 // Define columns of translationDict
+// keys are language codes of browser
 let languageDict = { "es": null, "en": 0, "de": 1 };
 
 // Translation keys must be in lower case
@@ -10,12 +11,12 @@ let translationDict = {
 	["[tunes]", "[Melodien]"],
 "[mseg]": // diag.html 
 	["[msec]", "[msec]"],
-"(borrado)": // history.html
-	["(deleted)", "(gelöscht)"],
 "¿cuál es tu nombre?": // tunelist.html (mcserver)
     ["What is your name?", "Dein Name, bitte?"],
 " a ": // note.html
 	[" to ", " bis "],
+"aceptar": // common.js
+	["OK","Ok"],
 "activa": // diag.html 
 	["Active", "Active"],
 "actuación": // tunelist.html 
@@ -34,14 +35,22 @@ let translationDict = {
 	["in tune", "gestimmt"],
 "afinar": // note.html 
 	["Tune", "Stimmen"],
+"afinar nota": // note.html 
+	["Tune note", "Note stimmen"],
+"afinar notas": // notelist.html 
+	["Tuning", "Stimmen"],
 "afinar a": // notelist.html
 	["Tune to", "Stimmen auf"],
 "afinar todos": // notelist.html 
 	["Tune all", "Alle Noten stimmen"],
+"agregar a setlist": // common.js
+	["Append to setlist", "An Setliste anhängen"],
 "ajuste velocidad:": // play.html 
 	["Set playback speed:", "Rückgabegeschwindingkeit:"],
 "alcanza para": // index.html 
 	["Enough for", "Reicht für"],
+"al día.": // tunelibedit.html 
+	["Up to date.", "Aktualisiert."],
 "alguien conectado": // diag.html 
 	["Someone connected", "Jemand angeschlossen"],
 "amplitud (db)": // note.html notelist.html 
@@ -50,6 +59,8 @@ let translationDict = {
 	["Amplitude", "Amplitude"],
 "archivos midi": // diag.html 
 	["MIDI files", "MIDI-dateien"],
+"autoplay": // common.js
+	["Autoplay", "Autoplay"],
 "autor": // tunelist.html play.html 
 	["Author", "Author"],
 "avance %": // history.html 
@@ -64,14 +75,26 @@ let translationDict = {
 	["Clear stored tuning", "Gespeicherte Frequenzen löschen"],
 "borrar setlist": // play.html 
 	["Clear setlist", "Setlist löschen"],
+"(borrado)": // history.html
+	["(deleted)", "(gelöscht)"],
 "🔍búsqueda": // tunelist.html 
 	["🔍Search", "🔍Suche"],
-"cambios pendientes, espere": // tunelist.html
-	["Changes pending, please wait","MIDI Dateien geändert, bitte warten"],
+"cambios almacenados, actualización pendiente": // common.html
+	["Changes stored, update pending", "Änderungen zum Update gespeichert"],
+"cambios a la espera que la música termine": // common.js
+	["Changes waiting for tune to stop","Änderungen warten auf das Melodieende"],
+"cambiar titulos de setlists...": // common.js
+	["Change setlist titles...", "Setlist Titel ändern..."],
+"cancelar": // common.js
+	["Cancel", "Abbrechen"],
+"cancelado": // play.js
+	["cancelled", "abgebrochen"],
 "calibrar indicación batería": // index.html 
 	["Calibrate battery indicators", "Batterieanzeige eichen"],
-"cargar setlist": // play.html 
+"cargar setlist": // common.js
 	["Load setlist", "Setlist laden"],
+"cargar setlist actual desde:": // common.js
+    ["Load current setlist from:", "Aktuelle Setlist von hier laden:"],
 "carpeta música": // diag.html 
 	["Music folder", "MIDI ordner"],
 "como wifi access point": // diag.html 
@@ -98,8 +121,10 @@ let translationDict = {
 	["not in tune", "verstimmt"],
 "descripción": // diag.html 
 	["Description", "Beschreibung"],
-"deshabilitado por afinador, pinout": // tunelist.html play.html 
-	["Disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
+"en espera": // play.html
+	["waiting","wartet"],
+"tocar música deshabilitado por afinador, pinout": // tunelist.html play.html 
+	["Playback disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
 "desordenar setlist": // play.html 
 	["Shuffle setlist", "Setlist mischen"],
 "desordenar todos": // play.html 
@@ -126,6 +151,8 @@ let translationDict = {
 	["Free flash", "Flash frei"],
 "flash usada": // diag.html 
 	["Used flash", "flash belegt"],
+"formato de tabla para copiar": // tunelibedit.html
+	["Table format for copy", "Tabellenformat zum kopieren"],
 "frecuencia": // diag.html 
 	["Frequency", "Frequenz"],
 "frecuencia media": // diag.html
@@ -134,38 +161,44 @@ let translationDict = {
 	["Turning", "Dreht"],
 "gráfico manivela": // diag.html
 	["Crank RPS graph", "Drehgeschwindigkeitsdiagramm"],
-"guardado": // play.html 
-	["Saved", "Gespeichert"],
-"guardar setlist": // play.html 
+"guardando setlist": // common.js
+	["Saving setlist","Setlist wird gespeichert"],
+"guardar": // tunelibedit.html, lyrics
+	["Save", "Speichern"],
+"guardar setlist": // common.js
 	["Save setlist", "Setlist speichern"],
+"guardar setlist actual en:": // common.js
+	["Save current setlist here:", "Aktuelle Setlist hier speichern:"],
 "género": // tunelist.html play.html 
 	["Genre", "Genre"],
 "hist": // tunelist.html 
 	["Hist", "Wiedergaben"],
 "historia": // index.html play.html history.html 
-	["History", "Verlauf"],
+	["History", "Chronik"],
 "historia truncada": // history.html
-    ["History purged", "Verlauf gekürzt"],
+    ["History purged", "Chronik gekürzt"],
 "hz": // notelist.html
 	["Hz", "Hz"],	
 "hz,": // notelist.html
 	["Hz,", "Hz,"],
 "imagen micropython": // diag.html 
 	["MicroPython image", "MicroPython image"],
+"índice": // index.html
+	["Home page","Homepage"],
 "info": // tunelist.html play.html 
 	["Info", "Info"],
-"información actualizada": // history.html 
-	["Information updated", "Information aktualisiert"],
+"ingrese": // common.js
+	["Enter", "Hier eingeben:"],
 "ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración": // index.html
 	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibration data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
-"ingrese comentario o puntaje *, ***,*** para: ": // history.html 
-	["Enter comment or rating *, **, *** for: ", "Schreib Kommentar oder Bewertung *, **, *** zu: "],
 "ip de clientes activos": // diag.html 
 	["IP of active clients", "IP aktiver Kunden"],
 "letra": // play.html 
 	["Lyrics", "Liedtext"],
 "lista de melodías": // tunelist.html 
 	["Tune list", "Melodieliste"],
+"los cambios se guardan automáticamente cada par de segundos.": // tunelibedit.html
+	["Changes are automatically saved every few seconds.", "Änderungen werden alle paar Sekunden automatisch gespeichert."],
 "manivela": // diag.html
 	["Crank", "Kurbel"],
 "manivela instalada": // diag.html
@@ -188,16 +221,22 @@ let translationDict = {
 	["Level must be between 0 and 100", "Level muss zwischen 0 und 100 liegen"],
 "nivel debe ser numérico": // index.html 
 	["Level must be numeric", "Level muss eine Zahl sein"],
+"no conectado": // common.js
+	["not connected", "nicht angeschlossen"],
 "no gira": // play.html 
 	["Not turning", "Dreht nicht"],
-"no hay información de avance disponible": // tunelist.html play.html 
-	["No progress information available", "Information über Fortschritt nicht verfügbar"],
 "no hay melodía en curso": // play.html
 	["No tune in progress", "Es läuft keine Melodie"],
 "no probados": // notelist.html
 	["untested", "nicht getestet"],
+"nombre archivo": // tunelibedit.html
+	["Filename", "Dateiname"],
+"partida automática activada": // common.js
+	["Autoplay enabled", "Automatisches abspielen aktiviert"],
 "partir": // play.html 
 	["Start", "Start"],
+"password:": // common.js
+	["Password:", "Passwort:"],
 "pedido": // history.html 
 	["Request", "Wunsch"],
 "pedido por": // play.html
@@ -212,21 +251,21 @@ let translationDict = {
     ["Next note", "Nächste Note"],
 "prueba pins": // notelist.html
 	["Test all pins", "Alle Pins testen"],
-"pts": // tunelist.html 
-	["Rating", "Bewertung"],
 "puesto en cero": // index.html 
 	["Set to zero", "Auf Null gesetzt"],
-"puntos": // play.html 
+"puntaje": // common.js
 	["Rating", "Bewertung"],
 "ram libre": // diag.html 
 	["Free RAM", "RAM frei"],
 "ram usada": // diag.html 
 	["Used RAM", "RAM belegt"],
+"remanente": // index.html 
+	["Remaining", "Verbleibend"],
 "registros": // play.html 
 	["Registers", "Register"],
 "repetición": // note.html 
 	["Repetition test", "Wiederholungstest"],
-"Repetición largo nota/silencio [msec]": // note.html
+"repetición largo nota/silencio [msec]": // note.html
 	["Repetition note length/silence [msec]", "Wiederholung Notenlänge/Pause [msec]"],
 "rev/seg": // play.html 
 	["rev/sec", "Umdrehungen/Sekunde"],
@@ -234,20 +273,24 @@ let translationDict = {
 	["Connects to SSID", "SSID"],
 "setlist": // play.html 
 	["Setlist", "Setlist"],
+"setlist guardada": // common.js
+    ["Setlist saved", "Setlist gespeichert"],
 "si historia más antigua que": // history.html 
 	["When older than", "Wenn älter als"],
+"(sin título)": // common.js/SetlistMenu
+	["(no title)", "(kein Titel)"],
 "sistema": // index.html diag.html 
 	["System", "System"],
 "sonar nota": // note.html 
 	["Note test", "Notentest"],
 "stop":
 	["Stop", "Halt"],
-"remanente": // index.html 
-	["Remaining", "Verbleibend"],
-"reproducción automática activada": // common.js
-	["Autoplay enabled", "Automatisches abspielen aktiviert"],
+"tamaño": // common.js
+	["Size", "Größe"],
 "tempo sigue manivela": // play.html 
 	["Tempo follows crank speed", "Drehgeschwindingkeit beeinflusst Tempo"],
+"terminó": // play.html
+	["ended", "geendet"],
 "tiempo desde reboot": // diag.html 
 	["Time since reboot", "Zeit seit reboot"],
 "tiempo operación": // index.html 
@@ -326,53 +369,6 @@ let translationDict = {
 
 let language = navigator.language.substring(0,2) ;
 let languageIndex = languageDict[language] ;
-console.log("language=", language, "languageIndex=", languageIndex);
-
-// verify all keys in lowercase, correct that if not
-function verifyTranslationDict(){
-	for( k in translationDict ){
-		if( k != k.toLowerCase() ){
-			console.log("Warning: translationDict key not in lower case", k );
-			// Add lowercase version to correct this on the fly
-			translationDict[k.toLowerCase()] = translationDict[k] ;
-		}
-	}
-}
-verifyTranslationDict() ;
-
-// Translate a string with current languge
-function tlt( s ){
-	if( languageIndex == null || languageIndex == undefined){
-		return s;
-	}
-	let tlist = translationDict[s.toLowerCase()];
-	if( tlist == undefined ){
-		return s ;
-	}
-    return tlist[languageIndex];
-}
-
-
-function translate_html(){
-	// Translates bottom level html DOM elements
-	// Must be run by page to be translated when DOM
-	// elements are loaded.
-	// Dynamic DOM elements are translated by tlt() function
-	let all = document.getElementsByTagName("*");
-	for (let i=0, max=all.length; i < max; i++) {
-		let d = all[i] ;
-		let localName = d.localName ;
-		if( ["html", "meta", "body", "script", "head", "table", "tbody", "thead", "tr"].includes(localName)){
-			continue ;
-		}
-		let innerHTML = d.innerHTML ;
-		if( innerHTML == undefined ||  innerHTML.includes("<") ){
-			// Don't try tro translate if no text or if there is a tag
-			continue ;
-		}
-		d.innerText = tlt(d.innerText ) ;
-	}
-}
-
+console.info("language=", language, "languageIndex=", languageIndex);
 
 

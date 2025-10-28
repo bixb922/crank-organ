@@ -1,3 +1,5 @@
+# (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+# MIT License
 
 # This scripts needs: 
 #   pip install mido 
@@ -12,6 +14,9 @@ import unicodedata
 import mido
 from datetime import datetime, timedelta
 import hashlib, binascii
+
+STORED_SETLIST_NUMBER = 9
+STORE_WEEKS = 3
 
 this_file_py = Path(__file__).name
 this_file = Path(__file__).stem
@@ -340,22 +345,19 @@ def make_setlist_newest( output_folder, input_filelist ):
         return hash.replace("\n", "").replace("+", "-").replace("/", "_")
 
     input_filelist.sort( key=lambda x:x[2], reverse=True )
-    two_weeks = datetime.now() - timedelta(weeks=2)
+    weeks = datetime.now() - timedelta(weeks=STORE_WEEKS)
     i = 0
     setlist = []
     for i, (filename, file_size, mtime ) in enumerate(input_filelist):
         modified = datetime.fromtimestamp(mtime)
-        if modified >= two_weeks:
-            print("Adding", filename, "to setlist file on PC")
+        if modified >= weeks:
             setlist.append( "i" + _compute_hash(filename) )
         i += 1
-
-    # >>> better: current setlist, but setlist.py does not react
-    # >>> to someone else setting the file, needs new method.
-    setlist_name = "setlist_stored.json"
+    setlist_name = f"setlist_stored_{STORED_SETLIST_NUMBER}.json"
+    print(f'{len(setlist)} files now in "recent additions" setlist file {setlist_name} on PC')
     with open(output_folder + "/" + setlist_name,"w") as file:
         json.dump( setlist, file )
-    print("Setlist for modified in last 2 weeks written to", setlist_name, " folder=", output_folder)
+    print(f"Setlist for modified in last {STORE_WEEKS} weeks written to", setlist_name, " folder=", output_folder)
 
 
 def main():

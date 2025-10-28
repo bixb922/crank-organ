@@ -1,25 +1,27 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 <body>
-<span id="popup" class="popuptext"></span>
+<!--<span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="history.back()">&#11013;</a>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
-<h1 id="title"></h1>
+-->
+<h1 id="header"></h1>
 <span id="error_message"></span>
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
 <script src="https://cdn.jsdelivr.net/combine/npm/tone@14.7.58,npm/@magenta/music@1.23.1/es6/core.js,npm/focus-visible@5,npm/html-midi-player@1.5.0"></script>
 
 <midi-player
@@ -38,6 +40,13 @@
 </p>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( "MIDI", "back"  );
+
+
 function decodeHTML(html) {
     var txt = document.createElement("p");
     txt.innerHTML = html;
@@ -52,9 +61,10 @@ let filename = new URL(window.location.href).pathname.split("/").at(-1) ;
 get_url  = "/get_midi_file/" + filename
 document.getElementById( "myMidiPlayer" ).src = get_url ;
 document.getElementById( "myVisualizer" ).src = get_url ;
-document.getElementById("title").innerText = decodeURIComponent(filename) ;
+document.getElementById("header").innerText = decodeURIComponent(filename) ;
 
-
+commonGetProgress.setSleep( 5_000 );
+commonGetProgress.startBackground();
 
 </script>
 </body>

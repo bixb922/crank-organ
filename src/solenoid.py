@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # Solenoid note on/note off, hides difference between GPIO and MCP23027
 # Uses MIDIdict to search efficently for the pin function given a MIDI Note
@@ -227,10 +227,8 @@ class PinTest:
         # Now get the actuator for that pin.
         try:
             actuator = actuator_bank.get_pin_by_repr(pin_repr) 
-            print(">>>pin found", actuator)
             try:
                 actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]))
-                print(">>>pulse set", pininfo["pulse0"], pininfo["pulse1"])
             except AttributeError:
                 # This is not a RC servo pin, no pulse0/pulse1
                 pass

@@ -1,8 +1,8 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 
-# Plays MIDI files using the umidiparser module
 
+# Plays MIDI files using the umidiparser module
 from micropython import const
 from time import ticks_us, ticks_diff
 import asyncio
@@ -11,7 +11,7 @@ from random import getrandbits
 
 from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE
 from minilog import getLogger
-from drehorgel import tunemanager, controller, battery, history, crank, config
+from drehorgel import tunemanager, controller, battery, history, crank, config, timezone
 
 import scheduler
 from midi import DRUM_PROGRAM, DRUM_CHANNEL
@@ -81,9 +81,17 @@ class MIDIPlayer:
             
             controller.all_notes_off()
             self.progress.tune_started(tuneid)
-
             self._reset_channelmap()
 
+            # Start with garbage collector to stabilize gc performance
+            scheduler.collect_garbage(reset=True)
+            scheduler.collect_garbage()
+
+            # activate the scheduler BEFORE starting to play
+            # If not, a task might start just when the MIDI file starts
+            # and then interfere with the timing of the notes.
+            await scheduler.wait_and_yield_ms( 200 )
+            start_time = timezone.now_timestamp()
             await self._play(midi_file)
             
             self.progress.tune_ended()
@@ -99,8 +107,9 @@ class MIDIPlayer:
             if e.errno == errno.ENOENT:
                 self.logger.info(f"File {midi_file=} or .gz {tuneid=} file not found")
                 self.progress.report_exception("file not found")
-                # It may be that tunelibedit must be run to sync tunelib
-                tunemanager.queue_tunelib_change( midi_file, -1 )
+                # Tell the tunemanager that the field has been deleted
+                # so it can remove the tuneid from tunelib.json
+                tunemanager.queue_file_deleted( midi_file )
             else:
                 # OSError that isn't file not found - strange.
                 self.logger.exc(e, f"Exception playing {midi_file=} or .gz {tuneid=}")
@@ -117,16 +126,30 @@ class MIDIPlayer:
             battery.start_heartbeat()
             battery.end_of_tune(self.time_played_us / 1_000_000)
             self._insert_history( tuneid, 
+                                 start_time,
                                  self.time_played_us, 
                                  duration, 
                                  requested )
+# 2025-08-28 10:09:33GMT-4 - setlist - DEBUG - Automatic playback sets music start event
+# 2025-08-28 10:09:33GMT-4 - setlist - INFO - start tuneid=ivKpJWIoT
+# 2025-08-28 10:09:33GMT-4 - player - INFO - ivKpJWIoT not found in tunelib
+# 2025-08-28 10:09:34GMT-4 - tunemanager - INFO - Adding VR125_A035 Carmen toeador rvb 1.mid in tunelib.json
+# main._handle_exception: unhandled asyncio exception {'future': <Task>, 'message': "Task exception wasn't retrieved", 'exception': NameError('local variable referenced before assignment',)}
+# 2025-08-28 10:09:34GMT-4 - startup - EXCEPTION - asyncio global exception handler
+#        Traceback (most recent call last):
+#          File "asyncio/core.py", line 1, in run_until_complete
+#          File "/software/mpy/setlist.py", line 145, in _setlist_process
+#          File "asyncio/core.py", line 1, in run_until_complete
+#          File "/software/mpy/player.py", line 128, in play_tune
+#        NameError: local variable referenced before assignment
+       
 
-    def _insert_history(self, tuneid, time_played_us, duration, requested):
+    def _insert_history(self, tuneid, start_time, time_played_us, duration, requested):
         try:
             percentage_played = round(time_played_us / 1000 / duration * 100)
         except ZeroDivisionError:
             percentage_played = 0
-        history.add_entry(tuneid, percentage_played, requested)
+        history.add_entry(tuneid, start_time, percentage_played, requested)
         if percentage_played > 95:
             tunemanager.add_one_to_history( tuneid )
 
@@ -141,6 +164,7 @@ class MIDIPlayer:
     
 
     async def _play(self, midi_file):
+
         # MidiFile() file takes about 50 millisec on a ESP32-S3 at 240 Mhz, 
         # do it before
         # starting the for event in midifile loop.
@@ -183,6 +207,9 @@ class MIDIPlayer:
             # the "time that should be"
             wait_time = round(midi_time - playing_time)
             # >>> measure jitter again?
+            # >>> end tune if MIDI suspended for a long time, i.e. tune forgotten?
+            # >>> end tune if MIDI suspended very near the end of the tune?
+            # >>> make that a config parameter?
             # Sleep until scheduled time has elapsed
             await scheduler.wait_and_yield_ms( wait_time )
 
@@ -237,7 +264,7 @@ class MIDIPlayer:
                 # crank should inform that it has stopped...?
                 normalized_vel = 1
             additional_wait = round(midi_event_delta_us / normalized_vel)
-            # >>>>>SHOULD RETURN HERE?
+            # >>>SHOULD RETURN HERE?
 
 
         # We get here if the crank is not turning and tempo_follows_crank is enabled.

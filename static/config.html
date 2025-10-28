@@ -1,28 +1,15 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
 <html>
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 <body>
-	<span id="popup" class="popuptext"></span>
-	<div class="headerdiv">
-		<span class="headerleft">
-			<a onclick="pageUp('index')">&#11013;</a>
-		</span>
-		&nbsp;Configuration
-		<span class="headerright" id="header_time"></span>
-	</div>
-	<script type="text/javascript" src="/static/common.js"></script>
-
-
 	<div class="middlediv">Enter password</div>
 	When pressing the save button, you may be asked for the password of the microcontroller. 
 
@@ -43,7 +30,7 @@
 	checked).
 	<br>
 	<label for="ap_password">New password:</label>
-	<input id="ap_password" name="ap_password" type="password" / size="15" oninput="validateNewPasswords()">
+	<input id="ap_password" name="ap_password" type="password"  size="15" oninput="validateNewPasswords()"/>
 	<br>
 	<label for="repeat_ap_password">Type new password again to check:</label>
 	<input id="repeat_ap_password" name="repeat_ap_password" type="password" size="15"
@@ -54,18 +41,18 @@
 
 
 	<div class="middlediv">Network name and description</div>
-	<label for="name">Host name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9,
+	<label for="name">Network name, WiFi Access Point name and BLE name of this device (up to 15 characters A-Z, a-z, 0-9,
 		start with a letter):</label>
 	<input id="name" name="name" type="text" size="15" maxlength="15" oninput="markField('name')" />
 	<br>
 
 	<label for="description">Your description of this device (free text). This description appears on some of the web
-		pages, but serves no other function:</label>
+		pages and serves no other function:</label>
 	<input id="description" name="description" type="text" style="width:auto" size="50"
 		oninput='markField("description")' />
 	<br>
 
-	<button type="button" onclick="save('description','name')">Save description and host name</button>
+	<button type="button" onclick="save('description','name')">Save description and network name</button>
 
 	<div class="middlediv">WiFi Router or hotspot (station mode)</div>
 	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one
@@ -112,12 +99,12 @@
 	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')" />
 	<br>
 
-	<label>USB power pack heartbeat period (leave 0 if battery is not a USB power pack), in milliseconds</label>
+	<label>USB battery pack heartbeat period (leave 0 if battery is not a USB battery pack), in milliseconds</label>
 	<input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4"
 		oninput="markField('battery_heartbeat_period')" />
 	<br>
 
-	<label>USB power pack heartbeat duration (leave 0 if battery is not a USB power pack), in milliseconds</label>
+	<label>USB battery pack heartbeat duration (leave 0 if battery is not a USB battery pack), in milliseconds</label>
 	<input id="battery_heartbeat_duration" name="battery_heartbeat_duration" type="text" size="4"
 		oninput="markField('battery_heartbeat_duration')" />
 	<br>
@@ -133,8 +120,8 @@
 	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')" />
 	<br>
 	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
-	<label for="tempo_follows_crank">Tempo follows crank, setting at startup. Checked means that the playback tempo
-		varies with the crank speed. Can be changed temporarily on the performance page.</label>
+	<label for="tempo_follows_crank">Tempo follows crank speed. Checked means that the playback tempo
+		varies with the crank speed. This is the setting at startup. Can be changed temporarily on the performance page.</label>
 	<br>
 	<label for="pulses_per_revolution">Pulses per revolution of crank revolution sensor. It's the
 		number of pulses the crank sensor gives for each revolution.</label>
@@ -157,7 +144,7 @@
 		The lower, the smoother but slower reacting is the crank. Starting and stopping the crank always has fast response.
 		Reasonable values seem to be from 0.6 to 1.6. Use 999 to disable.
 	</label>
-	<input id="crank_lowpass_cutoff" type="text" size="4" oninput="markField('crank_lowpass_cutoff')" />
+	<input id="crank_lowpass_cutoff" type="text" size="4" oninput="markField('crank_lowpass_cutoff')" />revolutions per second.
 	<br>
 	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier:</label>
 	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
@@ -168,10 +155,13 @@
 	<label for="tuning_frequency">Tuning frequency in Hz, normally 440. Decimal point allowed.</label>
 	<input id="tuning_frequency" type="text" size="6" oninput="markField('tuning_frequency')">
 	<br>
+	<label for="multiple_setlists">Multiple stored setlists. 0=One stored setlist. 1=Nine stored setlists.</label>
+	<input id="multiple_setlists" type="text" size="2" oninput="markField('multiple_setlists')">
+	<br>
 	<button type="button"
 		onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec',
 		'normal_rpsec','crank_lowpass_cutoff','automatic_delay', 'rotary_tempo_mult', 
-		'tuning_frequency', 'tuning_cents')">Save
+		'tuning_frequency', 'tuning_cents', 'multiple_setlists')">Save
 		play tune parameters</button>
 
 	<div class="middlediv">Other parameters</div>
@@ -183,8 +173,8 @@
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')" />
 	<br>
-	<label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). Start with
-		10000. No decimals, integer only:</label>
+	<label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). 
+		A reasonable value could be 10000. No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6"
 		oninput="markField('touchpad_big_change')" />
 	<br>
@@ -208,8 +198,8 @@
 		slows down the microcontroller unnecessarily</label>
 
 	<br>
-	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds = 5
-		minutes seems appropriate. No decimals, integer only:</label> <input id="max_age" name="max_age" type="text"
+	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds
+		seems appropriate. No decimals, integer only:</label> <input id="max_age" name="max_age" type="text"
 		size="6" oninput="markField('max_age')" />
 	<br>
 
@@ -227,7 +217,7 @@
 
 	<div class="middlediv">Server (optional)</div>
 
-	<label for="server">Server node name. Leave blank if no server node. mcserver must be installed for servernode to
+	<label for="server">Server node name. Leave blank if no mcserver node to
 		work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
 	<input id="servernode" name="servernode" type="text" size="20" oninput="markField('servernode')" />
 
@@ -239,15 +229,24 @@
 	<button type="button" onclick="save( 'servernode', 'serverpassword' )">Save server settings</button>
 
 	<div class="footerdiv"></div>
-	<script>
+	<script type="text/javascript" src="/static/common.js"></script>
+	<script type="text/javascript" src="/static/translations.js"></script>
 
+	<script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+		//[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input id=​"ap_password" name=​"ap_password" type=​"password" size=​"15" oninput=​"validateNewPasswords()​" style=​"background-color:​ rgb(255, 255, 255)​;​">​
+
+		// PageHeader.setTitle(headerTitle, upAction)
+		let pageHeader = new PageHeader().setTitle( "Configuration", "index" );
 		// Used by mark fields
 		let CHANGED_FIELDS = [];
 
 		async function getCurrentConfig() {
 			let json_result = await fetch_json("/get_config");
 			for (let [key, value] of Object.entries(json_result)) {
-				d = document.getElementById(key);
+				let d = document.getElementById(key);
 				if (d != null) {
 					if (d.type == "checkbox" || d.type == "radio") {
 						d.checked = value;
@@ -296,8 +295,8 @@
 		async function changePassword() {
 			if (validateNewPasswords()) {
 				save("ap_password");
-				clearField("ap_password");
-				clearField("repeat_ap_password");
+				textById("ap_password","");
+				textById("repeat_ap_password","");
 			}
 		}
 
@@ -379,6 +378,9 @@
 			}
 			CHANGED_FIELDS = [];
 		}
+		// Refresh with progress to show communication active
+		commonGetProgress.setSleep( 5_000 );
+		commonGetProgress.startBackground();
 
 	</script>
 </body>

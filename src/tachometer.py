@@ -1,14 +1,22 @@
 
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
-# Crank rotation speed sensor. Still in testing phase.
+
 import asyncio
 from time import ticks_ms, ticks_diff
 from machine import Pin
 
 from minilog import getLogger
 from drehorgel import config
-from counter import Encoder, Counter
+try:
+    # requires MicroPython 1.27 or later
+    # but there are problems with USB connection
+    # So wait until that is solved.
+    from machine import Encoder, Counter # type:ignore
+    print(">>>using Encoder, Counter from machine/esp32")
+except ImportError:
+    print(">>>using own PCNT driver")
+    from counter import Encoder, Counter
 
 
 # Number of pulses (1 pulse = off + on) per revolution
@@ -71,26 +79,34 @@ class TachoDriver:
             # will not pause at the end of the song.
             self.logger.debug("Crank sensor not enabled")
             return
-        
-         # For Counter: Rising + falling = 2
-         # For encoder: phases=2
-        self.encoder_factor = 2
 
+        #self_encoder_factor = 2
+        # For Counter: Rising + falling = 2
+        # For encoder: phases=2
+
+        #self.encoder_factor.  1
+        # For counter: Rising only
+        # For encoder: phases=1
+
+        self.encoder_factor = 1
+        
         if tachometer_pin1 and not tachometer_pin2:
             # One pin defined means: simple counter for crank
             counter = Counter( 0, 
                     Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     direction=Counter.UP,
-                    edge=Counter.RISING+Counter.FALLING, # encoder_factor = 2 
+                    edge=Counter.RISING, # self.encoder_factor = 1
                     filter_ns=20_000) # Highest filter value possible
         else:
             # Two pins defined means: rotary encoder for crank
             counter = Encoder( 0,
                     phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
-                    phases=2, # encoder_factor = 2
+                    phases=1, # self.encoder_factor = 1
                     filter_ns=20_000) # Highest filter value possible
-        
+            
+        self.counter = counter
+
         # For diag.html report of crank frequencies
         self.report_rps = []
         self.report_times = []
@@ -180,6 +196,25 @@ class TachoDriver:
             "higher_threshold_rpsec": HIGHER_THRESHOLD_RPSEC,
             "normal_rpsec": NORMAL_RPSEC
         }
+    
+    def raw_value( self ):
+        if not self.counter:
+            return ""
+        if not hasattr(self, "last_value"):
+            self.last_value = 0
+            self.count = 0
+            self.counter_task.cancel() #type:ignore
+            self.counter.value(0)
+        val = self.counter.value()
+        if val == self.last_value:
+            self.count += 1
+            if self.count >= 6: # about 2 sec
+                self.counter.value(0)
+                val = 0
+        else:
+            self.count = 0
+            self.last_value = val
+        return val
 
 # This is the high level processing for the crank rotation sensor
 # It uses TachoDriver.get_rps() to read the rotations per second,
@@ -264,12 +299,12 @@ class Crank:
 
     def set_velocity(self,ui_vel):
         # Velocity is a superimposed manual control via UI to alter the "normal"
-        # playback speed. Crank._ui_velocity is the velocity as set by the ui
+        # playback speed. elf.ui_velocity is the velocity as set by the ui
         # (50=normal, 0=lowest, 100=highest).
         # TempoEncoder can also set this velocity. Both are coordinated.
 
         self.ui_velocity = ui_vel
-        # The UI sets _ui_velocity to a value from 0 and 100, normal=50.
+        # The UI sets self.ui_velocity to a value from 0 and 100, normal=50.
         # For easier use this value from 0 to 100 is changed
         # to a multiplier for the MIDI tempo from 0.5 to 2
         # (half tempo to double tempo).
@@ -288,6 +323,7 @@ class Crank:
         progress["tacho_installed"] = self.is_installed()
         progress["tempo_multiplier"] = self.tempo_multiplier
 
+    
 # Rotary encoder to set tempo
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.

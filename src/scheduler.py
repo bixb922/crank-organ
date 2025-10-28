@@ -1,5 +1,6 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Allows the MIDI player to wait letting well behaved asyncio tasks
 # execute during the times between MIDI events.
 from micropython import const
@@ -15,18 +16,19 @@ _run_always_flag = True
 # all. Leaving a RESERVED_US waits short of this time
 # and then waits time.sleep_us() which does not yield but
 # is very precise.  
-_RESERVED_US = 20_000
+_RESERVED_US = const(20_000)
 
-# Very big int, to use if all time is available to request slices
-_INFINITY = const(1_000_000_000)
+# Very big int, to use if all time is available to request slices, 
+# (but still a MicroPython small int)
+_INFINITY = const(199_999_999)
 
 
 # If no timeout is specified, use a VERY long time
-# longer than the longest tune, 3_600_000 = 1 hour
+# longer than the longest tune, 3_600_000 msec = 1 hour
 _LONG_TIME = const(3_600_000)
 
 # If True, RequestSlice shows timing information.
-_DEBUG_TIMES = const(False)
+_DEBUG_TIMES = const(False) 
 
 async def wait_and_yield_ms(for_us):
     # This function is to wait for the next MIDI event with precision,
@@ -70,7 +72,8 @@ async def wait_and_yield_ms(for_us):
         sleep_us(remaining_us)
 
 
-def _find_and_run_task(available):
+def _find_and_run_task(available_usec):
+    available = available_usec//1000
     if _run_always_flag:
         # If run_always is set, all tasks are scheduled
         available = _INFINITY
@@ -139,7 +142,7 @@ class RequestSlice:
                     if _DEBUG_TIMES:
                         tl = [x.name for x in _tasklist]
                         print(
-                            f"task TIMEOUT {self.name}  requested={self.requested} timeout={self.wait_at_most} {tl=}"
+                            f"task TIMEOUT {self.name}  requested={self.requested} timeout={self.wait_at_most} pending={tl}"
                         )
                 except ValueError:
                     pass
@@ -154,12 +157,13 @@ class RequestSlice:
             # RequestSlice are ample enough.
             now = ticks_ms()
             dt = ticks_diff(now, self.t0)
-            exceeded = "***** exceeded *****" if dt > self.requested else ""
+            exceeded = "***** exceeded requested *****" if dt > self.requested else ""
             waited = ticks_diff(now, self.start) - dt
             tl = [x.name for x in _tasklist]
             print(
-                f"task {self.name} used={dt}, requested={self.requested}, available={self.available} timeout={self.wait_at_most}, waited {waited} {exc_type=} {exceeded} {tl=}"
+                f"task {self.name} used={dt}, requested={self.requested}, available={self.available} timeout={self.wait_at_most}, waited {waited} {exc_type=} {exceeded} pending tasks={tl}"
             )
+
         # Return None to re-raise any exception
 
 async def wait_for_player_inactive():
@@ -199,46 +203,45 @@ class MeasureMemory:
         print(f"\tMeasureMemory {self.title} {self.alloc} bytes" )
  
 # This garbage collector does not interfere with music playback:
-# it works in the wait times between notes.
+# it works in the wait times between notes. Assume a minimum of 10 msec.
 max_gc_time = 0 # Expose maximum garbage collect time for webserver.py /diag.html
+avg_gc_time = 0 # and running average >>> show in diag.html
+def collect_garbage(reset=False):
+
+    # Do a gc.collect() and feed indicators
+    global max_gc_time, avg_gc_time
+    t0 = ticks_ms()
+    gc.collect()
+    t =  ticks_diff( ticks_ms(), t0 ) 
+    max_gc_time = max( max_gc_time, t ) # >>> for statistics on diag page only???? what use has it?
+    if reset:
+        avg_gc_time = t # gc time just before playing, reset history
+    else:
+        avg_gc_time = round((avg_gc_time+t)/2)
+
 async def background_garbage_collector( ):
-    global max_gc_time
-
     # With MicroPython 1.21 and later, gc.collect() is not very critical anymore
-    # But I'll still keep the code. Now gc.collect() duration depends on
-    # RAM allocated and not total RAM size.
-
+    # With plain flash files (no ROMFS) and 1500 MIDI files, gc times can go up to nearly 500 ms
+    # but mainly during startup. During playback, gc times are around 70 msec.
+    # Finding 100 ms of pause in a MIDI file is not difficult, so 
+    # the delay of RequestSlice is minimal (less than 1 second, usually)
     while True:
         # Run garbage collector every 3 seconds
         # gc is best if not delayed more than a few seconds
         # If time is longer, gc takes longer too.
         await asyncio.sleep_ms(3_000)
-
-        # Measured times, minimum: after startup. Maximum: during playback
-        # VCC-GND  gc=49-61
-        # Weact gc=28-50
-        # No name board gc=48-60
-
-        # gc.collect() times just before starting async loop
-        # No name board 48 msec
-        # Weact board 43 msec
-        # VCC-GND board 48 msec
-
         try:
-            # Request a slice of max_gc_time msec to run 
+            # Request a slice of enough time to run 
             # garbage collector
-            async with RequestSlice( "gc.collect", max_gc_time, 10_000 ):
-                t0 = ticks_ms()
-                gc.collect()
-                # Adjust gc time upwards if initial estimate too low
-                max_gc_time = max( max_gc_time, ticks_diff( ticks_ms(), t0) )
+            async with RequestSlice( "gc.collect", round(avg_gc_time+15), 10_000 ):
+                collect_garbage()
 
         except RuntimeError:
             # If RequestSlice times out, collect garbage anyhow
             # No good to accumulate pending gc, gc time increases
             # but a MemoryError is not likely, since there
             # should be plenty of RAM with 8Mb
-            gc.collect()
+            collect_garbage()
 
 # This has to go somewhere. Used by pcnt.py and minilog.py
 def singleton(cls):

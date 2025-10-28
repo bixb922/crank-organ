@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # WiFi connection manager. Connects to station mode SSIDs and
 # publishes the AP mode SSID
@@ -156,8 +156,9 @@ class WiFiManager:
             # this can be slightly faster or less variable. PM_NONE
             # leads to browser response times for get_progress() of about 200ms
             # while PM_PERFORMANCE varies from 200 upwards to sometimes 1000 or more ms
-            print(">>>>network.WLAN.PM_NONE")
+            # If near the access point, there is little difference.
             self.sta_if.config(pm=network.WLAN.PM_NONE)
+            self.logger.info("WLAN performance mode set to PM_NONE")
 
             try:
                 self.sta_if.connect(access_point, password)
@@ -189,6 +190,7 @@ class WiFiManager:
         except Exception as e:
             self.logger.exc(e, "in _station_connect_to_ap")
             self.sta_if_status = access_point + " " + str(e)
+            
     def get_status(self):
         # Detailed wifi status for diag.html
         return {
@@ -214,9 +216,7 @@ class WiFiManager:
 
     async def loginfo(self, message):
         try:
-            async with scheduler.RequestSlice(
-                "wifimanager log.info", 100, 10_000
-            ):  
+            async with scheduler.RequestSlice( "wifimanager log.info", 100, 10_000):  
                 # logging can take about 100 msec
                 self.logger.info(message)
         except Exception:

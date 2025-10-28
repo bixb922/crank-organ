@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title id="pagetitle"></title>
     <link rel="stylesheet" type="text/css" href="/static/skeleton.css">
 </head>
 
 <body>
-    <span id="popup" class="popuptext"></span>
+    <!--<span id="popup" class="popuptext"></span>
     <div class="headerdiv">
         <span class="headerleft">
             <a onclick="pageUp()">&#11013;</a>
@@ -20,19 +19,21 @@
         </span>
         <span class="headerright" id="header_time"></span>
     </div>
+    -->
 
     <script type="text/javascript" src="/static/common.js"></script>
+    <script type="text/javascript" src="/static/translations.js"></script>
 
     <div>
-        <input type="file" id="fileDialogButton" multiple style="display: none;" onchange="processFileDialog()">
         <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
         <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
         <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
         <button onclick="purgeTunelib()">Purge tunelib</button>
         <button id="downloadFilesButton" onclick="downloadSelectedFiles()">Download</button>
-        <button id="deleteFilesButton" onclick="deleteFiles()">Delete</button>
-        <button onclick="clearSelection()">Clear selection</button>
+        <button id="deleteFilesButton" onclick="deleteFiles()" >Delete</button>
+        <button id="selectForBackup"  onclick="selectForBackup()" style="display:none">Select for backup</button>
     </div>
+
 
     <div id="logArea" style="display:none">
         <div class="middlediv">Notifications</div>
@@ -65,6 +66,11 @@
 </body>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+    // PageHeader.setTitle(headerTitle, upAction)
+    let pageHeader = new PageHeader().setTitle( "File Manager", ()=>{pageUp()} );
     // input dialog with webkitdirectory may upload entire folders...
     // DFWAB.
 
@@ -111,8 +117,8 @@
         UPLOAD_MODE = "currentFolder";
         // click hidden file dialog button
         closeLogWindow();
-        // Calls processFileDialog() when user pushes OK
-        document.getElementById("fileDialogButton").click();
+        // Calls processPickedFiles() when user clicks OK on dialog
+        document.getElementById("filePicker").click();
     }
 
     async function uploadToAutoFolder() {
@@ -120,8 +126,8 @@
         UPLOAD_MODE = "autoFolder";
         // click hidden file dialog button
         closeLogWindow();
-        // Calls processFileDialog() when user pushes OK
-        document.getElementById("fileDialogButton").click();
+        // Calls processPickedFiles() when user clicks OK
+        document.getElementById("filePicker").click();
 
     }
 
@@ -136,7 +142,8 @@
         return data.total_flash - data.used_flash;
     }
 
-    async function processFileDialog(event) {
+    async function processPickedFiles(event) {
+        // Called by "change" event of file dialog (id="filePicker").
         resp = await fetch_json("/get_permission");
         if (resp["error"]) {
             return;
@@ -145,17 +152,19 @@
         let body = document.getElementById("fileListBody");
         let sizeTitle = document.getElementById("thisFolderSize");
 
-        let fileList = document.getElementById("fileDialogButton").files;
+        let fileList = document.getElementById("filePicker").files;
         for (let file of fileList) {
             await uploadFile(file, CURRENT_PATH, UPLOAD_MODE);
             body.innerHTML = "";
             sizeTitle.innerHTML = "";
         };
-        // >>>> await refreshAll();
         logNotification("Upload complete");
-        document.getElementById("thisFolderSize").innerText = "Reload page to see changes to current folder."; 
+        // Page should be refreshed, but sometimes this may take too long to be practical
+        // So tell the user to reload (if she/he so wishes).
+        document.getElementById("thisFolderSize").innerHTML = "<a href='javascript:window.location.href=window.location.href' class='anohref'>Reload page</a> to see changes to current folder."; 
         document.getElementById("usedFlash").innerText = "";
         document.getElementById("tunelibAvg").innerText = "";
+        createFilePicker();
     }
 
 
@@ -201,13 +210,13 @@
     }
 
     function logMessage(message) {
-        document.getElementById('messageLog').innerHTML += message + "<br>";
+        document.getElementById("messageLog").innerHTML += message + "<br>";
         document.getElementById("logArea").style.display = '';
     }
 
     function closeLogWindow() {
-        document.getElementById('logArea').style.display = "none";
-        document.getElementById('messageLog').innerHTML = "";
+        document.getElementById("logArea").style.display = "none";
+        document.getElementById("messageLog").innerHTML = "";
     }
 
     function logError(message) {
@@ -269,6 +278,7 @@
             document.getElementById("deleteFilesButton").classList.add("inactive");
 
         }
+        showHideElement("selectForBackup", CURRENT_PATH == "/data");
     }
 
 
@@ -280,9 +290,12 @@
         // Get file list for path from server and show
         CURRENT_PATH = path;
         showPath();
-        //let url = "/listdir?" + new URLSearchParams( {"path":  CURRENT_PATH});
-        let url = "/listdir/" + encodePath(CURRENT_PATH);
-        data = await fetch_json(url);
+        //let listdir_url = "/listdir?" + new URLSearchParams( {"path":  CURRENT_PATH});
+        let listdir_url = "/listdir/" + encodePath(CURRENT_PATH);
+        if( isUsedFromDemo() ){
+            listdir_url = "/demo/listdir"; // demo on server only
+        }
+        data = await fetch_json(listdir_url);
 
         if (path !== '/' && path != "") {
             let row = insertRow(body, ["", ""]);
@@ -360,7 +373,7 @@
     function showPath() {
         // CURRENT_PATH is global variable with current folder's path
         let pathLinks = document.getElementById("pathLinks");
-        pathLinks.innerText = "";
+        pathLinks.innerHTML = "";
         let link = document.createElement("a");
         link.href = `/filemanager`;
         link.innerText = "/";
@@ -399,6 +412,11 @@
             tunelibInfo.innerHTML += ` Space left for ${spaceLeft} average MIDI files`;
         }
 
+    }
+    async function startPageRefresh(){
+        await refreshAll();
+        commonGetProgress.setSleep( 5_000 );
+        commonGetProgress.startBackground();
     }
 
     async function refreshAll() {
@@ -449,8 +467,8 @@
                 body.innerHTML = "";
                 sizeTitle.innerHTML = "";
             }
-            catch {
-                logError(`File ${file} could not be deleted`);
+            catch(e) {
+                logError(`File ${file} could not be deleted: ${e}`);
             }
         }
         clearSelection();
@@ -498,7 +516,7 @@
 
     function purgeTunelib(){
         closeLogWindow();
-        // Calls processFileDialog() when user pushes OK
+        // Calls processPickedFiles() when user pushes OK
         document.getElementById("folderDialogButton").click();
 
     }
@@ -592,7 +610,47 @@
         logNotification(`${n} files moved, purge complete.`);
     }
 
-    refreshAll();
+    function createFilePicker(){
+         // Reload after each use, if not click() hangs sometimes.
+        let fd = document.getElementById("filePicker");
+        if( fd ){
+            fd.remove();
+        }
+        fd = document.getElementById("filePicker");
+        fd = document.createElement("input");
+        fd.type = "file";
+        fd.id = "filePicker";
+        fd.multiple = true;
+        fd.style.display = "none";
+        document.body.appendChild( fd );
+        fd.addEventListener( "change", processPickedFiles );
+    }
+
+    async function selectForBackup(){
+        // Select files that are useful to backup
+        let pinfo = await fetch_json("/get_pinout_filename");
+        let pinout_filename =  pinfo["pinout_filename"].split("/")[1];
+        let check_these = [ "pinout.txt", "config",
+            "drumdef", "history", "setlist_stored_",
+            "tunelib", "lyrics", pinout_filename ];
+        let body = document.getElementById("fileListBody");
+        for( let row of body.rows ){
+            let filename = row.cells[1].innerText ;
+            if( !filename.endsWith(".json")&&
+                !filename.endsWith(".txt")){
+                    continue;
+                }
+            for( let ct of check_these ){
+                if( filename.includes(ct)){
+                    // Mark checkbox
+                    row.cells[0].children[0].checked = true ;
+                    continue;
+                }
+            }
+        }
+    }
+    createFilePicker();
+    startPageRefresh();
 
 
 </script>

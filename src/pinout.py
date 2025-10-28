@@ -1,5 +1,6 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Manage ESP32-S3 GPIO pin definitions and port expander MCP23017 pin definitios
 # and all other actuator definitions in the pinout files.
 
@@ -8,10 +9,37 @@
 # extracts an aspect of the information and organizes it,
 # see below "subclasses of PinoutParser"
 
+# >>> describe pinout.json file
+# >>> touchpad test button: show touchpad reading for 1 minute.
+# >>> microphone test show waveform
+# >>> tempo show count and switch state
+# >>> neopixel test, show color wheel (there is already the touch button)
+# >>> register show state (but play page already does this)
+
+# >>> make templates more complete..???
+#
+# >>> standard pinout for standard board?
+# 8 PWM
+# 1 i2C 3x16 MCP23017 (48 terminals + 3 power)
+# 1 neopixel output (3 terminals), 3 pads to select 38/48
+# 1 crank sensor input (4 terminals)
+# 1 UART for MIDI out (2 terminals)
+# 1 PWM 6pin output for PCA9685 (1 I2C+3.3V+GND, 1 6pin header)
+# 1 MAX9814 microphone, 3 pads to select gain (on board)
+# 1 touchpad (1 terminal)
+# 2 registers? (2 GPIO)
+# 1 tempo input with switch? (3 GPIO)
+# Spare GPIOS for solenoids (currently 8 spare GPIO)
+# 3x16+8=56 solenoids
+# All ULN2003A/UN2803A drivers? Or 4 high current?
+# power input, power output, GND
+# screw terminals 8+56+4+2+1=71 pins, small terminals should be 10cm
+# (64+8) x 2.54mm terminals needs < 10 cm board length
+# extension for high current? midi output?
+
 import os
 import machine
 import re
-from collections import OrderedDict
 
 from minilog import getLogger
 from midi import NoteDef
@@ -248,15 +276,18 @@ class GPIODef(PinoutParser):
     def __init__(self, source ):
         self.register_bank = RegisterBank()
         global ESP32_S3_AVAILABLE_GPIO_PINS
+        valid_pins = []
         for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
             try:
                 # Compare our definition to the MicroPython definition
                 # Mark unavailable pins as reserved
                 machine.Pin( pin, machine.Pin.IN )
+                valid_pins.append( pin )
             except ValueError: # Invalid pin
                 logger.error( f"Pin {pin} is not available on this ESP32-S3")
-                del ESP32_S3_AVAILABLE_GPIO_PINS[ESP32_S3_AVAILABLE_GPIO_PINS.index(pin)]
                 ESP32_S3_RESERVED_PINS.append( pin )
+                del ESP32_S3_AVAILABLE_GPIO_PINS[ESP32_S3_AVAILABLE_GPIO_PINS.index(pin)]
+        ESP32_S3_AVAILABLE_GPIO_PINS = valid_pins
         super().__init__(source)
 
     def define_start( self ):
@@ -524,22 +555,22 @@ class PinoutList:
         try:
             with open(self.pinout_txt_filename) as file:
                 # Return filename of nn_xxxxx.json with pinout info
-                return file.read()
-            # Test that the selected pinout.json file exists
+                fn = file.read()
+            # now check that the pinout file exists
             open(fn).close()
+            return fn
         except OSError:
             pass
-            # Fall through if no pin out files in /data
-            # Or specified pinout.json not found
- 
-        # Provide some basic default so nothing crashes
-        # no pinout folder?? should be created on boot....
-        fn = self.pinout_folder + "/1_note_minimal.json"
+    
+        # Provide a minimal default so nothing crashes
+        # Minimal json could sometimes only appear after next reboot, but software 
+        # does not crash if pinout.txt is missing or corrupt.
+        minimal_pinout_file = self.pinout_folder + "/1_note_minimal.json"
+        fileops.write_json( [["description","minimal"]], minimal_pinout_file, keep_backup=False)
         with open( self.pinout_txt_filename, "w") as file:
-            file.write(fn)
-        fileops.write_json( [["description","minimal"]], fn, keep_backup=False)
+            file.write(minimal_pinout_file)
         logger.error("Pinout configuration incomplete. Go to pinout page, select and save a pinout template")
-        return fn
+        return minimal_pinout_file
 
 
     def set_current_pinout_filename(self, new_pinout_filename):

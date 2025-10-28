@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 
 from time import ticks_ms, ticks_diff 
@@ -34,6 +34,7 @@ _logger = minilog.getLogger(__name__)
 
 # To install aiorepl:
 # mpremote mip install aiorepl
+# aiorepl will be activated automatically if present
 def start_aiorepl():
     try:
         # For debugging and testing, enable automatically if aiorepl present.
@@ -51,21 +52,11 @@ def _handle_exception(loop, context):
     led.severe()
     from drehorgel import controller
     controller.all_notes_off()
-    last_resort()
-
-def last_resort():
-    #print("unrecoverable error, starting uftpd...")
-    # let's hope the wifi is up at this point...
-    # Importing uftpd starts the ftp server
-    #import uftpd
-    #while True:
-        # Asyncio does not run anymore during "last resort"
-        #time.sleep(1000)
-    pass
-
+    # exit to REPL
 
 # To install aioprof:
 # mpremote mip install https://gitlab.com/alelec/aioprof/-/raw/main/aioprof.py
+# aioprof will be activated automatically if present
 async def do_aioprof():
     # Report profile every 30 seconds for debugging/optimizing
     # if aioprof is installed
@@ -87,15 +78,21 @@ def start_mcserver():
     except ImportError:
         # No impact if mcserver not present.
         pass
+    except Exception as e:
+        print("Exception importing mcserver", e)
 
-        
+
+
 async def signal_ready( controller ):
-    dt = ticks_diff(ticks_ms(), startup_time)
+    t1 = ticks_ms()
     gc.collect()
+    gc_t = ticks_diff( ticks_ms(), t1 )
+    start_dt = ticks_diff(t1, startup_time)
     alloc = gc.mem_alloc()
+    
     controller.all_notes_off()
-    print(f">>>Total startup time (without main, until asyncio ready) {dt} msec")
-    print(f">>>Memory used at startup {alloc}")
+    print(f">>>Total startup time (without main, until asyncio ready) {start_dt} msec")
+    print(f">>>Memory used at startup {alloc} gc={gc_t} msec")
     # Tell user system ready
     await controller.clap(8)
     led.off()
@@ -129,14 +126,12 @@ async def main():
 
     led.starting(3)
 
-    gc.collect()
-
     _logger.debug("Starting asyncio loop")
     await asyncio.gather(
         webserver.run_webserver(),
         scheduler.background_garbage_collector(),
         signal_ready(drehorgel.controller),
-        #do_aioprof()
+        #>>>do_aioprof() # only works if aioprof installed.
     ) # type:ignore
 
 asyncio.run(main())

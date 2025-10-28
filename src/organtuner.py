@@ -1,5 +1,6 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Handles response to notelist.html and note.html pages (tuning support)
 from micropython import const
 import os
@@ -51,29 +52,46 @@ class OrganTuner:
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
         self.microphone = Microphone( microphone_pin, config.cfg["mic_test_mode"] )
-        self.repeat_times = "(wait)"
+        # Each pair is (note_duration, silence) in milliseconds
+        # note durataions get halved every two repeats
+                # Organ roll specifications have a hole size of 2 to 3 mm
+        # and advance at a speed of 4 to 6 cm per second.
+        # This means that a hole takes about 45 milliseconds end-to-end
+        # although the hole opens gradually...
+        # I'll use that as the shortest slence too
+        # Analyzing organ MIDI files gives these approximate values:
+        #    40-50 ms note length approximate minimum
+        #    50-60 ms silence approximate minimum
+        # On piano, the fastest single note repeat is 14 notes/minute
+        # = one note every 70 msec
+        # On trumpet, a fast single note repeat is sixteemnth notes at
+        # 160 bpm = 90 msec per note. Double tonguing is faster but not double...
+        self.repeat_times = [(850,150),(601,106), (425,75), (301,53), (213,50), (150,50), (106,50), (75,50), (53,50), (40,50), (30,50), (30,40), (30, 30)]
+
         self.logger.debug("init ok")
 
     def get_stats( self ):
-        cents_list = [ v["cents"] for v in self.stored_tuning if v and "cents" in v and v["cents"] is not None]
-        cents_deviation = 0
-        try:
-            cents_deviation = sum( cents_list ) / len(cents_list) 
-        except ZeroDivisionError:
-            pass
-        avg_frequency = 440.0*2.0**(cents_deviation/1200.0)
-        tc = midi.tuning_cents
-        lcl = len(cents_list)
-        tok = sum( 1 for c in cents_list if abs(c) <= tc )
-        lst = len(self.stored_tuning)
+        # Need calculated fields for stats
+        tuning = self._calculate_tuning()
+        # Get global cents and frequency data using info of ALL notes
+        cents_list = [ v["cents"] for v in tuning if v and "cents" in v and v["cents"] is not None]
+        avg_frequency = avg( v["measured_freq"]/v["frequency"] for v in tuning if v and "measured_freq" in v and v["measured_freq"] is not None )
+        if avg_frequency:
+            avg_frequency = round(avg_frequency*midi.tuning_frequency,1)
+        else:
+            avg_frequency = "?"
+        tuning_cents = midi.tuning_cents # midi module has the maximum deviation allowed, set by configuration.
+        tuned = len(cents_list)
+        tuned_ok = sum( 1 for c in cents_list if abs(c) <= tuning_cents )
+        all_notes = len(tuning)
         return {
-                "tuned_ok": tok,
-                "tuned_not_ok": lcl-tok,
-                "not_tested": lst-lcl,
-                "pins": lst, 
-                "avg_frequency": round(avg_frequency,1),
+                "tuned_ok": tuned_ok,
+                "tuned_not_ok": tuned - tuned_ok,
+                "not_tested": all_notes - tuned,
+                "pins": all_notes, 
+                "avg_frequency": avg_frequency,
                 "tuning_frequency": midi.tuning_frequency,
-                "tuning_cents": tc }
+                "tuning_cents": tuning_cents }
 
     def queue_tuning(self, method, arg):
         from drehorgel import setlist
@@ -101,57 +119,27 @@ class OrganTuner:
             self.queue_tuning( self.play_pin, ( pin_index, 1000, 100) )
 
     async def repeat_note(self, pin_index ):
-        initial_tempo = (
-            60  # Let's start with quarter notes in a largo at 60 bpm
-        )
-        # Organ roll specifications have a hole size of 2 to 3 mm
-        # and advance at a speed of 4 to 6 cm per second.
-        # This means that a hole takes about 45 milliseconds end-to-end
-        # although the hole opens gradually...
-        # I'll use that as the shortest slence too
-        # Analyzing organ MIDI files gives these approximate values:
-        #    40-50 ms note length approximate minimum
-        #    50-60 ms silence approximate minimum
-        fastest_note = 40  
-        silence_percent = 15  # approximate percent of time assigned to a note at the beginning
-        minimum_silence = 50  
-        tempo = initial_tempo
-        self.repeat_times = ""
-        # These are duration/time with these parameters
-        # >>> show this in browser
-# Repeat test, note/silence in ms= 850/150 601/106 425/75 301/53 213/50 150/50 106/50 75/50 53/50 40/50 30/30
-        while True:
-            quarter = 60 / tempo * 1000
-            if quarter < fastest_note:
-                break
-            note_duration = max( fastest_note, quarter * (1 - silence_percent / 100) )
-            silence = max(minimum_silence, quarter * silence_percent / 100)
-            self.repeat_times += f"{note_duration:.0f}/{silence:.0f} "
-            # Queue repeat, don't queue play_pin(), that makes repeat not interruptible but more precise
+        for note_duration, silence in self.repeat_times:
+            # Queue repeat, don't queue play_pin(), thus repeat is not interruptible but more precise
             self.queue_tuning( self.repeat_pin, ( pin_index, note_duration, silence) )
-            # Each 2 loops divide note length by 2
-            tempo *= 1.414  # double speed every 2
-        self.queue_tuning( self.repeat_pin, ( pin_index, 30, 30) )
-        self.logger.info(f"Repeat test, note/silence in ms= {self.repeat_times}")
-
 
     def get_repeat_times(self):
-        return self.repeat_times
-    
-    async def repeat_pin( self, arg):
+        return " ".join( f"{note_duration}/{silence}" for note_duration, silence in self.repeat_times )
+
+    async def repeat_pin( self, arg ):
         pin_index, duration, silence = arg
         # Repeat notes for 4 seconds
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         play_during = 4000 # milliseconds
-        self.logger.debug(f"repeat note {duration=:.1f} {silence=:.1f}")
+        self.logger.debug(f"repeat note {duration=} {silence=}")
         t0 = time.ticks_ms()
         while time.ticks_diff(time.ticks_ms(), t0) < play_during:
             actuator.on()
             # time.sleep_us() is precise (but blocks asyncio loop)
-            time.sleep_us( round(duration * 1000)  )
+            time.sleep_us( duration * 1000  )
             actuator.off()
-            time.sleep_us( round(silence * 1000)  ) 
-        # Let queued async task do their job now, make a bit of
+            time.sleep_us( silence * 1000 ) 
+        # Let queued async task do their job now, and leave a bit of
         # silence before the next note
         await asyncio.sleep_ms(500)
  
@@ -166,7 +154,7 @@ class OrganTuner:
                 # Play twice: one up, one down
                 for pin_index in pin_indexes:
                     # Queue notes, that makes scale test interruptible
-                    self.queue_tuning( self.play_pin, ( pin_index, duration, 50) )
+                    self.queue_tuning( self.play_pin, ( pin_index, duration, 100) )
                 # alternate ascending and descending
                 pin_indexes.reverse()
             await asyncio.sleep_ms(500)
@@ -183,7 +171,7 @@ class OrganTuner:
                 # Play twice: one up, one down
                 for midi_number in notelist:
                     # Queue notes, that makes scale test interruptible
-                    self.queue_tuning( self.play_midi_note, ( midi_number, duration, 50) )
+                    self.queue_tuning( self.play_midi_note, ( midi_number, duration, 100) )
                 # alternate ascending and descending
                 notelist.reverse()
             await asyncio.sleep_ms(500)
@@ -191,8 +179,6 @@ class OrganTuner:
     async def play_pin( self, arg ):
         #  Make a pipe sound
         pin_index, duration, silence = arg
-        # >>> that should go to browser! Timing?
-        print(f">>>play pin for {duration=} {silence=}")
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         actuator.on()
         await asyncio.sleep_ms(round(duration))
@@ -254,7 +240,6 @@ class OrganTuner:
 
 
     def _get_stored_tuning(self):
-        import scheduler
         self.stored_tuning:list = fileops.read_json(config.ORGANTUNER_JSON,
                                     default=[],
                                     recreate=True)
@@ -264,24 +249,37 @@ class OrganTuner:
             len(self.stored_tuning) != actuator_bank.get_pin_count()):
             self.stored_tuning = [{}]*actuator_bank.get_pin_count()
 
-
         # Update stored tuning, if necessary
         changed = False
+        # Delete surplus keys of older versions of this software.
+        for v in self.stored_tuning:
+                for k in ("cents", "centslist", "centlists", "measured_freq", "frequency", "ampdb", "amplistdb"):
+                    if k in v:
+                        del v[k]
+                        changed = True
+                        
         for pin_index, actuator in enumerate(actuator_bank.get_all_pins()):
             # Make a copy to see if there was a change
             v:dict =  dict(self.stored_tuning[pin_index] )
             # Update with current pin definition, just to be sure
             # it's up to date
             midi_note = actuator.nominal_midi_note
+            # Keep redundant info about notes to check if pinout
+            # changes and update accordingly.
+            # "name" is for example "C3(48)"
+            # "pinname" is for example "MIDISerial(10,).48 "
             v["name"] = str(midi_note)
             v["midi_number"] = midi_note.midi_number
+            v["program_number"] = midi_note.program_number 
+            if not midi_note.program_number:
+                # save some space. Don't save 0 or null or space if wildcard program number
+                del v["program_number"]
+
             v["pinname"] = str(actuator) + " " + actuator.get_rank_name()
-            v["frequency"] = round(actuator.nominal_midi_note.frequency(),1)
-            if self.stored_tuning[pin_index] != v:
-                v["centslist"] = []
+            a = self.stored_tuning[pin_index]
+            if not a or a["name"]!=v["name"] or a["pinname"]!=v["pinname"] or a["midi_number"]!=v["midi_number"]:
                 v["amplist"] = []
-                v["amplistdb"] = []
-                v["cents"] = None
+                v["freqlist"] = []
                 self.stored_tuning[pin_index] = v
                 changed = True
         if changed:
@@ -297,44 +295,14 @@ class OrganTuner:
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         midi_note = actuator.nominal_midi_note
         self.logger.info(f"start update_tuning {actuator=} {midi_note=}")
-        # Do the tuning
-        _, amp, freqlist, amplist = await self._get_note_pitch(
+        # Do the tuning. Don't need average frequency and amplitude
+        _, _, freqlist, amplist = await self._get_note_pitch(
             pin_index, midi_note
         )
         # Update organtuner.json information
         d = self.stored_tuning[pin_index]
-        d["centslist"] = [
-            midi_note.cents(f) for f in freqlist
-        ]
         d["amplist"] = amplist
-
-        # Find the maximum amplitude of all note. That value sets 0 dB
-        maxamp = 1
-        for v in self.stored_tuning:
-            for amp in v["amplist"]:
-                if amp and amp > maxamp:
-                    maxamp = amp
-        # Now calculate all amplitudes in dB relative to maxamp
-        for v in self.stored_tuning:
-            # Calculate an average amplitude, convert to db
-            amplist = v.setdefault("amplist", [])
-            centslist = v.setdefault("centslist", [])
-            avgamp = avg(amplist)
-            v["ampdb"] = self.calcdb(avgamp, maxamp)
-
-            # Make a list of all amplitudes converted to db
-            v["amplistdb"] = [self.calcdb(amp, maxamp) for amp in amplist]
-
-            # If amp is None, the signal was too weak
-            # Delete cents of weak signals
-            for i in range(min(len(centslist), len(amplist))):
-                if amplist[i] is None:
-                    centslist[i] = None
-
-            v["cents"] = avg(centslist)
-            
-        # >>>Update takes about 500 msec, so it could be interesting
-        # >>> delay updating by writing several changes at once.
+        d["freqlist"] = freqlist
         fileops.write_json(
             self.stored_tuning, config.ORGANTUNER_JSON, keep_backup=False
         )
@@ -409,5 +377,47 @@ class OrganTuner:
         return frequency, amplitude, freqlist, amplist
 
     def get_organtuner_json( self ):
-        # Return updated tuning, the browser does not fetch organtuner.json
-        return self.stored_tuning
+        # Return updated tuning to the browser.
+        # The browser does not fetch organtuner.json
+        return self._calculate_tuning()
+    
+    def _calculate_tuning(self):
+        # Do calculated fields here:
+        #  ampdb, amplistdb, cents, centslist
+        # The calculated fields are done on the fly when
+        # browser asks for values. 
+        # Calculated fields are not stored, they depend on too many variables.
+        # Make a deep copy of stored_tuning, so the stored_tuning remains small.
+        tuning = list( dict(v) for v in self.stored_tuning )
+        # Find the global maximum amplitude of all notes. That value sets 0 dB
+        maxamp = 1
+        for v in tuning:
+            for amp in v["amplist"]:
+                if amp is None:
+                    self.logger.info(f"Amplitude must be != None {amp=} {v=}")
+                if amp and amp > maxamp:
+                    maxamp = amp
+
+        for v in tuning:
+            # Reconstruct a NoteDef for the MIDI note to get frequency, cents, tuning
+            midi_note = midi.NoteDef(v.get("program_number",0), v["midi_number"])
+            
+            # Calculate frequency (adjusted by tuning frequency)
+            # and use that to calculate cents
+            v["frequency"] = midi_note.frequency()
+            freqlist = v.setdefault("freqlist", [])
+            centslist = [ midi_note.cents(f) for f in freqlist ]
+            v["measured_freq"] = avg(freqlist)
+
+            # Calculate an average amplitude, convert to db
+            amplist = v.setdefault("amplist", [])
+            avgamp = avg(amplist)
+            v["ampdb"] = self.calcdb(avgamp, maxamp)
+
+            # Make a list of all amplitudes converted to db
+            v["amplistdb"] = [self.calcdb(amp, maxamp) for amp in amplist]
+
+            v["cents"] = avg(centslist)
+            v["centslist"] = centslist
+        # Calculated values are not stored
+        return tuning

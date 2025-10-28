@@ -1,23 +1,14 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
  <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
-<span id="popup" class="popuptext"></span>    
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
-
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
@@ -36,7 +27,7 @@
 <span id="pins" style="display:none"></span>
 <span id="tuning_cents" style="display:none"></span>
 <div class="tableFixHead">
-    <table  style="width:100%">
+    <table id="notelistTable">
 		<thead>
 			<tr>
 				<th>Programa y nota</th>
@@ -45,7 +36,7 @@
 				<th>Pin</th>
 			</tr>
 		</thead>
-		<tbody id="notelist">
+		<tbody id="notelistBody">
 		</tbody>
     </table>
 </div>
@@ -54,26 +45,32 @@
 </body>
 
 <script>
-// gets refreshed by updateTuningStats()
-let tuning_cents = 5;
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( tlt("Afinar notas"), "index");
+
+
+let tuning_cents = 5 ; // default, will be updated from config
 
 async function refreshNoteList() {
 	// refresh every 5 seconds
 	while( true ) {
 		// ensure tuning_cents is updated before updateNoteList()
 		await updateTuningStats();
-		updateNoteList( await fetch_json( "/get_organtuner_json" ) );
+		await updateNoteList( await fetch_json( "/get_organtuner_json" ) );
 		await sleep_ms( 5_000 ) ;
 	}
 }
 
-function updateNoteList( notelist ) {
-	let noteListTable = document.getElementById("notelist");
+async function updateNoteList( notelist ) {
+	// takes 5 msec for 20 notes
+	let notelistBody = document.getElementById("notelistBody");
 	let amplitude_seen = false
     // notelist is a dictionary, key=midi note number
 	// Clear table
-    noteListTable.innerText = "";
+    notelistBody.innerHTML = "";
 	// Populate table with values from notelist
+	let config = await configCache.get();
+	tuning_cents = config["tuning_cents"] ;
 	for( let midi in notelist ){
 		let note = notelist[midi]  ;
         let ampdb = note["ampdb"] ;
@@ -91,10 +88,10 @@ function updateNoteList( notelist ) {
         else {
             cents = Math.round( cents ) ;
         }
-		let row = insertRow( noteListTable, ["", cents, "", ampdb, "", note["pinname"]] );
+		let row = insertRow( notelistBody, ["", cents, "", ampdb, "", note["pinname"]] );
 		// Column 0: note name, link to note
 		// Column 1: cents as number
-		// COlumn 2: cents as bar graph, id `tuning${midi}`
+		// Column 2: cents as bar graph, id `tuning${midi}`
 		// Column 3: amplitude as number (amp_related)
 		// Column 4: amplitude as bar graph, id `amp${midi} (amp_related)
 		// Column 5: pin name
@@ -102,8 +99,14 @@ function updateNoteList( notelist ) {
 		link.href = `/note/${midi}`;
 		link.innerText = note["name"];
 		row.cells[0].appendChild( link ) ;
-		row.cells[2].id = `tuning${midi}`;
-		row.cells[4].id = `amp${midi}`;
+		let centsBar = document.createElement("canvas", {is:"needle-bar"});
+		centsBar.id = `tuning${midi}`;
+		centsBar.setParam( 20, -MAX_CENTS, MAX_CENTS, tuning_cents );
+		row.cells[2].appendChild( centsBar );
+		let dBBar = document.createElement("canvas", {is:"needle-bar"});
+		dBBar.id = `amp${midi}`;
+		dBBar.setParam( 20, MIN_DB, MAX_DB, 0 );
+		row.cells[4].appendChild( dBBar );
 
 		// Set name of amplitude related columns to be able to show/hide them
 		// based on whether amplitude values are present
@@ -125,16 +128,8 @@ function updateNoteList( notelist ) {
         let elename = `tuning${midi}` ;
         let docele = document.getElementById( elename ) ;
         if( cents != null ){
-        	docele.style.visibility = "visible" ;
-			let color = sap_green ;
- 			if(  cents > tuning_cents/100 || cents < -tuning_cents/100 ){
-				color = fire_brick ;
-			}
-			if(  cents >0.05 || cents < -0.05 ){
-			  color = fire_brick ;
-			}
-			//lrBarGraph( elename, scale_cents( cents ), color, scale_divisions_cents, 20 ) ;
-			centsBar( elename, cents, 20 );
+			docele.style.visibility = "visible" ;
+			docele.draw( cents );
         }
         else {
             docele.style.visibility = "hidden" ;
@@ -145,7 +140,8 @@ function updateNoteList( notelist ) {
         docele = document.getElementById( elename ) ;
         if( ampdb != null ){
           docele.style.visibility = "visible" ;
-		  dbBar( elename, ampdb, 15 ) ;
+		  //dbBar( elename, ampdb, 15 ) ;
+		  docele.draw( ampdb ) ;
         }
         else {
             docele.style.visibility = "hidden" ;
@@ -179,15 +175,14 @@ async function allPinTest(){
 
 async function updateTuningStats(){
 	let stats = await fetch_json( "/get_tuning_stats" );
-	// update global variable tuning_cents, needed for update_note_list()
-	tuning_cents = stats["tuning_cents"] ;
 	// Show results on page
 	setAllTextById( stats ) ;
 }
 
 translate_html();
 refreshNoteList() ;
-
+commonGetProgress.setSleep( 5_000 );
+commonGetProgress.startBackground();
 
 </script>
 </html>

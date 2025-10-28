@@ -1,5 +1,6 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Handles response to notelist.html and note.html pages (tuning support)
 
 import time
@@ -137,7 +138,6 @@ class Microphone:
             d = time.ticks_diff(time.ticks_ms(), t0)/1000
             frequency.save( s, d, midi_note, d/len(s), frequency.HIRES_FILE_PREFIX )
             print(">>>High resolution signal saved for", midi_note, "duration=", d )
-            # >>> end of testing code
 
 
 # Performance test of tuner

@@ -1,4 +1,4 @@
-# (c) 2024 Hermann von Borries
+# (c) Copyright 2024-2025 Hermann von Borries
 # MIT License
 
 class Matrix:

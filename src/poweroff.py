@@ -1,9 +1,11 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Power off task. Monitors activity and enters deepsleep to save battery
 # if not active.
 import machine
 import asyncio
+import esp32
 
 from drehorgel import player, config, led, setlist, controller
 from minilog import getLogger
@@ -63,6 +65,7 @@ class PowerManager:
 
     async def wait_and_power_off(self):
         # Deepsleep is the closest thing to "self power off"
+        # Could not make wake_on_touch work here.
         await self._wait_and_action( machine.deepsleep )
         # Does not return
 

@@ -1,21 +1,18 @@
 import os
 from microdot import send_file
-import time
 
 from drehorgel import tunemanager, config
 import fileops
 
+
 # Compress midi, html, css and js files in the browser: NO, bad idea.
-# >>> use tunelib to make listdir of tunelib faster
-# >>> put "Reload"  on filemanager page  with a link that reloads the page
 # >>> show compilation date on filemanager root to aid software upload.
-# >>> should there be a  "upgrade software" with root and subfolders and compare dates?
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
     "main.py": "/", # special case
     "json": "/data/",
-    "txt": "/data/", # pinout.txt
+    "txt": "/data/",
     "py": "/software/mpy/",
     "mpy": "/software/mpy/",
     "html": "/software/static/",
@@ -41,10 +38,16 @@ MIME_TYPES = {
 }
 
 def _check_midi_file( path, file_size=-1 ):
-    # file_size=-1 means "file has been deleted"
+    # Check if file operation affected a MIDI file.
+    # If so, queue a file update or deletion in tunemanager.
+    # This is used to keep the tunelib.json in sync with the file system.
+    # If the file is deleted, file_size will be -1.
     if "tunelib/" in path and fileops.get_file_type( path ) == "mid":
         # Changing or deleting MIDI file requires sync of tunelib at next reboot
-        tunemanager.queue_tunelib_change( path, file_size )
+        if file_size >= 0:
+            tunemanager.queue_file_updated( path, file_size )
+        else:
+            tunemanager.queue_file_deleted( path )
 
 def get_mime_type( filename ):
     # Default MIME type is text/plain
@@ -54,9 +57,22 @@ def listdir(path):
     if not path.endswith("/"):
         path += "/"
     listing = fast_listdir(path)
-    # >>> Make this faster, for example using the tunelib if path permits it.
+    if path == "/tunelib/":
+        # Speed up /tunelib folder, dates are already in tunelib.json.
+        tunelibfd = tunemanager.file_date_dict()
+    else:
+        tunelibfd = dict() # tunelibfd only available for files in /tunelib folder
+    getdate = 0
     for fileinfo in listing:
-        fileinfo["date"] = get_file_date(path + fileinfo["name"]) 
+        date = tunelibfd.get(fileinfo["name"], "") 
+        # Show date for up to 100 files, if not, response
+        # time becomes slow.
+        # This maximum does not apply to tunelib.
+        # 100 files can take about 4 seconds due to os.stat()
+        if not date and getdate<100:
+            date = fileops.get_file_date(path + fileinfo["name"])
+            getdate += 1
+        fileinfo["date"] = date
     return listing
 
 def fast_listdir(path):
@@ -84,23 +100,6 @@ def fast_listdir(path):
               "date":""
               } for dir_entry in os.ilistdir(path)]
         
-def get_file_date( filename ):
-    try:
-        t = time.localtime(os.stat(filename)[7])
-    except OverflowError:
-        # This really happened.... the cause
-        # is that a file got transferred with /filemanager
-        # without having
-        # set the ntp time. Since the time zone offset was minus 3 hours
-        # this gives a negativetime. 
-        # C language interpreted that negative number as
-        # unsigned int.
-        # This means: 
-        # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
-        # which is far, far in the future... overflow.
-        return "2000-01-01 00:00"
-    return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
-
 def upload( request, path, filename  ):
     # Upload a file from the PC to the microcontroller
 
@@ -116,8 +115,7 @@ def upload( request, path, filename  ):
     # Javascript normalize("NFC") substitutes combined diacritics
     # to code points.
     
-    # >>> test for diacritics marks, these must be filtered for consistency Mac/Windows/Javascript/MicroPython/browsers
-    # >>> could be done with re
+    # test for diacritics marks, these must be filtered for consistency Mac/Windows/Javascript/MicroPython/browsers
     for z in filename:
         if 0x300 <= ord(z) <= 0x36f:
            print(filename.encode())
@@ -133,7 +131,9 @@ def upload( request, path, filename  ):
         folder = DESTINATION_FOLDERS.get( 
                     filename,
                     DESTINATION_FOLDERS.get( fileops.get_file_type( filename ) ) )
-                                        
+        # Create folder if it does not exist
+        fileops.make_folder( folder )   
+
     if folder is None:
         raise ValueError
 
@@ -152,7 +152,7 @@ def upload( request, path, filename  ):
 
     # If a compressed file is replaced with a uncompressed one
     # delete the replaced file. Same with .py and .mpy
-    # And vice-versa. Only one instance of two equivalent
+    # And vice-versa. Only one instance (the newer) of two equivalent
     # files will be allowed, to avoid duplicity and confusion.
     equiv = fileops.get_equivalent( path )
 
@@ -163,7 +163,6 @@ def upload( request, path, filename  ):
     return {"folder": folder, 
             "oldFileSize": old_file_size,
             "newFileSize": new_file_size }
-
 
 def download(path):
     # Download a file from the microcontroller to the PC
@@ -187,7 +186,6 @@ def download(path):
 
 
 def _formatLogGenerator(filename):
-    # >>>Do all this function in javascript?
     def escapeHtml( s ):
         return s.replace("&","&amp;")\
             .replace("<","&lt;")\
@@ -294,5 +292,6 @@ def purge_tunelib_file( fn ):
         n += 1
         if n > 10:
             raise RuntimeError(f"Too many purged file versions {fn=} {n=}")
+    _check_midi_file( from_fn )
     os.rename( from_fn, append(to_fn, n) )
    

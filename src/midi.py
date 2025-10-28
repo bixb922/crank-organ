@@ -1,5 +1,6 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # MIDI support:
 # This module contains the NoteDef (note definition) class, 
 # which is used to store note definitions
@@ -21,7 +22,7 @@ DRUM_PROGRAM = 129
 WILDCARD_PROGRAM = 0 # Must be zero, see basic_note_on/basic_note_off
 
 from drehorgel import config
-tuning_frequency =  config.get_float("tuning_frequency", 440)
+tuning_frequency =  config.get_float("tuning_frequency", 440) or 440
 tuning_cents = config.get_int("tuning_cents", 5)
 
 class NoteDef:
@@ -65,6 +66,7 @@ class NoteDef:
         # Cents difference between the measured frequency and the nominal frequency
         if not measured_freq or measured_freq <= 0:
             return None
+        # self.frequency() already considers midi.tuning_frequency
         return 1200 * log(measured_freq / self.frequency()) / log(2)
 
     def note_name(self):
@@ -88,3 +90,4 @@ class NoteDef:
         # Both 0 means "no midi note"
         # midi_number has to be neither None nor 0
         return self.midi_number or self.program_number != 0
+    

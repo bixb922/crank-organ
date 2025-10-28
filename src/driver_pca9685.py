@@ -7,12 +7,9 @@ import time
 
 from driver_base import BasePin, BaseDriver
 
-# >>> angle calculator in pinout page
-
 #  one instance for each PCA chip
 class PCA9685Driver(BaseDriver):
     def __init__(self, i2c, i2c_number, address, period_us):
-        print("calling super init")
         super().__init__(  i2c_number, address )
 
         self.i2c = i2c
@@ -25,6 +22,7 @@ class PCA9685Driver(BaseDriver):
             )
         self.pca = PCA9685(i2c, address, period_us)
         self.pin_list = [] 
+        self.stagger_all_notes_off = True
 
     def set_servopulse( self, pulse0_us, pulse1_us ):
         # Store temporarily here. This is
@@ -39,11 +37,20 @@ class PCA9685Driver(BaseDriver):
         return sp
     
     def all_notes_off( self ):
+        if self.stagger_all_notes_off:
+            print("PCA9685Driver.all_notes_off: staggering all notes off for RC servos", repr(self))
         # No shorter way to do this, since pulse0_us can be potentially
         # different for each pin, so we cannot just set all to some value.
         for sp in self.pin_list:
             sp.value(0)
-    
+            if self.stagger_all_notes_off:
+                time.sleep_ms(100)  # Stagger turn-off to reduce current spikes
+        if self.stagger_all_notes_off:
+            print("PCA9685Driver.all_notes_off: staggering done")
+        self.stagger_all_notes_off = False  # Only do this once
+        # Same logic applies in driver_gpioservo.py
+
+        
 class PCAPin(BasePin):
 
     def set_device( self, pca, period_us, pulse0_us, pulse1_us ):

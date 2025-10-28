@@ -1,26 +1,27 @@
 
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
  <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
-<span id="popup" class="popuptext"></span>
+<!--<span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
-        <a onclick="pageUp('tunelist')">&#11013;</a>
+        <a onclick="pageUp('index')">&#11013;</a>
 	</span>
     &nbsp;&nbsp;&nbsp;<b>Drums setting</b>
 	<span class="headerright" id="header_time"></span>
 </div>
+-->
 
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <table>
 	<tbody id="drumTableBody">
@@ -31,6 +32,14 @@
 </body>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( "Drums setting", "index" );
+
+
 // {
 //     "45": {"name": "Low Tom MIDI=45=A2=A,, tuned to Bb", 
 //             "duration": 65, 
@@ -41,13 +50,14 @@ let drumdef = {};
 let MAX_MIDIS = 10;
 async function refresh(){
 	// global drumdef
-	drumdef = await fetch_json("/data/drumdef.json");
+	drumdef = await fetch_json( "/data/drumdef.json");
 	let tbody = document.getElementById("drumTableBody");
-	console.log("tbody=", tbody);
 	for( let midi_number in drumdef ){
-		console.log("midi_number=", midi_number);
+		if( isNaN(midi_number) ){
+			// ignore comments
+			continue;
+		}
 		let dd = drumdef[midi_number];
-		console.log("dd=", dd);
 		let row = insertRow( tbody, [dd["name"]]);
 		row.cells[0].colSpan = 10;
 		insertFormRow( tbody, "durationRow", ["Duration", makeInput(`duration.${midi_number}`, 3, dd["duration"]), "msec"]);
@@ -73,6 +83,8 @@ async function refresh(){
 		row = insertRow( tbody, ["================================"]);
 		row.cells[0].colSpan = 10;
 	}
+	commonGetProgress.setSleep( 5_000 );
+	commonGetProgress.startBackground();
 }
 
 function insertFormRow( body, rowid, data ){
@@ -106,7 +118,6 @@ async function updateField(id){
 	let input_box = document.getElementById(id);
 	let midi_number = data[1];
 	let field = data[0];
-	console.log("updateField data=", data);
 
 	if( field == "duration" || field == "strong_duration"){		
 		let v = input_box.value;
@@ -122,7 +133,6 @@ async function updateField(id){
 		}
 		drumdef[midi_number][field] = midilist;
 	}
-	console.log("Modified", drumdef);
 	await fetch_json("/test_drumdef", drumdef );
 
 	// Erase background
@@ -132,6 +142,7 @@ async function save(){
 	await fetch_json("/save_drumdef", drumdef );
 }
 refresh();
+
 
 </script>
 </html>

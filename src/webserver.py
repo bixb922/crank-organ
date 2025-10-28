@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # Webserver module, serves all http requests.
 
@@ -29,13 +29,12 @@ from pinout import GPIOstatistics, SaveNewPinout
 
 app = Microdot()
 _logger = getLogger(__name__)
-DATA_FOLDER = "data/"
-STATIC_FOLDER = "software/static/"
-if fileops.file_exists("/rom/static/index.html.gz"):
-    STATIC_FOLDER = "/rom/static/"
-print(">>>static folder:", STATIC_FOLDER )
 
-boot_session_id = hex(getrandbits(24))[2:]
+# Priority: software/static (if it there) to allow
+# incremental software update and development
+# If one of these folders is not there, no significant overhead is incurred.
+STATIC_FOLDERS = ["/software/static/", "/rom/static/"]
+
 
 # Session is a dict, key=session_id, session data is a dict, for example {"login":True}
 sessions = {}
@@ -44,7 +43,6 @@ def get_session( request ):
     # This can happen with the first http request after a reboot.
     return sessions[request.cookies["session"]]
 
-USE_CACHE = True  # will be set by run_webserver() to value in config.json
 MAX_AGE = config.get_int("max_age") or (24 * 60 * 60)
 
 
@@ -61,7 +59,7 @@ def func_after_req( request, response ):
     except KeyError:
         # No cookie - must send cookie and add new session
         # By design, this session cookie is different from the
-        # boot_session_id. The boot session id identifies a
+        # boot_session id (set by player.py). The boot session id identifies a
         # boot session, i.e. changes from one reboot to
         # the next reboot. Whereas the session cookie is issued
         # per client as a login session id to keep the login
@@ -166,57 +164,55 @@ async def index_page(request):
 # File related web requests
 @app.route("/static/<filepath>")
 async def async_static_files(request, filepath):
-    return static_files( request, filepath )
+    return await static_files( request, filepath )
 
-def static_files( request, path ):
+async def static_files( request, path ):
     ua = request.headers.get("User-Agent")
     if ua:
         if "Chrome" not in ua and "Firefox" not in ua:
             # Could not make run Javascript's "await fetch" well in Safari.
             _logger.debug(f"Browser not supported {ua}")
             return "Safari not supported, use Chrome or Firefox"
+    async with scheduler.RequestSlice("webserver static_files", 100):
+        for folder in STATIC_FOLDERS:
+            filename = folder + path
+            # Check first for uncompressed file. 
+            # Could make it easier for development since
+            # uploading a uncompressed file takes precedence.
+            if fileops.file_exists(filename):
+                return send_file(filename, max_age=MAX_AGE)
+            
+            # File not found, perhaps a compressed version exists?
+            # In that case, add a header for the Content-type  according to file type
+            # and a header for Content-Encoding = gzip
+            filename_zip = filename + ".gz"
+            if fileops.file_exists( filename_zip ):
+                # If .gz file, serve this compressed file 
+                # instead of regular file
+                # On Mac, compress with gzip, for example:
+                # gzip -9 -c -k config.html > config.html.gz
+                # See https://www.gzip.org/
+                # Content type depends on the original file type
+                ct = filemanager.get_mime_type( filename )
 
-    filename = STATIC_FOLDER + path
-    # Check first for uncompressed file. 
-    # Could make it easier for development since
-    # uploading a uncompressed file takes precedence.
-    if fileops.file_exists(filename):
-        return send_file(filename, max_age=MAX_AGE)
-    
-    # File not found, perhaps a compressed version exists?
-    # In that case, add a header for the Content-type  according to file type
-    # and a header for Content-Encoding = gzip
-    filename_zip = filename + ".gz"
-    if fileops.file_exists( filename_zip ):
-        # If .gz file, serve this compressed file 
-        # instead of regular file
-        # On Mac, compress with gzip, for example:
-        # gzip -9 -c -k config.html > config.html.gz
-        # See https://www.gzip.org/
-        # Content type depends on the original file type
-        ct = filemanager.get_mime_type( filename )
-        return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
+                return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
     _logger.info(f"static_files {filename} not found")
     return respond_not_found()
 
 
 @app.route("/data/<filepath>")
 async def send_data_file(request, filepath):
-    filename = DATA_FOLDER + filepath
+    filename = config.DATA_FOLDER + filepath
     if not fileops.file_exists(filename):
         _logger.info(f"send_data_file {filename} not found")
         # Since a data file is requested (normally) by fetch_json() 
         # in Javascript, respond_not_found() will also
         # return a 404 error.
         return respond_not_found()
-    return send_file(filename, max_age=0)
+    # Don't cache data files with the brower. 
+    # Cacheing json files is controlled at the Javascript level.
 
-@app.route("/get_description")
-async def get_description(request):    
-    # Return description of this microcontroller, to be used
-    # as the title of page. The browser client
-    # caches this in tab storage. 
-    return { "description": config.cfg.get("description")}
+    return send_file(filename, max_age=0)
 
 def get_progress():
     # Gather progress from all sources
@@ -224,30 +220,29 @@ def get_progress():
     progress = player.get_progress()
     crank.complement_progress(progress)
     setlist.complement_progress(progress)
-    # gpio has th RegisterBank() object
+    # gpio has the RegisterBank() object
     gpio.get_registers().complement_progress(progress)
     tunemanager.complement_progress(progress)
+    battery.complement_progress(progress)
+    # commonGetProgress() in common.js filters setlist and adds tunelib
     return progress
 
-
-@app.route("/get_progress/<browser_boot_session>")
-async def process_get_progress(request, browser_boot_session):
-    # Currently not using the browser_boot_session here
-    # But the javascript uses it to flush cache.
-    # If browser_boot_session is different than progress["boot_session"]
-    # then this is the first /get_progress after reboot.
-    # The browser then will, for example, invalidate the tab
-    # cache to get fresh data.
-    return get_progress()
+@app.route("/get_progress")
+async def ws_get_progress(request):
+    # get_progress() itself is very fast, but set aside
+    # some CPU for responding
+    async with scheduler.RequestSlice("webserver get_progress", 100):
+        return get_progress()
 
 #
 # Setlist management
 #
 
-@app.post("/queue_tune/<tune>")
-async def queue_tune_setlist(request, tune):
+@app.post("/queue_tune")
+async def queue_tune(request):
     # Queue tune to setlist
-    setlist.queue_tune(tune)
+    data = request.json
+    setlist.queue_tune(data["tuneid"], data["slot"] )
     return get_progress()
 
 
@@ -265,19 +260,21 @@ async def stop_tune_setlist(request):
 
 @app.route("/back_setlist")
 async def back_setlist(request):
+    # >>> should these have RequestSlice? 
     setlist.to_beginning_of_tune()
     return get_progress()
 
 
-@app.route("/save_setlist")
+@app.post("/save_setlist")
 async def save_setlist(request):
-    setlist.save()
+    data = request.json
+    setlist.save( data["slot"] )
     return get_progress()
 
 
-@app.route("/load_setlist")
+@app.post("/load_setlist")
 async def load_setlist(request):
-    setlist.load()
+    setlist.load( request.json["slot"] ) 
     return get_progress()
 
 
@@ -314,6 +311,14 @@ async def shuffle_3stars(request):
     setlist.shuffle_3stars()
     return get_progress()
 
+@app.route("/get_setlist_titles")
+async def get_titles( request ):
+    return setlist.get_titles() 
+
+@app.post("/save_setlist_titles")
+async def save_titles( request ):
+    setlist.save_titles( request.json )
+    return respond_ok()
 #
 # Organ tuner web requests
 #
@@ -323,7 +328,7 @@ async def get_organtuner_json( request ):
 
 @app.route("/note/<int:pin_index>")
 async def note_page(request, pin_index):
-    return static_files( request, "note.html" )
+    return await static_files( request, "note.html" )
 
 @app.route("/tune_all")
 async def start_tune_all(request):
@@ -352,7 +357,6 @@ async def sound_note(request, pin_index):
 @app.route("/sound_repetition/<int:pin_index>")
 async def sound_repetition(request, pin_index):
     get_organ_tuner().queue_tuning(get_organ_tuner().repeat_note, pin_index)
-    # >>> Will be shown second time the button is pressed
     return { "repeat_times": get_organ_tuner().get_repeat_times() }
 
 
@@ -385,7 +389,6 @@ async def get_tuning_stats(request):
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
 async def get_battery_status(request):
-    # When playing music, /battery is good indicator of activitys
     return battery.get_info()
 
 
@@ -412,22 +415,16 @@ async def show_log(request):
 # diag.html web requests
 @app.route("/diag")
 async def diag(request):
-    # Collect=110ms, mem_free=150ms, mem_alloc=150ms
-    # It's now faster with latest MicroPython version,
-    # gc.collect() now about 50 ms.
-    # After PR#8183, even faster gc.collect() should be possible.
     try:
         async with scheduler.RequestSlice("webserver diag", 5000, 10_000):
             gc.collect()
             t0 = ticks_ms()
-            # gc.collect() takes 50 to 100 ms.
             gc.collect()  # measure optimal gc.collect() time
             t1 = ticks_ms()
             gc_collect_time = ticks_diff(t1, t0)
-            # mem_free and mem_alloc are quite slow, similar to
-            # gc.collect()
-            free_ram = gc.mem_free()  # This is rather slow with 8MB
-            used_ram = gc.mem_alloc()  # This is rather slow with 8MB
+            # mem_free and mem_alloc are quite slow, similar to gc.collect()
+            free_ram = gc.mem_free()  
+            used_ram = gc.mem_alloc() 
             # statvfs takes 1.5 sec
             vfs = os.statvfs("/")
 
@@ -522,9 +519,20 @@ async def set_velocity_relative(request, change):
 def tacho_irq_report(request):
     return crank.td.irq_report()
 
+
+@app.route("/tacho_raw_value")
+def tacho_raw_value(request):
+    setlist.stop_playback()
+    return {"value": crank.td.raw_value() }
+
 @app.route("/top_setlist/<tuneid>")
 async def top_setlist(request, tuneid):
     setlist.top(tuneid)
+    return get_progress()
+
+@app.route("/bottom_setlist/<tuneid>")
+async def bottom_setlist(request, tuneid):
+    setlist.bottom(tuneid)
     return get_progress()
 
 
@@ -568,11 +576,12 @@ async def get_pinout_filename(request):
 async def get_used_pins( request, path ):
     return GPIOstatistics(decodePath(path)).get_used_pins()
 
-
 @app.route("/get_index_page_info")
 async def get_index_page_info(request):
     # Information needed by index.html
+    # Use existing routine here in webserver and complement.
     resp = await get_pinout_filename(request)
+    # Pinout filename, pinout description and server node name (if any)
     resp["servernode"] = config.cfg["servernode"]
     return resp
 
@@ -634,21 +643,28 @@ async def save_drumdef( request ):
     return respond_ok()
 
 # Generic requests requests: some browsers request favicon
+def serve_favicon( fn ):
+    for folder in STATIC_FOLDERS:
+        filename = folder + fn
+        if fileops.file_exists( filename ):
+            return send_file(filename, max_age=MAX_AGE)
+    return respond_not_found() # ???
+
 @app.route("/favicon.ico")
-async def serve_favicon(request):
-    return send_file(STATIC_FOLDER + "favicon.ico", max_age=MAX_AGE)
+async def favicon_ico(request):
+    serve_favicon( "favicon.ico" )
 
 
 @app.route("/favicon.png")
-async def static_favicon(request):
-    return send_file(STATIC_FOLDER + "favicon.png", max_age=MAX_AGE)
+async def favicon_png(request):
+    serve_favicon( "favicon.png" )
 
 
 # Not used
-@app.route("/logout")
-async def logout(request): 
-    get_session( request )["login"] = False
-    return {}
+# @app.route("/logout")
+# async def logout(request): 
+#     get_session( request )["login"] = False
+#     return {}
 
 
 # Tunelib editor
@@ -662,12 +678,12 @@ async def start_tunelib_sync(request):
 # Tunelib editor
 @app.route("/tunelib_sync_progress")
 async def tunelib_sync_progress(request):
-    return {"progress":tunemanager.get_sync_progress()}
+    return {"progress": tunemanager.get_sync_progress()}
 
 @app.post("/save_tunelib")
 @authorize
 async def save_tunelib(request):
-    tunemanager.save(request.json)
+    tunemanager.queue_field_changes(request.json)
     return respond_ok()
 
 
@@ -682,15 +698,6 @@ async def save_lyrics( request ):
 @authorize
 async def delete_history(request, days):
     history.delete_old(days)
-    return respond_ok()
-
-@app.post( "/register_comment")
-async def register_comment(request):
-    # Register comment does not ask for password
-    # The purpose is to register rating/comment during the performance
-    # so this has to be easy to use.
-    data = request.json
-    tunemanager.register_comment( data["tuneid"], data["comment"])
     return respond_ok()
 
 @app.post( "/tempo_follows_crank" )
@@ -781,6 +788,7 @@ async def filemanager_upload(request, path_filename ):
     path, filename = path_filename.split("+")
     path = decodePath( path )
     filename = decodePath( filename )
+    _logger.info(f"Uploading {filename} to {path}")
     try:
         return filemanager.upload( request, path, filename  )
     except ValueError:
@@ -798,7 +806,7 @@ async def filemanager_show_file( request, path ):
 @app.route("/show_midi/<path>")
 async def show_midi( request, path ):
     # Javascript will retrieve the path passed in the URL
-    return static_files( request, "show_midi.html" )
+    return await static_files( request, "show_midi.html" )
 
 @app.route("/get_midi_file/<path>")
 async def get_midi_file( request, path ):
@@ -835,7 +843,7 @@ async def purge_tunelib_file(request ):
 @app.route("/filemanager/<path>")
 async def handle_filemanager( request, path=""):
     # Load page, javascript will retrieve the path an call back
-    return static_files( request, "filemanager.html" )
+    return await static_files( request, "filemanager.html" )
 
 
 # A very simple call just to ask for password and get authorized
@@ -884,14 +892,13 @@ async def error_handler( request, exception ):
     return respond_error_alert(f"Server error 500 {request.url=} {exception=}")
 
 async def run_webserver():
-    global _logger, USE_CACHE, MAX_AGE
+    global _logger, MAX_AGE
 
     # Configure file cache for browser
+    # MAX_AGE is applied selectively
     if not config.cfg.get("webserver_cache", True):
         MAX_AGE = 0
-        USE_CACHE = False
-
-    _logger.debug(f"{USE_CACHE=} {MAX_AGE=:,} sec")
+    _logger.debug(f"{MAX_AGE=:,} sec {STATIC_FOLDERS=}")
     await app.start_server(host="0.0.0.0", port=80 )
 
 

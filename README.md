@@ -69,11 +69,11 @@ Main documents:
 * [Description of the controller software.](doc-software/README.md)
 * [Description of the controller hardware and construction plans](doc-hardware/README.md)
 
-Specific documents
-* [Battery](doc-hardware/battery.md)
-* [Crank sensor](doc-hardware/crank-sensor.md) with a summary [here](doc-hardware/README.md#9-crank-rotation-sensor)
-* [How to connect an ESP32-S3 to MIDI over serial (MIDI over 5 pin DIN plug) ](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md)
-* **NEW** Use of RC servos for valves here: ![servos](/doc-servo/servos.md)
+Specific documents:
+* [Battery](doc-hardware/battery.md). Describes  options for a battery for a crank organ.
+* [Crank sensor](doc-hardware/crank-sensor.md) with a summary [here](doc-hardware/README.md#9-crank-rotation-sensor). Describes several options to build or install a crank rotation sensor. This sensor is optional.
+* [How to connect an ESP32-S3 to MIDI over serial (MIDI over 5 pin DIN plug) ](https://github.com/bixb922/umidiparser/blob/master/midi_over_serial/midi_over_serial.md). This is interesting if you want to connect this solution to a MIDI card over a serial connection (MIDI over 5 pin DIN plug)
+* **NEW** [Use of RC servos to move organ valves](/doc-servo/servos.md). 
 
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the "issue" section or start a discussion in this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
@@ -83,21 +83,19 @@ To see this software in operation, see a demo here: https://drehorgel.pythonanyw
 This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning.
 
 
+
 # 4. Folders
-
-These are the folders in this GITHUB repository. On a cell phone, select "Browse code". On a PC or MAC just navigate to https://github.com/bixb922/crank-organ to see the folders. Open the README.md in the folder for the detailed description.
-
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
-|doc-software|[Description of the controller software.](doc-software/README.md) |
-|doc-hardware|[Description of the controller hardware and construction plans](doc-hardware/README.md))|
+|install|Installation files                      |
 |src| Full source code in MicroPython language |
 |static| Web pages for the microcontroller (HTML, CSS, Javascript)   |
 |data| Pinout templates for 20, 26 and 31 note organs |
-|install|Installation files                      |
+|tools|Some tools used during development of this software |
+|kicad|KiCad source files|
 
-[Here](doc-software/README.md) is a change log, see section "Recent changes".
+[Here](doc-software/README.md) is a change log, see section titled "Recent changes".
 
 # 5. License
 

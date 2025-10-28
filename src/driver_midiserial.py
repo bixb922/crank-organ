@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Hermann von Borries
+# Copyright (c) 2023-2025 Hermann von Borries
 # MIT license
 
 # Controller for MIDI output over serial
@@ -22,8 +22,8 @@ class MIDISerialDriver(BaseDriver):
         # per board, allowing several boards per MIDI serial output.
 
         # Default rx is 9 for UART1
-        # >>> Should use default pins or allow user
-        # >>> to define rxpin as well?
+        # >>> Should allow user to define rxpin as well!!
+        # (to make assignment explicit)
         # (On the pinout.html page the rx pin will show as "used")
         # assert 1 <= uart <= 2
         # assert 0 <= channel <= 15

@@ -1,4 +1,4 @@
-# (c) 2020 Hermann Paul von Borries
+# (c) Copyright 2020-2025 Hermann Paul von Borries
 # MIT License
 # Tallies battery usage
 
@@ -42,21 +42,21 @@ class Battery:
             "solenoid_on_seconds": 0,  # Time that actuators were on, in seconds
             "tunes_played": 0,      # Number of tunes played
             "date_zero": "0000-00-00", # Datetime when set to zero
-            # These magnitudes are estimated:
+            # These magnitudes are estimated using linear regression:
             "remaining_seconds": None,  # calculated time until battery is empty, seconds 
             "percent_remaining": None, # estimated with coefficients
             "tunes_remaining": None,   # Estimation of how many tunes can still be played with this battery charge
             "low": None,       # True/False, compares percent used with low battery level
         }
-        self.battery_info.update( fallback )
+        # Update any missing keys, this makes new versions easier
+        for k in set(fallback)-set(self.battery_info):
+            self.battery_info[k] = fallback[k]
+            self.logger.debug(f"Adding battery info key {k}")
 
         self.battery_task = asyncio.create_task(self._battery_process())
 
         # Start with heartbeat
-
         self.heartbeat_task = asyncio.create_task(self._heartbeat_process())
-
-        self._write_battery_info()
         self.logger.debug("init ok")
 
     async def _battery_process(self):
@@ -73,13 +73,9 @@ class Battery:
             # but uses get_info() from memory.
             # Be nice and ask for a time slice. Updating a file
             # in flash usually takes 20 or 30 msec but may go up to 190 msec
-            try:
-                async with scheduler.RequestSlice("battery", 200, 10_000):
+            # If no slice available, just wait.
+            async with scheduler.RequestSlice("battery", 300):
                     self._write_battery_info()
-            except RuntimeError:
-                # Music playback did not have a pause
-                # Try writing next time
-                pass
 
             await asyncio.sleep(_UPDATE_EVERY_SECONDS)
 
@@ -156,7 +152,9 @@ class Battery:
     def end_of_tune(self, seconds)->None:
         self.battery_info["playing_seconds"] += seconds
         self.battery_info["tunes_played"] += 1
-
+        # Tune ended, no need to RequestSlice.
+        self._write_battery_info()
+        
     def record_level(self, level)->None:
         # Level: 100=battery full
         #          0=battery empty
@@ -274,3 +272,7 @@ class Battery:
         if pr is not None:
             return pr < _BATTERY_LOW_PERCENT
 
+    def complement_progress( self, progress ):
+        progress["bat_low"] = self.battery_info["low"]
+        progress["bat_percent_remaining"] = self.battery_info["percent_remaining"]
+        progress["bat_remaining_seconds"] = self.battery_info["remaining_seconds"]

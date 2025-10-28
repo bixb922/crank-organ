@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
  <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    
     <meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
-<span id="popup" class="popuptext"></span>
+<!--<span id="popup" class="popuptext"></span>
 <div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp('index')">&#11013;</a>
@@ -18,7 +17,9 @@
 	&nbsp;Pinout and MIDI configuration
 	<span class="headerright" id="header_time"></span>
 </div>
+-->
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
 
 <div class="middlediv">Select template</div>
     This configuration should be needed only once, when setting up the system.
@@ -127,6 +128,12 @@ When pressing the save button, you may be asked for the password of the microcon
 </table>	
 <div class="footerdiv"></div>
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( "Pinout and MIDI configuration", "index" );
 
 let currentPinoutFilename = null;
 function currentPinoutFilenameAbs(){
@@ -197,12 +204,12 @@ async function getPinoutDetail( ) {
 
     let rownum = 0;
     let lastPin = null ;
-    lastPDtype = null;
+    let lastPDtype = null;
 
     let tbody = document.getElementById( "tbodyPinoutForm" );
-    tbody.innerText = "";
+    tbody.innerHTML = "";
 
-    for( let z in pinout_detail ){
+    for( let z = 0; z < pinout_detail.length; z++ ){
         let f = z + ""; // for the function closures to work.
         let pd = pinout_detail[f] ;
         let pdtype = pd[0];
@@ -228,12 +235,15 @@ async function getPinoutDetail( ) {
             }
             // If a simple counter is installed: define only one pin
             // If a rotary encoder is installed: define two pins
-            insertFormRow( tbody,`row_${f}_tachometer`, [
+            let row = insertFormRow( tbody,`row_${f}_tachometer`, [
                 "Crank rotation sensor",
                 makeInput( `tachometer_counter.${f}`, 3, pd[1] ),
                 "second output (optional)",
-                makeInput( `tachometer_encoder.${f}`, 3, second_pin )
+                makeInput( `tachometer_encoder.${f}`, 3, second_pin ),
+                makeButton( `tachotest${f}`, "Test crank", ()=>{testCrank(f)} ),
+                ""
             ] );
+            row.cells[5].id = `tachovalue${f}`;
         }
         else if( pdtype == "microphone"){
             insertFormRow( tbody,`row_${f}_microphone`, [
@@ -311,7 +321,7 @@ async function getPinoutDetail( ) {
             pininfo.f = f;
             // Make a deep copy of the pininfo variable to prepare for the function closure.
             let testPinArgs = JSON.parse( JSON.stringify( pininfo ) );
-            testFunction = function() { testPin( testPinArgs )} ;
+            let testFunction = function() { testPin( testPinArgs )} ;
             
             let row = insertFormRow( tbody, `row_${f}_midi`, [
                 makeInput( `midi.pin.${f}`, 3, pin ),
@@ -431,7 +441,7 @@ async function getPinoutDetail( ) {
                 );
         }
         else {
-            console.log("Unknown pdtype", pdtype );
+            console.warn("Unknown pdtype", pdtype );
         }
         rownum += 1;
         lastPDtype = pdtype;
@@ -441,8 +451,6 @@ async function getPinoutDetail( ) {
     document.getElementById("tbodyPinoutForm").style.display = "";
     await get_available_pins() ;
 }
-   
-getPinoutList();
 
     
 async function savePinoutFilename(){
@@ -463,7 +471,7 @@ async function savePinoutDetail(){
     let rows = document.getElementsByTagName( "tr" );
     let lastPin = null ;
     let midi_seen = false ;
-    for( n in rows ){
+    for( let n in rows ){
         let row_id = rows[n].id ;
         if( row_id == undefined || row_id == null ){
             continue ;
@@ -552,7 +560,7 @@ async function savePinoutDetail(){
 
         }
         else {
-            console.log("error found pdype=", pdtype, "while saving");
+            console.warn("error found pdype=", pdtype, "while saving");
         }
     }
     
@@ -617,29 +625,14 @@ async function testPin( pininfo ){
     button.innerText = originalText;
 }
 
-// >>> replaced by testPin
-// async function testGPIO( pin ){
-    
-//     let req = { "pin": pin };
-//     // test_gpio is with a physical pin number, disregarding
-//     // pinout definition
-//     await fetch_json( "/test_gpio", req ) ;
-// }
-
-// async function testMCP( sda, scl, mcpaddr, pin ){
-   
-//     let req = { "sda": sda, "scl": scl, "mcpaddr": mcpaddr, "pin": pin };
-//     // test_mcp is with physical pin/mcpaddress/mcp pin number
-//     // and pinout.json does not matter here, we want to test.
-//     await fetch_json( "/test_mcp", req ) ;
-// }
-    
-function note_name( midi ){
-    let note_list = [ "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B" ];
-    let nn =  note_list[ midi%12 ] + Math.floor( (midi/12) - 1 );
-    return nn;
+async function testCrank(f){
+    // Display raw counter value for 1 minute
+    let endTest = Date.now() + 60_000;
+    while( Date.now() <= endTest ){
+        document.getElementById(`tachovalue${f}`).innerText = (await fetch_json("/tacho_raw_value"))["value"];
+    }
 }
-    
+
 function showNoteName( f ){
     // Set nn (note name) element
 
@@ -656,7 +649,7 @@ function showNoteName( f ){
         if( instrument != DRUM_PROGRAM ){
             let v = e.value ; 
             if( !isNaN(v) && v != "" ){
-                nn = note_name( parseInt(v) ) ;
+                nn = noteName( parseInt(v) ) ;
             }
         }
         textById( `nn.${f}`,  nn ) ; 
@@ -683,7 +676,7 @@ function updateAllNoteNames() {
 }
     
 function hidePinoutDetail(){
- document.getElementById("tbodyPinoutForm").style.display = "none";
+    document.getElementById("tbodyPinoutForm").style.display = "none";
 }
 
 function transpose( semitones ){
@@ -817,7 +810,13 @@ async function get_available_pins(){
         }
         return s.substring(0,s.length-1);
     }
-    json_result = await fetch_json( "/get_used_pins/" + encodePath(currentPinoutFilenameAbs()) );
+    let json_result = {};
+    if( !isUsedFromDemo() ){
+        json_result = await fetch_json( "/get_used_pins/" + encodePath(currentPinoutFilenameAbs()) );
+    }
+    else{
+        json_result = await fetch_json( "/get_used_pins" + encodePath(currentPinoutFilenameAbs()) );
+    }
     for( const [key, value] of Object.entries(json_result)) {
         if( typeof value == typeof []){
             textById( key, list_to_string(value) );
@@ -870,7 +869,7 @@ function insertFormRow( body, rowid, data ){
     if( rowid ){
         row.id = rowid ;
     }
-	for( v of data ){
+	for( let v of data ){
         if( typeof v === 'string' || v instanceof String ){
 		    row.insertCell(-1).innerText = "" + v ;
         }
@@ -881,6 +880,7 @@ function insertFormRow( body, rowid, data ){
 	}
 	return row;
 }
+
 
 let tableDirection = 1;
 function sortTable() {
@@ -915,10 +915,15 @@ function sortTable() {
 
 }
 function titlerow( row ){
-    for( c of row.cells ){
+    for( let c of row.cells ){
         c.style.fontWeight = "bold";
     }
 }
+   
+getPinoutList();
+
+commonGetProgress.setSleep( 5_000 );
+commonGetProgress.startBackground();
 
 </script>
 </body>

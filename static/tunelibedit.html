@@ -1,28 +1,25 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
  <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    
     <meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 
 <body id="pagebody">
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;Tunelib editor
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
+
 <script type="text/javascript" src="/static/common.js"></script>
+<script type="text/javascript" src="/static/translations.js"></script>
+
+<span id="changes_auto" style="display:none">Los cambios se guardan automáticamente cada par de segundos.</span>
+<br>
 
 <span id="wait_for_update"></span>
+
 <div class="tableFixHead">
 
     <table>
@@ -31,13 +28,7 @@
     </table>
 </div>
 <br>
-<button onclick="save()" id="saveButton">Save tunelib info</button>
-<br>
-When pressing the save button, you may be asked for the password of the microcontroller. 
-<br>
-<b>Reload page after saving to refresh information.</b>
-<br>
-<button onclick="showAsTable()">Table for copy to clipboard</button>"
+<button onclick="showAsTable()">Formato de tabla para copiar</button>
 <div class="footerdiv"></div>
 
 <div id="modalLyrics" class="modal">
@@ -46,41 +37,61 @@ When pressing the save button, you may be asked for the password of the microcon
       <br>
       <textarea id="lyricsText" rows="30"></textarea>
       <br>
-      <button onclick="saveLyrics()">Save</button>
+      <button onclick="saveLyrics()">Guardar</button>
     </div>
   
 </div>
 </body>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader();
+pageHeader.setTitle( "Tunelib editor", "index"  );
+pageHeader.setBannerInfo( "✅" + tlt("Al día."), "❗" );
 
 
 async function getTuneList( ) {
-    wfu = document.getElementById( "wait_for_update" ) ;
-    wfu.innerHTML +=  "Checking for new files, updating...<br>" ;
+    let wfu = document.getElementById( "wait_for_update" ) ;
+    wfu.innerHTML = "";
 	let resp = await fetch_json( "/start_tunelib_sync" ) ;
     while( true ){
-        resp = await fetch_json( "/tunelib_sync_progress" );
-        wfu.innerHTML =  resp["progress"] ;
+        let resp = await fetch_json( "/tunelib_sync_progress" );
+        wfu.innerHTML =  "<p>" + resp["progress"] ;
         if( resp["progress"].includes( "***end***") ){
-            await sleep_ms( 2000 ) ;
+            // wfu.innerHTML to be cleared at end of this function.
             break ;
         }
-        await sleep_ms( 2000 );
+        await sleep_ms( 1000 );
+        
     }
-	wfu.innerHTML = "" ;
-    
-    let tunelib = await fetch_json( "/data/tunelib.json" ) ;
+    // Update with latest information
+    tunelibCache.drop();
+    lyricsCache.drop();
+
+    let tunelib = await tunelibCache.get() ;
     let tunelist = [];
     for( const [key, tune] of Object.entries(tunelib)) {
         tunelist.push( tune ) ;
     }
     sortTunelist( tunelist );
     await updateForm( tunelist ) ;
+
+    await sleep_ms( 5_000 ) ;
+    wfu.innerHTML = "";
+    showHideElement( "changes_auto", true );
 }
 
 let CHANGED_FIELDS = [] ;
-let TABLE_HEADER = ["Title", "Genre", "Author", "Year", "Autoplay", "Rating", "Info","Lyrics", "Duration", "Date&nbsp;added", "Filename", "Size", "Delete"] ;
+
+let HEADER_MAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_AUTOPLAY,
+    TLCOL_RATING, TLCOL_INFO, TLCOL_LYRICS, TLCOL_TIME, TLCOL_DATEADDED,
+    TLCOL_FILENAME, TLCOL_SIZE ] ;
+let TABLE_HEADER = map_tlcol_names( HEADER_MAP );
+TABLE_HEADER.push( tlt("Borrar")  ); // last column is delete button
 
 async function updateForm( tunelist ){
 
@@ -96,11 +107,10 @@ async function updateForm( tunelist ){
         tunelistHead.appendChild( row );
     }
 
-
     let tunelistBody = document.getElementById( "tunelistBody" );
-    tunelistBody.innerText = "";
-   
-	for( i in tunelist ) {
+    tunelistBody.innerHTML = "";
+    let lyrics = await lyricsCache.get();
+	for( let i in tunelist ) {
         let tune = tunelist[i]; // have a new variable for each iteration
         // that is needed for function() closure.
 
@@ -119,7 +129,7 @@ async function updateForm( tunelist ){
         lyricsButton.classList.add( "smallbutton" );
         lyricsButton.onclick = function(){ editLyrics( tune[TLCOL_ID] ) };
         lyricsButton.id = `lyrics_${tune[TLCOL_ID]}`;
-        if( await get_lyrics( tune[TLCOL_ID])) {
+        if( tune[TLCOL_LYRICS]) {
             lyricsButton.innerText = "Edit";
         }
         else{
@@ -158,7 +168,7 @@ function makeBoxField( tuneid, name, size, value ){
         return checkbox ; 
     }
     
-     let textBox = document.createElement( "input" );
+    let textBox = document.createElement( "input" );
     textBox.name = tuneid ;
     textBox.id = id ;
     textBox.size = size ;
@@ -173,30 +183,61 @@ function markField( id ){
     }
     const d = document.getElementById( id ) ;
     d.style.backgroundColor = cream ;
+    // record time to delay save() until it's quiet.
+    lastFieldUpdate = Date.now();
 }
     
 
-async function save( ){
+async function save_process( ){
     // Send json with changed fields only
-    let newjson = {} ;
-    for( let d in CHANGED_FIELDS ){
-        let ele = document.getElementById(CHANGED_FIELDS[d]) ; 
+    // items of newjson are of the form needed for
+    // tunelib., i.e. a list of
+    // [TLOP_FIELD, tuneid, tlcol, value]
+    const TLOP_FIELD = 3 ;
+    while( true ){
+        await sleep_ms( 1000 );
+        if( CHANGED_FIELDS.length == 0 ){
+            continue ; // nothing to save
+        }
+        let t1 = Date.now();
+            // wait a few seconds without a change to
+            // gather several changes in one interchange
+        if( (t1 - lastFieldUpdate) < 3000 ){
+            // Compares to 12 seconds in tunemanager.py ((time.time() - file_stat[8]) < 12)
+            // It is better that time here is a bit smaller than tunemanager.
+            continue;
+        }
+        let newjson = [];
+        // Make a copy and clear CHANGED_FIELDS now to avoid
+        // possible race condition due to await below.
+        // CHANGED_FIELDS is a list of id of changed DOM fields
+        let cfcopy = [...CHANGED_FIELDS];
+        CHANGED_FIELDS = [];
+        for( let eleid of cfcopy ){
+            let ele = document.getElementById(eleid)
+            // split id into [tuneid, tlcol]  
+            let tt = ele.id.split(".");
+            if( ele.type == "text" ){
+                newjson.push( [ TLOP_FIELD, tt[0], parseInt(tt[1]), ele.value ] ) ;
+            }
+            else if( ele.type == "checkbox" ){
+                newjson.push( [ TLOP_FIELD, tt[0], parseInt(tt[1]), ele.checked?1:0 ]);
+            }
         
-        if( ele.type == "text" ){
-            newjson[ele.id] = ele.value ;
-            ele.style.backgroundColor = "#ffffff" ;
         }
-        else if( ele.type == "checkbox" ){
-            newjson[ele.id] = ele.checked ;
+        // newjson now is a list of lists, each of the form
+        // [TLOP_FIELD, tuneid, tlcol, value]
+        // Unchanged fields are not transmitted.
+        resp = await fetch_json( "/save_tunelib", newjson ) ;
+        // Now that the microcontroller has the data, unmark the fields.
+        for( let eleid of cfcopy ){
+            let ele = document.getElementById(eleid)
+            // split id into [tuneid, tlcol]  
+            if( ele.type == "text" ){
+                ele.style.backgroundColor = "white" ;
+            }
         }
-       
-    }
-    // newjson now is a dictionary with key tuneid.fieldname and the value
-    // is the value of the new field. Unchanged fields are not transmitted.
-    resp = await fetch_json( "/save_tunelib", newjson ) ;
-    CHANGED_FIELDS = [] ;
-    if( !resp.error ){
-        showPopup("saveButton", "Tunelib updated on flash" ) ;
+        // from this point on, progress tracks the state of the update.
     }
 }
 
@@ -208,16 +249,17 @@ function sortTunelist( tunelist){
     } 
     tunelist.sort( compareFn );
 }
-let currentTuneid = "";
+let currentTuneid = ""; // the tuneid with lyrics being edited
 async function editLyrics(tuneid){
     let modal = document.getElementById( "modalLyrics" );
     let lyricsText = document.getElementById( "lyricsText" );
     currentTuneid = tuneid ;
     lyricsText.cols = Math.round(window.innerWidth/12) ;
     lyricsText.rows = Math.round(window.innerHeight/5);
-    lyricsText.value = await get_lyrics( currentTuneid ) ;
+    // If no entry, then lyrics is empty ""
+    lyricsText.value = await lyricsCacheTuneid( currentTuneid );
     modal.style.display = "block";
-    // at next refresh, button name gets better
+    // at next refresh, button name gets recalculated
     document.getElementById(`lyrics_${tuneid}`).innerText = "Edit";
     return ;
 }
@@ -241,15 +283,14 @@ async function saveLyrics(){
     let resp = await fetch_json( "/save_lyrics", data );
     closeLyrics() ;
     showPopup("", "Lyrics saved" ) ;
-    // clear lyrics cache
-    drop_lyrics() ;
     // If /save_lyrics is successful, we could change button name
     // to "Edit" immediately (not only on next refresh?)
+    lyricsCache.drop();
     return ;
 }
 
 async function showAsTable(){
-    let tunelib = await get_tunelib() ;
+    let tunelib = await tunelibCache.get() ;
     let table = document.createElement( "table");
     let tableHead = document.createElement( "thead" );
     let headRow = document.createElement( "tr" );
@@ -262,7 +303,7 @@ async function showAsTable(){
     table.appendChild( tableHead );
 
     let tableBody = document.createElement( "tbody" );
-    tableBody.innerText = "";
+    tableBody.innerHTML = "";
     for( let tuneid in tunelib  ){
         let tune = tunelib[tuneid];
         let row = insertRow( tableBody,[tune[TLCOL_TITLE],tune[TLCOL_GENRE],
@@ -274,13 +315,12 @@ async function showAsTable(){
     }
     table.appendChild( tableBody );
     // Only show the table
-    let pageBody = document.getElementById("pagebody");
-    pageBody.innerText = "";
-    pageBody.appendChild( table );
+    document.body.innerHTML = "";
+    document.body.appendChild( table );
 }
 
 async function deleteTuneFile( tuneid, rowid ){
-    let tunelib = await fetch_json( "/data/tunelib.json" ) ;
+    let tunelib = await tunelibCache.get() ;
     let tune = tunelib[tuneid];
     if( tune == undefined ){
         return;
@@ -296,9 +336,16 @@ async function deleteTuneFile( tuneid, rowid ){
     }
 }
 
-// remove cached copy of tunelib
-drop_tunelib() ;
+
+translate_html();
 // fill form with tunelib
 getTuneList() ;
+// save in background
+save_process()
+
+
+commonGetProgress.setSleep( 2_000 );
+// No need to register updateProgress function
+commonGetProgress.startBackground();
 </script>
 </html>

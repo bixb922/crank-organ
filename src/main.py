@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 
 # First thing: turn on led
@@ -28,14 +28,7 @@ import errno
 # although it could be a bit lower since 
 # not all 16 MB are really available.
 # Largest impact is readsize=. Impact of lookahead= is low.
-os.umount("/")
-
-# Do this only if not done by _boot.py
-readsize = 1024
-progsize = 128
-lookahead = 512
-os.mount(os.VfsLfs2(bdev,readsize=readsize,progsize=progsize,lookahead=lookahead),"/") # type:ignore
-print(f"VfsLfs2 mounted with {readsize=}, {progsize=}, {lookahead=}")
+# Mount is done in boot.py, since that speeds up mpremote too,
 
 # sys.path with romfs: ['', '.frozen', '/rom', '/rom/lib', '/lib']
 # sys.path with flash: ['', '.frozen', '/lib']
@@ -43,6 +36,7 @@ try:
     # Put this folder at beginning to enable incremental update
     # during development.
     open("software/mpy").close()
+    # No folder software/mpy. don't add to path.
     # Remove root to make boot slightly faster
     if sys.path[0] == "":
         sys.path.pop(0)
@@ -65,14 +59,12 @@ except OSError as e:
 #    Image size is the sum of MPY files with an overhead of 0.6%
 #
 # Time to deploy mpy+static
-# Image size is 221592 bytes
+# Image size is 221592 bytes, but with data compressed = 203704 bytes
 # ROMFS0 partition has size 262144 bytes (64 blocks of 4096 bytes each)
-# Preparing ROMFS0 partition for writing
-# Writing at offset 221184
-# ROMFS image deployed
-# mpremote romfs deploy device/root/software  0.79s user 0.40s system 6% cpu 18.754 total
+# mpremote romfs deploy *.gz + *.mpy 0.79s user 0.40s system 6% cpu 18.754 total
 #
 # It's not a good idea to import main in _boot.py, that makes software
 # not interruptible (i.e. no ctrl-C). File main.py must be on flash root.
 
+# Start up the software
 import startup # type:ignore

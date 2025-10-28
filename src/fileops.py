@@ -1,10 +1,12 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 from micropython import const
 import json
 import asyncio
 import errno
 import os
+import time
+
 from deflate import DeflateIO, AUTO
 import scheduler
 
@@ -121,7 +123,6 @@ def copy_file( source, destination ):
     # If destination exists, it will be overwritten.
     # If source does not exist, OSError is raised.
     with open(source, "rb") as src:
-        print(">>>Copy file", source, "to", destination)
         with open(destination, "wb") as dst: # type:ignore
             dst.write(src.read())
 
@@ -170,8 +171,6 @@ def open_midi( filename ):
     # But even so, there is no need to read the full file to memory
     # A buffer size of > 1000 means almost no impact on CPU and
     # uses a relatively small amount of RAM
-    # >>> could push decompress to MidiFile() and decompress on the
-    # >>> fly, but that would require buffer_size=0 (i.e. buffer complete file)
     return MidiFile(find_decompressed_midi_filename( filename ),
                     buffer_size=5000,
                     reuse_event_object=True)
@@ -221,6 +220,24 @@ def get_equivalent( filename ):
     return filename + ".gz"
 
 def filename_no_gz( filename ):
-    if is_compressed( filename ):
+    # if is_compressed( filename ):
+    if filename.endswith(".gz"):
         return filename[:-3]
     return filename
+
+def get_file_date( filename ):
+    try:
+        t = time.localtime(os.stat(filename)[7])
+    except OverflowError:
+        # This really happened.... the cause
+        # is that a file got transferred with /filemanager
+        # without having
+        # set the ntp time. Since the time zone offset was minus 3 hours
+        # this gives a negative time. 
+        # C language interpreted that negative number as
+        # unsigned int.
+        # This means: 
+        # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
+        # which is far, far in the future... fortunately raises overflow.
+        return "2000-01-01 00:00"
+    return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"

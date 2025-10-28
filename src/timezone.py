@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 import time
 import ntptime
@@ -52,10 +52,11 @@ class TimeZone:
         self.set_rtc( time.time() )
     
     def has_time( self ):
-        # is time after 2024/1/1?
+        # is time between 2024/1/1 and 2056/2/1?
         # i.e. has time already been set by ntp, browser
         # or previous to soft reset?
-        return time.time() > 756864000
+        # 24 years * 365.25 days * 86400 seconds
+        return time.time() > 757382400  
     
     def set_rtc( self, timestamp ):
         # Prepare a time tuple as argument for RTC
@@ -109,6 +110,12 @@ class TimeZone:
         # set RTC. 
         if self.has_time():
             return # NTP or browser has already set time.
+        # 946_684_800 = 30 years (1970 to 2000) * 365.25 days * 86400 seconds
+        # 2_713_953_600 = 86 years (1970 to 2056) * 365.25 days * 86400 seconds
+        # Check that time is in a reasonable range
+        if newtimestamp < 946_684_800 or newtimestamp > 2_713_953_600:
+            self.logger.info("Ignoring time set by browser, out of range") #type:ignore
+            return
         self.set_rtc( newtimestamp - 946_684_800)
         self.logger.info("Time set by browser") # type:ignore
         

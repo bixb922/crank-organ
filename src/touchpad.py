@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # Touchpad asyncio driver, detects button down event in background
 # and triggers events defined by registering.

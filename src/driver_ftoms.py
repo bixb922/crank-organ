@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Hermann von Borries
+# Copyright (c) 2023-2025 Hermann von Borries
 # MIT license
 
 import time
@@ -20,8 +20,7 @@ class FauxTomDriver(BaseDriver):
         self.pin_list = []
 
     def save( self, new_drumdef ):
-        # >>> perhaps should validate correct contents??
-        fileops.write_json( config.DRUMDEF_JSON, new_drumdef )
+        fileops.write_json( new_drumdef, config.DRUMDEF_JSON )
     
     # Provide iterator for all defined drums
     # This is different from other drivers, where

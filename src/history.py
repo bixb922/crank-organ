@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 
 from drehorgel import timezone
@@ -24,12 +24,12 @@ class HistoryManager:
         self.logger.debug(f"{len(hlist)} elements in history")
         return hlist
     
-    def add_entry( self, tuneid, percentage, requested ):     
+    def add_entry( self, tuneid, start_time, percentage, requested ):     
         hlist = self._read_hlist()
         # use 1/0 instead of true/false to save space
         # use timestamp instead of full ascii date to 
         # make time comparison in self.delete_old() easier.
-        hlist.append((tuneid, timezone.now_timestamp(), percentage, 1 if requested else 0 ))
+        hlist.append((tuneid, start_time, percentage, 1 if requested else 0 ))
         fileops.write_json(hlist, self.history_json, keep_backup=False)
 
     def delete_old(self, days):

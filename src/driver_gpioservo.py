@@ -1,5 +1,6 @@
 from driver_gpio import BaseDriver, BasePin
 from machine import PWM, Pin
+from time import sleep_ms
 # This class is instantiated when a ["gpioservo", x,x,x] entry
 # is found in pinout.json.
 # The driver can handle up to 8 PWM channels for RC servos (radio control servos)
@@ -18,6 +19,10 @@ class GPIOServoDriver(BaseDriver):
 
         self._frequency = round(1_000_000/period_us)
 
+        # First all notes off after power on must stagger reset
+        self.all_notes_off_stagger = True
+
+
     def set_servopulse( self, pulse0_us, pulse1_us ):
         # Store duty cycle that is valid from this point on while
         # reading pinout.json
@@ -34,9 +39,16 @@ class GPIOServoDriver(BaseDriver):
         return sp
 
     def all_notes_off( self ):
+        if self.all_notes_off_stagger:
+            print("GPIOServoDriver.all_notes_off: staggering all notes off for RC servos", repr(self))
         for sp in self._pwm_pins:
             sp.value(0)
-
+            if self.all_notes_off_stagger:
+                sleep_ms(100)  # Stagger turn-off to reduce current spikes
+        if self.all_notes_off_stagger:
+            print("GPIOServoDriver.all_notes_off: staggering done")
+        self.all_notes_off_stagger = False  # Only do this once
+        # Same logic applies in driver_pca9685.py
 
 class GPIOServoPin(BasePin):
     def __init__( self, driver, frequency, pulse0, pulse1, pin_number, rank, nominal_midi_note ):

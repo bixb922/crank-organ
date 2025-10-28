@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # Blinks RGB (neopixel) LED.
 # ESP32-S3 boards may have one of these.

@@ -1,31 +1,29 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
+
 # Setlist control: setlist task, setlist management
 
 import asyncio
 from random import randrange
+import os
 
 from drehorgel import config, tunemanager, crank, player, gpio, led
 import touchpad
 from minilog import getLogger
 import fileops
 
-# >>> could be interesting to have more stored setlist? not convinced
-# >>> automatically created setlist?
-# >>> add to setlist from history page?
-# setlist_history.json = all tunes played today
-# "Save" and "load" would need to ask for setlist. 
-# Makes things more complicated...?
-
 def del_key(key, dictionary):
     if key in dictionary:
         del dictionary[key]
 
+CURRENT_SETLIST = const(0)
+STORED_SETLIST = const(1) 
 
 class Setlist:
     def __init__(self):
         self.logger = getLogger(__name__)
         self.current_setlist = [] # for now
+
         self.playback_enabled = True
         self.waiting_for_start_tune_event = False
 
@@ -55,14 +53,6 @@ class Setlist:
         self.timeout_task = None
         self.logger.debug("init ok")
 
-
-    def _write_current_setlist( self ):
-        # Write current setlist to flash to make
-        # it persistent across reboots.
-        fileops.write_json( 
-            self.current_setlist, 
-            config.CURRENT_SETLIST_JSON,
-            keep_backup=False)
 
     # Functions related to the different ways to start a tune
     def start_tune(self):
@@ -104,12 +94,18 @@ class Setlist:
         # When powered on, load setlist if present
         # First try with current setlist, if empty then
         # try with stored setlist.
-        for filename in (config.CURRENT_SETLIST_JSON,
-                         config.STORED_SETLIST_JSON):
-            self.current_setlist = fileops.read_json( filename, default=[] )
-            if self.current_setlist:
-                break    
 
+        # For transition to new stored setlist names
+        for slot, old_filename in enumerate(["/data/setlist_current.json","/data/setlist_stored.json" ]):
+            try:
+                os.rename( old_filename, self._stored_setlist_filename(slot) )
+            except OSError:
+              pass
+
+        # Read current setlist, if empty load setlist 1
+        self.load( CURRENT_SETLIST )
+        # If empty, current setlist stays empty...
+                  
         while True:
 
             # Ensure this loop will always yield
@@ -135,7 +131,7 @@ class Setlist:
 
             # Get top tune and play
             tuneid = self.current_setlist.pop(0)
-            self._write_current_setlist()
+            self._save_current()
 
             self.logger.info(f"start {tuneid=}")
             led.start_tune_flash()
@@ -183,22 +179,40 @@ class Setlist:
 
 
     # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
-    def queue_tune(self, tuneid):
+    def queue_tune(self, tuneid, slot):
+        # Should a tuneid that is not in the tunelib
+        #  be added to a setlist, that will not matter much
+        # since the browser will check setlist against her/his tunelib
+        # and drop tuneids that are not in tunelib.
+        if slot == 0:
+            slist = self.current_setlist
+        else:
+            slist = self.load( slot, False )
         # If not in setlist: add
         # If in setlist: delete
         # Each tune may be only once in setlist
         changed = False
-        if tuneid in self.current_setlist:
-            i = self.current_setlist.index(tuneid)
-            del self.current_setlist[i]
-            del_key(tuneid, self.tune_requests)
-            changed = True
+        # For slots 1-9 always append, never delete. But never append twice.
+        # For slot 0 (current setlist), toggle.
+        if tuneid in slist:
+            # Case: tune in setlist
+            if slot == 0:
+                i = slist.index(tuneid)
+                del slist[i]
+                del_key(tuneid, self.tune_requests)
+                changed = True
         else:
-            # Append to setlist. 
-            self.current_setlist.append(tuneid)
+            # Not in current setlist
+            # Check if it is the current tune
+            progress = player.get_progress()
+            if tuneid == progress["tune"] and progress["status"] == "playing":
+                # don't allow to queue the current tune again
+                return
+            # For all slots: if not in setlist, append
+            slist.append(tuneid)
             changed = True
         if changed:
-            self._write_current_setlist()
+            self.save( slot, slist=slist )
 
     def add_tune_requests(self, request_dict):
         self.tune_requests.update(request_dict)
@@ -208,7 +222,7 @@ class Setlist:
                 self.current_setlist.append(tuneid)
                 changed = True
         if changed:
-            self._write_current_setlist()
+            self._save_current()
         # current setlist is updated separately
 
     def stop_tune(self):
@@ -220,7 +234,7 @@ class Setlist:
             # Delete from top of setlist
             tuneid = self.current_setlist[0]
             del self.current_setlist[0]
-            self._write_current_setlist()
+            self._save_current()
             del_key(tuneid, self.tune_requests)
 
         # Stop current tune, if playing
@@ -228,24 +242,39 @@ class Setlist:
             self.player_task.cancel() # type:ignore
             led.stop_tune_flash()
 
-    def save(self):
-        # Save current setlist to another file
+    def save(self, slot, slist=None ):
+        # >>> consider guarding with RequestSlice
+        if not( 0 <= slot <= 9 ):
+            raise ValueError
+
+        if slist == None:
+            slist = self.current_setlist
+        
+        # Save setlist in RAM to file
+        filename = self._stored_setlist_filename( slot )
         fileops.write_json(
-            self.current_setlist, config.STORED_SETLIST_JSON, keep_backup=False
+            slist, filename, keep_backup=False
         )
+
         # >>>spectator_list is not made persistent. Tough luck.
 
-    def load(self):
+    def _save_current( self ):
+        self.save( CURRENT_SETLIST )
+
+    def load(self, slot, into_current=True):
+        # >>> consider guarding with RequestSlice
         # Read setlist from flash
-        self.current_setlist = fileops.read_json(
-                config.STORED_SETLIST_JSON,
-                default=[])
-
-        self.logger.debug(f"Setlist loaded {len(self.current_setlist)} elements")
-
+        filename = self._stored_setlist_filename( slot )
+        slist = fileops.read_json(filename, default=[])
+        if into_current:
+            self.current_setlist = slist
+            self.logger.debug(f"Setlist {slot} loaded {len(self.current_setlist)} tunes")
+            self._save_current()
+        return slist
+    
     def clear(self):
         self.current_setlist = []
-        self._write_current_setlist()
+        self._save_current()
 
     def _get_pos(self, tuneid):
         # Get position of tuneid in current setlist
@@ -255,10 +284,13 @@ class Setlist:
         return self.current_setlist.index(tuneid) 
 
     def _interchange( self, pos1, pos2 ):
-        # Interchange tunes at positions pos1 and pos2 of the setlist
-        cs = self.current_setlist
-        cs[pos1], cs[pos2] = cs[pos2], cs[pos1]
-        self._write_current_setlist()
+        n = len(self.current_setlist)
+        if ( 0 <= pos1 < n and
+             0 <= pos2 < n ):
+            # Interchange tunes at positions pos1 and pos2 of the setlist
+            cs = self.current_setlist
+            cs[pos1], cs[pos2] = cs[pos2], cs[pos1]
+            self._save_current()
 
     def up(self, tuneid):  
         try:  
@@ -288,7 +320,7 @@ class Setlist:
             s = self.current_setlist[pos]
             del self.current_setlist[pos]
             self.current_setlist.insert(0, s)
-            self._write_current_setlist()
+            self._save_current()
         except (ValueError, IndexError):
             pass
 
@@ -296,11 +328,21 @@ class Setlist:
         try:
             pos = self._get_pos(tuneid)
             del self.current_setlist[pos]
-            self._write_current_setlist()
+            self._save_current()
         except (ValueError, IndexError):
             pass
 
-# >>> add bottom function?
+    def bottom(self, tuneid):
+        # Move this tune to bottom of setlist
+        try:
+            pos = self._get_pos(tuneid)
+            # Move to bottom
+            s = self.current_setlist[pos]
+            del self.current_setlist[pos]
+            self.current_setlist.append(s)
+            self._save_current()
+        except (ValueError, IndexError):
+            pass
 
     def to_beginning_of_tune(self):
         # Restart current tune, called by "da capo"
@@ -310,7 +352,7 @@ class Setlist:
         if tuneid:
             self.stop_tune()
             self.current_setlist.insert(0, tuneid)
-            self._write_current_setlist()
+            self._save_current()
 
     def shuffle(self):
         # Shuffle current setlist (no builtin shuffle)
@@ -323,7 +365,7 @@ class Setlist:
             t = permutation[i]
             permutation[i] = permutation[j]
             permutation[j] = t
-        self._write_current_setlist()
+        self._save_current()
 
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
@@ -372,37 +414,44 @@ class Setlist:
         return self._is_empty() and self.player_task == None
 
     async def _automatic_playback_process( self ):
+        # Wait a bit before starting automatic playback
+        # to ensure initialization is really done.
+        await asyncio.sleep( self.automatic_delay ) 
+        # In practice this loop is a while True:
         while self.playback_enabled:
-            # Wait for any tune to ned
+            # Wait for any tune to end
             while self.player_task:
                 await asyncio.sleep_ms(500)
             # Wait the time between tunes as indicated in config.json
             await asyncio.sleep( self.automatic_delay )
-            # If no tune playing, kick start event to get tune going
+            # If no tune playing, kick start event to get next tune going
             if not self.player_task:
                 self.logger.debug("Automatic playback sets music start event")
                 self.music_start_event.set()
+        # Exit loop if for example organtuner runs
+
 
     async def _blink_empty( self ):
         while self.playback_enabled:
             led.set_blink_setlist( self._is_empty() )
             await asyncio.sleep_ms(370) # type:ignore
 
+    # >>> quizas no es buena idea?? browser igual filtra....
+    # >>> a quien le interesa? Toma tiempo y codigo...
     def sync( self, tunelib ):
-        for tuneid in set(self.current_setlist)-set(tunelib):
-            self.drop( tuneid )
-
-        stored_setlist = fileops.read_json(
-                config.STORED_SETLIST_JSON,
-                default=[])
-        changed = False
-        for tuneid in set(stored_setlist)-set(tunelib):
-            del stored_setlist[stored_setlist.index(tuneid)]
-            changed = True
-        if changed:
-            fileops.write_json(
-                stored_setlist, config.STORED_SETLIST_JSON, keep_backup=False
-            )
+        # setlist.sync is not strictly necessary since javascript
+        # layer checks if setlist's tuneids are in tunelib.
+        for slot in range(10):
+            stored_setlist = self.load( slot, False )
+            # self.load() will return [] if file does not exist
+            delete = set(stored_setlist)-set(tunelib)
+            for tuneid in delete:
+                del stored_setlist[stored_setlist.index(tuneid)]
+            if delete:
+                self.save( slot, slist=stored_setlist )
+                if slot == CURRENT_SETLIST:
+                    # And reload from stored
+                    self.load( CURRENT_SETLIST )
 
     def stop_playback( self ):
         # Called to stop playback of music immediately until the next reboot.
@@ -424,3 +473,31 @@ class Setlist:
         if self.playback_enabled:
             self.logger.debug("Playback disabled, setlist process will stop")
         self.playback_enabled = False
+
+    def _stored_setlist_filename( self, slot ):
+        return f"{config.DATA_FOLDER}setlist_stored_{slot}.json"
+    
+    def get_titles( self ):
+        if config.get_int("multiple_setlists",0):
+            # returns slot 1-9, title, number of tunes
+            # The "titles file" has 10 elements. 
+            # Element 0 is the "current setlist" and is skipped here.
+            titles =  fileops.read_json( config.SETLIST_TITLES_JSON, default=["current", "","", "","","","","","",""])
+            # [slot_number 1-9, title, number of tunes in setlist]
+            return [ [slot,title, len(self.load(slot,False))]
+                    for slot, title in enumerate(titles)
+                    if slot >= 1]
+        # Single stored setlist enabled. Signal this to javascript
+        # using an empty setlist.
+        return []
+    
+    def save_titles( self, titles ):
+        if len(titles) != 10:
+            raise ValueError
+        fileops.write_json( titles, config.SETLIST_TITLES_JSON, keep_backup=False )
+
+
+
+        
+
+    

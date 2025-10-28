@@ -1,3 +1,4 @@
+# Being phased out in favor of new builtin modules
 from machine import mem32, Pin
 
 from micropython import const
@@ -385,7 +386,6 @@ class PCNT:
             if vconfig is not None:
                 if not( 0 <= vconfig <= 2**length-1):
                     raise ValueError
-                # >>> should check maxval?
                 if channel8:
                     # bit position depends on channel
                     if channel is None:
@@ -393,7 +393,7 @@ class PCNT:
                     bitpos += channel * 8
                 set_bit_field( reg0, bitpos, length, vconfig )
 
-        # >>> better code for filter:
+        # better code for filter:
         #if filter is not None:
         #    set_bit_field( reg0, 10, 1023, filter )
         #    set_bit_field( reg0, 10, 1, bool(filter) )

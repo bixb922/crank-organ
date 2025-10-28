@@ -5,8 +5,8 @@ import os.path # type:ignore
 py_folder = "crank-organ/src" 
 static_folder = "crank-organ/static"
 data_folder = "crank-organ/data"
-mpy_folder = "device/root/software/mpy"
-static_folder_gz = "device/root/software/static"
+mpy_folder = "device/mpy"
+static_folder_gz = "device/static"
 
 
 #py_folder = "github-clone/crank-organ/src" 

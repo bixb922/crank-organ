@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 # Handles config.json and other configuration options
 # Also, data file names and folders are defined here.
@@ -12,6 +12,7 @@ import fileops
 import re
 from hashlib import sha256
 # >>> new config parameter for minimum time of repetition test
+# >>> new config parameter for WiFi Power Mode
 
 # One logger for both Config and PasswordManager
 _logger = minilog.getLogger(__name__)
@@ -38,17 +39,17 @@ class Config:
         
         # minilog folder/filenames defined in minilog module, not here
         # Timezone file/folder defined in timezone module, not here
+        self.DATA_FOLDER = "data/"
         self.BATTERY_CALIBRATION_JSON = "data/battery_calibration.json"
         self.BATTERY_JSON = "data/battery.json"
         self.CONFIG_JSON = "data/config.json"
-        self.CURRENT_SETLIST_JSON = "data/setlist_current.json"
         self.DRUMDEF_JSON = "data/drumdef.json"
         self.HISTORY_JSON = "data/history.json"
         self.LYRICS_JSON = "data/lyrics.json"
         self.ORGANTUNER_JSON = "data/organtuner.json"
         self.PINOUT_TXT = "data/pinout.txt"
         self.PINOUT_FOLDER = "data"
-        self.STORED_SETLIST_JSON = "data/setlist_stored.json"
+        self.SETLIST_TITLES_JSON = "data/setlist_titles.json"
         self.SYNC_TUNELIB = "data/sync_tunelib.json"
         self.TUNELIB_JSON = "data/tunelib.json"
         
@@ -75,8 +76,10 @@ class Config:
             "ap_ip": "192.168.144.1",
             "ap_max_idle": 120, 
             "idle_deepsleep_minutes": 15,
+
             "battery_heartbeat_duration": 0,
             "battery_heartbeat_period": 0,
+
             "max_polyphony": 9,
             "touchpad_big_change": 20000,
             
@@ -102,12 +105,11 @@ class Config:
             "rotary_tempo_mult": 1,
             "tuning_frequency": 440,
             "tuning_cents": 5,
+            "multiple_setlists": 0,
         }
         # Populate missing keys from fallback
-        # compute missing_items in order to show new keys in log
-        missing_items = {k: fallback[k] for k in set(fallback.keys()) - set(self.cfg.keys())}
-        self.cfg.update(missing_items)
-        for k in missing_items:
+        for k in set(fallback)-set(self.cfg):
+            self.cfg[k] = fallback[k]
             _logger.debug(f"Adding configuration key '{k}'")
 
         # Delete surplus keys
@@ -171,7 +173,6 @@ class Config:
                 f"Config.json item {item} not a floating point number"
             )
             return default
-    # >>> implement get() and get_bool()
     
     def save(self, newconfig):
         # Save new configuration, validate before storing
@@ -188,7 +189,8 @@ class Config:
                 "battery_heartbeat_duration",
                 "battery_heartbeat_period",
                 "automatic_delay",
-                "tuning_cents"
+                "tuning_cents",
+                "multiple_setlists"
             ):
                 try:
                     newconfig[k] = int(v)

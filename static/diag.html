@@ -1,26 +1,18 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
-<body id="docbody">
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;<span>Sistema</span>
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
+<body>
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
+
 <span id="description_span">   
 <table>
     <tbody>
@@ -73,8 +65,8 @@
 </table>
 </span>
 <span id="wifi_span">
-<div class="middlediv">Configuración WIFI</div>
-<table>
+  <div class="middlediv">Configuración WIFI</div>
+  <table>
 	<tbody id="wifiConfig">
 	<tr>	
 		<td>Host name, AP SSID, BLE name:</td><td id="hostname"></td>
@@ -100,14 +92,14 @@
 	<tr>	
 		<td>Connection status</td><td id="sta_if_status"></td>
 	</tr>
-	</tr>
 	<tr>
 		<td colspan="2"><b>Como WiFi access point</b></td>
 	</tr>
 	<tr>	
-    <td>SSID</td><td id="ap_if_ssid"></td>
+   		 <td>SSID</td>  <td id="ap_if_ssid"></td>
+	</tr>
 	<tr>	
-		<td>IP</td><td id="ap_if_ip"></td>
+		<td>IP</td>  <td id="ap_if_ip"></td>
 	</tr>
 	<tr>	
 		<td>Alguien conectado</td><td id="ap_if_connected"></td>
@@ -116,7 +108,7 @@
 		<td>Activa</td><td id="ap_if_active"></td>
 	</tr>
 	</tbody>
-</table>
+  </table>
 
 
 <div class="middlediv">WiFi scan</div>
@@ -127,7 +119,6 @@
 	<thead>
 		<tr>
 			<td>SSID</td>
-			<td>Channel</td>
 			<td>dBm</td>
 		</tr>
 	</thead>
@@ -144,6 +135,11 @@
 </body>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( "Sistema", "index" );
 
 async function getWifiStatus() {
 	setAllTextById(  await fetch_json( "/get_wifi_status" ) );
@@ -157,9 +153,13 @@ async function wifiScan() {
 	// Each row is [ ssid, bssid, channel, rssi, authmode, hidden ]
 	var s = "";
 	let scanInfo = document.getElementById( "scanInfo" );
-	for( i = 0; i < wifiData.length; i++ ) {
+	scanInfo.innerHTML = "";
+	for( let i = 0; i < wifiData.length; i++ ) {
 		w = wifiData[i] ;
-		insertRow( scanInfo, [ w[0], w[2], w[3] ] );
+		// insert ssid and rssi.
+		// channel seems to be the channel definition of the local WiFi
+		// and not the channel of the SSID.
+		insertRow( scanInfo, [ w[0], w[3] ] );
 	}
 }
 
@@ -172,6 +172,10 @@ async function getDiagInfo( ) {
 	htmlById("solenoid_devices", diag["solenoid_devices"].replaceAll("\n", "<br>") );
     getWifiStatus() ;
 	showHideElement( "crankGraphButton", diag["crank_installed"]);
+	
+	commonGetProgress.setSleep( 5_000 );
+    commonGetProgress.startBackground();
+
 }
 
 
@@ -198,7 +202,6 @@ function createArray(N, step){
 	}
 	return [...generateNumbers(N, step)];
 } ;
-// console.log(createArray(10)); 
 
 async function crankGraph(){
 	showHideElement("crankGraphButton", false);
@@ -220,11 +223,11 @@ async function crankGraph(){
 			scriptElement.text = await response.text() ;
 		}
 		catch(e){
-			console.log("Could not fetch chart.js", e);
+			console.warn("Could not fetch chart.js", e);
 			return ;
 		}
  		document.body.append(scriptElement) ;
-		console.log("chartjs appended");
+		console.info("chartjs appended");
 	}
 
 	// Define graphs, no data

@@ -1,4 +1,4 @@
-# (c) 2023 Hermann Paul von Borries
+# (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 from micropython import const
 import os
@@ -143,6 +143,8 @@ def compute_time_step_usec( nominal_frequency  ):
     return 1/nominal_frequency/SAMPLES_PER_PERIOD*1_000_000
 
 def clear_stored_signals():
-    for filename in os.listdir(SIGNAL_FOLDER):
-        os.remove(SIGNAL_FOLDER + "/" + filename)
-
+    try:
+        for filename in os.listdir(SIGNAL_FOLDER):
+            os.remove(SIGNAL_FOLDER + "/" + filename)
+    except OSError:
+        pass

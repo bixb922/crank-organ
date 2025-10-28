@@ -1,88 +1,25 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
- MIT License-->
- <html>
+<!-- (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+ MIT License -->
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 <body>
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-		&nbsp;<span id="headerTitle">Lista de melodías</span>
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
-<h1 id="banner" style="display:none"></h1>
-<!-- html continues below javascript -->
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
 
-<script>
-// Function to translate characters with accent and tilde
-let   from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç", 
-      to   = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuunncc",
-      mapping = {};
- 
-for(let i = 0, j = from.length; i < j; i++ )
-      mapping[ from.charAt( i ) ] = to.charAt( i );
- 
-function normalizaTildes( str ) {
-      let ret = [];
-      for( let i = 0, j = str.length; i < j; i++ ) {
-          let c = str.charAt( i );
-          if( mapping.hasOwnProperty( str.charAt( i ) ) )
-              ret.push( mapping[ c ] );
-          else
-              ret.push( c );
-      }      
-      return ret.join( '' );
- }
-  
-function searchTable() {
-	// Declare variables
-
-	let input = document.getElementById("searchInput");
-    text = input.value ;
-    text = text.replace("*","⭐" );
-    text = text.replace("*","⭐" );
-    text = text.replace("*","⭐" );
-    if( text != input.innerText ){
-        input.value = text ;
-    }
-	let filter = normalizaTildes( input.value.toUpperCase() );
-	let table = document.getElementById("tunelisttable");
-	let tr = table.getElementsByTagName("tr");
-
-	// Loop through all table rows, and hide those who don't match the search query
-	for (let i = 1; i < tr.length; i++) {
-		let txtValue = normalizaTildes( tr[i].innerText ) ;
-		if (txtValue.toUpperCase().indexOf(filter) > -1 ) {
-			tr[i].style.display = "";
-		} else {
-			tr[i].style.display = "none";
-		}
-	}
-}
-// When navigating to the table ensure the search is activated with
-// whatever text is in the searchInput field.
-window.onload = searchTable;
-</script>
-<!-- Search button, placeholder includes magnifying glass -->
-
 	<input type="text" id="searchInput"
-           onkeyup="searchTable()"
            placeholder="🔍Búsqueda"
+           onkeyup="filterTable()"
            size="10"/>
 	<button id="navigateToPlayPage" type="button" onclick="navigateToPlayPage()">Actuación</button>
-    <button id="startButton" onclick = 'startTune()'>Partir</button>
+    <button id="startButton" onclick='startTune()'>Partir</button>
 
     <div class="tableFixHead">
       <table id="tunelisttable">
@@ -96,173 +33,128 @@ window.onload = searchTable;
 </body>
 
 <script>
+
+
 document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
 
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( tlt("Lista de melodías"), "index" );
+
 // keep sorted list in global page context
-let TUNELIST = [] ;
-let TUNELIST_SIGNATURE = "";
 
-let headermap = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
-let header = [ tlt("Título"), tlt("Género"), tlt("Autor"), "mm:ss", tlt("Año"), tlt("Hist"), tlt("Info"), tlt("Fecha"), tlt("Pts")] ;
+let HEADERMAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
+let HEADER = map_tlcol_names( HEADERMAP );
+HEADER[3] = "mm:ss"; // time column is in mm:ss format
+
+// Current order
 let sortColumn = 0 ;
-direction = 1 ;
+let direction = 1 ; // sort direction must be 1 or -1
 
 
-// Called when loading page:
-async function startPageRefreshProcess( ) {
-    console.log("startPageRefreshProcess cookie=", document.cookie );
-    if( isUsedFromServer() ){
+// Keep track of which rows are visible
+function tunelistVisibilityChanges( entries ){
+    // Page has scrolled, update TitleTunes that entered/exited viewport.
+    for( let entry of entries ){
+        // Add/remove class according to visibility in viewport
+        if( entry.isIntersecting ){
+            entry.target.classList.add("tunelist-visible");
+        }
+        else{
+            entry.target.classList.remove("tunelist-visible");
+        }
+    }
+}
+
+// Called when loading page
+async function pageRefreshProcess( ) {
+    if( isUsedFromIOT() ){
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
         document.getElementById( "startButton").style.display = "none" ;
     }
+    
+    fillHeader( );
+    await fillBody( ) ;
+    changeOrder( 0 );
+
+
     // Refresh progress periodically
-	await updateProgressEvery() ;
+    commonGetProgress.setSleep( 2_000 );
+    commonGetProgress.registerCallback( updateProgress );
+    commonGetProgress.setReloadIfTunelibChanged( true );
+    await sleep_ms(100); // to avoid forcing reflow
+    // Start background will trigger a updateProgress very soon.
+    commonGetProgress.startBackground();
+
 }
 
 function fillHeader( ){
-
     let headerRow = document.getElementById("headerRow");
     headerRow.innerHTML = "";
-    for (let  z = 0 ; z < header.length ; z++ ){
-        let j = z; // need to do this for the function() closure
-        let th = document.createElement("th");
-        let h = "";
-        if( j == sortColumn ){
-            if( direction > 0 ){
-                // up arrow to show sorting order
-                h = "↑"; // &#x2191;
-            }
-            else{
-                // down arrow to show sorting order
-                h = "↓"; // &#x2193;
-            }
+    for (let col = 0 ; col < HEADER.length ; col++ ){
+        let arrow = ""
+        if( col == sortColumn ){
+            arrow = direction > 0 ? "↑ " : "↓ ";
         }
-        th.innerText = h + header[j];
-        // note that changeOrder is async
-        th.onclick = function() { changeOrder(j) };
+        let th = document.createElement("th");
+        th.textContent = arrow + HEADER[col];
+        th.style.cursor = "pointer";
+        th.onclick = function() { changeOrder(col) };
         headerRow.appendChild( th );
     }
 }
-    
+let fastSearch = [];
+
 async function fillBody( ) {
     let s = "";
     let tlbody = document.getElementById( "tunelistbody")
-    tlbody.innerText = "";    
-	for( i in TUNELIST ) {
-        let tune = TUNELIST[i];
-        let tuneid = tune[TLCOL_ID];
- 
+    tlbody.innerHTML = "";  
+    let tunelib = await tunelibCache.get(); // common.js
+    let multipleSetlists = await isMultipleSetlistsEnabled();
+    let n = 0;
+    for( const [tuneid, tune] of Object.entries(tunelib)) {
         let row = insertRow( tlbody, ["",tune[TLCOL_GENRE],
                 tune[TLCOL_AUTHOR], formatMilliMMSS( tune[TLCOL_TIME] ),
                 tune[TLCOL_YEAR], tune[TLCOL_HISTORY],
-                "", tune[TLCOL_DATEADDED], get_rating(tune)] );
-        row.cells[0].id = `title.${tuneid}` ;
-        
-        // span "queued.tuneid" hour glass if queued and (n) queue position if queued
-        // span "playing.tuneid" music notes if playing
-        // anchor  "title.tuneid" title, clickable, bold if playing
-        // span "percentage.tuneid" percentage
-        // span "bar.tuneid" Bar graph
-        let queued = document.createElement( "span" );
-        queued.id = `queued.${tuneid}`;
-        row.cells[0].appendChild( queued );
+                "", tune[TLCOL_DATEADDED], formatRating(tune)] );
 
-        let playing = document.createElement( "span" );
-        playing.id = `playing.${tuneid}`;
-        row.cells[0].appendChild( playing );
+        let tuneTitle = document.createElement( "span", {"is":"tune-title"});
+        // full format is "hptm%ds"
+        tuneTitle.setTune( tune, { beforeFormat:"hpt", afterFormat:"m%s", shortClick:true, menu:multipleSetlists } );
+        row.cells[0].appendChild( tuneTitle );
 
-        let titleLink = document.createElement("a");
-        titleLink.id = `title.${tuneid}`;
-        titleLink.onclick = function() { queueTune(tuneid) };
-        titleLink.innerText = await makeTuneTitle( tune );
-        titleLink.style.cursor = "pointer";
-        titleLink.classList.add( "anohref" );
-        row.cells[0].appendChild( titleLink );
-
-        let percentage = document.createElement( "span" );
-        percentage.id = `percentage.${tuneid}`;
-        row.cells[0].appendChild( percentage );
-        
-        let bar = document.createElement( "span" );
-        bar.id = `bar.${tuneid}`;
-        row.cells[0].appendChild( bar );
-
-        row.cells[5].style.texyAlign = "right"; // history
+        row.cells[5].style.textAlign = "right"; // history
 
         let infoLink = document.createElement("a");
-        infoLink.style.cursor = "pointer";
         infoLink.classList.add( "anohref" );
         infoLink.onclick = function(){ showFullInfo(tuneid) };
         infoLink.innerText = trunc(tune[TLCOL_INFO],10);
         row.cells[6].appendChild( infoLink );
 
-        
+        // For the search functionality, we need to normalize the tune text
+        // and store it in a global array for fast search. 
+        // And add row.id to be able to decode the row number in filterTable().
+        row.id = "r" + n;
+        n += 1;
+        s = tune[TLCOL_TITLE] + "\t" +
+            tune[TLCOL_GENRE] + "\t" +
+            tune[TLCOL_AUTHOR] + "\t" +
+            formatMilliMMSS( tune[TLCOL_TIME] ) + "\t" +
+            tune[TLCOL_YEAR] + "\t" +
+            tune[TLCOL_INFO] + "\t" +
+            tune[TLCOL_DATEADDED] + "\t" +
+            tune[TLCOL_RATING] ;
+        fastSearch.push( normalizaTildes(s) );
 	}
-	document.getElementById("tunelisttable").appendChild( tlbody );
 }
 
-async function updateTunelistTable( ){
-    fillHeader( );
-    await fillBody( ) ;
-    
-}    
 function navigateToPlayPage() {
 	window.location.href = "/static/play.html" ;
 }
 
-async function queueTune( tuneid ) {
-    let spectator_name = "" ;
-    if( isUsedFromServer()  ){
-        let resp = await fetch_json( "/get_spectator_name" ) ;
-        console.log("queueTune resp=", resp );
-        spectator_name = resp["spectator_name"] ;
-        while( spectator_name == "" ){
-            spectator_name = window.prompt(tlt("¿Cuál es tu nombre?")).trim().replace(/<\/?[^>]+(>|$)/g, "");
-        }
-    }
-
-	showPopup( "title."+tuneid, tlt("actualizando setlist"));
-    postdata = { 
-        "spectator_name": spectator_name, 
-        "tuneid": tuneid } ;
-	let progress = await fetch_json( "/queue_tune/" + tuneid, postdata ) ;
-	updateThisPage( progress ) ;
-}
-
-async function updateProgressEvery() {
-	while( true ) {
-        let progress = await commonGetProgress();
-        // Load TUNELIST the first time and if tunelist changed.
-        if( TUNELIST_SIGNATURE == "" || TUNELIST_SIGNATURE != progress.tunelib_signature ){
-            // get_tunelib() will cache tunelib in tab storage
-            // so it is not costly to call get_tunelib() again
-            console.log("Get tunelib, signature new or different");
-            let tunelib = await get_tunelib() ;
-            TUNELIST = [];
-            for( const [key, tune] of Object.entries(tunelib)) {
-                TUNELIST.push( tune ) ;
-            }
-            sortTunelist( 0 );
-            // Now update tunelist html
-            await updateTunelistTable( );
-        
-            TUNELIST_SIGNATURE = progress.tunelib_signature ;
-        }
-        updateThisPage( progress );
-        await sleep_ms( 2_000 );
-	}
-}
     
-function updateThisPage( progress ) {
-    if( progress == undefined ){
-        return ;
-    }
-	//const queue_img = "&#127775;"; // Glowing Star
-    //const queue_img = "&#x1F9FA;" ; // Basket
-    const queue_img = "&#x23F3"; // Hourglass
-	let playing_tuneid = progress["tune"] ;
-    let setlist = progress["setlist"] ;
-    
+function updateProgress( progress ) {
+    let tunelib = progress["tunelib"];
+
     let startButton = document.getElementById("startButton");
     if( progress["setlist"].length > 0 && 
         progress["status"] == "waiting"
@@ -272,80 +164,52 @@ function updateThisPage( progress ) {
     else {
         startButton.classList.add("inactive");
     }
-    let tune_requests = progress["tune_requests"] ;
-    if( tune_requests == undefined ){
-        tune_requests = {} ;
-    }
-    
-    // Update all titles, reset if not in setlist,
-    // mark if in setlist, mark current playing tune.
-    for( i in TUNELIST ){
-        let tune = TUNELIST[i];
-        let tuneid = tune[TLCOL_ID] ;
-
-        if( tuneid == playing_tuneid ) {
-            htmlById( `playing.${tuneid}`,  "&#127925;" ) ; //🎵 music note
-            document.getElementById( `title.${tuneid}`).style.fontWeight = "bold";
-            let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ;
-            if( isNaN(percent)){
-                percent = 0 ;
-            }
-		  	htmlById(`percentage.${tuneid}`,  "<br>" + Math.round(percent)+"% " );
-			progressBar( `bar.${tuneid}`, percent, 20 );
-
-        }
-        else {
-            textById( `playing.${tuneid}`, "");
-            document.getElementById( `title.${tuneid}`).style.fontWeight = "normal";
-            textById( `percentage.${tuneid}`, "");
-			textById( `bar.${tuneid}`, "" );
-        }
-        if( setlist.includes( tuneid ) ){
-            let position = setlist.indexOf( tuneid ) ;
-            let spnam = "";
-            let spectator_name = tune_requests[ tuneid ];
-            if( spectator_name != undefined ){
-                // add spectator name
-                spnam = " - " + spectator_name ;
-            };
-            htmlById( `queued.${tuneid}`,
-                `${queue_img}(${position+1}${escapeHtml(spnam)}) `);
-        }
-        else {
-            textById( `queued.${tuneid}`, "" );
-        }
-	}
-    return ;
-}
-
-async function changeOrder( column ){
-    sortTunelist( column );
-    await updateTunelistTable() ;
-}
-    
-function sortTunelist( column ){
-    function compareFn(a, b ){
-        col = headermap[sortColumn] ;
-        if( a[col] < b[col] ){
-            return direction ;
-        }
-        if( a[col] > b[col] ){
-            return -direction ;
-        }
-        return 0;
-    } 
-
-    if( column == sortColumn ){
-        direction = -direction ;
-    }
-    else {
-        sortColumn = column ;
-        direction = -1 ;
-    }
-    TUNELIST.sort( compareFn );
+    TuneTitle.updateProgress( progress );
 
 }
-    
+
+function changeOrder(column) {
+    // Helper to get cell value, normalized for text comparison
+    function getCellValue(row, col) {
+        return row.cells[col].textContent.trim().toLowerCase();
+    }
+    // Compare as text
+    function compareText(rowA, rowB) {
+        let a = getCellValue(rowA, column);
+        let b = getCellValue(rowB, column);
+        return b.localeCompare(a) * direction;
+    }
+    // Compare as number (fallback to text if not a number)
+    function compareNum(rowA, rowB) {
+        let a = getCellValue(rowA, column);
+        let b = getCellValue(rowB, column);
+        if (isNaN(a) || isNaN(b)) return compareText(rowA, rowB);
+        a = parseInt(a);
+        b = parseInt(b);
+        return (b - a) * direction;
+    }
+
+    // Toggle direction if same column, else set new column and default direction
+    if (column === sortColumn) {
+        direction = -direction;
+    } else {
+        sortColumn = column;
+        direction = -1;
+    }
+
+    fillHeader();
+
+    let tbody = document.getElementById("tunelistbody");
+    let rows = Array.from(tbody.rows);
+
+    // Choose comparison based on column type
+    let compareFn = (HEADERMAP[sortColumn] === TLCOL_HISTORY) ? compareNum : compareText;
+    rows.sort(compareFn);
+
+    // Re-append sorted rows
+    tbody.replaceChildren(...rows);
+}
+
 function trunc( text, n ){
     if( text.length < n ){
         return text ;
@@ -353,7 +217,7 @@ function trunc( text, n ){
     return text.substring(0,n-3) + "...";
 }
 async function showFullInfo(tuneid){
-    let tunelib = await get_tunelib() ;
+    let tunelib = await tunelibCache.get() ;
     let tune = tunelib[tuneid] ;
     if( tune == undefined ){
         return;
@@ -363,14 +227,48 @@ async function showFullInfo(tuneid){
 }
 
 async function startTune() {
-    updateThisPage( await fetch_json( "/start_tune" )  );
+    // This will call updateProgress in turn:
+    await commonGetProgress.fetchJson( "/start_tune" );
+}
+
+// Search functionality
+
+// Function to translate some commo characters with accent and tilde
+// to their non-accented equivalents.
+// This is used to normalize the search input and the table content.
+// This does not cover all languages.
+let   from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç", 
+      to   = "aaaaaeeeeiiiioooouuuuaaaaaeeeeiiiioooouuuunncc",
+      mapping = {};
+ 
+for(let i = 0, j = from.length; i < j; i++ )
+      mapping[ from.charAt( i ) ] = to.charAt( i );
+ 
+function normalizaTildes( str ) {
+    let m = [...str].map( (c) => {
+        if( mapping.hasOwnProperty(c) ){
+            return mapping[c];
+        }
+        return c;
+    });
+    return m.join("").toLowerCase();
+ }
+
+
+function filterTable() {
+    let filter = normalizaTildes( document.getElementById("searchInput").value ) ;
+    let rowList = document.getElementById("tunelistbody").rows;
+    for( let row of rowList){
+        let rowText = fastSearch[ parseInt(row.id.substring(1)) ]; // id of row is "r0", "r1", etc.
+        row.style.display = rowText.includes(filter) ? "" : "none";
+    }
 }
 
 translate_html();
 
-// startPageRefreshProcess will call updateProgressEvery the first time,    
-// and updateProgressEvery will continue refreshing
-startPageRefreshProcess() ;
+// pageRefreshProcess will call updateProgressEvery the first time,    
+// and then will continue refreshing
+pageRefreshProcess() ;
 
 
 </script>

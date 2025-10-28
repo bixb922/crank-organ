@@ -1,23 +1,16 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
  <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+	
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
-	<title id="pagetitle"></title>
 	<link rel="icon" type="image/png" href="favicon.png?a=1"/>	
 </head>
 <body>
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-		&nbsp;Home page
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
+
 <div style="clear:both" height=1></div>
 
 <script type="text/javascript" src="/static/common.js"></script>
@@ -156,7 +149,7 @@
 		</td>
         </tr>
 		<tr>
-			<td id="batterygraph">
+			<td><canvas id="batterygraph" is="bar-graph"></canvas>
 			</td>
 		</tr>
 	</tbody>
@@ -171,16 +164,22 @@
 
 <div class="footerdiv"></div>
 <!-- 
- You are not allowed to remove this copyright notice.
- No está autorizado borrar esta marca de derechos de autor
- Urheberrecht nicht löschen. -->
+ You are not allowed to remove nor hide this copyright notice.
+ No está autorizado borrar ni ocultar esta marca de derechos de autor
+ Das Entfernen oder Ausblenden dieses Copyright-Hinweises ist nicht gestattet. -->
  <span style="font-size:smaller">
 © Copyright 2023-2025 Hermann Paul von Borries. Source code and documentation at https://www.github.com/bixb922/crank-organ
+All rights reserved.
 </span>
 <div class="footerdiv"></div>
 
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
+
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( tlt("Índice"), false ) ;
 
 async function getPageData(){
     resp = await fetch_json( "/get_index_page_info" ) ;
@@ -200,8 +199,16 @@ async function getPageData(){
 		}
         document.getElementById("serverlink").href = server;
     }
+	let bg = document.getElementById("batterygraph");
+	bg.setParam( 80, 0, 100 ); // width, min, max
+
     getBatteryInfo();
-    
+    commonGetProgress.setSleep( 5_000 );
+	commonGetProgress.startBackground();
+	// Since there is not much else to do, fill the caches for
+	// great things to come.
+	await commonGetProgress.fillCaches();
+
 }    
    
 
@@ -212,7 +219,7 @@ function navigate( newpage ){
 async function getBatteryInfo( ) {
     // This is the detailed battery info in the body
     // of the page, the battery info in the header
-    // gets updated in common.js
+    // gets updated in common.js class GetProgress/PageHeader.
 	while( true ) {
 		updateBatteryInfo( await fetch_json( "/battery" ) ) ;
 		await sleep_ms( 15000 ) ;
@@ -229,7 +236,7 @@ function updateBatteryInfo( battery ) {
 	else{
 		let percent_remaining = Math.round(battery.percent_remaining) ;
 		textById("percent_remaining", "" + percent_remaining + "%") ;
-		progressBar( "batterygraph", percent_remaining, 80 );
+		document.getElementById("batterygraph").draw( percent_remaining );
 	}
 	let tr = battery.tunes_remaining
 	if( is_no_number(tr)){

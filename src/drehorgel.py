@@ -16,7 +16,11 @@ def init_led():
 def init_fileops():
     import fileops
     if not fileops.folder_exists("/data"):
-        fileops.make_folder( "/data")
+        try:
+            # install_data may be present in romfs
+            import install_data # type: ignore
+        except ImportError:
+            fileops.make_folder( "/data")
     if fileops.folder_exists("/rom/data"):
         fileops.copy_folder("/rom/data", "/data", overwrite=False)
 
@@ -89,7 +93,6 @@ def init():
         config.BATTERY_CALIBRATION_JSON,
     )
     
-
     from tunemanager import TuneManager
     tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON, config.LYRICS_JSON, config.SYNC_TUNELIB )
     

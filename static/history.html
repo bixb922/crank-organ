@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<!-- Copyright (c) 2023 Hermann von Borries
+<!-- Copyright (c) 2023-2025 Hermann von Borries
  MIT License-->
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    
     <meta name="viewport" content="width=device-width,initial-scale=1">
-	<title id="pagetitle"></title>
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 
 <body>
-<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
+<!--<<span id="popup" class="popuptext"></span>
+div class="headerdiv">
 	<span class="headerleft">
         <a onclick="pageUp()">&#11013;</a>
 		&nbsp;<span>Historia</span>
     </span>
 	<span class="headerright" id="header_time"></span>
 </div>
+-->
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
@@ -47,7 +47,11 @@
 </body>
 
 <script>
+// (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
+// MIT License
 
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( tlt("Historia"), "back" );
 
 
 async function getHistory( ) {
@@ -57,8 +61,12 @@ async function getHistory( ) {
 	let s = "" ;
     let previous_date = "";
     let body = document.getElementById( "historyBody" );
-    body.innerText = "";
-    for( hist_element of histlist){
+    body.innerHTML = "";
+    let i = 0;
+    let multipleSetlists = await isMultipleSetlistsEnabled();
+    let tunelib = await tunelibCache.get();
+
+    for( let hist_element of histlist){
         // 0 tuneid
         // 1 date in seconds since 2000/1/1 (ESP32 epoch)
         // 2 percentage
@@ -68,7 +76,16 @@ async function getHistory( ) {
         // date: yyyy-mm-dd, time: hh:mm
         let d = new Date(946_684_800_000); // ESP32 epoch start
         d.setUTCSeconds( hist_element[1] );
-        let datetime = d.toISOString() ; // e.g. 2024-05-13T08:40:49.000Z
+        //>>>why history with dates out of range?
+        // ok:  ["i17ZwSkgx",809359841, 100, 0],
+        // out of range: ["iSWeZDp89", 18446744059830, 100, 0],
+        let datetime = "2000-01-01T00:00" ;
+        try{
+            datetime = d.toISOString() ; // e.g. 2024-05-13T08:40:49.000Z
+        } catch(e){
+            console.error("Error converting date", e, "hist_element=", hist_element );
+            continue;
+        }
         let tsplit = datetime.split("T");
         let date = tsplit[0] ;
         let time = tsplit[1].substring(0,5) ;
@@ -87,24 +104,32 @@ async function getHistory( ) {
             // user request
             user_request = "✔️" ; // check mark &#x2714;
         }
-        // Get title (if still in tunelib...)
-        let tunelib = await get_tunelib();
-        let tuneid = hist_element[0];
-    	let tune = tunelib[hist_element[0]]; // may be undefined if tune was deleted
+        let row = insertRow( body, [time, "", "", user_request]);
 
-        let title = await make_history_title( tune );
-        let completion = await make_history_percentage(  tune, hist_element[2] );
-     
-        let row = insertRow( body, [time, title, completion, user_request]);
-        row.cells[2].style.textAlign = "right";
-        let commentIcon = document.createElement("a");
-        commentIcon.onclick = function(){register_comment(""+title, ""+tuneid)};
-        if( tune ){
-            commentIcon.innerHTML= "&nbsp;&#x1f4dd;" ;// non blank space, memo=📝
-            commentIcon.classList.add( "anohref" );
-            row.cells[1].appendChild( commentIcon );
+        // Get title (if still in tunelib...)
+        let tuneid = hist_element[0];
+    	let tune = tunelib[tuneid]; // may be undefined if tune was deleted
+        if( tune != undefined ){
+            let tuneTitle = document.createElement( "span", {"is":"tune-title"});
+            // format "hpt%msd"
+            // We are calling isMultipleSetlistsEnabled() here, so menu only appears if needed.
+            tuneTitle.setTune( tune, { beforeFormat:"hpt", afterFormat:"ms", shortClick:true, menu:multipleSetlists } );
+            row.cells[1].appendChild( tuneTitle );
+            row.cells[2].innerText = await make_history_percentage(  tune, hist_element[2] );
         }
+        else{
+            let tuneTitle = document.createElement( "span" );
+            tuneTitle.innerText = tlt("(borrado)");
+            row.cells[1].appendChild( tuneTitle );
+            row.cells[2].innerText = "";
+        }
+        
+        i += 1;
     }
+    commonGetProgress.setSleep( 2_000 );
+    commonGetProgress.registerCallback( (progress)=>TuneTitle.updateProgress( progress ) );
+    commonGetProgress.setReloadIfTunelibChanged(true);
+    commonGetProgress.startBackground();
 }
 
 
@@ -120,28 +145,6 @@ async function deleteHistory(){
     window.location.reload() ;
 }
 
-async function make_history_title( tune ){
-    // History title is:
-    //      title
-    //      (info) if there is info
-    //      rating
-	if( tune != undefined ){
-		let title =  await makeTuneTitle( tune );
-        let text = title ;
-		let info = tune[TLCOL_INFO] ;
-		if( info != "" ){
-			text += " (" + info  + ")";
-		}
-		let rating = get_rating(tune) ;
-		if( rating != "" ){
-			text += " " + rating ;
-		}
-        return text;
-	}
-    // So sorry if tune is not in tunelib anymore... no info available
-    return tlt("(borrado)") ;
-}
-
 async function make_history_percentage( tune, percentage ){
     let text = "" + percentage + "%";
     if( tune != undefined ){
@@ -151,19 +154,11 @@ async function make_history_percentage( tune, percentage ){
 }
 
 
-async function register_comment(title, tuneid){
-	comment = prompt(tlt("Ingrese comentario o puntaje *, ***,*** para: ") + title);
-	if( comment != null ){
-		j = { "tuneid": tuneid, "comment": comment };
-		await fetch_json( "/register_comment", j );
-        showPopup("", tlt("Información actualizada")); 
-        drop_tunelib();
-        await sleep_ms(1000);
-        window.location.reload() ;
-    }
-}
 
 translate_html() ;
 getHistory() ;
+
+
+
 </script>
 </html>

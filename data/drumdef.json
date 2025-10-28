@@ -23,7 +23,7 @@
         "strong_midis": [65]
             },
     "75": {
-        "name": "Claves MIDI=75=Eb5=_e, tuned to Eb", 
+        "name": "Claves MIDI=75=Eb5=_e tuned to Eb", 
         "duration": 8, 
         "midi_list": [69,67,65,66,68], 
         "strong_duration": 10,
