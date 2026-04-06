@@ -215,4 +215,3 @@ asyncio.run(main())
 # >>> ideas. 
 # >>> Universal board
 # >>> Support for MIDI over USB
-# >>> umidiparser sort by time and event type, program change before note on.
