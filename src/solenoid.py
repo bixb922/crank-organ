@@ -9,109 +9,75 @@ from time import sleep_ms
 import minilog
 from drehorgel import led
 from midi import DRUM_PROGRAM
+from driver_base import RCServoPin, BasePin, SolePin
 
 _logger = minilog.getLogger(__name__)
+
 
 class ActuatorBank:
     # Holds all actuator drivers (and all actuators) according to
     # definition in pinout.json
-    def __init__(self, max_polyphony, actuator_def ):
-
-        # config_max_polyphony Controls maximum number of notes to sound simultaneously
-        # so that the total current current doesn't exceed a limit.
-        self.config_max_polyphony =  max( max_polyphony, 1)
-        # This is the list of actuators that are currently
-        # active. It is used to limit the number of actuators to
-        # self.config_max_polyphony as a maximum. List elements are
-        # actuators such as GPIOPin or MCP23017Pin or one MIDI serial actuator.
-        self.active_actuators = []
-
-        # Parsing fills these definitions:
+    def __init__(self, actuator_def,  config ):
+        # Parsing fills these definitions.
         # pin_list: a list of all actuators that have been defined
         # in the pinout.
-        self.pin_list = []
-        # pin_info is info about MCP devices, to show to the user.
-        self.pin_info = []
-
-        self.sumsolenoid_on_msec = 0
-
-        # Get the results from actuator_def
+        # pin_info is info about all devices, to show to the user.
         self.pin_list = actuator_def.get_pin_list()
         self.driver_list = actuator_def.get_driver_list() 
-        self.pin_info = actuator_def.get_pin_info()
-        # Tell the drivers that here is the actuator bank
+        self.known_programs = actuator_def.known_programs
 
-        for drv in self.driver_list:
-            drv.set_actuator_bank( self )
+        # Inject configuration for pins
+        RCServoPin.set_config( config )
+        SolePin.set_config( config )
+        BasePin.set_led( led )
+        BasePin.set_pinlist( self.pin_list )
 
-        for pin in self.pin_list:
-            pin.set_actuator_bank( self )
 
-        self.pin_info = []
-        for drv in self.driver_list:
-            drv_repr = repr(drv)
-            count = 0
-            for pin in self.pin_list:
-                if repr(pin).startswith(drv_repr + "."):
-                    count += 1
-            self.pin_info.append( (drv_repr,count) )
-        _logger.debug(f"init complete {self.pin_info=}")
+        # Gather some info for diag.html
+        pi = self.get_pin_info(", ")
+        _logger.debug(f"init complete {pi}")
 
     def all_notes_off( self ):
-        # All notes off is done at two levels.
-        # Do it fast at driver level, to ensure all notes are off asap
-        for drv in self.driver_list:
-            drv.all_notes_off()
+        # Don't flash led if some problem occurs during all notes off,
+        # It's distracting
+        BasePin.set_led( None )
 
-        # And reset at the actuator level too, not only driver level,
-        # to ensure the actuator logic is synchronized with the driver level.
+        # Some drivers have a very fast and
+        # very effective "all notes off" 
+        # method, for example MIDI output and MCP23017.
+        # pin objects are not informed about this change,
+        # so below we turn off all pins anyhow.
+        for drv in self.driver_list:
+            if hasattr( drv, "all_notes_off"):
+                drv.all_notes_off()
+
+        # Use force_off() to ensure that
+        # mismatched note on/note off pairs are turned off,
+        # and to leave pins in a consistent state.
         for actuator in self.pin_list:
             actuator.force_off()
-        self.active_actuators = []
 
-
-    def add_active( self, actuator ):
-        # Add actuator to self.active_actuators.
-        # Check polyphony before adding another actuator.
-        # Turn off oldest note until polyphony ok.
-        while len(self.active_actuators) >= self.config_max_polyphony:
-            # Blink led (don't wait blinking to be over)
-            led.short_problem()
-            # pop() should not raise IndexError since len(self.actuators) > 0
-            # (self.config_max_polyphony is always >= 1 at least.
-            self.active_actuators.pop(0).force_off()
-        # Now we have capacity to add another actuator
-        self.active_actuators.append( actuator )
-
-    def remove_active( self, actuator ):
-        # Remove actuator from list of active actuators.
-        # If not present, ignore. This can happen with certain 
-        # sequences of exceed polyphony and duplicate note off events.
-        aa = self.active_actuators
-        try:
-            del aa[ aa.index( actuator )]
-        except ValueError:
-            pass
-                 
-    def add_operating_time( self, msec ):
-        # Keep tally of time solenoids were on
-        self.sumsolenoid_on_msec +=  msec      
+        # Reset state now that all notes are off
+        SolePin.clear_active()
         
-    def get_sum_msec_solenoids_on_and_zero(self):
-        t = self.sumsolenoid_on_msec
-        self.sumsolenoid_on_msec = 0
-        return t
+        BasePin.set_led( led )
 
-    def get_status(self):
+    def get_pin_info(self, sep):
         # Get summary of current devices for display
-        return self.pin_info
+        pin_info = []
+        for drv in self.driver_list:
+            drv_repr = repr(drv)+"."
+            pin_info.append( 
+                (drv_repr[:-1], 
+                sum( 1 for pin in self.pin_list if repr(pin).startswith(drv_repr))) )
+        return sep.join(f"{drv} {pins} pins" for drv, pins in pin_info)
 
     def get_actuator_by_pin_index(self, pin_index):
         # organtuner.py refers to a pin with it's index
         # in the pin_list. Since the organtuner's pin_index
         # is derived from the pin_list, this works, since
-        # solenoids.py and organtuner.py are based on this self.pin_list.
-        # organtuner.py synchronizes with self.pin_list
+        # solenoids.py and organtuner.py are based on self.pin_list.
+        # Also, organtuner.json synchronizes with self.pin_list
         # at each reboot.
         return self.pin_list[pin_index]
     
@@ -123,20 +89,14 @@ class ActuatorBank:
         return len( self.pin_list )
     
     def get_pin_by_midi_number( self, midi_number ):
-        # This is used during initalization only, it's not very important
+        # This is used during initalization of Faux Toms only, it's not very important
         # for this code to be fast
         for pin in self.pin_list:
             m = pin.nominal_midi_note
             if (m.midi_number == midi_number and
                 m.program_number != DRUM_PROGRAM ):
                 return pin
-
-
-    def actuators_that_are_on(self):
-        # Return a list of actuators that are currently on
-        # This is used by the driver_ftom to avoid using notes
-        # that are already on.
-        return self.active_actuators
+        # Return None if not found
     
     def get_pin_by_repr( self, name ):
         # We could keep pin_dict to make this faster
@@ -154,15 +114,15 @@ class ActuatorBank:
 # a probability this is not true. But if it says "not connected",
 # then there is no I2C device on these pins.
 class PinTest:
+ 
     def _basicTestGPIO(self, gpio_pin):
-        # Test a GPIO pin. Sometimes this does not work,
-        # is random because of ambient electromagnetic noise.
+        # Test if a GPIO pin has some kind of load
+        # i.e. something connected
         gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_UP)
         with_pull_up = gp.value()
         gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_DOWN)
         with_pull_down = gp.value()
         gp = machine.Pin(gpio_pin, machine.Pin.IN)
-        # no_pull = gp.value()
 
         n = with_pull_up * 2 + with_pull_down
         # 00 = something pulls down for all cases. Might be a ULN2803 or
@@ -191,12 +151,13 @@ class PinTest:
         sclok = self._testGPIO(scl) == "I2C"
         return sdaok and sclok
 
-    async def web_test_pin( self, pininfo ):
+    async def web_test_pin( self, pininfo, actuator_bank ):
         # Called by web server to test a pin, expects a "pininfo" dict
         # with info filled out by pinout.html
         # The "pininfo" dictionary has all fields about the pin,
         # some fields may be superfluous.
-
+        
+        _logger.debug(f"Web test pin {pininfo=}")
         driver_type = pininfo["type"]
 
         # Compute a pinout repr to search for that pin.
@@ -206,40 +167,47 @@ class PinTest:
         from driver_gpioservo import GPIOServoDriver
         from driver_pca9685 import PCA9685Driver
         # These calls here must mirror the super().__init__() parameters in the
-        # constructors of the respective classes:
+        # constructors of their respective classes:
         driver_dict = { 
             "gpio":      lambda: GPIODriver.make_repr() + "." + str(pininfo['pin']),
             # Note that MIDISerial uses midi note number and NOT a "pin" number,
-            # there is no "pin" for MIDISerial.
+            # there is no "pin" for MIDISerial but "midi".
             "serial":   lambda: MIDISerialDriver.make_repr(pininfo['uart']) + "." + str(pininfo['midi']),
             "mcp23017": lambda: MCP23017Driver.make_repr(pininfo['i2ccount'],pininfo['mcpaddr']) + "." + str(pininfo['pin']),
             "gpioservo": lambda: GPIOServoDriver.make_repr() + "." + str(pininfo['pin']),
             "pca9685":   lambda: PCA9685Driver.make_repr(pininfo['i2ccount'],pininfo['pcaaddr']) + "." + str(pininfo['pin'])
         }    
-        from drehorgel import actuator_bank
-        print(f"{driver_type=}")
-        print(f"{pininfo=}")
         try:
             pin_repr = driver_dict[driver_type]()
-            print(f"{pin_repr=}")
         except:
             return f"Unknown driver: {driver_type}"
         # Now get the actuator for that pin.
         try:
             actuator = actuator_bank.get_pin_by_repr(pin_repr) 
-            try:
-                actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]))
-            except AttributeError:
-                # This is not a RC servo pin, no pulse0/pulse1
-                pass
-
         except KeyError:
              return f"Pin not found: {pin_repr}"
 
-        for _ in range(8):
-            actuator.value(1)
-            await asyncio.sleep_ms(500)
-            actuator.value(0)
-            await asyncio.sleep_ms(500)
-
+        try:
+            # Non RC Servo pins will ignore this call
+            actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]))
+        except (KeyError, AttributeError):
+            # No pulse0/pulse1 info in pininfo, ignore.
+            # Or actuator does not support set_servopulse, ignore.
+            pass
         
+        # No worries about polyphony or moving servos here
+        # since there is not much else happening.
+        # So we use low level functions that don't check current consumption limits.
+        for _ in range(pininfo["repeat"]):
+            actuator.low_level_on()
+            await asyncio.sleep_ms(pininfo["pause"])
+            actuator.low_level_off()
+            await asyncio.sleep_ms(pininfo["pause"])
+
+        # If pininfo["repeat"] is 0, 
+        # then reset off position anyhow. 
+        # This makes it easy to adjust
+        # "off" position of each servo with arrow buttons
+        await asyncio.sleep_ms(120)
+        actuator.low_level_off()
+        # RC Servo low_level_off will eventually call stop_pwm()

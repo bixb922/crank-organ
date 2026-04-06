@@ -9,7 +9,7 @@ import asyncio
 import io
 import json
 import time
-
+print("Microdot: using await for Request._safe_readline()")
 try:
     from inspect import iscoroutinefunction, iscoroutine
     from functools import partial
@@ -403,9 +403,16 @@ class Request:
         # headers
         headers = NoCaseDict()
         content_length = 0
-        while True:
+        while True: 
+            # >>> make readline more async friendly
+            # >>> if not, get_progress() interferes with 
+            # >>> MIDI player.
+            # >>> Following line added to improve asyncio response
+            await asyncio.sleep_ms(20)
+            # >>> end of change
             line = (await Request._safe_readline(
-                client_reader)).strip().decode()
+                    client_reader)).strip().decode()
+
             if line == '':
                 break
             header, value = line.split(':', 1)

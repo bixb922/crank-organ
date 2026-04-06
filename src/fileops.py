@@ -60,7 +60,9 @@ def read_json(filename, default=None, recreate=False):
         try:
             f = find_latest_backup(filename)
             with open(f) as file:
-                return json.load(file)
+                j = json.load(file)
+                print(f"fileops.read_json using backup file {f}")
+                return j
         except (OSError, ValueError):
             if default is not None:
                 if recreate:
@@ -137,43 +139,40 @@ def copy_folder( src_folder, dst_folder, overwrite=False ):
 def is_folder( folder_name ):
     return os.stat( folder_name )[0] == 16384
 
-def find_decompressed_midi_filename( filename ):
-    # Will first return .mid file, if it exists.
+def decompress_midi( filename, temp_filename ):
+    # Will first return filename of .mid file, if it exists.
     # iI not, will add .gz (if not present) and
-    # then try to open .mid.gz file
+    # then try to decompress the .mid.gz file and return the temp_filename
+    # of the decompressed .mid.gz file.
     # If not found: OSError
-    # So it will open the midi file, disregarding if its foo.mid
-    # or foo.mid.gz
     if file_exists( filename ) and not is_compressed(filename):
         return filename
     # Decompress in one go, there is enough RAM
-    # and it will be freed immediately
-    # Using ByteIO is faster but would require changes in umidiparser
-    # Or else, use a RAM disk, with higher gc.collect() times
+    # and RAM will be freed immediately. Store in flash.
+    # Caching the decompressed file in RAM would raise gc.collect() times.
     with open( filename, "rb") as file:
         with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
             data = stream.read()
 
-    # This code does not allow have two MIDI files open at the same time.
-    # Also: temp.mid does not get deleted after use, it remains there
+    # Also: temp_filename does not get deleted after use, it remains there
     # until the next file is decompressed.
-    TEMP_FILENAME = "/data/temp.mid"
-    with open( TEMP_FILENAME, "wb") as output:  # type:ignore
+    with open( temp_filename, "wb") as output:  # type:ignore
         output.write(data)
-    return TEMP_FILENAME
+    return temp_filename
 
 def open_midi( filename ):
-    # Restriction: find_decompressed_midi_filename() works only
-    # for one file at a time. Cannot open 2 MIDI files simultaneously.
-    # (but that is not required here)
+    # Reading the whole file to memory (buffer_size=0) makes garbage
+    # collection times much higher.
+    # With filecache=True, 500 bytes is appropriate. There is a minor
+    # gain with 1000 bytes in terms of overall performance
+    # but open/first note times increase with 1000 to 5000 bytes.
+    # Also: 500 bytes per track keeps gc times low.
     from umidiparser import MidiFile
-    # With 4 to 8 MB RAM, there is enough to have large buffer.
-    # But even so, there is no need to read the full file to memory
-    # A buffer size of > 1000 means almost no impact on CPU and
-    # uses a relatively small amount of RAM
-    return MidiFile(find_decompressed_midi_filename( filename ),
-                    buffer_size=5000,
-                    reuse_event_object=True)
+    # Files should be decompressed at this point. But there is very little overhead
+    # in calling decompress_midi for MIDI file that is already decompressed.
+    return MidiFile( decompress_midi( filename, "/data/midi_fileops.mid"),
+                    buffer_size=100,
+                    reuse_event_object=True )
 
 def get_file_type( filename ):
         # foo.mid.gz returns "mid"
@@ -241,3 +240,23 @@ def get_file_date( filename ):
         # which is far, far in the future... fortunately raises overflow.
         return "2000-01-01 00:00"
     return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
+
+
+
+def get_mime_type( filename ):
+    mime_types = {
+        # default is text/plain;charset=UTF-8 
+        "json": "application/json;charset=UTF-8",
+        "gif": "image/gif",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "ico": "image/vnd.microsoft.icon",
+        "mid": "audio/midi",
+        "html": "text/html",
+        "css": "text/css",
+        "txt": "text/text",
+        "js": "javascript"
+    }
+    # Default MIME type is text/plain
+    return mime_types.get( get_file_type(filename), "text/plain")  + ";charset=UTF-8"

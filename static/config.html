@@ -20,7 +20,7 @@
 	<input id="password_required" name="password_required" type="checkbox" oninput="markField('password_required')" />
 	<label for="password_required">Password is required to make configuration changes</label>
 	<br>
-	<button type="button" onclick="save('password_required')">Save if password is required</button>
+	<button type="button" onclick="save()">Save changes</button>
 	<br>&nbsp;
 	<br>
 
@@ -52,7 +52,7 @@
 		oninput='markField("description")' />
 	<br>
 
-	<button type="button" onclick="save('description','name')">Save description and network name</button>
+	<button type="button" onclick="save()">Save changes</button>
 
 	<div class="middlediv">WiFi Router or hotspot (station mode)</div>
 	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one
@@ -74,22 +74,19 @@
 	<label for="password2">Password of the secondary router/hotspot:</label>
 	<input id="password2" name="password2" type="password" size="16" oninput="markField('password2')" />
 	<br>
-	<button type="button" onclick="save('access_point1','password1','access_point2','password2')">Save WiFi info and
-		passwords</button>
+
+	<input id="advertise_bt" type="checkbox" oninput="markField('advertise_bt')">
+	<label for="advertise_bt">Advertise WiFi names on Bluetooth</label>
+	<br>
+
+	<button type="button" onclick="save()">Save changes</button>
 
 	<div class="middlediv">Power management</div>
 
 	<label for="max_polyphony">Maximum polyphony allowed. If more than this number of solenoids are on simultaneously,
-		the oldest note is turned off to protect batteries. Integer only:</label>
+		the oldest note is turned off to protect batteries. Does not apply to RC servos. Integer only:</label>
 	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')" />
 	<br>
-
-	<label for="idle_deepsleep_minutes">After this time the microcontroller will enter deepsleep if idle, i.e. ifnot
-		playing music, no web activity. Turn power off then on to restore. No decimals, integer only:</label>
-	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="3"
-		oninput="markField('idle_deepsleep_minutes')" />&nbsp;minutes.
-	<br>
-
 
 	<label for="ap_max_idle">Time the AP WiFi radio will be active without no one connecting. After this time, if idle,
 		the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the
@@ -109,14 +106,15 @@
 		oninput="markField('battery_heartbeat_duration')" />
 	<br>
 
-
-	<button type="button"
-		onclick="save('max_polyphony', 'idle_deepsleep_minutes','ap_max_idle', 'battery_heartbeat_duration', 'battery_heartbeat_period' )">Save
-		power settings</button>
+	<label>After this time the microcontroller stops and enters low power mode. 0=disabled. In minutes.</label>
+	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="4"
+		oninput="markField('idle_deepsleep_minutes')" />
+	<br>
+	<button type="button" onclick="save()">Save changes</button>
 
 	<div class="middlediv">Crank and tune play parameters</div>
 	<label>If zero: no automatic playback. Greater than zero: after this time the next tune is started automatically
-		and crank sensor will be disabled. In seconds, integer only:</label>
+		and crank sensor will be disabled. Minimum 5 seconds. In seconds, integer only:</label>
 	<input id="automatic_delay" name="automatic_delay" type="text" size="4" oninput="markField('automatic_delay')" />
 	<br>
 	<input id="tempo_follows_crank" type="checkbox" oninput="markField('tempo_follows_crank')">
@@ -155,14 +153,21 @@
 	<label for="tuning_frequency">Tuning frequency in Hz, normally 440. Decimal point allowed.</label>
 	<input id="tuning_frequency" type="text" size="6" oninput="markField('tuning_frequency')">
 	<br>
-	<label for="multiple_setlists">Multiple stored setlists. 0=One stored setlist. 1=Nine stored setlists.</label>
-	<input id="multiple_setlists" type="text" size="2" oninput="markField('multiple_setlists')">
+	<input type="checkbox" name="multiple_setlists" id="multiple_setlists" value="multiple_setlists"
+		oninput="markField('multiple_setlists')">
+	<label for="multiple_setlists">Multiple stored setlists. Unchecked=One stored setlist. Checked=Nine stored setlists.</label>
 	<br>
-	<button type="button"
-		onclick="save('tempo_follows_crank', 'pulses_per_revolution','lower_threshold_rpsec','higher_threshold_rpsec',
-		'normal_rpsec','crank_lowpass_cutoff','automatic_delay', 'rotary_tempo_mult', 
-		'tuning_frequency', 'tuning_cents', 'multiple_setlists')">Save
-		play tune parameters</button>
+	<input type="checkbox" name="wait_stop_turning" id="wait_stop_turning" value="wait_stop_turning"
+		oninput="markField('wait_stop_turning')">
+	<label for="wait_stop_turning">If a crank is active, wait for the crank to reach a complete stop at the end of each tune, before starting the next tune.</label>
+	<br>
+	
+	<input type="checkbox" name="barrel_mode" id="barrel_mode" value="barrel_mode"
+		oninput="markField('barrel_mode')">
+	<label for="barrel_mode">Barrel organ mode: repeat current tune while crank is turning until "next tune" button is pressed. Crank sensor must be present.</label>
+	<br>
+
+	<button type="button" onclick="save()">Save changes</button>
 
 	<div class="middlediv">Other parameters</div>
 
@@ -173,11 +178,23 @@
 	<label for="ap_ip">IP as access point. Should be of type 192.168.xxx.yyy with xxx and yyy between 1 and 255:</label>
 	<input id="ap_ip" name="ap_ip" type="text" oninput="markField('ap_ip')" />
 	<br>
+
+
+
+
 	<label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). 
 		A reasonable value could be 10000. No decimals, integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6"
 		oninput="markField('touchpad_big_change')" />
 	<br>
+
+
+	i2c_frequency
+	<label for="i2c_frequency_khz">I2C bus frequency in kHz. MicroPyton SoftI2C is used, so values between 10 and 800 kHz may work. No decimals, integer only:</label>
+	<input id="i2c_frequency_khz" name="i2c_frequency_khz" type="text" size="6"
+		oninput="markField('i2c_frequency_khz')" />
+	<br>
+
 	<label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal
 		received. Example: -18 db. Always negative, decimal point allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')" />dB
@@ -187,9 +204,49 @@
 	<label for="mic_amplitude">Measure amplitude of the microphone signal while tuning. Needs non-compressing microphone.</label>
 	<br>
 
+	<label for="auto_purge_history">Purge history automatically after this number of days. 0=only manual purge of history. No decimals, integer only:</label>
+	<input id="auto_purge_history" name="auto_purge_history" type="text" size="5"
+		oninput="markField('auto_purge_history')" />
+	<br>
 
-	<button type="button" onclick="save(  'ap_ip', 'touchpad_big_change', 'mic_signal_low', 'mic_amplitude' )">Save other
-		parameters</button>
+	<button type="button" onclick="save()">Save changes</button>
+	<div class="middlediv">RC Servo</div>
+
+	<label for="rc_max_moving">Maximum of RC servos that can move simultaneously. 
+		This parameter limits the current needed to move many servos at the same time.
+		When this maximum is exceeded, the current movement will stall until the servo stopped moving.
+		No decimals, integer only:
+	</label>
+	<input id="rc_max_moving" name="rc_max_moving" type="text" size="4" oninput="markField('rc_max_moving')" />
+	<br>
+
+	<label for="rc_moving_time">Estimated time that the RC servo movement takes, in millseconds.
+			No decimals, integer only:
+	</label>
+	<input id="rc_moving_time" name="rc_moving_time" type="text" size="4" oninput="markField('rc_moving_time')" />
+	<br>
+	
+	
+	<input id="rc_pwm_auto_off" name="rc_pwm_auto_off" type="checkbox" oninput="markField('rc_pwm_auto_off')" />
+	<label for="rc_pwm_auto_off">Turn PWM pulse train off to conserve energy when the RC servo movement has stopped and the note is off.</label>
+	<br>
+	
+	<button type="button" onclick="save()">Save changes</button>
+
+	
+	<div class="middlediv">Server (optional)</div>
+
+	<label for="server">Server node name. Leave blank if no mcserver node to
+		work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
+	<input id="servernode" name="servernode" type="text" size="20" oninput="markField('servernode')" />
+	<br>
+	
+	<label for="serverpassword">Password to access server:</label> 
+	<input id="serverpassword" name="serverpassword"
+		type="password" size="12" oninput="markField('serverpassword')" />
+	<br>
+
+	<button type="button" onclick="save()">Save changes</button>
 
 	<div class="middlediv">Debug/test settings</div>
 
@@ -199,8 +256,8 @@
 
 	<br>
 	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds
-		seems appropriate. No decimals, integer only:</label> <input id="max_age" name="max_age" type="text"
-		size="6" oninput="markField('max_age')" />
+		seems appropriate. No decimals, integer only:</label> 
+	<input id="max_age" name="max_age" type="text" size="6" oninput="markField('max_age')" />
 	<br>
 
 	<input type="checkbox" name="mic_test_mode" id="mic_test_mode" value="mic_test_mode"
@@ -212,21 +269,12 @@
 	<label for="mic_store_signal">Store microphone signal and FFT on flash when tuning</label>
 	<br>
 
-	<button type="button" onclick="save( 'webserver_cache', 'max_age',  'mic_test_mode','mic_store_signal' )">Save debug
-		settings</button>
-
-	<div class="middlediv">Server (optional)</div>
-
-	<label for="server">Server node name. Leave blank if no mcserver node to
-		work. Examples: 192.168.100.19:8080 or drehorgel.pythonanywhere.com</label>
-	<input id="servernode" name="servernode" type="text" size="20" oninput="markField('servernode')" />
-
-
+	<input type="checkbox" name="log_debug" id="log_debug" value="log_debug"
+	oninput="markField('log_debug')">
+	<label for="log_debug">Log debug messages to error.log on flash. Not checked: Normal setting, stores error and info messages. Checked: adds debugging messages (this is slow).</label>
 	<br>
-	<label for="serverpassword">Password to access server:</label> <input id="serverpassword" name="serverpassword"
-		type="password" size="12" oninput="markField('serverpassword')" />
-	<br>
-	<button type="button" onclick="save( 'servernode', 'serverpassword' )">Save server settings</button>
+	<button type="button" onclick="save()">Save changes</button>
+
 
 	<div class="footerdiv"></div>
 	<script type="text/javascript" src="/static/common.js"></script>
@@ -244,7 +292,7 @@
 		let CHANGED_FIELDS = [];
 
 		async function getCurrentConfig() {
-			let json_result = await fetch_json("/get_config");
+			let json_result = await fetch_json("/get_stored_config");
 			for (let [key, value] of Object.entries(json_result)) {
 				let d = document.getElementById(key);
 				if (d != null) {
@@ -300,25 +348,23 @@
 			}
 		}
 
-		async function save( /* argument list */) {
-			// Save  configuration data according to argument list.
+		async function save( ) {
+			// Save  configuration data according to CHANGED_FIELDS.
 			let post_data = {};
 
 			// Add al arguments of save to list
 			let value = "";
-			for (var i = 0; i < arguments.length; i++) {
-				value = getValue(arguments[i])
-				if (arguments[i].includes("password") && value == "***************") {
+			for ( let id of CHANGED_FIELDS )  {
+				value = getValue(id)
+				if (id.includes("password") && value == "***************") {
 					// Don't store unchanged passwords
 					continue;
 				}
-				post_data[arguments[i]] = value;
+				post_data[id] = value;
 			}
 			const resp = await fetch_json("/save_config", post_data);
 			showPopup("", "Configuration saved to flash. Reboot needed!");
-			for (var i = 0; i < arguments.length; i++) {
-				clearMark(arguments[i]);
-			}
+			clearMarks();
 		}
 		function getValue(element_id) {
 			let a = document.getElementById(element_id);
@@ -351,7 +397,6 @@
 			textById("copy_hostname4", hostname);
 		}
 
-
 		function markField(id) {
 			// Change background color of changed fields
 			if (id == "name") {
@@ -364,16 +409,17 @@
 			d.style.backgroundColor = cream;
 		}
 		function clearMark(id) {
-			if (["webserver_cache", "mic_test_mode", "password_required", "automatic_delay"].includes(id)) {
+			let d = document.getElementById(id);
+			if( d.type == "checkbox" ){
+				// checkbox items can't change color that easily
 				return;
 			}
-			document.getElementById(id).style.backgroundColor = "#ffffff";
+			d.style.backgroundColor = "#ffffff";
 		}
 
 		function clearMarks() {
 			// Reset background color of changed fields
-			for (let i in CHANGED_FIELDS) {
-				let id = CHANGED_FIELDS[i];
+			for (let id of CHANGED_FIELDS) {
 				clearMark(id);
 			}
 			CHANGED_FIELDS = [];

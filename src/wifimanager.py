@@ -18,8 +18,7 @@ from time import ticks_ms, ticks_diff
 from drehorgel import config, timezone, led
 from minilog import getLogger
 import scheduler
-
-
+import blemcs
 
 # 15 seconds waiting for this device in station mode to connect to an AP
 # After this time, the device will try with the other AP
@@ -39,7 +38,7 @@ class WiFiManager:
         # Connect in background to both interfaces
         self.ap_if = network.WLAN(network.AP_IF)
         self.sta_if = network.WLAN(network.STA_IF)
-        network.hostname(config.cfg["name"])
+        network.hostname(config.name)
 
         self.sta_if_ssid = ""
 
@@ -50,8 +49,22 @@ class WiFiManager:
 
         # Configure hostname before setting .active(True)
         # Works for both AP and STA_IF mode
-        network.hostname(config.cfg["name"])
+        network.hostname(config.name)
         self.sta_if_cancel_event = asyncio.Event()
+
+        # Pass info to Bluetooth advertiser.
+        if config.advertise_bt:
+            self.blemcs = blemcs.BLEMCS( config.name )
+        else:
+            self.blemcs = blemcs.BLEnull()
+        self.blemcs.set_characteristic( "stassid1", config.access_point1 )
+        self.blemcs.set_characteristic( "stassid2", config.access_point2 )
+        self.blemcs.set_characteristic( "apssid", config.name )
+        self.blemcs.set_characteristic( "staip1", "" )
+        self.blemcs.set_characteristic( "staip2", "" )
+        self.blemcs.set_characteristic( "apip", config.ap_ip )
+
+        self.blemcs.start_advertising()
 
     async def async_init(self):
         # Start background task to connect STA_IF and AP_IF
@@ -75,25 +88,26 @@ class WiFiManager:
         try:
             self.ap_if.active(True)
             self.ap_if.config(
-                ssid=config.cfg["name"],
+                ssid=config.name,
                 key=config.get_password("ap_password"),
                 security=4,
             )
-            apip = config.cfg.get("ap_ip", "192.168.144.1")
+            apip = config.ap_ip
             self.ap_if.ifconfig((apip, "255.255.255.0", apip, apip))
             self.logger.debug(
-                f"AP mode started ssid {config.cfg['name']} config {self.ap_if.ifconfig()}"
+                f"AP mode started ssid {config.name} IP {self.ap_if.ipconfig('addr4')}"
             )
-
+            self.blemcs.set_status( "ap", "a" )
         except Exception as e:
             self.logger.exc(e, "in _start_ap_interface")
 
-        # The timeout is 2 minutes for a client to connect to the AP WiFi
+        # The timeout is some minutes for a client to connect to the AP WiFi
         # Once connected, there is no limit on time to use the AP WiFi connection
-        await asyncio.sleep(config.get_int("ap_max_idle") or 120)
+        await asyncio.sleep(config.ap_max_idle)
         if not self.ap_if.isconnected():
             self.ap_if.active(False)
             self.logger.debug("AP mode idle, disconnected")
+            self.blemcs.set_status( "ap", "i" )
             # This will probably also disconnect sta_if
             # if not in use.
             # Reinit the station interface just in case
@@ -108,32 +122,41 @@ class WiFiManager:
             while True:
                 # Try with each AP defined, reconnect if it gets disconnected.
                 for ap in ("1", "2"):
+                    await asyncio.sleep_ms(500) # avoid tight loop
                     # Will fail if not configured, but AP should start anyhow.
-                    self.sta_if_ssid = config.cfg["access_point" + ap]
+                    ssid = getattr( config, "access_point" + ap )
+                    if not ssid:
+                        continue
+                    self.sta_if_ssid = ssid
                     password = config.get_password("password" + ap)
                     self.logger.debug(
                         f"_start_station_interface for ssid={self.sta_if_ssid=}"
                     )
+                    self.blemcs.set_status( "sta"+ap, "b" )
                     await self._station_connect_to_ap(
                         self.sta_if_ssid, password
                     )
                     if self.sta_if.isconnected():
                         led.connected()
                         await self.loginfo(
-                            f"Connected to {self.sta_if.config('ssid')} network config {self.sta_if.ifconfig()} hostname {network.hostname()}"
+                            f"Connected to {self.sta_if.config('ssid')} IP {self.sta_if.ipconfig('addr4')} hostname {network.hostname()}"
                         )
                         timezone.network_up()
-
+                        self.blemcs.set_status( "sta"+ap, "c" )
+                        self.blemcs.set_characteristic( "staip"+ap, self.sta_if.ipconfig('addr4')[0] )
+                        
                     # isconnected does not need to RequestSlice
                     while self.sta_if.isconnected():
                         # Test every 10 seconds if still connected
                         await asyncio.sleep(10)
-
+                    self.blemcs.set_status( "sta"+ap, "n" )
+                    self.blemcs.set_characteristic( "staip"+ap, "" )
                     # Reset sta_if before trying again
                     # self.sta_if.disconnect()
                     self.sta_if.active(False)
                     await asyncio.sleep(1)
                 if self.sta_if_cancel_event.is_set():
+
                     # If cancelled, then
                     # don't restart anymore
                     await self.loginfo(
@@ -145,21 +168,16 @@ class WiFiManager:
         except Exception as e:
             self.logger.exc(e, "in _start_station_interface")
 
-    async def _station_connect_to_ap(self, access_point, password):
+    async def _station_connect_to_ap(self, access_point, password ):
         # Connect station interface to a router or wifi hotspot
 
         try:
+
             self.sta_if.active(True)
             # Power modes for WiFi
-            # Hard reset default is  network.WLAN.PM_PERFORMANCE=1
-            # print(f"{self.sta_if.config('pm')=} {network.WLAN.PM_NONE=} {network.WLAN.PM_PERFORMANCE=} {network.WLAN.PM_POWERSAVE=} ")
-            # this can be slightly faster or less variable. PM_NONE
-            # leads to browser response times for get_progress() of about 200ms
-            # while PM_PERFORMANCE varies from 200 upwards to sometimes 1000 or more ms
-            # If near the access point, there is little difference.
-            self.sta_if.config(pm=network.WLAN.PM_NONE)
-            self.logger.info("WLAN performance mode set to PM_NONE")
-
+            # Hard reset default is network.WLAN.PM_PERFORMANCE=1
+            # No clear difference beteen PM_NONE and PM_PERFORMANCE...
+            # self.sta_if.config(pm=network.WLAN.PM_NONE)
             try:
                 self.sta_if.connect(access_point, password)
 
@@ -197,14 +215,14 @@ class WiFiManager:
             "sta_if_status": self.sta_if_status,
             "sta_if_ssid": self.sta_if_ssid,
             "sta_if_connected": self.sta_if.isconnected(),
-            "sta_if_ip": self.sta_if.ifconfig()[0],
+            "sta_if_ip": self.sta_if.ipconfig("addr4"),
             "sta_if_active": self.sta_if.active(),
             "ap_if_connected": self.ap_if.isconnected(),
-            "ap_if_ip": self.ap_if.ifconfig()[0],
-            "ap_if_ssid": config.cfg["name"],
+            "ap_if_ip": self.ap_if.ipconfig("addr4"),
+            "ap_if_ssid": config.name,
             "ap_if_active": self.ap_if.active(),
             "hostname": network.hostname(),
-            "description": config.cfg["description"],
+            "description": config.description,
         }
 
     def sta_isconnected(self):

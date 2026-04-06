@@ -276,10 +276,10 @@ async function updateProgress( progress ) {
     }
 	let tunelib = progress["tunelib"]; 
 
-    let tune_requests = progress["tune_requests"] ;
-    if( tune_requests == undefined ){
-        tune_requests = {} ;
-    }
+    //let tune_requests = progress["tune_requests"] ;
+    //if( tune_requests == undefined ){
+    //    tune_requests = {} ;
+    //}
 
 	let startButton = document.getElementById("startButton");
 	let daCapoButton = document.getElementById("daCapoButton");
@@ -318,9 +318,9 @@ async function updateProgress( progress ) {
 			showHideElement( "no_tune_span", false ) ;
 
 			// better do not use spectator format of title here
-			let spectator_name = tune_requests[CURRENT_TUNEID];
-			textById( "spectator_name",  spectator_name );
-			showHideElement( "request_row", spectator_name );
+			//let spectator_name = tune_requests[CURRENT_TUNEID];
+			//textById( "spectator_name",  spectator_name );
+			//showHideElement( "request_row", spectator_name );
 
 			let tt = document.getElementById("title");
 			// full format is "hptm%ds"
@@ -344,7 +344,7 @@ async function updateProgress( progress ) {
 
 			// Update progress bar every second, first call
 			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
-			status_text = make_status_text( progress["status"], percent ) ;
+			status_text = make_status_text( progress["status"], percent, progress["repeats"] ) ;
 			textById("progress", status_text) ;
 			document.getElementById("timebar").draw( percent );
 			// >>> may be interesting to show air consumption graph
@@ -483,42 +483,42 @@ async function updateProgress( progress ) {
 }
 
 async function shuffleAllTunes() {
-	await commonGetProgress.fetchJson( "/shuffle_all_tunes" ) ;
+	await commonGetProgress.fetchProgress( "/shuffle_all_tunes" ) ;
 }
 async function shuffle3Stars(){
-	await commonGetProgress.fetchJson("/shuffle_3stars" ) ;
+	await commonGetProgress.fetchProgress("/shuffle_3stars" ) ;
 
 }
 async function shuffleSetlist() {
-	await commonGetProgress.fetchJson("/shuffle_set_list" ) ;
+	await commonGetProgress.fetchProgress("/shuffle_set_list" ) ;
 }
 
 async function clearSetlist() {
-	await commonGetProgress.fetchJson("/clear_setlist" );
+	await commonGetProgress.fetchProgress("/clear_setlist" );
 }
 
 async function upSetlist(tuneid) {
-	await commonGetProgress.fetchJson("/up_setlist/" + tuneid );
+	await commonGetProgress.fetchProgress("/up_setlist/" + tuneid );
 }
 
 async function downSetlist(tuneid) {
-	await commonGetProgress.fetchJson("/down_setlist/" + tuneid );
+	await commonGetProgress.fetchProgress("/down_setlist/" + tuneid );
 }
 
 async function dropSetlist(tuneid) {
-	await commonGetProgress.fetchJson("/drop_setlist/" + tuneid );
+	await commonGetProgress.fetchProgress("/drop_setlist/" + tuneid );
 }
 
 async function topSetlist(tuneid) {
-	await commonGetProgress.fetchJson("/top_setlist/" + tuneid );
+	await commonGetProgress.fetchProgress("/top_setlist/" + tuneid );
 }
 
 async function bottomSetlist(tuneid) {
-	await commonGetProgress.fetchJson("/bottom_setlist/" + tuneid );
+	await commonGetProgress.fetchProgress("/bottom_setlist/" + tuneid );
 }
 
 async function set_velocity( increment ) {
-	await commonGetProgress.fetchJson( "/set_velocity_relative/" + increment );
+	await commonGetProgress.fetchProgress( "/set_velocity_relative/" + increment );
 }
 
 async function check_cancelled( ) {
@@ -537,17 +537,17 @@ async function check_cancelled( ) {
 }
     
 async function startTune() {
-    await commonGetProgress.fetchJson( "/start_tune" ) ;
+    await commonGetProgress.fetchProgress( "/start_tune" ) ;
 }
 
 async function stopTuneSetlist() {
-	await commonGetProgress.fetchJson("/stop_tune_setlist" ) ;
+	await commonGetProgress.fetchProgress("/stop_tune_setlist" ) ;
     await check_cancelled( ) ;
 	await commonGetProgress.getProgress();  // >>> necessary???
 }
 
 async function backSetlist() {
-	await commonGetProgress.fetchJson( "/back_setlist" ) ;
+	await commonGetProgress.fetchProgress( "/back_setlist" ) ;
     await check_cancelled() ;
 	await commonGetProgress.getProgress( ) ;// >>> necessary???
 }
@@ -555,7 +555,7 @@ async function backSetlist() {
 async function tempo_follows_crank(){
     let f = document.getElementById("tempo_follows_crank");
     let data = { "tempo_follows_crank": f.checked };
-    await commonGetProgress.fetchJson( "/tempo_follows_crank", data );
+    await commonGetProgress.fetchProgress( "/tempo_follows_crank", data );
 }
 
 function go_history(){
@@ -630,7 +630,7 @@ async function formatLyrics(c){
 
 async function toggleRegister( reg_name ){
 	let value = document.getElementById( `reg_${reg_name}`).checked;
-	await commonGetProgress.fetchJson( "/toggle_register",
+	await commonGetProgress.fetchProgress( "/toggle_register",
 				 	{"name": reg_name, "value": value} );
 }
 
@@ -646,7 +646,7 @@ function sortSetlist() {
     rows.forEach(row => tbody.appendChild(row));
 }
 
-function make_status_text( progress_status, percentage ) {
+function make_status_text( progress_status, percentage, repeats ) {
 	// Transform player status to language
     let status_text ;
 	if (progress_status === "ended") {
@@ -654,6 +654,9 @@ function make_status_text( progress_status, percentage ) {
 	}
 	else if(progress_status === "playing" ) {
 		status_text = "" + Math.round(percentage) + "%" ;
+		//if( repeats > 1 ){
+		//	output repeats here if desirable.
+		//}
 	}
 	else if(progress_status === "cancelled" ) {
 		status_text = tlt("cancelado") ;

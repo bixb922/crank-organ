@@ -9,12 +9,12 @@ import os
 
 from minilog import getLogger
 
-from drehorgel import config, led, crank, timezone, actuator_bank, controller
+from drehorgel import config, led, crank, timezone, controller
 import scheduler
 import fileops
+from driver_base import BasePin
 
-from matrix import Matrix, linear_regression
-
+# >>> evaluate value of battery monitor
 
 # update readings every 60 seconds
 _UPDATE_EVERY_SECONDS = const(60) 
@@ -24,13 +24,10 @@ _UPDATE_EVERY_SECONDS = const(60)
 _BATTERY_LOW_PERCENT = const(10)
 
 class Battery:
-    def __init__( self, battery_json_filename, battery_calibration_filename ):
-        self.battery_json_filename = battery_json_filename
-        self.battery_calibration_filename = battery_calibration_filename
-
+    def __init__( self ):
         self.logger = getLogger(__name__)
         self.battery_info = fileops.read_json(
-            self.battery_json_filename, 
+            config.BATTERY_JSON, 
             default={})
         # No need to recreate missing file. Will be written
         # once a minute, and browser will not show the error
@@ -66,22 +63,21 @@ class Battery:
         self.get_coefficients()
         
         while True:
-            self.update_calculations()
-
             # Update battery info on flash to keep tally
             # of usage. The webserver does not read this file,
             # but uses get_info() from memory.
             # Be nice and ask for a time slice. Updating a file
             # in flash usually takes 20 or 30 msec but may go up to 190 msec
-            # If no slice available, just wait.
+            # If no slice available, just wait until end of tune.
             async with scheduler.RequestSlice("battery", 300):
-                    self._write_battery_info()
+                self.update_calculations()
+                self._write_battery_info()
 
             await asyncio.sleep(_UPDATE_EVERY_SECONDS)
 
     def _write_battery_info(self)->None:
         fileops.write_json(
-            self.battery_info, self.battery_json_filename, keep_backup=False
+            self.battery_info, config.BATTERY_JSON, keep_backup=False
         )
 
     def set_to_zero(self)->None:
@@ -105,8 +101,7 @@ class Battery:
         now = time.ticks_ms()
         self.battery_info["operating_seconds"] += time.ticks_diff(now, self.last_update) / 1000
         # Get time solenoids were "on", convert ms to seconds
-        self.battery_info["solenoid_on_seconds"] += actuator_bank.get_sum_msec_solenoids_on_and_zero() / 1000
-        
+        self.battery_info["solenoid_on_seconds"] += BasePin.get_reset_battery_usage() / 1000
         # Estimate remaining time and tunes
         self.battery_info["percent_remaining"] = self.estimate_percent_remaining()
         self.battery_info["tunes_remaining"] = self.estimate_tunes_remaining()
@@ -118,9 +113,8 @@ class Battery:
         return self.battery_info
 
     async def _heartbeat_process(self)->None:
-        heartbeat_period = config.get_int("battery_heartbeat_period", 0)
-        heartbeat_duration = config.get_int("battery_heartbeat_duration", 0)
-        if heartbeat_period == 0 or heartbeat_duration == 0:
+        heartbeat_period = config.battery_heartbeat_period 
+        if heartbeat_period == 0:
             return
 
         self.make_heartbeat = True
@@ -135,7 +129,7 @@ class Battery:
                 if not crank.is_installed() or (crank.is_installed() and not crank.is_turning()):
                     print(".", end="")
                     led.heartbeat()
-                    await controller.play_random_note(heartbeat_duration)
+                    await controller.play_random_note(config.battery_heartbeat_duration)
                 await asyncio.sleep_ms(heartbeat_period)
 
             while not self.make_heartbeat:
@@ -161,7 +155,7 @@ class Battery:
         #          reset=delete calibration, new calbration, new coefficients
         if "reset" in str(level):
             try:
-                os.remove(self.battery_calibration_filename)
+                os.remove(config.BATTERY_CALIBRATION_JSON)
             except OSError:
                 pass
             return
@@ -176,12 +170,12 @@ class Battery:
                   level,
                   self.battery_info["tunes_played"],
                   self.battery_info["playing_seconds"]])
-        fileops.write_json(bcj, self.battery_calibration_filename, keep_backup=False)
+        fileops.write_json(bcj, config.BATTERY_CALIBRATION_JSON, keep_backup=False)
 
       
     def read_calibration_data(self)->list:
         return fileops.read_json(
-            self.battery_calibration_filename, 
+            config.BATTERY_CALIBRATION_JSON, 
             default=[])
 
     def get_coefficients(self)->None:
@@ -193,6 +187,9 @@ class Battery:
             self.logger.debug("Can't calibrate: no calibration data")
             return
         
+        # Import matrix here to save memory if not used
+        from matrix import Matrix, linear_regression
+
         # xdata: first column must be all 1 to get beta[0]
         # Add x1=0, x2=0 y=100 as known point (i.e. with
         # no use, level is 100%)

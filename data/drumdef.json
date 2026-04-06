@@ -11,21 +11,21 @@
     "47": {
         "name": "Low-mid Tom MIDI=47=B2=B,, tuned to Eb", 
         "duration": 15,
-        "midi_list": [61,60,53,56,62], 
+        "midi_list": [53,56,60,61,62,63,64,65,66,67,68,69], 
         "strong_duration": 20, 
         "strong_midis": [58]
          },
     "50": {
         "name": "High Tom MIDI=50=D3=D, tuned to Bb", 
         "duration": 15, 
-        "midi_list": [63,61,60,62,64], 
+        "midi_list": [60,61,62,63,64,66,67,68,69,70,71,71], 
         "strong_duration": 20,
         "strong_midis": [65]
             },
     "75": {
         "name": "Claves MIDI=75=Eb5=_e tuned to Eb", 
-        "duration": 8, 
-        "midi_list": [69,67,65,66,68], 
+        "duration":15, 
+        "midi_list": [69,67,65,66,68,72,73,74,75,76,77,78], 
         "strong_duration": 10,
         "strong_midis": [70]
         }

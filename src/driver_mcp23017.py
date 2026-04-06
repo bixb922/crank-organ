@@ -1,11 +1,11 @@
 #Copyright (c) 2024 Hermann Paul von Borries
 #MIT License
 
-#See https://github.com/mcauser/micropython-mcp23017
-#for a full driver.
+# See https://github.com/mcauser/micropython-mcp23017
+# for a full driver.
 
 from micropython import const
-from driver_base import BasePin, BaseDriver
+from driver_base import SolePin, BaseDriver
 
 # register addresses in bank=0 mode 
 _MCP_IODIR = const(0x00)  # R/W I/O Direction Register
@@ -56,9 +56,15 @@ class MCP23017Driver(BaseDriver):
 
     def _write(self, reg, val):
         #assert 0 <= val <= 255
+        # >>> evaluate use of try/except TimeoutError,
+        # also for MCP23017Driver._read() and PCA9685Driver.set_pwm()
+        # As it is, the current tune will abort and the error log
+        # will show a TimeoutError if I2C connection is flaky.
+        # I2C bus frequency can be configured in General Configuration.
         self._i2c.writeto_mem(
             self._address, reg, (val).to_bytes(1) 
         )
+        
     def _read(self, reg):
         data = self._i2c.readfrom_mem(
             self._address, reg, 1
@@ -66,6 +72,7 @@ class MCP23017Driver(BaseDriver):
         return data[0]
 
     def define_pin( self, *args ):
+        # Pass this driver and then the *args
         return MCPPin( self, *args )
     
     def all_notes_off( self ):
@@ -75,7 +82,7 @@ class MCP23017Driver(BaseDriver):
         self._write( _MCP_GPIO+1, 0 )
     
 
-class MCPPin(BasePin):
+class MCPPin(SolePin):
     def __init__( self,  driver, pin_number, rank, nominal_midi_note ):
         #assert 0 <= pin_number <= 15
 
@@ -86,15 +93,15 @@ class MCPPin(BasePin):
         self._bit = 1<<(pin_number & 0x07)
         super().__init__(driver, pin_number, rank, nominal_midi_note )
 
-
-    def value( self, val ):
-        # Turn this pin on/off according to value
-        # The code is  more stable reading the current state from the
+    def low_level_on( self ):
+        # It is better reading the current state from the
         # MCP than caching state in memory.
         r = self._driver._read( self._gpioreg )
-        if val:
-            self._driver._write( self._gpioreg, r | self._bit )
-        else:
-            self._driver._write( self._gpioreg, r & (~self._bit) )
+        self._driver._write( self._gpioreg, r | self._bit )
 
+    def low_level_off( self ):
+        r = self._driver._read( self._gpioreg )
+        self._driver._write( self._gpioreg, r & (~self._bit) )
+
+    
     

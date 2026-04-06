@@ -5,9 +5,8 @@
 # if not active.
 import machine
 import asyncio
-import esp32
 
-from drehorgel import player, config, led, setlist, controller
+from drehorgel import config, led, setlist, controller, player
 from minilog import getLogger
 
 class PowerManager:
@@ -20,15 +19,17 @@ class PowerManager:
         last_tune = None
         last_playtime = None
         idle_minutes = 0
-        idle_deepsleep_minutes = config.get_int("idle_deepsleep_minutes") or 15
+        idle_deepsleep_minutes = config.idle_deepsleep_minutes
+        if idle_deepsleep_minutes <= 0:
+            return
         await asyncio.sleep_ms(1000)
         from webserver import is_active
-        
         while True:
             await asyncio.sleep(60)  # Sleep for 1 minute and check.
-
             progress = player.get_progress()
             playtime = progress["playtime"]
+            # no player, no progress, no change of playtime
+
             tune = progress["tune"]
             # Any activity in the last minute?
             if (
@@ -52,22 +53,39 @@ class PowerManager:
                 led.ack()
                 await self.wait_and_power_off()
                 # Not to return
-
+            progress = None
+            tune = None
+            playtime = None
+            
     async def _wait_and_action(self, action):
         setlist.stop_tune()
-        # Turn all midis off
         controller.all_notes_off()
         led.shutdown()
         # Wait for web server to respond, led to flash, etc
         # Don't shut down microdot, need it to respond.
         await asyncio.sleep_ms(1000)
         action()
-
+ 
     async def wait_and_power_off(self):
         # Deepsleep is the closest thing to "self power off"
         # Could not make wake_on_touch work here.
+        # >>>must find root cause, but deepsleep leaves some GPIO (GPIO 11) on.
+        # >>> (this is a hardware problem)
         await self._wait_and_action( machine.deepsleep )
         # Does not return
+        # await self._wait_and_action( self.lowpower )
+
+    # def lowpower(self):
+    #     import network, time
+    #     sta_if = network.WLAN(network.STA_IF)
+    #     sta_if.active(False)
+    #     machine.freq(40_000_000)
+    #     while True:
+    #         time.sleep_ms(5_000)
+    #         led.on( (1,1,1))
+    #         time.sleep_ms(20)
+    #         led.off()
+
 
     async def wait_and_reset(self):
         await self._wait_and_action( machine.reset )

@@ -123,21 +123,19 @@ class Microphone:
     
     def save_hires_signal(self, midi_note):
         from drehorgel import config
-        if self.adc_device and config.cfg.get("mic_store_signal", False):
+        if self.adc_device and config.mic_store_signal:
             read = self.adc_device.read  # type:ignore
             # 4000 samples at 30.000 samples/sec means 0.116 sec
             # of data. At 100 Hz for the lowest signal, this means
             # at least 10 periods of the signal. 
             # At 2500 Hz for the highest signal, this means about 250 periods
             # with about 12 samples per period.
-            print(">>>High resolution signal for", midi_note, "start" )
             s = array("i", (0 for _ in range(4000))) # type:ignore
             t0 = time.ticks_ms()
             for i in range(len(s)):
                 s[i] = read()
             d = time.ticks_diff(time.ticks_ms(), t0)/1000
             frequency.save( s, d, midi_note, d/len(s), frequency.HIRES_FILE_PREFIX )
-            print(">>>High resolution signal saved for", midi_note, "duration=", d )
 
 
 # Performance test of tuner

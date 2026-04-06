@@ -100,6 +100,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     to_position = int(nominal_freq*ACCEPTED_FREQUENCY_RANGE/freq_step)+3
     
     # print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
+
     result = fft_module.fft(signal, True)
 
     if save_result:
@@ -133,7 +134,6 @@ def save( signal, duration, midi_note, step, prefix ):
         # Write data, one integer per line.
         for v in signal:
             file.write(f"{round(v)}\n")
-        print("file", filename, "written")
             
 def compute_amplitude( signal ):
     avgsignal =  sum( s for s in signal )/len(signal)

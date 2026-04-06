@@ -7,29 +7,17 @@ startup_time = ticks_ms()
 import gc
 import asyncio
 
-# Create folders if not there
-# Data that changes in time is stored here: battery info
-# setlist, logs, timezone information, pinout information. Create before importing minilog, config, battery, timezone.
+try:
+    import aioprof # type:ignore
+    aioprof.enable()
+    # aioprof.inject() sometimes leaves asyncio in confusion. Don't.
+except:
+    pass
+
 # Startup about 4.5 sec when in flash, less if frozen.
 import scheduler
-
-# First thing: initialize led and get turn it on
 import drehorgel
-drehorgel.init_led()
-led = drehorgel.led
-
-led.starting(0)
-
-
-# First ensure all mandatory folders are there.
-drehorgel.init_fileops()
-
-# And get the time/timezone/ntp process going in background,
-# the timezone object is needed for logger, and most modules
-# require logger
-drehorgel.init_timezone()
-import minilog 
-_logger = minilog.getLogger(__name__)
+from minilog import getLogger
 
 
 # To install aiorepl:
@@ -49,7 +37,7 @@ def _handle_exception(loop, context):
     print("main._handle_exception: unhandled asyncio exception", context)
     # Will catch any unhandled exception of asyncio tasks.
     _logger.exc(context["exception"], "asyncio global exception handler")
-    led.severe()
+    _led.severe()
     from drehorgel import controller
     controller.all_notes_off()
     # exit to REPL
@@ -57,19 +45,82 @@ def _handle_exception(loop, context):
 # To install aioprof:
 # mpremote mip install https://gitlab.com/alelec/aioprof/-/raw/main/aioprof.py
 # aioprof will be activated automatically if present
+# Patched aioprof.py in def send():
+# process only: if t_name != "do_aioprof"
+# and cleanup: t_name = t_name.split("'")[1]
 async def do_aioprof():
-    # Report profile every 30 seconds for debugging/optimizing
-    # if aioprof is installed
-    try:
-        import aioprof # type:ignore
-    except ImportError:
+    if "aioprof" not in globals():
         return
-    aioprof.inject()
-    print("aioprof enabled")
+    # Report profile when player inactive
+    _logger.debug("aioprof enabled. Use caffeinate command on MAC")
+    from scheduler import wait_for_player_inactive
     while True:
+        t0 = ticks_ms()
         await asyncio.sleep(30)
-        aioprof.report()
-        
+        await wait_for_player_inactive()
+        # Customized version of aioprof.report()
+        taskinfo = [(name, count, ms, max) for  name, (count, ms, max, _) in aioprof.timing.items()]
+
+        dt = ticks_diff( ticks_ms(), t0 )
+        try:
+            total_ms = aioprof.total_time
+        except:
+            total_ms = sum( x[2] for x in taskinfo )
+        # Subtract time used by sleep_us from asyncio times
+        # since sleep_us wait time is idle time.
+        sleep_us_wait = 0
+        #if hasattr( scheduler, "total_sleep_us"):
+            # scheduler.total_sleep_us sums all the time
+            # waiting with sleep_us for precision.
+        #    sleep_us_wait = round(scheduler.total_sleep_us/1000)
+        #    scheduler.total_sleep_us = 0
+        # Sort by max descending
+        taskinfo.sort(key=lambda x:x[3], reverse=True)
+        print(f"| name {' '*45} | count  | msec  | max   |")
+        for name, count, ms, max in taskinfo:
+            if max >= 20 or ms >= 1000:
+                #if name == "play_tune":
+                #    ms -= sleep_us_wait 
+                print(f"| {name:50s} | {count:6d} | {ms:5d} | {max:5d} |")
+        # sort by ms descending
+        taskinfo.sort( key=lambda x: x[2], reverse=True)
+        print(f"| Time since last report {dt=}")
+        print(f"| {'Task':30s} | {'msec':5s} | {'%':5s}  |")
+        for name, count, msec, max in taskinfo:
+            if msec/dt >= 0.001:
+                percent = msec/dt*100
+                #if name == "play_tune":
+                #    name = "play_tune without sleep_us"
+                #    percent -= sleep_us_wait/dt*100
+                print(f"| {name:30s} | {msec:5d} | {percent:5.0f}% |")
+        print(f"| {'total':30s} | {' ':5s} | {(total_ms-sleep_us_wait)/dt*100:5.0f}% |")
+        #print(f"| {'sleep_us,not included in total':30s} | {sleep_us_wait:5d} | {sleep_us_wait/dt*100:5.0f}% |")
+        taskinfo = None
+
+        aioprof.reset()
+
+# PCA9685, ROMFS, 1 track midi "Tico Tico l rvb 1 MT101 D032.mid"
+# | name                                               | count | msec  | max   |
+# | midifile_cache_process                             |   110 |  1471 |   742 |
+# | play_tune                                          | 71656 | 19519 |   298 |
+# | _setlist_process                                   |     5 |   262 |   262 |
+# | serve                                              |  1154 |  7564 |    43 |
+# | background_garbage_collector                       |    89 |   504 |    39 |
+# | _battery_process                                   |     2 |    23 |    22 |
+# | Time since last report dt=116279
+# | Task                           | msec  | %      |
+# | play_tune                      | 19519 |    17% |
+# | serve                          |  7564 |     7% |
+# | midifile_cache_process         |  1471 |     1% |
+# | background_garbage_collector   |   504 |     0% |
+# | _setlist_process               |   262 |     0% |
+# | _tp_process                    |   197 |     0% |
+# | total                          |       |    26% |
+
+# Feb 2026. Comparable player.play_tune() statistics:
+# midi_events=5010, msec/event=1.2, busy=5.7%, avg gc=40 msec, late ratio=4.12%
+
+
 def start_mcserver():
     # Start communication task with server on internet
     # but only if installed.
@@ -77,6 +128,7 @@ def start_mcserver():
         import mcserver # type:ignore
     except ImportError:
         # No impact if mcserver not present.
+        # No communication is initiated by this software.
         pass
     except Exception as e:
         print("Exception importing mcserver", e)
@@ -84,27 +136,53 @@ def start_mcserver():
 
 
 async def signal_ready( controller ):
+    # Asyncio has started!
+    # Show some startup statistics
     t1 = ticks_ms()
     gc.collect()
     gc_t = ticks_diff( ticks_ms(), t1 )
     start_dt = ticks_diff(t1, startup_time)
     alloc = gc.mem_alloc()
-    
+    # This allow to check startup time and memory allocation.
+    # gc time also can be seen on diag.html
+    print(f"Total startup time (without main, until asyncio ready) {start_dt} msec")
+    print(f"Memory used at startup {alloc} gc={gc_t} msec")
+    # March 2026:
+    # Total startup time (without main, until asyncio ready) 4085 msec
+    # Memory used at startup 137840 gc=28 mse
+
     controller.all_notes_off()
-    print(f">>>Total startup time (without main, until asyncio ready) {start_dt} msec")
-    print(f">>>Memory used at startup {alloc} gc={gc_t} msec")
-    # Tell user system ready
-    await controller.clap(8)
-    led.off()
+    
+    # Tell user system ready by moving some actuators
+    await controller.clap(5)
+    _led.off()
 
 
 async def main():
+    global _led, _logger
+
+    # Ensure /data and /tunelib folders are there
+    drehorgel.init_fileops()
+
     #  Establish global exception handler for asyncio
     asyncio.get_event_loop().set_exception_handler(_handle_exception)
 
-    # Pass getLogger to timezone... it can't import minilog
+    # Change led color
+    drehorgel.init_led()
+    _led = drehorgel.led
+    _led.starting(0)
+
+    # Get the time/timezone/ntp process going in background.
+    # The timezone object is needed for logger, and most modules
+    # require logger
+    drehorgel.init_timezone()
+    getLogger.set_timezone( drehorgel.timezone )
+    _logger = getLogger(__name__)
+    _led.set_logger( _logger ) # it's only for error count, use startup's logger instance
+    
+    # Inject getLogger to timezone... it can't import minilog
     # that would be circular imports.
-    drehorgel.timezone.setLogger(minilog.getLogger)
+    drehorgel.timezone.setLogger(getLogger)
     # Get configuration
     drehorgel.init_config()
 
@@ -120,19 +198,21 @@ async def main():
 
     scheduler.run_always()
     drehorgel.init()
-    import webserver 
+    import webserver
 
-    start_mcserver()   
+    start_mcserver()
 
-    led.starting(3)
+    _led.starting(3)
 
-    _logger.debug("Starting asyncio loop")
     await asyncio.gather(
         webserver.run_webserver(),
         scheduler.background_garbage_collector(),
         signal_ready(drehorgel.controller),
-        #>>>do_aioprof() # only works if aioprof installed.
+        do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
 
 asyncio.run(main())
-
+# >>> ideas. 
+# >>> Universal board
+# >>> Support for MIDI over USB
+# >>> umidiparser sort by time and event type, program change before note on.

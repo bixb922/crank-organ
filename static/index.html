@@ -161,8 +161,7 @@
 <button type="button" onclick="battery_level()" id="batteryLevelButton">
 	Calibrar indicación batería
 </button>
-
-<div class="footerdiv"></div>
+<br>
 <!-- 
  You are not allowed to remove nor hide this copyright notice.
  No está autorizado borrar ni ocultar esta marca de derechos de autor
@@ -285,6 +284,7 @@ async function battery_level(){
     await fetch_json( "/record_battery_level", level_json) ;
 	showPopup( "batteryLevelButton", tlt("Nivel de batería registrado"));
 }
+
 
 translate_html();
 getPageData() ; 

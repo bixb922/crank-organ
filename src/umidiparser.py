@@ -53,7 +53,7 @@ import sys
 _implementation = sys.implementation.name # type:ignore
 if _implementation == "micropython":
     from micropython import const
-    import uasyncio as asyncio
+    import asyncio
 
     time_sleep_us = lambda usec: time.sleep_us(usec)
     time_now_us = lambda: time.ticks_us()
@@ -67,7 +67,7 @@ elif _implementation == "circuitpython":
     except:
         pass
     time_sleep_us = lambda usec: time.sleep(usec / 1_000_000)
-    time_now_us = lambda: (time.monotonic_ns() + 500) // 1_000
+    time_now_us = lambda: (time.monotonic_ns() + 500) // 1_000 # type:ignore
     time_diff_us = lambda x, y: x - y
     asyncio_sleep_ms = lambda x: asyncio.sleep_ms(x)
 else:
@@ -85,6 +85,10 @@ else:
         return function
 
     micropython.native = lambda function: function
+    
+
+from filecache import MidiFileCache #, MidiNoCache, MidiBufferedCache
+
 
 # Only utf-8 encoding available in Micropython 1.19.1 or CircuitPython 7.3.3
 # Should probably be .decode("iso8859-1", errors="backslashreplace")
@@ -140,7 +144,6 @@ ESCAPE = const(0xF7)
 # to accomodate the larger data
 _INITIAL_EVENT_BUFFER_SIZE = const(20)
 
-
 # Parse midi variable length number format,
 # used for time deltas and meta message lengths
 @micropython.native
@@ -165,7 +168,7 @@ def _midi_number_to_int(midi_data):
     return value
 
 
-def _process_events(event_iterator, miditicks_per_quarter, reuse_event_object):
+def _process_events(event_iterator, miditicks_per_quarter, reuse_event_object ):
     # This function iterates through the provided event iterator,
     # getting one MidiEvent at a time, and processes MIDI meta set tempo
     # events to convert the time delta in MIDI ticks to time delta in microseconds,
@@ -204,7 +207,7 @@ def _process_events(event_iterator, miditicks_per_quarter, reuse_event_object):
         elif status == END_OF_TRACK:
             yield event
             # Ignore events after end of track
-            break
+            return # >>> was break!!!
 
         yield event
 
@@ -432,11 +435,11 @@ class MidiEvent:
         #       The raw data of the event. self.data is the read only
         #       property for self._data.
 
-        self._event_status_byte = None
-        self._data = None
+        #self._event_status_byte = None
+        #self._data = None
 
-        self._status = None
-        self.delta_miditicks = None
+        #self._status = None
+        #self.delta_miditicks = None
         self.delta_us = None
         self.timestamp_us = None
 
@@ -939,10 +942,10 @@ class MidiTrack:
     def __init__(
         self,
         file_object,
-        filename,
         reuse_event_object,
         buffer_size,
         miditicks_per_quarter,
+        filecache
     ):
         """
         The MidiTrack cosntructor is called internally by MidiFile,
@@ -953,62 +956,27 @@ class MidiTrack:
         # file_object: This is the currently opened midi file, positioned at the start
         #   of this track's data,
         #   just before the 4 bytes with the track or chunk length.
-        # filename: the file name of file_object.
-        #   file_object.name not available on CircuitPython
+        #   Use this to get track length and return pointer in file
+        #.  pointing to end of track so MidiFile can continue processing next track. Do not keep this file object
         self._reuse_event_object = reuse_event_object
         self._miditicks_per_quarter = miditicks_per_quarter
         self._buffer_size = buffer_size
-
+        self._filecache = filecache
+        
         # MTrk header in file has just been processed, get chunk length
         self._track_length = int.from_bytes(file_object.read(4), "big")
 
-        if buffer_size <= 0:
-            # Read the entire track data to RAM
-            self._track_data = file_object.read(self._track_length)
-        else:
-            # Store filename and start position to open file when interation over track data starts
-            self._filename = filename
-            self._start_position = file_object.tell()
+        # Store start position to open file here when interation over track data starts
+        self._start_position = file_object.tell()
+        # Skip rest of track chunk, fast forward to beginning of next track
+        file_object.seek(self._track_length, 1)
 
-            # Skip rest of track chunk, fast forward to beginning of next track
-            file_object.seek(self._track_length, 1)
-
-        self._track_parser = None
         self.event = None
         self.current_miditicks = None
 
-    def _buffered_data_generator(self):
-        # Generator to return byte by byte from a buffered track
-        # (a track entirely in memory, buffer_size=0)
-        # This way seems to be rather fast:
-        return (data_byte for data_byte in self._track_data)
-
-    def _file_data_generator(self):
-        # Generator to return byte by byte of a track with
-        # buffer_size>0. Reads portions of n bytes and then returns
-        # byte by byte.
-
-        # Allocate buffer to be reused for each read
-        buffer = bytearray(self._buffer_size)
-
-        # Open file again to read the track
-        with open(self._filename, "rb") as file:
-            file.seek(self._start_position)
-            unread_bytes = self._track_length
-            while True:
-                # Read a buffer of data and yield byte by byte to caller
-                bytes_read = file.readinto(buffer)
-                yield from memoryview(buffer)[0:bytes_read]
-                # Check if end of track reached
-                unread_bytes -= bytes_read
-                if unread_bytes <= 0 or bytes_read == 0:
-                    return
-
-    def _get_midi_data(self):
-        # Choose method to return data
-        if self._buffer_size <= 0:
-            return self._buffered_data_generator
-        return self._file_data_generator
+    def _track_byte_iterator( self ):
+        fileinstance = self._filecache.open()
+        return iter(fileinstance.byte_reader(self._start_position, self._track_length, self._buffer_size))
 
     def __iter__(self):
         """
@@ -1034,19 +1002,19 @@ class MidiTrack:
         # This is used to parse a single track, for multitrack processing _track_parse_start
         # method is used
         return _process_events(
-            MidiParser(iter(self._get_midi_data()())).parse_events(),
+            MidiParser(self._track_byte_iterator()).parse_events(),
             self._miditicks_per_quarter,
             self._reuse_event_object,
         )
 
     # _track_parse_start and _track_parse_next are an iterator used
-    # to merge tracks. Instead of just iterationg, they also keep track of the
+    # to merge tracks. Instead of just iterating, they also keep track of the
     # sum of midi ticks in thr track. They allow comparing tracks to know which
     # has the next event.
     def _track_parse_start(self):
         # This is an internal method called by MidiFile for multitrack processing.
-        self._track_parser = MidiParser(
-            iter(self._get_midi_data()())
+        self._track_parser = MidiParser( 
+            self._track_byte_iterator()
         ).parse_events()
 
         # Get first event to get things going...
@@ -1097,21 +1065,21 @@ class MidiFile:
         The name of a MIDI file, usually a .mid or .rtx MIDI file.
 
         buffer_size=100
-        The buffer size that will be allocated for each track, 0=read
-        complete track to memory.
+        The buffer size that will be allocated for each track
 
         reuse_event_object=False
         True will reuse the event object during parsing, using less RAM.
 
         Returns an iterator over the events in the MIDI file.
         """
-
         # Store parameters
         self._reuse_event_object = reuse_event_object
+        assert buffer_size > 0
         self._buffer_size = buffer_size
+        self._filecache = MidiFileCache( filename )
 
         # Process file
-        with open(filename, "rb") as file:
+        with self._filecache.open() as file:
             # First chunk must be MThd midi header, process header and validate
             (
                 self._format_type,
@@ -1119,22 +1087,20 @@ class MidiFile:
                 self._miditicks_per_quarter,
             ) = self._get_header(file)
 
-            self._filename = filename
-
             # Get all track objects of the file.
             # Disregard the number of chunks, read the real number of tracks present.
             self.tracks = []
             for _ in range(number_of_chunks):
-                track_id = file.read(4).decode("latin-1")
+                track_id = file.read(4)
                 # Only process MTrk chunks
-                if track_id == "MTrk":
+                if track_id == b"MTrk":
                     self.tracks.append(
                         MidiTrack(
                             file,
-                            filename,
                             reuse_event_object,
                             buffer_size,
                             self._miditicks_per_quarter,
+                            self._filecache
                         )
                     )
                 else:
@@ -1142,27 +1108,27 @@ class MidiFile:
                     # use MidiTrack but ignore result
                     MidiTrack(
                         file,
-                        filename,
                         reuse_event_object,
                         10,
                         self._miditicks_per_quarter,
+                        self._filecache
                     )
-
+            
     def _get_header(self, file):
         # Decodes the MIDI file header, returns the
         # values of the header:
         # format type (0-2), number of data chunks, MIDI ticks per quarter note
 
-        track_id = file.read(4).decode("latin-1")
-        if track_id != "MThd":
+        track_id = file.read(4)
+        if track_id != b"MThd":
             # It is said that Mac midi files may have 128 extra
             # bytes prepended (i.e. a Mac BInary Header)
             # Just in case, skip bytes until 128 bytes have been ignored,
             # then read track_id again
             # I have not been able to verify this.
             file.read(128 - 4)
-            track_id = file.read(4).decode("latin-1")
-            if track_id != "MThd":
+            track_id = file.read(4)
+            if track_id != b"MThd":
                 raise ValueError("Midi file does not start with MThd header")
         header_len = int.from_bytes(file.read(4), "big")
 
@@ -1210,17 +1176,10 @@ class MidiFile:
         """
         Return the file name of the MIDI file, with absolute path.
         """
-        return self._filename
+        return self._filecache.get_filename()
 
     @property
     def buffer_size(self):
-        """
-        Return the buffer_size value. 0=tracks are buffered entirely in RAM.
-        A number, for example buffer_size=100 means a buffer of 100 bytes is
-        allocated per track to read the track data.
-
-        This allows to read large MIDI files efficiently on microcontrollers with small RAM.
-        """
         return self._buffer_size
 
     @property
@@ -1322,7 +1281,7 @@ class MidiFile:
             self._miditicks_per_quarter,
             self._reuse_event_object,
         )
-
+    
     def length_us(self):
         """
         Returns the length of the MidiFile in microseconds.
@@ -1335,8 +1294,10 @@ class MidiFile:
         # Iterate through all events
         # The complete file must be processed to compute length
         # Open another instance of the file, so that the current process is not disturbed
-        for event in MidiFile(self.filename):
-            playback_time_us += event.delta_us
+        # Use parameters to make it two times faster than without
+        for event in MidiFile(self._filecache.get_filename(), buffer_size=100, reuse_event_object=True):
+            if event.delta_us is not None:
+                playback_time_us += event.delta_us
 
         # Return the last time seen, or 0 if there were no events
         return playback_time_us
@@ -1350,7 +1311,10 @@ class MidiFile:
         """
         return MidiPlay(self)
 
-
+    def finalize( self ):
+        self._filecache.finalize()
+            
+        
 class MidiPlay:
     """
     Internal class used to play a MIDI file waiting after each event for the next one.
@@ -1396,3 +1360,4 @@ class MidiPlay:
         # If wait time <= 0, execute asyncio.sleep anyhow to yield control to other tasks
         await asyncio_sleep_ms(max(wait_time // 1_000, 0))
         return event
+    

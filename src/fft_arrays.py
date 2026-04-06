@@ -41,8 +41,8 @@ def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
 #		_fft(out + step, buf + step, n, step * 2);
     if step < n:
         step2 = step*2
-        _fft_recursive(out, outoffset, buf, bufoffset, n, step2)
-        _fft_recursive(out, outoffset+step, buf, bufoffset+step, n, step2)
+        _fft_recursive(out, outoffset, buf, bufoffset, n, step2) # type:ignore
+        _fft_recursive(out, outoffset+step, buf, bufoffset+step, n, step2) # type:ignore
         #multiple = BUFFER_SIZE//n # only allow n == BUFFER_SIZE
 #		for (int i = 0; i < n; i += 2 * step) {
         for i in range(0,n,step2):
@@ -68,6 +68,7 @@ def _fft_recursive( buf, bufoffset, out, outoffset, n, step):
 
 @micropython.native  # type:ignore
 def fft(signal, hann_windowing=False):
+
     if len(signal)!=BUFFER_SIZE:
         raise ValueError
     if hann_windowing:

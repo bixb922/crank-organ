@@ -1,6 +1,14 @@
 # Fix MicroPython .bin image generation for romfs
-# Needs v1.26
+# version > v1.26
+# Get esp-idf, see: https://github.com/micropython/micropython/tree/master/ports/esp32
+    # git clone ...
+    # no need for git checkout/git subodule update
+    # cd esp-idf
+    # ./install.sh esp32s3
+    # source export.sh
+# To generate micropython  image:
     # git clone https://www.github.com/micropython/micropython.git
+
 	# To generate micropython 1.26.preview image:
 	# % git rebase -i f77fd62
     # and edit file with vi (or whatever editor git uses)
@@ -26,10 +34,13 @@
 	# % make clean	
 	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT submodules
     # No spaces allowed in FROZEN_MANIFEST path (even if enclosed in "")
-	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/some_path_without_blanks/manifest.py
+    # Create a soft link:
+    # ln -s "/Users/username/some folder/another folder/crank-organ/tools/" crank_organ_tools
+	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/crank_organ_tools/mainfest.py
+    # Preferable without manifest, if not the ESP32 will become difficult to manage.
     # The output are the .bin files
     # .bin files are now in micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT folder
-    # Copy to micropython_bin folder with 
+    # Copy to bin folder with 
     # % gmake copy_mp_bin
 
 from pathlib import Path
@@ -38,6 +49,8 @@ from shutil import copy
 home_path = Path.home()
 port_path = home_path / "micropython/ports/esp32"
 my_path = Path(__file__).parent
+modules_path = port_path / "modules"
+
 board_path = port_path / "boards/ESP32_GENERIC_S3"
 print(f"{home_path=}")
 print(f"{port_path=}")
@@ -47,7 +60,7 @@ PARTITION_FILENAME = "partitions-4MiB-BIG-romfs.csv"
 def add_partition_csv():
     partition_dst = port_path / PARTITION_FILENAME
     copy( my_path / PARTITION_FILENAME, partition_dst )
-    print("new partition csv copied to", partition_dst)
+    print(partition_dst, "copied as new partition file")
 
 def fix_sdkconfig_board():
     sdkconfig_filename = board_path / "sdkconfig.board"
@@ -67,16 +80,26 @@ def fix_mpconfigboard():
     mpconfig_filename = board_path / "mpconfigboard.h"
     with open(mpconfig_filename ) as input:
         mpconfigport = input.read()
-
+    dirty = False
     if "MICROPY_VFS_ROM" in mpconfigport:
-        print(f"{mpconfig_filename} already up to date")
-        return
-    
-    mpconfigport += "\n#define MICROPY_VFS_ROM (1)\n"
-    with open( mpconfig_filename, "w" ) as output:
-        output.write( mpconfigport )
-    print(f"{mpconfig_filename} updated")
-    
+        print(f"{mpconfig_filename} already has VFS_ROM defined")
+    else:
+        dirty = True
+        mpconfigport += "\n#define MICROPY_VFS_ROM (1)\n"
+
+    if "MICROPY_PY_DEFLATE_COMPRESS" in mpconfigport:
+        print( f"{mpconfig_filename} already has compression defined")
+    else:
+        dirty = True
+        mpconfigport += "\n#define MICROPY_PY_DEFLATE_COMPRESS (1)\n"
+
+    if dirty:
+        with open( mpconfig_filename, "w" ) as output:
+            output.write( mpconfigport )
+        print(f"{mpconfig_filename} updated")
+    else:
+        print(f"{mpconfig_filename} no need to update.")
+
 def main():
     add_partition_csv()
     fix_sdkconfig_board()

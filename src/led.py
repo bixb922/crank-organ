@@ -8,9 +8,6 @@ import asyncio
 import neopixel
 import machine
 
-# if __name__ == "__main__":
-#    sys.path.append("software/mpy")
-
 LED_FILE = "data/led.txt"
 
 # 1=lowest, 255=highest
@@ -36,14 +33,11 @@ class BlinkingLed:
             self.neopixel_led = NoLED()
 
         self.off()
-
-        # Get a logger to get error count
-        self.logger = None
-
-        self.setlist = None # We don't know the setlist yet, too early
-        
-        self.problem_task = asyncio.create_task(self._problem_process())
         self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
+
+    def set_logger( self, logger ):
+        # Use logger instance to get error count
+        self.problem_task = asyncio.create_task(self._problem_process(logger))
 
     # Simple (permanent) led on and off
     def on(self, color):
@@ -54,31 +48,27 @@ class BlinkingLed:
         self.on((0, 0, 0))
 
     # Problem encountered? run permanent task flashing red
-    async def _problem_process(self):
+    async def _problem_process(self, logger):
         # Wait until asyncio is running
         await asyncio.sleep_ms(1000)
-        # minilog is needed to get error count to blink red if a problem occurred
-        import minilog
-        self.logger = minilog.getLogger(__name__)
-            
+        
         while True:
+            await asyncio.sleep_ms(1000)
             # Problem: error or exception entry in log
-            if self.logger.get_error_count() > 0:
+            if logger.get_error_count() > 0:
                 # Replace this task with a blinking task
                 self.problem_task = self._blink_background((MEDIUM, 0, 0))
                 # Don't blink for setlist empty anymore, could be confusing
-                if self.blink_setlist:
+                if self.blink_setlist_task:
                     self.blink_setlist_task.cancel() # type:ignore
                     self.blink_setlist_task = None
                 # No way to exit red blinking, no need to test again.
                 # But the blinking task created here could be superceded
                 # by a sever error blinking....
                 return
-            await asyncio.sleep_ms(1000)
 
     # Starting phases, blue->green
     def starting(self, phase):
-        # Shades of green
         self.on(
             (
                 (0, 0, VERY_LOW),
@@ -177,7 +167,7 @@ class BlinkingLed:
 def set_led( pin ):
     # Caching pin makes this module decoupled from pinout
     # and led starts sooner. led.txt is only written if
-    # the pin is changes and is different from the default 48.
+    # the pin has changed and is different from the default 48.
     if get_led() != pin:
         # Write led.txt only if pin definition is different
         with open(LED_FILE, "w") as file:

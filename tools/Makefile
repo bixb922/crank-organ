@@ -1,6 +1,5 @@
 # >>> add Microdot and umidiparser as submodules.
 # >>> update Microdot to latest version. Use native authentication.
-# >>> check if multipart/form-data is useful.
 
 # This makefile is used during software development.
 # Use gmake -fcrank-organ/tools/Makefile
@@ -34,9 +33,10 @@ NOW := $(shell date "+%Y%m%d-%H%M%S")
 MPY_FILES := \
 compiledate.mpy \
 fileops.mpy \
+actuatorstats.mpy \
 battery.mpy \
+blemcs.mpy \
 config.mpy \
-counter.mpy \
 drehorgel.mpy \
 driver_base.mpy \
 driver_gpio.mpy \
@@ -47,6 +47,7 @@ driver_null.mpy \
 driver_ftoms.mpy \
 driver_pca9685.mpy \
 filemanager.mpy \
+filecache.mpy \
 history.mpy \
 led.mpy \
 matrix.mpy \
@@ -58,7 +59,6 @@ organtuner.mpy \
 microphone.mpy \
 pinout.mpy \
 player.mpy \
-poweroff.mpy \
 scheduler.mpy \
 setlist.mpy \
 solenoid.mpy \
@@ -72,7 +72,6 @@ webserver.mpy \
 wifimanager.mpy \
 frequency.mpy \
 fft_arrays.mpy \
-pcnt.mpy \
 mcserver.mpy 
 
 
@@ -90,7 +89,6 @@ pinout.html.gz \
 play.html.gz \
 tunelibedit.html.gz \
 tunelist.html.gz \
-show_midi.html.gz \
 skeleton.css.gz \
 translations.js.gz 
 
@@ -120,7 +118,7 @@ device/update/%.gz : device/static/%.gz
 # Target "compile": compile py to mpy, compress html/js to gz
 # Compilation results to device/mpy
 # Compression results to device/static
-compile: $(addprefix device/mpy/, $(MPY_FILES)) $(addprefix device/static/,  $(STATIC_FILES))
+compile: $(addprefix device/mpy/, $(MPY_FILES)) $(addprefix device/static/,  $(STATIC_FILES)) compiledate
 
 compiledate:
 	python3 crank-organ/tools/write_compiledate.py
@@ -152,19 +150,19 @@ prepare_git: romfs
 	python3 crank-organ/tools/update-toc.py
 	-rm device/mpy/mcserver.mpy
 	-rm device/mpy/mcserver.py
-	python3 -m freezefs crank-organ/data crank-organ/install/install_data.py --target=/data --on-import=extract --overwrite=always --compress
-	-rm -r freezetemp/
-	-mkdir freezetemp/
-	-mkdir freezetemp/software/
-	-mkdir freezetemp/software/mpy/
-	-mkdir freezetemp/software/static/
-	cp crank-organ/src/* freezetemp/software/mpy/
-	cp crank-organ/static/* freezetemp/software/static/
-	cp crank-organ/src/main.py freezetemp/
-	cp crank-organ/tools/boot.py freezetemp/
-	rm freezetemp/software/mpy/main.py
-	python3 -m freezefs freezetemp crank-organ/install/install_software.py --target=/ --on-import=extract --overwrite=always --compress
-	-rm -r freezetemp
+# 	python3 -m freezefs crank-organ/data crank-organ/install/install_data.py --target=/data --on-import=extract --overwrite=always --compress
+# 	-rm -r freezetemp/
+# 	-mkdir freezetemp/
+# 	-mkdir freezetemp/software/
+# 	-mkdir freezetemp/software/mpy/
+# 	-mkdir freezetemp/software/static/
+# 	cp crank-organ/src/* freezetemp/software/mpy/
+# 	cp crank-organ/static/* freezetemp/software/static/
+# 	cp crank-organ/src/main.py freezetemp/
+# 	cp crank-organ/tools/boot.py freezetemp/
+# 	rm freezetemp/software/mpy/main.py
+# 	python3 -m freezefs freezetemp crank-organ/install/install_software.py --target=/ --on-import=extract --overwrite=always --compress
+# 	-rm -r freezetemp
 
 
  
@@ -190,19 +188,26 @@ cleanpc:
 	-mkdir device/static
 	-mkdir device/update
 
-initdevice:
+initdevice: compile
 	-$(MPREMOTE) mkdir software
 	-$(MPREMOTE) mkdir software/static
 	-$(MPREMOTE) mkdir software/mpy
+	$(MPREMOTE) cp crank-organ/static/favicon.ico :/software/static/
+	$(MPREMOTE) cp crank-organ/static/favicon.png :/software/static/
+	$(MPREMOTE) cp crank-organ/static/crank.jpg :/software/static/
+	$(MPREMOTE) cp crank-organ/src/main.py :/
+	$(MPREMOTE) cp crank-organ/tools/boot.py :/
+	$(MPREMOTE) cp -r device/mpy/ :/software/mpy/
+	$(MPREMOTE) cp -r device/static/ :/software/static/
 
 initpc:
 	mkdir device
 	mkdir device/mpy
 	mkdir device/static
 
-installdevice: 
-	$(MPREMOTE) run crank-organ/install/install_software.py  
-	$(MPREMOTE) run crank-organ/install/install_data.py 
+#installdevice: 
+#	$(MPREMOTE) run crank-organ/install/install_software.py  
+#	$(MPREMOTE) run crank-organ/install/install_data.py 
 
 
 romfs: compile
@@ -222,10 +227,10 @@ romfs: compile
 	# gmake romfs
 	# 
 	# Then:
-	# cd micropython_bin
+	# cd crank-organ/bin
 	# sh flash_mp.sh
 	#
-	-mkdir micropython_bin
+	-mkdir crank-organ/bin
 	-rm -r -f romfs_temp
 	mkdir romfs_temp
 	mkdir romfs_temp/static
@@ -240,11 +245,13 @@ romfs: compile
 	cp crank-organ/src/main.py romfs_temp/
 	python3 -m freezefs crank-organ/data temp.py --target=/data --on-import=extract --compress
 	$(MPY_CROSS) temp.py -o romfs_temp/install_data.mpy
-	mpremote romfs --no-mpy -o micropython_bin/romfs.bin build romfs_temp 
-	echo "Run flash_mp.sh in micropython_bin folder"
+	mpremote romfs --no-mpy -o crank-organ/bin/romfs.bin build romfs_temp 
+	echo "Run flash_mp.sh in crank-organ/bin folder"
+	echo "or deploy with: mpremote romfs deploy romfs_temp"	
+	echo "or deploy with: esptool.py --chip esp32s3 write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x1C0000 crank-organ/bin/romfs.bin"
 
 copy_mp_bin:
 	#  cache results of MicroPython image compilation here
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin ../../micropython_bin/
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/partition_table/partition-table.bin ../../micropython_bin/
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/micropython.bin ../../micropython_bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin ../bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/partition_table/partition-table.bin ../bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/micropython.bin ../bin/

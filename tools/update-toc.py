@@ -1,6 +1,5 @@
-# Utility to generate automatic table of contents for .md markdown files
- 
 import re
+
 from glob import glob
 
 level0 = 0

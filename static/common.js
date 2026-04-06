@@ -22,6 +22,8 @@ let MAX_CENTS = 50 ;
 //   --primary-color: #007bff;
 //   --font-size-base: 16px;
 // }
+// >>>allow user to select color scheme
+
 light_gold = "#B29700";
 american_gold = "#D4AF37";
 sunray = "#E1C158";
@@ -41,7 +43,10 @@ meter_red_color = "#C36922";
 meter_gray = "#e8e8e8" ;
 progress_color = "#3EA8A3" ; 
 
-
+// shorthand for document.getElementById(id)
+function $g(id){
+	return document.getElementById(id);
+}
 
 function is_no_number( n ){
 	return n == null || typeof n === "undefined" || isNaN(n) ;
@@ -257,7 +262,7 @@ async function fetch_json( url, post_data ){
 	let post_arg = make_fetch_args( post_data ) ;
 	// One connect yields 0.75 but one failure still does not lower connects_ok so drastically
 	fetch_json.isConnected = ()=>{ 
-		// should be 2-3 times commonGetProgress.setSleep()
+		// timeout value should be 2-3 times commonGetProgress.setSleep()
 		if( (Date.now() - fetch_json.last_ok) > 15_000 ){
 			return false; // should be some activity at least...
 		}
@@ -353,12 +358,11 @@ function make_fetch_args( data ){
 async function sleep_ms( t ){
 	await new Promise(r => setTimeout(r, t));
 }
-
 class GetProgress{
 	// Usage: instantiated in common.js only once (like a singleton)
 	// commonGetProgress.registerCallback() to register callback when progress has been updated
 	// commonGetProgress.setReloadIfTunelibChanged(v) true=reload this page if tunelib has changed, false=don't.
-	// commonGetProgress.fetchJson( "/drop_setlist", post_data ) to
+	// commonGetProgress.fetchProgress("/drop_setlist", post_data) to
 	// call some fetch_json that returns a progress and filter it, will also do callbacks.
 	// commonGetProgress.registerCache( ) to register a JsonCache for fill/drop functions
 	constructor(){
@@ -397,12 +401,19 @@ class GetProgress{
 		this.#backgroundProcess();
 	}
 	async getProgress( ){
-		let progress = await this.fetchJson( "/get_progress" );
+		let progress = await this.fetchProgress( "/get_progress");
 		console.debug("progress=", progress);
 		return progress;
 	}
 
-	async fetchJson( url, post ){
+	async fetchProgress( url, post ){
+		if( isUsedFromIOT() ){
+			return {};
+		}
+		// Do not refresh hidden/background pages. Stall.
+		while( document.hidden ){
+			await sleep_ms(200);
+		}
 		// do a fetch_json that returns a progress, and filter it
 		// before returning.
 		let progress = await fetch_json( url, post );
@@ -455,7 +466,7 @@ class GetProgress{
 		// Cache is refreshed on boot and when tunelib changes significantly.
 		let tunelib_change = progress.tunelib_signature != this.stored_tunelib_signature ;
 		let reboot = progress.boot_session != this.stored_boot_session;
-		console.log("#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
+		// console.log("#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
 		if( tunelib_change || reboot ){
 			// Force refresh of all the (registered) JsonCache objects
 			// by calling their drop method
@@ -566,9 +577,10 @@ class PageHeader{
 				textById("connectText", "\u205F"); 
 			}
 			else{
-				// 💔 &#x1f494; broken heart + six per em space
-				textById("connectSymbol", "\u2006💔\u2006"); 
-				textById("connectText", tlt("no conectado")+"\u205F"); 
+				// broken heart 💔 &#x1f494; + worried face &#x1F61F; + six per em space
+				textById("connectSymbol", "\u2006💔😟\u2006"); 
+				// Don't use long text, it may not fit on the header of a small (cell phone) screen
+				textById("connectText", "\u205F"); 
 			}
 			showHideElement( "batterySymbol", isConnected );
 			showHideElement( "batteryTime", isConnected );
@@ -859,13 +871,15 @@ class JsonCache{
 	}
 
 }
-let tunelibCache = new JsonCache("/data/tunelib.json");
-let lyricsCache = new JsonCache("/data/lyrics.json");
+let tunelibCache = new JsonCache( "/data/tunelib.json");
+let lyricsCache = new JsonCache( "/data/lyrics.json");
 async function lyricsCacheTuneid( tuneid ){
 	// If no lyrics available, return empty string
 	return ((await lyricsCache.get())[tuneid]) || "";
 }
-let configCache = new JsonCache("/data/config.json");
+let configCache = new JsonCache( "/get_current_config");
+
+
 async function isMultipleSetlistsEnabled(){
 	let config = await configCache.get();
 	return config["multiple_setlists"];
@@ -892,9 +906,9 @@ function isUsedFromServer(){
 
 let programNameList = [
     "any",
-    "Acoustic Grand Piano",
-    "Bright Acoustic Piano",
-    "Electric Grand Piano",
+    "Acoustic Piano",
+    "Bright Piano",
+    "Electric Piano",
     "Honky-tonk Piano",
     "Electric Piano 1",
     "Electric Piano 2",
@@ -916,17 +930,17 @@ let programNameList = [
     "Accordion",
     "Harmonica",
     "Tango Accordion",
-    "Acoustic Guitar (nylon)",
-    "Acoustic Guitar (steel)",
-    "Electric Guitar (jazz)",
-    "Electric Guitar (clean)",
-    "Electric Guitar (muted)",
+    "Nylon Guitar",
+    "Steel Guitar",
+    "Jazz Guitar",
+    "Clean Guitar",
+    "Muted Guitar",
     "Overdriven Guitar",
     "Distortion Guitar",
     "Guitar Harmonics",
     "Acoustic ",
-    "Electric  (finger)",
-    "Electric  (pick)",
+    "Electric (finger)",
+    "Electric (pick)",
     "Fretless ",
     "Slap  1",
     "Slap  2",
@@ -1020,9 +1034,11 @@ let programNameList = [
     "Helicopter",
     "Applause",
     "Gunshot",
-    "drum"]
+    "drum"];
+
+
 // Translate MIDI program number to program name
-function program_name( program_number ){
+function programName( program_number ){
 		if( program_number == "" ){
 			return programNameList[0];
 		}
@@ -1035,7 +1051,14 @@ function program_name( program_number ){
 		
 }
 
-function noteName( midi ){
+function noteName( programNumber, midi ){
+	if( programNumber == 129 ){
+		// special program numbef for drums
+		return "" + midi;
+	}
+	if( midi < 0 || midi > 127 ){
+		return "???";
+	}
     let note_list = [ "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B" ];
     let nn =  note_list[ midi%12 ] + Math.floor( (midi/12) - 1 );
     return nn;
@@ -1162,7 +1185,7 @@ async function setTimezone(){
 	let longName = Intl.DateTimeFormat().resolvedOptions().timeZone; 
 	// Allow only posts with this cache, this prevents race condition with index.html's cach refill
 	if( !setTimezone.cache ){
-		setTimezone.cache = new JsonCache("/set_time_zone", postOnly=true ) ;
+		setTimezone.cache = new JsonCache( "/set_time_zone", postOnly=true ) ;
 	}
 	// fetch_json will be done only once 
 	await setTimezone.cache.get({"offset": offsetMinutes*60, 
@@ -1321,7 +1344,7 @@ async function queueTune( tuneid, slot ) {
         "tuneid": tuneid, 
         "slot": slot } ;
 	// queue tune and update page with result
-	await commonGetProgress.fetchJson( "/queue_tune", postdata ) ;
+	await commonGetProgress.fetchProgress( "/queue_tune", postdata) ;
 }
 
 
@@ -1486,10 +1509,11 @@ class TuneTitle extends HTMLSpanElement{
 				}
 			}
 			else if( c == "s"){
-				let spectator_name = tune_requests[ self.tuneid ];
-				if( spectator_name ){
-					result = "\u00A0-\u00A0" + escapeHtml(spectator_name) + "\u00A0";
-				}
+				// not in use
+				//let spectator_name = tune_requests[ self.tuneid ];
+				//if( spectator_name ){
+				//	result = "\u00A0-\u00A0" + escapeHtml(spectator_name) + "\u00A0";
+				//}
 			}
 			else if( c == "d"){
 				result = "\u00A0" + formatMilliMMSS( self.tune[TLCOL_TIME] ) + "\u00A0";
@@ -1501,10 +1525,10 @@ class TuneTitle extends HTMLSpanElement{
 		let position = setlist.indexOf( this.tuneid );
 		const in_setlist = (position >= 0);
 		// Update only tunes in setlist
-		let tune_requests = progress["tune_requests"] ;
-		if( tune_requests == undefined ){
-			tune_requests = {} ;
-		}
+		// let tune_requests = progress["tune_requests"] ;
+		// if( tune_requests == undefined ){
+		//	tune_requests = {} ;
+		//}
 		let before = "";
 		let after = "";
 		for( let c of this.options.beforeFormat ){
@@ -1564,7 +1588,7 @@ class SetlistMenu extends HTMLButtonElement{
 	}
 	static async #openTunelibChangeDialog( tlcol ){
 		let textMap = new Map();
-		// >>> redesign if all columns are prompted
+		// >>> redesign if all columns are available here
 		textMap.set( TLCOL_RATING, tlt("Ingrese") + " " + map_tlcol_names(TLCOL_RATING));
 		textMap.set( TLCOL_INFO, tlt("Ingrese") + " " + map_tlcol_names(TLCOL_INFO));
 		// TLCOL_RATING, TLCOL_INFO, 
@@ -1576,7 +1600,7 @@ class SetlistMenu extends HTMLButtonElement{
 
 			// send a list of tuples just as /save_tunelib likes it
 			// just with one change, but its a list of lists...
-		// >>> should rating be limited to * ** and ***?
+			// >>> should rating be limited to * ** and ***?
 			await fetch_json( "/save_tunelib", [[TLOP_REPLACE_FIELD, SetlistMenu.tuneid, tlcol, info]] );
 			showPopup("", tlt("Cambios almacenados, actualización pendiente")); 
 			await sleep_ms(1000);

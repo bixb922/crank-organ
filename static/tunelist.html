@@ -50,6 +50,24 @@ HEADER[3] = "mm:ss"; // time column is in mm:ss format
 let sortColumn = 0 ;
 let direction = 1 ; // sort direction must be 1 or -1
 
+// Use history to compute TLCOL_HISTORY
+let historyCache = new JsonCache( "/data/history.json" );
+async function updateTunelibWithHistory( tunelib ){
+    if( isUsedFromIOT() ){
+        return;
+    }
+    // Restriction: needs reboot to update history
+    let history = await historyCache.get();
+    for( let tuneid in tunelib ){
+        tunelib[tuneid][TLCOL_HISTORY] = 0;
+    }
+    for( const [historyid, time, percent, rfu] of history ){
+        // Count if 95% played
+        if( historyid in tunelib && percent > 95 ){
+            tunelib[historyid][TLCOL_HISTORY] += 1;
+        }
+    }
+}
 
 // Keep track of which rows are visible
 function tunelistVisibilityChanges( entries ){
@@ -71,7 +89,7 @@ async function pageRefreshProcess( ) {
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
         document.getElementById( "startButton").style.display = "none" ;
     }
-    
+
     fillHeader( );
     await fillBody( ) ;
     changeOrder( 0 );
@@ -107,8 +125,9 @@ let fastSearch = [];
 async function fillBody( ) {
     let s = "";
     let tlbody = document.getElementById( "tunelistbody")
-    tlbody.innerHTML = "";  
+    tlbody.innerHTML = ""; 
     let tunelib = await tunelibCache.get(); // common.js
+    await updateTunelibWithHistory( tunelib ); 
     let multipleSetlists = await isMultipleSetlistsEnabled();
     let n = 0;
     for( const [tuneid, tune] of Object.entries(tunelib)) {
@@ -228,7 +247,7 @@ async function showFullInfo(tuneid){
 
 async function startTune() {
     // This will call updateProgress in turn:
-    await commonGetProgress.fetchJson( "/start_tune" );
+    await commonGetProgress.fetchProgress( "/start_tune" );
 }
 
 // Search functionality

@@ -32,7 +32,7 @@ div class="headerdiv">
             <th>Fecha</th>
             <th>Melodía</th>
             <th>Avance %</th>
-            <th><span>Pedido</span>&nbsp;</th>
+            <th style="display:none"><span>Pedido</span>&nbsp;</th>
           </tr>
         </thead>
         <tbody id="historyBody">
@@ -70,15 +70,12 @@ async function getHistory( ) {
         // 0 tuneid
         // 1 date in seconds since 2000/1/1 (ESP32 epoch)
         // 2 percentage
-        // 3 requested by user (true/false)
+        // 3 RFU 
 
         // Convert date from seconds in ESP32 epoch to string
         // date: yyyy-mm-dd, time: hh:mm
         let d = new Date(946_684_800_000); // ESP32 epoch start
         d.setUTCSeconds( hist_element[1] );
-        //>>>why history with dates out of range?
-        // ok:  ["i17ZwSkgx",809359841, 100, 0],
-        // out of range: ["iSWeZDp89", 18446744059830, 100, 0],
         let datetime = "2000-01-01T00:00" ;
         try{
             datetime = d.toISOString() ; // e.g. 2024-05-13T08:40:49.000Z
@@ -92,19 +89,23 @@ async function getHistory( ) {
 
         // Insert separator row with date when date changes
         if( date != previous_date) {
-            let row = insertRow( body, [date]);
-            row.cells[0].colSpan = 3;
+            let row = insertRow( body, [date, "", ""]);
+            row.cells[0].colSpan = 2;
             row.cells[0].style.fontWeight="bold";
+            let deleteDay = document.createElement("button");
+            deleteDay.innerText = "🗑️";
+            deleteDay.onclick = ()=>{deleteHistoryDate(date)};
+            row.cells[1].appendChild( deleteDay );
          };
         previous_date = date ;
 
         // Mark if tune has been requested via web site
-        let user_request = "" ;
-        if( hist_element[3] ) {
+        //let user_request = "" ;
+        //if( hist_element[3] ) {
             // user request
-            user_request = "✔️" ; // check mark &#x2714;
-        }
-        let row = insertRow( body, [time, "", "", user_request]);
+        //    user_request = "✔️" ; // check mark &#x2714;
+        //}
+        let row = insertRow( body, [time, "", "" ]);
 
         // Get title (if still in tunelib...)
         let tuneid = hist_element[0];
@@ -136,8 +137,9 @@ async function getHistory( ) {
 async function deleteHistory(){
     // Purge old elements from history
 	let days = parseInt( document.getElementById("days").value );
-    if( !isNaN(days) ){
+    if( isNaN(days) ){
         showPopup(document.getElementById("days"), "must be numeric" );
+        return;
     }
 	resp = await fetch_json( "/delete_history/" + days ) ;
     showPopup("", tlt("Historia truncada") ); 
@@ -153,8 +155,14 @@ async function make_history_percentage( tune, percentage ){
     return text ;
 }
 
-
-
+async function deleteHistoryDate( date ){
+    if( confirm( tlt("Borrar historia de") + " " + date + " ?") ){
+        let resp = await fetch_json( "/delete_history_date/" + date ) ;
+        showPopup("", tlt("Historia truncada") ); 
+        await sleep_ms(1000);
+        window.location.reload() ;
+    }
+}
 translate_html() ;
 getHistory() ;
 

@@ -12,31 +12,24 @@ import scheduler
 from minilog import getLogger
 import fileops
 from drehorgel import timezone
+# Design procedure to restore a ESP32 from scratch.
+#   esptool
+#   mpremote copy boot.py (or put in image!!!)
+#   copy json files
+#   copy tunelib MIDI files and tunelib ORDER IMPORTANT!!
 
 # >>> print setlist with lyrics
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
-# >>> add play midi button to tunelibedit?
-
-# original hash
-# def _compute_hash(s):
-#     # Each tune has a unique hash derived from the filename
-#     # This is the tuneid. By design it is made unique (see _make_unique_hash)
-#     # and stable.
-#     digest = hashlib.sha256(fileops.filename_no_gz(s).encode()).digest()
-#     folded_digest = bytearray(6)
-#     i = 0
-#     for n in digest:
-#          folded_digest[i] ^= n
-#          i = (i + 1) % 6 # 6 = len(folded_digest)
-#     hash = binascii.b2a_base64(folded_digest).decode()
-#     # Make result compatible with URL encoding
-#     return "i" + hash.replace("\n", "").replace("+", "-").replace("/", "_")
+# >>> document use case: copy midi file with mpremote.
+# >>> document how to do large changes to tunelib
+# >>> document restore tunelib backup
+# >>> save checkpoints if large sync
 
 import sys
-if sys.implementation.version[1] < 26: # type:ignore
-    print(">>>MicroPython version not supported", sys.implementation )
-# >>> Viper function _fold_digest() does not work correctly previous to 1.26
+if  sys.implementation.version[0] <= 1 and sys.implementation.version[1] < 26: # type:ignore
+    raise RuntimeError("MicroPython version not supported", sys.implementation )
+# Viper function _fold_digest() does not work correctly previous to MicroPython 1.26
 
 def _compute_hash(filename_no_gz):
     # Compute hash for midi filename (.gz must be stripped before calling)
@@ -67,8 +60,8 @@ def _fold_digest( digest:ptr8, digest_len:int)->object: # type:ignore
     encoding = ptr8(b64encoding) # type:ignore
     b64 = ptr8(base64_buffer) # type:ignore
     b64[0] = 105 # ord("i"), tuneid hash keys start with that letter
-    # >>> b64[1]=something does not work prior to MicroPyton 1.26!!!!
-    # >>> but b64[0] works....
+    # b64[1]=something does not work prior to MicroPyton 1.26!!!!
+    # but b64[0] works....
     b64[1] = encoding[  folded[0]>>2]                         # 0:765432
     b64[2] = encoding[((folded[0]&0x03)<<4) | (folded[1]>>4)] # 0:10 + 1:7654
     b64[3] = encoding[((folded[1]&0x0f)<<2) | (folded[2]>>6)] # 1:3210 + 2:76
@@ -97,8 +90,8 @@ TLCOL_INFO = const(8)
 TLCOL_DATEADDED = const(9) 
 TLCOL_RATING = const(10)
 TLCOL_SIZE = const(11) 
-TLCOL_HISTORY = const(12)
-TLCOL_LYRICS = const(13) # 1=there are lyrics, 0=no lyrics
+TLCOL_HISTORY = const(12) # Is now calculated in the browser and filled in here
+TLCOL_LYRICS = const(13) # 1=there are lyrics, 0 or ""=no lyrics
 TLCOL_COLUMNS = const(14)
 
 
@@ -126,7 +119,8 @@ class TuneManager:
         self.sync_task = asyncio.create_task(self._sync_process())
         self.sync_event = asyncio.Event()
         self.tunelib_signature = ""
-
+        self.empty_cache()
+        self.midifile_cache_task = asyncio.create_task( self.midifile_cache_process() )
         # Create tunelib.json and lyrics.json if not there.
         # to make javascript happy. Checking if file exists 
         # before reading could cut boot time by 2 seconds if there
@@ -134,6 +128,8 @@ class TuneManager:
         ly = self._read_lyrics() 
         tu = self._read_tunelib()
         self.logger.debug(f"init ok, {len(tu)} tunes in {tunelib_filename}, {len(ly)} lyrics in {lyrics_filename}")
+        del ly
+        del tu
 
     def _compute_tunelib_signature( self, tunelib ):
         # A number that changes (well, almost always) when the tunelib changes.
@@ -172,19 +168,17 @@ class TuneManager:
                                  recreate=True )
 
     def get_info_by_tuneid(self, tuneid):
-        # Used by player.py to get tune info
-        tunelib = self._read_tunelib()
-        if tuneid not in tunelib:
-            return None, 0
-        filename = self.tunelib_folder + tunelib[tuneid][TLCOL_FILENAME]
-        duration = tunelib[tuneid][TLCOL_TIME]
-        return filename, duration
+        # Used by player.py to get tune info and
+        # decompressed MIDI file
+        self.cache_midi( tuneid )
+        if tuneid != self.cached_tune[TLCOL_ID]:
+            # cache_midi could not find/decompress file
+            # return filename=None, duration=0 and title=None.
+            return None, 0, None
+        return self.cached_midifile, int(self.cached_tune[TLCOL_TIME]), self.cached_tune[TLCOL_TITLE]
         
     def get_tune_count(self):
-        tunelib = self._read_tunelib()
-        count = len(tunelib)
-        del tunelib
-        return count
+        return len(self._read_tunelib())
 
     def get_autoplay(self, rating=""):
         # Return list of all possible tune ids marked as autoplay.
@@ -194,10 +188,12 @@ class TuneManager:
         # include all tuning with autoplay and specified rating or better.
         # The resulting list must be a copy, since it will be modified.
         tunelib = self._read_tunelib()
-        return [
+        res = [
             tuneid for tuneid, v in tunelib.items() 
             if v[TLCOL_AUTOPLAY] and rating in v[TLCOL_RATING] ]
-
+        del tunelib
+        return res
+    
     def get_autoplay_3stars(self):
         return self.get_autoplay("***")
 
@@ -240,7 +236,6 @@ class TuneManager:
             await asyncio.sleep_ms(10)
 
     def _dedup_midi_files( self, filedict ):
-        # >>> move dedup to sync_one_file?. 
         # If file is .gz, then check for .mid
         # If both file.mid and foo.mid.gz are present,
         # erase foo.mid and keep foo.mid.gz
@@ -253,10 +248,10 @@ class TuneManager:
             os.remove( self.tunelib_folder + filename )
             del filedict[filename]
 
-    def _get_duration(self, filename):
+    def get_duration (self, filename):
         try:
             # Get duration in milliseconds
-            return fileops.open_midi(self.tunelib_folder + filename).length_us() // 1000
+            return sum( event.delta_us for event in fileops.open_midi(self.tunelib_folder + filename) if event.delta_us is not None ) // 1000
         except Exception as e:
             self.logger.exc(e, f"Computing duration of {filename}")
             return 0
@@ -299,7 +294,7 @@ class TuneManager:
         tune[TLCOL_SIZE] = filesize
         tune[TLCOL_DATEADDED] = timezone.now_ymd()
         # This can take some time!!! (up to 3 seconds per tune)
-        tune[TLCOL_TIME] = self._get_duration(filename)
+        tune[TLCOL_TIME] = self.get_duration(filename)
         # Update filename, the file could now
         # have (or not) a .gz suffix and be different from before
         tune[TLCOL_FILENAME] = filename
@@ -377,6 +372,7 @@ class TuneManager:
                                 if tune[TLCOL_FILENAME] not in filedict )
         await asyncio.sleep_ms(50) # let browser catch up
         for op, p1,p2,p3 in change_queue:
+            await asyncio.sleep_ms(50)
             if op == TLOP_FILE_UPDATE or op == TLOP_FILE_DELETE:
                 # [TLOP_FILEUPDATE, p1:filename, p2:filesize, 0 ]
                 # [TLOP_FILEDELETE, p1:filename, 0, 0 ]
@@ -384,15 +380,16 @@ class TuneManager:
                 operation = self._sync_one_file( newtunelib, op, p1, p2  )
                 if operation:
                     changed = True
-                    self._sync_progress( f"{operation} {p1} in tunelib.json" )
-                    await asyncio.sleep_ms(100)
+                    self._sync_progress( f"{operation} {p1} to tunelib.json" )
             elif op == TLOP_REPLACE_FIELD:
                 # Change data field in tunelib.json
                 # [TLOP_FIELD, p1:tuneid, p2:tlcol, p3:new_value]
                 try:
                     # Update tunelib fields. queue_tunelib_change() already
                     # checked that p2 is a valid column number
-                    self._update_tlop_field( newtunelib, p1, p2, p3 )
+                    # p1=tuneid, p2=tlcol, p3=new_value
+                    newtunelib[p1][int(p2)] = p3
+
                     self.logger.debug(f"queued change applied ok, tuneid={p1} tcol={p2} new data={p3}]")
                     changed = True
                 except KeyError:
@@ -425,11 +422,7 @@ class TuneManager:
         # that process has ended.
         
         self._sync_progress( "", type="end" )
-        
-    def _update_tlop_field( self, newtunelib, tuneid, tlcol, new_value ):
-        # May raise KeyError if tuneid not in newtunelib
-        # tlcol was checked in queue_field_changes()
-        newtunelib[tuneid][int(tlcol)] = new_value
+        del newtunelib
 
     def _make_unique_hash(self, path, newtunelib):
         fn = path.split("/")[-1]
@@ -485,7 +478,8 @@ class TuneManager:
         # No need for get_lyrics function since
         # javascript can get the complete lyrics.json 
         # file as data and cache int.
-
+        del all_lyrics
+    
     def _sync_lyrics( self, newtunelib ):
         # Delete all lyrics where the tune has been deleted
         all_lyrics = self._read_lyrics()
@@ -501,19 +495,22 @@ class TuneManager:
         tunelib_changes = set( tune[TLCOL_ID] for tune in newtunelib.values() if bool(tune[TLCOL_LYRICS]) != bool(tune[TLCOL_ID] in all_lyrics))
         for tuneid in tunelib_changes:
             newtunelib[tuneid][TLCOL_LYRICS] = 1 if tuneid in all_lyrics else 0
+        
+        del all_lyrics
         # Caller must write tunelib.json back to flash if changed
         return bool(tunelib_changes)
     
-    def add_one_to_history( self, tuneid ):
-        # >>> If this queues a change instead of rewriting tunelib.json,
-        # then the play/tunelist/history pages will be reloaded
-        # after each tune played, which is a bit annoying.
-        # But: the history count will be perfectly up to date.
-        tunelib = self._read_tunelib()
-        tune = tunelib.get(tuneid)
-        if tune:
-            tune[TLCOL_HISTORY] = tune[TLCOL_HISTORY] + 1 if tune[TLCOL_HISTORY] else 1 
-            self._write_tunelib_json( tunelib )
+    # def add_one_to_history( self, tuneid ):
+        # This is done now by the browser and TLCOL_HISTORY
+        # is not updated on the server. This makes end
+        # of tune processing much faster, and tunelib
+        # is not rewritten each time a tune is played.
+    
+        # tunelib = self._read_tunelib()
+        # tune = tunelib.get(tuneid)
+        # if tune:
+        #     tune[TLCOL_HISTORY] = tune[TLCOL_HISTORY] + 1 if tune[TLCOL_HISTORY] else 1 
+        #     self._write_tunelib_json( tunelib )
 
     def _queue_change( self, tlop ):
         change_queue = self._read_sync_file()
@@ -532,11 +529,15 @@ class TuneManager:
                                  file_size,0] )
         # sync process will wake up and process this file
         # Don't kick process - that way several changes are processed in one fell swoop
-
+        # Empty cache just in case the changed file was in cache
+        self.empty_cache()
+        
     def queue_file_deleted( self, path ):
         self._queue_change( [ TLOP_FILE_DELETE,
                                  fileops.get_basename(path), 
                                  0,0] )
+        # Empty cache just in case the deleted file was in cache
+        self.empty_cache()
 
     
     def complement_progress( self, progress ):
@@ -563,8 +564,47 @@ class TuneManager:
         fileops.write_json( change_queue,  self.sync_filename, keep_backup=False )
 
     def file_date_dict( self ):
-        # Return dictionary filename:date added for benefit of filemanager.py
+        # Return dictionary filename:date added for the benefit of filemanager.py
         return {tune[TLCOL_FILENAME]: tune[TLCOL_DATEADDED]
                 for tune in self._read_tunelib().values()}
     
-    # >>> split in tunelib and tunemanager classes?
+    async def midifile_cache_process( self ):
+        from drehorgel import setlist
+        await asyncio.sleep_ms( 1000 )
+        while True:
+            # Incur overhead only when no music plays
+            async with scheduler.RequestSlice( "cache_midi", 1500 ):
+                    # Get top tune from setlist, cache the info
+                    # and decompress midi (if needed). 
+                    # setlist.top() could be None if setlist empty,
+                    # that doesn't alter currently cached item.
+                    # If tune already in cache, this will be very fast.
+                    self.cache_midi( setlist.get_top() )
+            await asyncio.sleep_ms(2000)
+
+    def cache_midi( self, tuneid ):
+        if not tuneid or tuneid == self.cached_tune[TLCOL_ID]:
+            return
+        tunelib = self._read_tunelib()
+        try:
+            tune = tunelib[tuneid]
+        except KeyError:
+            # Not in tunelib. Or tuneid is None because the setlist is empty.
+            self.cached_midifile = None
+            self.cached_tune = [""]
+            return
+        filename = self.tunelib_folder + tune[TLCOL_FILENAME]
+        try:
+            self.cached_midifile = fileops.decompress_midi( filename, "/data/midi_cached.mid" )
+            self.cached_tune = tune
+        except Exception as e:
+            self.logger.info( f"MIDI file {filename} not found or could not be decompressed {e}" )
+            # File not found
+            self.empty_cache()
+            return
+        del tunelib
+        #  get_info_by_tuneid has to check if the cache could be filled or not.
+    
+    def empty_cache( self ):
+        self.cached_midifile = None
+        self.cached_tune = [""]

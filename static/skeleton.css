@@ -9,6 +9,7 @@
 
 
 /* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
 - Grid
 - Base Styles
 - Typography
@@ -25,7 +26,8 @@
 */
 
 
-/* Grid */
+/* Grid
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .container {
   position: relative;
   width: 100%;
@@ -111,7 +113,8 @@
 }
 
 
-/* Base Styles */
+/* Base Styles
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 /* NOTE
 html is set to 62.5% so that all the REM measurements throughout Skeleton
 are based on 10px sizing. So basically 1.5rem = 15px :) */
@@ -125,7 +128,8 @@ body {
   color: #222; }
 
 
-/* Typography */
+/* Typography
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 h1, h2, h3, h4, h5, h6 {
   margin-top: 0;
   margin-bottom: 2rem;
@@ -151,7 +155,8 @@ p {
   margin-top: 0; }
 
 
-/* Links */
+/* Links
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 a {
   color: #1E7EAB; }
 a:hover {
@@ -160,25 +165,10 @@ a:hover {
 .anohref {
   text-decoration: underline;
   color: #1E7EAB;
-  cursor: pointer;
 }
-.anoshortclick {
-  color: black;
-}
-.invertlink {
-  background-color: #000000;
-}
-.title-menu-button{
-    font-size: 110%;
-    font-weight: bold;
-    padding: 0px 0px 0px 0px;
-    height: 100%;
-    line-height: 100%;
-    border-radius: 2px;
-    margin: 0px 0px 2px 0px;
-}
+
 /* Buttons
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .button,
 button,
 input[type="submit"],
@@ -186,7 +176,7 @@ input[type="reset"],
 input[type="button"] {
   display: inline-block;
   height: 38px;
-  padding: 0px 6px; /* original 30px */
+  padding: 0 6px; /* original 30px */
   color: #555;
   text-align: center;
   font-size: 11px;
@@ -241,7 +231,7 @@ input[type="button"].button-primary:focus {
 button.smallbutton  {
   display: inline-block;
   height: 38px;
-  padding: 0px 0px;
+  padding: 0 0px;
   background-color: #FBFBE8;
   text-align: center;
   font-size: 12px;
@@ -258,25 +248,8 @@ button.smallbutton  {
 button.smallbutton:active  {
 	background-color:#0a283E;
 }
-
-button.minibutton  {
-  border: 0px;
-  font-size: 120%;
-  padding: 0px 0px 0px 0px;
-  margin: 0px 0px;
-  cursor: pointer;
-}
-button.minibutton:active  {
-	background-color:#0a283E;
-}
-
-
-button.inactive {
-  color:#afafaf;
-}
-
 /* Forms
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 input[type="email"],
 input[type="number"],
 input[type="search"],
@@ -326,7 +299,7 @@ legend {
   margin-bottom: .5rem;
   /* font-weight: 600; */ }
 fieldset {
-  padding: 0px;
+  padding: 0;
   border-width: 0; }
 input[type="checkbox"],
 input[type="radio"] {
@@ -337,7 +310,7 @@ label > .label-body {
   font-weight: normal; }
 
 /* Lists
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 ul {
   list-style: circle inside; }
 ol {
@@ -356,7 +329,7 @@ li {
 
 
 /* Code
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 code {
   padding: .2rem .5rem;
   margin: 0 .2rem;
@@ -372,9 +345,9 @@ pre > code {
 
 
 /* Tables
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 th {
-  padding: 2px 2px;
+  padding: 2px, 2px;
   text-align: left;
   border-bottom: 1px solid #E1E1E1;
   color: #FFFFFF; 
@@ -399,7 +372,7 @@ td:last-child {
 
 
 /* Spacing
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 button,
 .button {
   margin-bottom: 1rem; }
@@ -421,7 +394,7 @@ form {
 
 
 /* Utilities
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .u-full-width {
   width: 100%;
   box-sizing: border-box; }
@@ -435,7 +408,7 @@ form {
 
 
 /* Misc
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 hr {
   margin-top: 3rem;
   margin-bottom: 3.5rem;
@@ -444,7 +417,7 @@ hr {
 
 
 /* Clearing
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 
 /* Self Clearing Goodness */
 .container:after,
@@ -527,7 +500,7 @@ span.headerright {
 
 
 /* Media Queries
- */
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 /*
 Note: The best way to structure the use of media queries is to create the queries
 near the relevant code. For example, if you wanted to change the styles for buttons
@@ -556,7 +529,7 @@ there.
 input[type="text"].changed,
 input[type="checkbox"].changed,
 input[type="radio"].changed {
-    background-color: #FDFDD3 ; /* cream */
+    background-color: "#FDFDD3" ; /* cream */
 } 
 
 th {
@@ -597,7 +570,6 @@ div.footerdiv {
   overflow: auto; /* Enable scroll if needed */
   background-color: rgb(0,0,0); /* Fallback color */
   background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-
 }
 
 /* Modal Content/Box */
@@ -607,8 +579,6 @@ div.footerdiv {
   padding: 20px;
   border: 1px solid #888;
   width: 80%; /* Could be more or less, depending on screen size */
-  border-style: solid;
-  border-width: 10px;
 }
 
 /* The Close Button */

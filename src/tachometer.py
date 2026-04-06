@@ -4,66 +4,54 @@
 
 import asyncio
 from time import ticks_ms, ticks_diff
+
 from machine import Pin
+# Counter/Encoder requires MicroPython 1.27 or later
+from machine import Encoder, Counter # type:ignore
 
 from minilog import getLogger
 from drehorgel import config
-try:
-    # requires MicroPython 1.27 or later
-    # but there are problems with USB connection
-    # So wait until that is solved.
-    from machine import Encoder, Counter # type:ignore
-    print(">>>using Encoder, Counter from machine/esp32")
-except ImportError:
-    print(">>>using own PCNT driver")
-    from counter import Encoder, Counter
-
-
-# Number of pulses (1 pulse = off + on) per revolution
-PULSES_PER_REV = config.get_int("pulses_per_revolution") or 24
 
 # Factor to convert the milliseconds  to revolutions per second (rpsec)
 # and vice-versa. rpsec = FACTOR/msec, msec = FACTOR/rpsec
-FACTOR = 1000/PULSES_PER_REV
+FACTOR = 1000/config.pulses_per_revolution
 
-# Less than these minimum means "stopped" or "not turning"
-# The two values give the detection a hysteresis.
-LOWER_THRESHOLD_RPSEC = config.get_float( "lower_threshold_rpsec") or 0.3
-HIGHER_THRESHOLD_RPSEC = config.get_float( "higher_threshold_rpsec") or 0.7 # greater than this value means the crank is *turning*
+def low_pass_filter( fc, step, htr ):
+    # This is a low pass filter for the crank. The special
+    # aspect is that if the rev/sec of the crank drops below
+    # config.higher_threshold_rpsec, then the response is immediate (without filtering).
+    # As a result, stopping and starting the crank movement has fast response.
+    # Over config.higher_threshold_rpsec  the crank movement is smoothed out.
+    rc = 1/(6.28*fc)
+    alpha = step/(rc+step)
+    current = 0
+    rpsec = 0
+    yield -1 # needed to prime generator.send()
+    while True:
+        rpsec = yield (current:=rpsec*alpha + current*(1-alpha) if rpsec >= htr else rpsec)
+       
+# class LowPassFilter:
+# Replaced by low_pass_filter() above.
+#     def __init__( self, fc, step ):
+#         # step = estimated time between samples.
+#         # Time constant rc of low pass filter is 
+#         # 1/(2*pi*cutoff frequency)
+#         rc = 1/(6.28*fc)
+#         self.alpha = step/(rc+step)
+#         self.current = 0
 
-# "Normal" turning speed, when MIDI speed == real speed
-NORMAL_RPSEC = config.get_float( "normal_rpsec") or 1.2
-
-class LowPassFilter:
-# This is a low pass filter for the crank. The special
-# aspect is that if the rev/sec of the crank drops below
-# HIGHER_THRESHOLD_RPSEC, then the response is immediate (without filtering).
-# As a result, stopping and starting the crank movement is
-# Over HIGHER_THRESHOLD_RPSEC the crank movement is smoothed out.
-
-# practically not affected by the low pass filter.
-    def __init__( self, fc, step ):
-        # Time constant rc of low pass filter is 
-        # 1/(2*pi*cutoff frequency)
-        rc = 1/(6.28*fc)
-        self.alpha = step/(rc+step)
-        self.current = 0
-
-    def filter( self, rpsec ):
-        if rpsec >= HIGHER_THRESHOLD_RPSEC:
-            self.current = rpsec*self.alpha + self.current*(1-self.alpha)
-        else:
-            # Below HIGHER_THRESHOLD_RPSEC, there is no filtering.
-            # This allows to process "stop crank" situations with good response.
-            # In other words:
-            # When the crank is still turning between LOWER_THRESHOLD_RPSEC
-            # and HIGHER_THRESHOLD_RPSEC, there is no smoothing out...
-            self.current = rpsec
-        return self.current
-    # Filter probably would be more precise calculating
-    # alpha in filter() with the real step instead of a
-    # estimated step, but that needs more CPU and storage
-    # and I don't think it helps much.
+#     def filter( self, rpsec ):
+#         if rpsec >= config.higher_threshold_rpsec :
+#             self.current = rpsec*self.alpha + self.current*(1-self.alpha)
+#         else:
+#             # Below config.higher_threshold_rpsec , there is no filtering.
+#             # This allows to process "stop crank" situations with good response.
+#             # In other words:
+#             # When the crank is still turning between config.lower_threshold_rpsec
+#             # and config.higher_threshold_rpsec , there is no smoothing out...
+#             self.current = rpsec
+#         return self.current
+    
 
 # This is the low level driver for the crank rotation sensor
 # Main output is get_rps() which returns the "rotations per second"
@@ -72,37 +60,32 @@ class TachoDriver:
     def __init__(self, tachometer_pin1, tachometer_pin2):
         self.logger = getLogger(__name__)
         self.counter_task = None
+        self.counter = None
         self.rpsec = 0
-        self.encoder_factor = 1 # Encoder phases compensation
-        if not tachometer_pin1 or config.get_int("automatic_delay"):
+        self.phases = 1
+        if not tachometer_pin1 or config.automatic_delay:
             # Disable crank sensor for "automatic_delay" so music
             # will not pause at the end of the song.
             self.logger.debug("Crank sensor not enabled")
             return
-
-        #self_encoder_factor = 2
-        # For Counter: Rising + falling = 2
-        # For encoder: phases=2
-
-        #self.encoder_factor.  1
-        # For counter: Rising only
-        # For encoder: phases=1
-
-        self.encoder_factor = 1
         
+        # Maximum value for filter_ns is 12787.5 nanosec = 13 microseconds
+        # if filter_ns is higher, the highest possible value is set.
         if tachometer_pin1 and not tachometer_pin2:
             # One pin defined means: simple counter for crank
             counter = Counter( 0, 
                     Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     direction=Counter.UP,
-                    edge=Counter.RISING, # self.encoder_factor = 1
+                    phases=self.phases,
+                    edge=Counter.RISING, # self.phases = 1
                     filter_ns=20_000) # Highest filter value possible
         else:
+            self.phases = 4
             # Two pins defined means: rotary encoder for crank
             counter = Encoder( 0,
                     phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
-                    phases=1, # self.encoder_factor = 1
+                    phases=self.phases, 
                     filter_ns=20_000) # Highest filter value possible
             
         self.counter = counter
@@ -113,34 +96,34 @@ class TachoDriver:
         
         # Start the sensor process
         self.counter_task = asyncio.create_task( self._sensor_process(counter) )
-        self.logger.debug("init ok")
 
     async def _sensor_process( self, counter ):
-        # Prime the loop
         last_time = ticks_ms()
         counter.value(0) # Reset value counter to 0
         # step: Delay between 2 reads of the crank in millisec
         # If too small, precision decreases
         # If too large, response to changes is slower
-        step = 100
+        step = 200
         # Most crank variations occur at the crank rev/sec frequency
         # Filter whatever is faster than that.
         # If fc were set to 0, that disables the crank altogether
         # Prevent setting fc to 0
-        fc = max( 0.2, config.get_float("crank_lowpass_cutoff") or  NORMAL_RPSEC )
-        
-        lpf = LowPassFilter( fc,  step/1_000 )
-    
+        fc = max( 0.2, config.crank_lowpass_cutoff ) 
+        # old version: lpf = LowPassFilter( fc, step/1_000 )
+        lpf = low_pass_filter( fc,  step/1_000,  config.higher_threshold_rpsec)
+        next(lpf) # Needed to prime generator
+
         while True:
+            # Wait approximately "step" milliseconds
             await asyncio.sleep_ms(step)
             # Get pulses since last call, i.e. value(0) resets
             # the counter to 0. 
             # Take abs() because if a Encoder is present, value
             # can be negative if crank is turned in the opposite
-            # direction. Using abs() neither the order of the pins
+            # direction. When using abs() neither the order of the pins
             # nor the direction of rotation matters
             # If there is a Counter instead of Encoder, value() will aways be positive anyhow.
-            # Divide by self.encoder_factor for the encoder with phases=2
+            # Divide by self.phaes to account for Encoder/Counter phases
 
             # At 200 nominal pulses/rev, counter.value()
             # will read 400 nominal pulses. For a sleep time of
@@ -150,17 +133,17 @@ class TachoDriver:
             # at nominal speed.
             # Reading at 100 millisec is similar to human reaction time,
             # so delay should quite tolerable.
-            pulses =  abs(counter.value(0))/self.encoder_factor
+            pulses =  abs(counter.value(0))/self.phases
             new_time = ticks_ms()
             time_ms = ticks_diff( new_time, last_time )
-
+            last_time = new_time
+            # print(f"{pulses=} {time_ms=} {pulses/time_ms*1000=:.1f}")
             # time_ms should never be 0, because there is a sleep_ms in this loop
             # so there should never a division by 0 here
-            # rpsec = (pulses/PULSES_PER_REV)/(time_ms/1000)
-            # rpsec = pulses * FACTOR / time_ms
+            #self.rpsec = pulses * FACTOR / time_ms
             # Apply low pass filter
-            self.rpsec = lpf.filter( pulses * FACTOR / time_ms )
-            last_time = new_time
+            # >>>self.rpsec = lpf.filter( pulses * FACTOR / time_ms )
+            self.rpsec = lpf.send( pulses * FACTOR / time_ms )
             self._accumulate_readings( new_time, self.rpsec )
 
     def get_rpsec( self ):
@@ -192,12 +175,13 @@ class TachoDriver:
             "timesList": times,
             "now": ticks_ms(),
             "is_installed": self.is_installed(),
-            "lower_threshold_rpsec": LOWER_THRESHOLD_RPSEC,
-            "higher_threshold_rpsec": HIGHER_THRESHOLD_RPSEC,
-            "normal_rpsec": NORMAL_RPSEC
+            "lower_threshold_rpsec": config.lower_threshold_rpsec,
+            "higher_threshold_rpsec": config.higher_threshold_rpsec ,
+            "normal_rpsec": config.normal_rpsec
         }
     
     def raw_value( self ):
+        # Used in pinout.html to test crank encoder/counter
         if not self.counter:
             return ""
         if not hasattr(self, "last_value"):
@@ -208,7 +192,8 @@ class TachoDriver:
         val = self.counter.value()
         if val == self.last_value:
             self.count += 1
-            if self.count >= 6: # about 2 sec
+            # reset if no change during about 2 sec
+            if self.count >= 6: 
                 self.counter.value(0)
                 val = 0
         else:
@@ -221,12 +206,12 @@ class TachoDriver:
 # filters out small variations to clean up response.
 # Main output is velocity for the MIDI player (get_normalized_rps), combining
 # crank RPS and velocity set via browser (play.html)
-# Main outputs:
+# Main interfaces:
 #   crank.is_turning() 
 #   await crank.wait_start_turning()
 #   await crank.wait_stop_turning()
 #   crank.get_normalized_rps()
-#   Triggers asyncio.Event() according to registered events.
+#   Triggers registered event.
 #   Adds crank info to get_progress() for tunelist.html and play.html.
 class Crank:
     # Trigger events based on the crank revolution speed
@@ -254,23 +239,33 @@ class Crank:
         self.logger.debug("crank init ok")
     
     def register_start_crank_event( self, ev ):
+        # Injected by setlist.
         self.registered_event = ev
 
     async def _start_stop_monitor( self ):
          # This task sets/resets events when crank movement
          # starts and stops.
          while True:
-            await asyncio.sleep_ms(50)
+            await asyncio.sleep_ms(100)
             r = self.td.get_rpsec()
-            # if .is_set() is faster than .set()
-            if r <= LOWER_THRESHOLD_RPSEC and not self.crank_stopped.is_set():
+            if r <= config.lower_threshold_rpsec and not self.crank_stopped.is_set():
                 self.crank_stopped.set()
                 self.crank_turning.clear()
-            elif r >= HIGHER_THRESHOLD_RPSEC and not self.crank_turning.is_set():
-                self.crank_stopped.clear()
-                self.crank_turning.set()
-                # And kick the registered event
-                self.registered_event.set()
+            elif r >= config.higher_threshold_rpsec:
+                # Handle registered event
+                if config.wait_stop_turning:
+                      # set only on transition from stopped to turning
+                      # Allows code to clear event and detect transition from
+                      # turning to stopped.
+                      if not self.crank_turning.is_set():
+                        self.registered_event.set()
+                else:
+                    # keep set always while crank is turning
+                    self.registered_event.set()
+
+                if not self.crank_turning.is_set(): # optimize CPU
+                    self.crank_stopped.clear()
+                    self.crank_turning.set()
 
     def is_turning(self):
         return self.crank_turning.is_set()
@@ -289,7 +284,7 @@ class Crank:
         # depending on crank speed AND UI velocity setting
         # If no crank, UI can still change tempo!
         if tempo_follows_crank:
-            return self.td.get_rpsec() / NORMAL_RPSEC * self.tempo_multiplier 
+            return self.td.get_rpsec() / config.normal_rpsec * self.tempo_multiplier 
         return self.tempo_multiplier 
 
     def set_velocity_relative( self, change):
@@ -328,58 +323,59 @@ class Crank:
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.
 # The effect of this sensor is added to the crank sensor and UI setting
-class TempoEncoder:
-    def __init__( self, crank, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
-        self.logger = getLogger("TempoEncoder")
-        self.crank = crank
-        if not tempo_a or not tempo_b:
-            # Both A and B input must be present for the
-            # rotary encoder to work.
-            return
-        encoder = Encoder( 1, filter_ns=13000, # Highest value possible
-                            phase_a=Pin( tempo_a, Pin.IN, Pin.PULL_UP ), 
-                            phase_b=Pin( tempo_b, Pin.IN, Pin.PULL_UP ), 
-                            phases=1)
-        self.tempo_task = asyncio.create_task( self._tempo_process( encoder, rotary_tempo_mult ) )
+# >>> verify if still needed
+# class TempoEncoder:
+#     def __init__( self, crank, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
+#         self.logger = getLogger("TempoEncoder")
+#         self.crank = crank
+#         if not tempo_a or not tempo_b:
+#             # Both A and B input must be present for the
+#             # rotary encoder to work.
+#             return
+#         encoder = Encoder( 1, filter_ns=13000, # Highest value possible
+#                             phase_a=Pin( tempo_a, Pin.IN, Pin.PULL_UP ), 
+#                             phase_b=Pin( tempo_b, Pin.IN, Pin.PULL_UP ), 
+#                             phases=1)
+#         self.tempo_task = asyncio.create_task( self._tempo_process( encoder, rotary_tempo_mult ) )
 
-        # Switch is optional
-        if tempo_switch:
-            switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
-            self.switch_task = asyncio.create_task( self._switch_process( switch ))
-        self.logger.debug("init ok")
+#         # Switch is optional
+#         if tempo_switch:
+#             switch = Pin( tempo_switch, Pin.IN, Pin.PULL_UP )
+#             self.switch_task = asyncio.create_task( self._switch_process( switch ))
+#         self.logger.debug("init ok")
 
-    async def _tempo_process(self, encoder, rotary_tempo_mult ):
-        encoder.value(0)
-        while True:
-            # Read velocity several times a second 
-            await asyncio.sleep_ms(200)
-            # Read pulses since last read, reset counter to 0.
-            if (v := encoder.value(0)):
-                self.crank.set_velocity_relative( v * rotary_tempo_mult )  
+#     async def _tempo_process(self, encoder, rotary_tempo_mult ):
+#         encoder.value(0)
+#         while True:
+#             # Read velocity several times a second 
+#             await asyncio.sleep_ms(200)
+#             # Read pulses since last read, reset counter to 0.
+#             if (v := encoder.value(0)):
+#                 self.crank.set_velocity_relative( v * rotary_tempo_mult )  
         
-    async def _switch_process( self, switch ):
-        # This detects a long press of the rotary encoder's switch
-        # considering that the switch is very, very noisy and bouncy.
-        while True:
-            await asyncio.sleep_ms(300)
-            # Wait until switch pressed (.value()==0 is "pressed")
-            if switch.value() == 0:
-                # Switch is now "on", see if it stays 
-                # steadily on
-                # for about 0.8 seconds. 
-                # I have a rather
-                # low quality rotary encoder where the
-                # switch toggles when the rotary encoder counts.
-                # Or perhaps I don't know how to use that thing.
-                v = 0
-                for _ in range(40):
-                    # Sample frequently
-                    await asyncio.sleep_ms(20)
-                    if(v := switch.value()): 
-                        break
-                # Was switch never off during this time?
-                if v == 0:
-                    self.crank.set_velocity(50)
+#     async def _switch_process( self, switch ):
+#         # This detects a long press of the rotary encoder's switch
+#         # considering that the switch is very, very noisy and bouncy.
+#         while True:
+#             await asyncio.sleep_ms(300)
+#             # Wait until switch pressed (.value()==0 is "pressed")
+#             if switch.value() == 0:
+#                 # Switch is now "on", see if it stays 
+#                 # steadily on
+#                 # for about 0.8 seconds. 
+#                 # I have a rather
+#                 # low quality rotary encoder where the
+#                 # switch toggles when the rotary encoder counts.
+#                 # Or perhaps I don't know how to use that thing.
+#                 v = 0
+#                 for _ in range(40):
+#                     # Sample frequently
+#                     await asyncio.sleep_ms(20)
+#                     if(v := switch.value()): 
+#                         break
+#                 # Was switch never off during this time?
+#                 if v == 0:
+#                     self.crank.set_velocity(50)
 
 #This code will plug TachoDriver and generate random RPS
 # from random import random
@@ -394,14 +390,14 @@ class TempoEncoder:
 #             # 200 stripes = 400 pulses/sec at 1 RPS
 #             # 800 pulses*100ms = 80 pulses
 #             # should result in 2.4 RPS
-#             self.current_val = random()*80
+#             self.current_value = random()*80
 #             print(f"DebugCounter {self.current_val=}")
 #             self.repetitions = random()*40 + 10
 
 #         #newt = ticks_ms()
 #         #dt = ticks_diff(newt, self.time_ant)
 #         #self.time_ant = newt
-#         return self.current_val
+#         return self.current_value
 
 # async def debug():
 #     print("TachoDriver Debug started")

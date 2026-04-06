@@ -73,6 +73,8 @@ let translationDict = {
 	["delete", "Löschen"],
 "borrar afinación": // notelist.html 
 	["Clear stored tuning", "Gespeicherte Frequenzen löschen"],
+"borrar historia de":
+	["Delete history of", "Lösche Chronik vom"],
 "borrar setlist": // play.html 
 	["Clear setlist", "Setlist löschen"],
 "(borrado)": // history.html
@@ -123,7 +125,7 @@ let translationDict = {
 	["Description", "Beschreibung"],
 "en espera": // play.html
 	["waiting","wartet"],
-"tocar música deshabilitado por afinador, pinout": // tunelist.html play.html 
+"tocar música deshabilitado por afinador, pinout. debe reiniciar para reestablecer.": // tunelist.html play.html 
 	["Playback disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
 "desordenar setlist": // play.html 
 	["Shuffle setlist", "Setlist mischen"],
@@ -134,7 +136,7 @@ let translationDict = {
 "duración": // play.html 
 	["Duration", "Länge"],
 "días": // history.html 
-	["days,", "Tage,"],
+	["days", "Tage"],
 "editar tunelib": // index.html 
 	["Edit tunelib", "Tunelib bearbeiten"],
 "errores)": // diag.html 
@@ -203,6 +205,8 @@ let translationDict = {
 	["Crank", "Kurbel"],
 "manivela instalada": // diag.html
     ["Crank sensor active", "Kurbelsensor aktiv"],
+"mc server": // admin.html
+    ["MC server", "MC server"],
 "melodía": // history.html 
 	["Tune", "Melodie"],
 "melodía actual": // play.html 
@@ -276,7 +280,7 @@ let translationDict = {
 "setlist guardada": // common.js
     ["Setlist saved", "Setlist gespeichert"],
 "si historia más antigua que": // history.html 
-	["When older than", "Wenn älter als"],
+	["If older than", "Wenn älter als"],
 "(sin título)": // common.js/SetlistMenu
 	["(no title)", "(kein Titel)"],
 "sistema": // index.html diag.html 
@@ -305,66 +309,39 @@ let translationDict = {
 	["Time playing", "Zeit Musikwiedergabe"],
 "título": // tunelist.html play.html 
 	["Title", "Titel"],
+"usar frequencia media": // notelist.html
+	[ "Use average frequency", "Frequenzmittelwert verwenden"],
 "ver log": // diag.html 
 	["Show log", "Log anzeigen"],
 "versión micropython": // diag.html 
 	["MicroPython version", "MicroPython version"],
 "zona horaria": // diag.html
 	["Time zone", "Zeitzone"],
+	
 // Server translations
 "bienvenido al organillo en internet": // server index.html
 	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
 "aquí está la historia, en fotos, de la construcción del organillo": // server index.html	
 	["Here is the construction log with photos", "Hier ist die Baugeschichte, mit Bildern"],
-"aquí están todas las melodías que hoy tiene el organillo. puedes pedir que se toque una melodía pulsando el título de la canción.":
-	["Here is the list of all tunes in the crank organ. You can tap a melody to request it to be played", "Hier ist die Melodieliste die in der Drehorgel gespeichert ist. Drück auf einen Titel damit die Melodie gespielt wird!"],
 "cómo funciona": // server index.html
 	["How does it work?", "Wie funktioniert es?"],
 "aquí se explica cómo funcion el organillo":
 	["Here is an explanation on how this crank-organ works", "Hier ist eine Beschreibung wie die Drehorgel funktioniert"],
 "demostración del software":
 	["Demo of the crank organ software","Drehorgelsoftware Demo"],
-"el organillo en internet": // admin.html
-	["The crank organ on internet", "Die Drehorgel im Internet"],
-"espectadores":  // admin.html
-	["Spectators","Zuhörer"], 
 "esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre":
     ["Here is a demo of the crank organ software. You can see all the options, navigate the pages and test how it works. You cannot alter the configuration. Link to the open source/free software ",
 	"Hier ist eine Demo des Drehorgelsoftwares. Alle Webseiten des Softwares können angesehen werden und der Betrieb wird simuliert. Die Konfiguration kann allerdings nicht geändert werden. Link zum open source/freiem software "],
 "aquí": 
 	["here", "hier"],
-"fecha expiración (local)":  // admin.html
-	["Expiration date (local time)", "Verfallsdatum"],
-"fecha software (local)": // admin.hml
-	["Software update date","Softwareaktualisierung Datom "],
-"fecha tunelib.json (local)":  // admin.html
-	["tunelib.json date", "tunelib.json Datum"],
 "fotos": // server index.html
 	["Photos", "Fotos"],
-"imprimir": // admin.html
-	["Print","Ausdrucken"],
 "logout": // admin.html
 	["Logout", "Logout"],
-"melodías": // server index.html
-	["Tunes","Melodien"],
-"nombre":  // admin.html
-	["Name", "Namen"], // server index.html
 "máximo tiempo para gc": // diag.html
 	["Maximum gc time","Höchste gc Zeit"],
 "melodía actual":  // server index.html
 	["Current tune", "Gegenwärtige Melodie"],
-"muestra la melodía que se esta tocando ahora ¡y tiene la letra para poder acompañar cantando!": // server index.html
-	["Shows the melody now playing and the lyrics to sing along!", "Zeigt die Melodie an die gerade gespielt wird, mit Liedtext zum mitsingen!"],
-"obtener link performance": // admin.html
-	["Get performance link", "Link zur Vorführung erstellen"],
-"pedidos": // admin.html
-	["Requests","Wunsch"],
-"remanente (hh:mm:ss)": // admin.html
-	["Time remaining (hh:mm:ss)","Verbleibende Zeit (Stunden:Minuten:Sekunden)"],
-"último refresco":  // admin.html
-	["Last refresh","Letzte Aktualisierung"],
-"vigente": // admin.html
-	[ "Current", "Gültig" ],
 }
 
 let language = navigator.language.substring(0,2) ;

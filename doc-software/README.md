@@ -19,10 +19,10 @@
      * [Enable multiple setlists with configuration option](#enable-multiple-setlists-with-configuration-option)
      * [Load and save buttons](#load-and-save-buttons)
      * [Tune title menu](#tune-title-menu)
-     * [Last 2 weeks of changes to tunelib](#last-2-weeks-of-changes-to-tunelib)
 8.  [Tuner](#8-tuner)
      * [The note list page](#the-note-list-page)
      * [The note page](#the-note-page)
+     * [Configuration of tuning frequency](#configuration-of-tuning-frequency)
 9.  [History](#9-history)
 10.  [Edit Tunelib](#10-edit-tunelib)
      * [The tune library](#the-tune-library)
@@ -40,7 +40,8 @@
 12.  [Pin and MIDI configuration](#12-pin-and-midi-configuration)
      * [Select scale](#select-scale)
      * [Transpose scale (only if necessary)](#transpose-scale-only-if-necessary)
-     * [Test solenoids](#test-solenoids)
+     * [Test solenoids or RC servos](#test-solenoids-or-rc-servos)
+     * [Adjust "on" and "off" position of each RC servo](#adjust-on-and-off-position-of-each-rc-servo)
      * [Redefine MIDI notes (only if necessary)](#redefine-midi-notes-only-if-necessary)
      * [Microphone, crank sensor, touchpad and neopixel LED (important)](#microphone-crank-sensor-touchpad-and-neopixel-led-important)
      * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
@@ -52,6 +53,7 @@
      * [Update MIDI files](#update-midi-files)
      * [Update software](#update-software)
      * [View files](#view-files)
+     * [Download files](#download-files)
 15.  [Turning the system on](#15-turning-the-system-on)
 16.  [Installation](#16-installation)
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
@@ -70,7 +72,6 @@
      * [Registers](#registers)
      * [Percussion sounds made with pipes a.k.a. "fake drums"](#percussion-sounds-made-with-pipes-aka-fake-drums)
      * [Crank rotation sensor and tempo](#crank-rotation-sensor-and-tempo)
-     * [Compressed HTML and JS files, compile .py files](#compressed-html-and-js-files-compile-py-files)
      * [Automatic shutdown when idle](#automatic-shutdown-when-idle)
      * [The onboard RGB LED](#the-onboard-rgb-led)
      * [Another way to do initial configuration](#another-way-to-do-initial-configuration)
@@ -89,7 +90,8 @@
      * [Changes May 31 to June 14, 2025](#changes-may-31-to-june-14-2025)
      * [Changes June 15 to June 23, 2025](#changes-june-15-to-june-23-2025)
      * [Changes June 24 to July 5, 2025](#changes-june-24-to-july-5-2025)
-     * [Changes July 6, 2025 to ...](#changes-july-6-2025-to)
+     * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
+     * [Changes from Nov 2025 to ...](#changes-from-nov-2025-to)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -112,26 +114,27 @@ Please post a Github issue in this repository for any question you might have. P
 
 * Browser as user interface (Chrome or Firefox). Management is done with WiFi with a browser on a cell phone, tablet or PC. No need to install anything on the cell phone or tablet.
 * However: the solution can play music perfectly without a cell phone present
-* Can define a up to ten setlists or select tune by tune.
+* Can define a up to ten setlists or select tune by tune on the go.
 * It's very fast to establish a setlist. The setlist can be ordered, shuffled and stored on flash. Playback order can be changed while playing, new tunes can be added or tunes can be dropped while performing.
 * MIDI files can be updated via WiFi or via USB connection. You can add description, author, title, year and a rating to each tune.
-* To aid tuning, playing scales and individual notes is supported. A tuner is included.
-* Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments, like a glockenspiel MIDI instrument.
-* This system is highly scalable, capable of managing a virtually unlimited number of pipes. The microcontroller can store about 1600 MIDI compressed files in it's flash memory. With the addition of an SD card, there is virtually no limit.
-* Standard type 0 and 1 MIDI files are supported. Optionally, program numbers to identify different instruments and the percussion channel can be defined for use, 
-* Allows to store lyrics
+* To aid tuning, playing scales and individual notes is supported. A tuner is included (needs to have microphone connected to the microcontroller)
+* Preconfigured for common crank organ scales scales: 20 note Carl Frei, 26 note Alderman/Wright, 31 note Raffin. Allows to define custom scales and different MIDI instruments, like a glockenspiel MIDI instrument or reed pipes.
+* This system is highly scalable, capable of managing a virtually unlimited number of pipes. The microcontroller can store 1500 or more MIDI  files in it's flash memory, when using the *tools/compress-midi.py* utility. With the addition of an SD card, there is virtually no limit.
+* Standard type 0 and 1 MIDI files are supported. Program numbers to identify different instruments and the percussion channel (channel 10) can be defined for use.
+* Allows add lyrics
 * Unattended operation is possible too. After a definable number of seconds, the next tune starts automatically.
+* Barrel organ mode: when enabled, the MIDI file is repeated until the next tune is selected, just like a barrel organ.
 * Software or hardware registers (as in "register stop of a organ")
 * Crank turning speed sets MIDI playback speed (optional)
 * Crank turning starts MIDI playback (optional)
 * Simulated percussion: drums are simulated playing several pipes together during a very short time
 * Shows remaining battery capacity on browser
 * Many options to move valves, percussion and other devices:
-   - solenoids or solenoid valves via GPIO pins
-   - solenoids or solenoid valves via via "MCP23017 16 port expander". Either several MCP23017 on one I2C bus or one bus per port expander.
+   - solenoids or solenoid valves via GPIO pins. 20 pipes don't need expansion boards.
+   - solenoids or solenoid valves via via "MCP23017 16 port expander". Either several MCP23017 on one I2C bus or one bus per port expander. Hundreds of output ports can be configured this way.
    - third party driver boards via MIDI over serial output. There are several manufacturers of boards for 32 or 64 or more outputs that can be connected to a "5 pin DIN MIDI over serial" connector.
-   - RC servos (radio control servos) via GPIO ports (up to 8 supported on ESP32-S3) 
-   - RC servos (radio control servos) via  "PCA9685 16 port RC control board". Either several PCA9685 on one I2C or one I2C for each PCA9685
+   - RC servos (radio control servos) via microcontroller GPIO ports (up to 8 supported on the ESP32-S3) 
+   - RC servos (radio control servos) via  "PCA9685 16 port RC control board". Either several PCA9685 on one I2C or one I2C for each PCA9685.  Hundreds of output ports can be configured this way.
    - Many I2C buses on the ESP32-S3, two pins needed for each bus.
 
 
@@ -176,9 +179,9 @@ flowchart LR
     F --> |Click on file name| FC[File contents view]
 ```
 
-The home page is the menu page.
+The home page is the main menu page.
 
-While music is playing, try to stay on the tune list and the performance pages. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages. The purpose of other pages is the configuration and update of the microcontroller and these pages may interfere with playing music.
+While music is playing, try to stay on the tune list and the performance pages. The software is optimized so that these pages and their refresh does not interfere with the MIDI notes being played. All functions for playing music are included in these two pages. The purpose of other pages is the configuration, maintenance and update of files and parameters and these pages may interfere with playing music.
 
 While using the tuning pages (note list and note page) and the test button on the pinout definition page, playing back music is disabled (if not, music could start to play while tuning or testing). You will need to reboot the microcontroller to enable playing music again.
 
@@ -252,6 +255,7 @@ Option 2: If the touchpad is installed, start cranking, then touch and release t
 
 Option 3: If a crank rotation sensor is installed, start turning the crank. This will start the tune.
 
+Option 4: If you configure "Automatic mode" in the General Configuration, the tune will start after the specified pause. This mode is for unattended operation, like when you are towing the crank organ in a procession.
 
 ### Setlist control
 
@@ -288,7 +292,7 @@ These controls regulate playback speed. Even if there is no crank sensor, you ca
 
 ## Enable multiple setlists with configuration option
 
-The microcontroller can handle 9 stored setlists, but this must be enabled on the "General configuration" page setting "Multiple setlists" to 1, then reboot the microcontroller.
+The microcontroller can handle 9 stored setlists, but this must be enabled on the "General configuration" page checking "Multiple stored setlists", then reboot the microcontroller. Once checked, there will also be a "three vertical dot" menu next to each tune title (wherever a tune title occurs). The "Save" and "Load" setlist buttons on the Performance page now will allow to select the setlist.
 
 These stored setlists operate like the memory of a calculator. You can store and recall (save and load) the current setlist to these memories.
 
@@ -303,7 +307,7 @@ The number in parenthesis ```(15)``` is the number of tunes already in that setl
 
 ## Tune title menu
 
-The [⋮] menu button to the left of a tune title will open the setlist menu.
+The [⋮] menu button to the left of a tune title will open the setlist menu. This menu button is only visible if multiple setlists have been configured.
 
 ![title menu button](tune_title_menu_button.jpg)
 
@@ -321,12 +325,7 @@ This features are handy to work with setlists:
 
 To manipulate the stored setlists 1 to 9 you have to load (recall) them to the current setlist, move tunes up and down, and then store back.
 
-You also can set some fields for the tune in that popup menu, like the Information and Rating fields. Changes are queued, the actual update takes place when the microcontroller is idle. Once the changes are queued, you can continue working. Pages will reload to refresh information once the tunelib is updated.
-
-
-## Last 2 weeks of changes to tunelib
-
-If you use the compress MIDI utility ```compress_midi.py```, that utility will leave a setlist for slot 9 in the ```tunelib_compressed``` folder with the tunes added in the last 2 weeks (file ```setlist_stored_9.json```). Upload that folder in one go with the compressed MIDI files using the "Upload to auto folder" option of the file manager. Recalling that setlist with the "load setlist" button will allow to review recent additions to the tunelist.
+You also can set some fields for the tune in that popup menu, like the Information and Rating fields. Changes are queued, the actual update takes place when the microcontroller is idle. Once the changes are queued, you can continue working. Pages will reload to refresh information once the tunelib is updated. Changes can be entered while the music is playing.
 
 
 # 8. Tuner
@@ -373,13 +372,19 @@ The "Repetition test" button will make a repetition test increasing speed until 
 
 "Next note" will go to the next note in the tuner list.
 
+## Configuration of tuning frequency
+The standard tuning frequency is 440 Hz. You can enter another frequency on the General Configuration page.
+
+When the weather is hot or cold, all pipes change tuning. If you want a relative tuning and if you do not need to tune to exactly 440 Hz, then you can use the average frequency shown on the note list page instead of 440 Hz. That saves a lot of time when tuning.
+
 # 9. History
-The history page will show all dates a tune has been played, and a list of all tunes played that date. There is a button to purge older history, if you should wish that.
+The history page will show all dates a tune has been played, and a list of all tunes played that date. There is a button to purge older history, if you should wish that, either day by day or all entries older that a specified number of days.
 
 The column "% completed" show how much of the tune has been played. 100% means the complete tune. I like to know whether I stopped a tune (with the "Next" button on the performance page) before completing in order to review that tune.
 
 ![History page](history.jpg)
 
+Old history can be purged, either selecting a day on the history page, or with a maximum number of days at the bottom of the history page, or with a General Configuration parameter.
 
 # 10. Edit Tunelib
 The Tunelib Editor allows to edit information about the tunes.
@@ -477,7 +482,7 @@ You also can change the passwords editing config.json on your PC and then upload
 
 ## Power management settings
 
-Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (shortened a bit) if the maximum is exceeded. Calculate this number by dividing the maximum current less 10% by the current consumption of each solenoid, and truncate to the previous integer.
+Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (shortened a bit) if the maximum is exceeded. Calculate this number by dividing the maximum current less 10% by the current consumption of each solenoid, and truncate to the previous integer. Does not apply to RC servos (the limit for RC servis is not how many are on but how many are moving).
 
 USB power pack heartbeat: Some USB power packs need some current every now and then to remain turned on. This option will activate a random solenoid to achieve a minimal consumption.
 
@@ -520,7 +525,7 @@ See also [Crank rotation sensor and tempo](#crank-rotation-sensor-and-tempo)
 There are crank organs being used for unattended operation. In the "Crank and tune play parameters" of the configuration page, set the number of seconds between tunes, and tunes will play automatically one after the other with the indicated pause between tunes. As with manual operation, first the current setlist will be played, and when empty, the microcontroller will shuffle tunes.
 
 ## Battery calibration
-Battery calibration enables to show computed battery usage on the top of each page and on the home page. If you have other means to show battery level, this is of little interest.
+Battery calibration enables to show computed battery usage on the top of each page and on the home page. If you have other means to show battery level, this is of little interest. There is no battery sensor. The software predicts battery consumption.
 
 Battery calibration is done on the home page (index page). It will give information to the microcontroller to estimate the level of charge of the batteries based on the time the processor is on and on the time solenoid valves are on.
 
@@ -587,21 +592,25 @@ You can mix and match, i.e. you can specify a template that sends some MIDI mess
 
 You also specify additional hardware you connect to the microcontroller:
 * A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller)
+* A microphone for tuning
 * Electronic register switches
 * A rotary sensor for the crank (to detect movement, and/or to sense velocity)
-* A rotary knob (rotary encoder) to set velocity
-* A microphone for tuning
 
 ## Transpose scale (only if necessary)
 If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowest note fits. The transpose buttons shift the complete scale up or down one semitone.
 
-## Test solenoids
+## Test solenoids or RC servos
 Next to each solenoid pin definition there is a test button. If the hardware and solenoids are connected, this is a way to test if the wiring is correct.
 
 If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here. 
 
 Pin and scale definitions must be saved before testing, but MIDI note number can be changed on the fly without saving. A "Pin not found" message can mean that the scale definition was not saved, or a MCP23017/PCA9685 is not detected on the I2C bus.
 
+## Adjust "on" and "off" position of each RC servo
+
+For RC servos there is a arrow up and arrow down position to adjust the position of the "off" position in small steps. The servo "off" position is changed immediately.
+
+The "on" position needs you to enter a value, and then use the Test button to see the "on" position of the servo. 200 is normally a good starting point.
 
 ## Redefine MIDI notes (only if necessary)
 
@@ -726,7 +735,7 @@ The error log records events of class INFO, ERROR and EXCEPTION. The MicroPython
 
 Press the "Update files" button on the index page, and the File Manager will show up.
 
-You can navigate to all folders, and view text, MIDI and image files, but the main purpose is to update MIDI files (i.e. tunelib) and software.
+You can navigate to all folders, and view text and image files, but the main purpose is to update MIDI files (i.e. tunelib). Patches to single software files (Python, html) can also be uploaded.
 
 ![File manager screenshot](file_manager.png)
 
@@ -747,10 +756,26 @@ Use the "Update to auto folder" button to upload MIDI files. After some time, th
 Use the "Edit Tunelib" option to add title, genre, author, rating, etc.
 
 ## Update software
-Use the "Update to auto folder" button to upload a new software version (.py or .mpy files. .html and .js files), then reboot to make the new version take effect. You can reboot with the "Reset" button on the "System" page, or by pressing the reset button on the microcontroller.
+See here: [Update to a newer version](#update-to-a-newer-version). The preferred method is to use ```esptool.py``` to upload images. This update procedure does *not* affect MIDI files nor the configuration.
+
+If you update from a crank organ software version prior to November 2025, then you can free some flash space running this command at the PC:
+```
+mpremote rm -r /software
+```
+
+However, individual ```.py```, ```.mpy``` ```.html```, ```.html.gz``` as well as images and CSS files can be uploaded with the file manager. The uploaded file has priority over the files baked into the ```.bin``` images.
+
+This software uses the ROMFS capability of MicroPython to include the compiled and compressed software in the .bin file. Only boot.py is frozen together with the MicroPython image. This allows more flexibility than freezing the software, frees about 600 kb of flash, speeds up startup, frees more than 100 kB of RAM, shortens garbage collection times, makes installation easier, and provides a integrated MicroPython/application software bundle.
+
+If you want to apply a patch, change the corresponding .py or .html or .js file and upload that file with the ""Update to auto folder" button. These files end up in /software/mpy and /software/static and have priority over ROMFS files in the /rom folder.  
+
+If you want to compile the .bin files yourself, you will have to dig into ```crank-organ/tools/Makefile``` and ```crank-organ/tools/fix_mp_romfs.py```. Please read the comments. Some tweaking will surely be required. 
 
 ## View files
-Files that are "underlined" in the File Manager can be clicked to view their content. Click on MIDI files is supported, try that!
+Files that are "underlined" in the File Manager can be clicked to view their content.
+
+## Download files
+Some files can be downloaded. Compressed MIDI files cannot be read back.
 
 # 15. Turning the system on
 
@@ -772,11 +797,9 @@ You don't need your cell phone turned on to play music, only to alter the setlis
 # 16. Installation
 ## Prerequisite hardware and software
 
-This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash, 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash, 8 Megabytes RAM(Megabytes, not Gigabytes...). The ESP32-S3 is most easily available on boards (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository).
+This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash + 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash + 8 Megabytes RAM ( Megabytes, not Gigabytes...). The ESP32-S3 is most easily available as a board (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository),  a We-Act clone or a VCC-GND clone.
 
 For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schematic. It's best to connect a touchpad, which really is any metal knob or disc such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology. The touchpad is used to start tunes.
-
-If more than 20 pipes/solenoids are needed, see hardware section of this repository. This will need a MCP23017 port expander.
 
 Use Chrome or Firefox on a cell phone, PC, MAC or tablet to control the microcontroller. Safari is not supported.
 
@@ -788,54 +811,24 @@ No programming required. Configuration is done later via web pages and forms wit
 
 Install Python from python.org. Please follow instructions on that page to install Python. You will not need to program with Python, but the programs to manage the microcontroller need the Python installed.
 
-Python includes the pip "pip Installs Python Libraries" utility. Install the esptool.py and mpremote utility programs using: ```pip install esptool```and ```pip install mpremote```
+Python includes the pip "Pip Installs Python"  utility. Install the ```esptool.py``` and the ```mpremote utility``` programs using: ```pip install esptool```and ```pip install mpremote```
 
 Install the git utility, to access github.com easily, namely to clone this repository to your PC with ```git clone https://www.github.com/bixb922/crank-organ```
 
 
 ## Installation instructions
 
-To install MicroPython on the ESP32-S3 N8R8 or N16R8 please see https://micropython.org/download/ESP32_GENERIC_S3/ section "Firmware (Support for Octal-SPIRAM)". Download the latest .bin file and use the esptool.py command line provided on the page. Version 1.24 or 1.25 are fine. Don't use version 1.26 nor 1.27 until the MicroPython team solves these problems. (This kind of problem is rather unusual, MicroPython is very stable)
+The ```git clone``` command from above should have created a ```crank-organ``` folder with several subfolders. The complete software (source code and documentation) is in these folders. The ```crank-organ/bin``` subfolder has the installation files.
 
-To change the flash size from the standard 8Mb to 16Mb use this tool: https://github.com/glenn20/mp-image-tool-esp32. If you use this tool, you don't need ```esptool.py```, and the tool alters the .bin image to recognize the 16Mb and can even load the altered image to the microcontroller. See here: https://github.com/bixb922/crank-organ/discussions/3 or read the documentation at the respository for mp-image-tool-esp32. 
+Connect the ESP32S3 to the PC using the USB Port. Do not use the USB port labeled COM. Press the "BOOT" button on the ESP32S3 and while it is down, press the "RESET" button shortly.
 
-
-You can use the mpremote utility to verify over a USB cable that MicroPython is working, see https://docs.micropython.org/en/latest/reference/mpremote.html.  Run mpremote on the command line and you should get the ```>>>``` prompt (also called "REPL prompt").
-
-Copy the software repository with ```git clone https://github.com/bixb922/crank-organ``` to the hard drive of your PC. 
-
-No other prerrequisite libraries need to be installed on the microcontroller (former versions required ```aiohttp```, but this is not needed anymore).
-
-Go to the ```install``` folder and execute the commands: 
+Now use the commands:
 ```
-cd crank-organ/install
-mpremote run install_software.py
-mpremote run install_data.py
+cd crank-organ/bin
+esptool.py --chip esp32s3 write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x10000 micropython.bin 0x1C0000 romfs.bin
 ```
-Please be patient, these ```run``` commands take a few seconds before a response appears, since ```mpremote``` needs to transfer the data over USB first and does not show progress.
 
-During the installation, a list of all files installed on the microcontroller will be displayed.
-
-Enter ```mpremote ls``` and the output should be similar to:
-```
-ls :
-           0 data/
-         516 main.py
-           0 software/
-           0 tunelib/
-```
-The application is now installed. You can copy MIDI files (with .mid type) to the tunelib folder with mpremote:
-```
-mpremote cp my_nice_melody.mid :/tunelib/
-```
-Or better yet: you can configure WiFi and copy MIDI files to the /tunelib folder with the [File Manager](#file-manager). 
-
-Once the files are copied, please wait a bit until the files are processed. Then enter the [Tunelib editor](#the-tunelib-editor-tunelib-editor-button-on-index-page) add information such as better titles, author, year, genre and rating. This information makes it easier for you to search for MIDI files if you have very many of them.
-
-
-To test the application use this command in cmd (Windows) or Terminal (Mac) enter the mpremote command. Press control-C. When the ```>>>``` prompt appears, press control-D.
-
-You should see a startup log similar to this:
+Push the reset button again. Use ```mpremote``` to connect to the ESP32S3. Press Control-C. You should see a startup log similar to this:
 ```
 boot.py mount readsize=4096, progsize=128, lookahead=512
 timezone - Could not read timezone.json: [Errno 2] ENOENT
@@ -858,9 +851,7 @@ timezone - Could not read timezone.json: [Errno 2] ENOENT
 2024-06-25 15:26:13UTC - setlist - DEBUG - init ok
 2024-06-25 15:26:13UTC - organtuner - INFO - new data/organtuner.json written
 2024-06-25 15:26:13UTC - organtuner - DEBUG - init ok
-2024-06-25 15:26:13UTC - poweroff - DEBUG - init ok
 2024-06-25 15:26:14UTC - setlist - DEBUG - Setlist loaded 0 elements
-2024-06-25 15:26:14UTC - poweroff - DEBUG - Power off monitor started
 2024-06-25 15:26:14UTC - startup - DEBUG - Starting asyncio loop
 2024-06-25 15:26:14UTC - webserver - DEBUG - USE_CACHE=True MAX_AGE=300 sec
 2024-06-25 15:26:14UTC - solenoid - DEBUG - clap 8
@@ -870,9 +861,9 @@ Total startup time (without main, until asyncio ready) 4357 msec
 2024-06-25 15:26:28UTC - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_2
 ```
 
-If there is an entry marked ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
+If there is an entry that says ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
 
-Now connect with WiFi. WiFi is active about 5 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 seconds after power on, and will stay on until you configure WiFi and reboot. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on older Android phones. 
+Now connect with WiFi. WiFi starts to be active about 10 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 seconds after power on, and will stay on until you configure WiFi and reboot. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on older Android phones. 
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
 
@@ -880,9 +871,13 @@ Then configure the WiFi parameters using the General Configuration button on the
 
 Configuration is best done on a PC. That also allows to use the browser to translate the configuration instructions.
 
-Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, upload MIDI files.
+Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, upload MIDI files or with the different configuration pages provided by the microcontroller.
 
 If you can't configure WiFi, see (here)(##another-way-to-configure)
+
+If you are updating from a previous version, see ![Update software](#update-software)
+
+On the "System" page you can verify the RAM and flash size. About 2Mb of the flash are used by MicroPython and this software. The software detects the size of the flash automatically.
 
 ## WiFi capabilities
 
@@ -909,7 +904,7 @@ flowchart LR
 
 The microcontroller will try option 1 and option 2 one after the other until connected. It will try during 15 seconds with option 1, then 15 seconds with option 2 and so on, until one of the two options is available.
 
-* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. For power saving reasons, this option is made available during 2 minutes after power on (except when the microcontroller is not configured for WiFi, in that case option 3 is active until configured), or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. If you connect, option 3 access stays active until you stop using it.
+* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. For power saving reasons, this option is made available during 3 minutes after power on (except when the microcontroller is not configured for WiFi, in that case option 3 is active until configured), or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. If you connect, option 3 access stays active until you stop using it.
 
 ```mermaid
 flowchart LR
@@ -920,18 +915,19 @@ See [General Configuration](#general-configuration) to configure WiFi.
 
 ## Update to a newer version
 
-Download the ```crank-organ```repository and run this the ```cmd``` (Windows) or ```Terminal``` (Mac) prompt:
-```
-% cd crank-organ/install
-% mpremote run install_software.py
-```
-The MIDI files and configuration on your microcontroller will not be affected.
+Follow the installation instructions. You need to repeat the ```esptool.py``` command described there with the new .bin files from the repository.
+
+The ```Makefile``` in the ```crank-organ/tools``` folder of the Github repository also can:
+* Compile changes to mpy files
+* Upload changed mpy or html files via mpremote
+* Generate a romfs image, to be deployed with ```esptool.py````
+
 
 # 17. Other stuff
 
 ## Increase MIDI file capacity
 
-The software accepts compressed MIDI files. With average size crank organ music MIDI files (what I'm trying to say: withthe tunes I have) the capacity without compression is about 700 files for the 16MB flash version of the ESP32-S3. With compression the capacity is about 1800 MIDI files for the 16MB version and 700 files for the 8MB version of the ESP32-S3 board.
+The software accepts compressed MIDI files. With average size crank organ music MIDI files (what I'm trying to say: withthe tunes I have) the capacity without compression is about 700 files for the 16MB flash version of the ESP32-S3. With compression the capacity is about 1500 MIDI files for the 16MB version and 700 files for the 8MB version of the ESP32-S3 board.
 
 The ```compress_midi.py``` utility included here runs on your PC. It compresses all MIDI files in an input folder to an ouput folder. The input files are not changed. The output folder should start empty. If ```compress_midi.py``` is run again, only changed files are processed.
 
@@ -947,11 +943,11 @@ Finally, you should copy these files to the microcontroller using the "Update to
 
 The music player will automatically recognize either the .mid file or the .mid.gz file and decompress on the fly if necessary.
 
-Use ```compress_midi.py --help``` for help with the utility program. Input and output folder name need to be specified only once because they are kept in ```compress_midi.json``` in your current folder on the PC.
+Use ```compress_midi.py --help``` for help with the utility program. Input and output folder name need to be specified only once because they are kept in ```compress_midi.json``` in the current folder on the PC.
 
-Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes.
+Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes. 
 
-There is an additional feature of compress_midi.py: it leaves a file named ```setlist_2.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same upload in file manager). Then recall the stored playlist in the Play page and you will have a number 2 setlist of the last 2 weeks of modifications. This allows to check and play recent tunes.
+There is an additional feature of compress_midi.py: it leaves a file named ```setlist_9.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same upload operation in the file manager). Then recall the stored playlist in the Play page and you will have a number 9 setlist of the last 2 or 3 weeks of modifications. This allows to check and play recent tunes.
 
 ## SD card
 
@@ -975,7 +971,7 @@ When connected to a router or cell phone hot spot, the software uses NTP (Networ
 
 The time zone (for example America/Lima or India/Kolkata) is obtained from the browser automatically, then stored. There is no need for configuration.
 
-If no internet access is available nor a browser loads a page on the microcontroller, time starts on Jan 1st, 2000. This does not impair operation at all, allowing to crank the organ without internet access. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
+If no internet access is available nor a browser loads a page on the microcontroller, time starts on Jan 1st, 2000. This does not impair operation at all, allowing to crank the organ without internet access, or even without a cell phone. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
 
 ## MIDI over serial
 
@@ -1044,16 +1040,6 @@ When you turn the crank for some seconds and there is no setlist, the microcontr
 
 Here is more on the crank sensor: [A crank sensor journey](/doc-hardware/crank-sensor.md)
 
-## Compressed HTML and JS files, compile .py files
-You can compress the text files in the /software/static folder using gzip on the PC or Mac. That saves about 190 kilobytes of flash space. Copy the .gz files to the ```/software/static/``` folder. 
-
-Python files (.py files) can also be compiled with mpy-cross to save space and make startup slightly faster. This will save about 280 kilobytes of flash space.
-
-In both cases, there is a slight performance advantage.
-
-If you are interested, plase post an issue in this Github repository and I'll explain.
-
-In any case, I am working on the ROMFS option of MicroPython, which will enable even more savings out of the box.
 
 ## Automatic shutdown when idle
 After 15 minutes without activity, the microprocessor will shut itself down to save energy. You will need to turn it off and then on again.
@@ -1105,7 +1091,7 @@ Microcontroller flash storage is fairly robust. It is very unlikely to end up wi
 
 However, 
 once you configure your microcontroller and enter data in your Tunelib, you should backup relevant files:
-* /tunelib/*.mid: all MIDI files. Instead of doing backup, it's probably best to have a /tunelib and a /tunelib_compressed folder somewhere on the PC and then copy the newest MIDI files with the [File Manager](#file-manager) to the microcontroller.
+* /tunelib/*.mid: all MIDI files. Instead of doing backup, it's best to have a /tunelib and a /tunelib_compressed folder somewhere on the PC and then copy the latest MIDI files with the [File Manager](#file-manager) to the microcontroller.
 * /data/tunelib.json: it holds the additional information about each tune, such as title, genre, year, date added, rating.
 * /data/lyrics.json: the lyrics of the tunes.
 * /data/config.json: contains encrypted passwords, WiFi and general configuration. 
@@ -1181,7 +1167,7 @@ Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 ba
 * Automatic playback
 
 ## Changes from June 2024 to October 2024
-* File manager included: Easier MIDI and software update via web pages, no additional software needed
+* File manager included: Easier MIDI via web pages, no additional software needed
 * Simulated drum notes, playing several pipes for a short time at once
 * Electronic registers, both by web page and by hardware switch
 * Added a button on the bottom of the Pin and MIDI configuration page to analyze/order the pinout definition.
@@ -1212,7 +1198,7 @@ Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 ba
 
 * Support for MIDI over serial (MIDI over DIN connector)
 * New: both quadrature and simple encoder can be used as crank rotation sensor
-* Potentiometer type rotary encoder to regulate speed
+* Potentiometer type rotary encoder to regulate speed (dropped later)
 * Make current setlist persistent, so the current setlist  survives reboots and is not reverted to the stored setlist.
 * After entering a password for configuration, revoke credentials on reboot. Simpler password dialog. Password hashed when sent over http, adds yet another layer of security.
 * Time zone is now set from the browser configuration. No configuration necessary, less overhead, less hassle, smaller code, frequent update, no restrictions on frequency of use.
@@ -1224,7 +1210,7 @@ New features
 * Midi files can be gzip compressed (e.g. ```.mid.gz```), this more than doubles the capacity for MIDI files, from about 720 to about 1800 MIDI files.
 * There is the new ```compress_midi.py``` utility for the PC/Mac to compress a complete folder of MIDI files incrementally. Use: ```python compress.py --help```
 * Fast variations of crank revolutions/sec are now smoothed out with low pass filter, except when crank stops or starts.
-* A rotary knob (potentiometer type rotary sensor) can now be used to set playback speed alongsidea crank rotation sensor.
+* A rotary knob (potentiometer type rotary sensor) can now be used to set playback speed alongsidea crank rotation sensor (feature dropped)
 * HTML and JS files can be gzip compressed to save a bit of flash. You will have to compress these with the gzip utility on your PC and then upload with the file manager to the /software/static folder. This allows to free some flash memory.
 * File manager now knows about compressed files and about py/mpy files, deleting the
 replaced file. The new file replaces the previous file, even if one
@@ -1362,7 +1348,7 @@ note ons and note offs is paired. The note is turned off when the last note off 
 * Foundation for support of MicroPython's romfs
 * Test servo pin does not need to save pulse with info
 
-## Changes July 6, 2025 to ...
+## Changes July 6, 2025 to October 28, 2025
 New features:
 * Multiple setlists.  Save and load setlist buttons of play page now show multiple setlist menu. This feature needs to be enabled in the "General Configuration", with a new configuration option.
 * Menu on tune titles  with options to append to setlists, append to info and change rating. This feature needs to be enabled in the "General Configuration".
@@ -1405,6 +1391,60 @@ Fixes:
 * Corrected calculation of average frequency of tuner
 * Upload file on file manager used to hang sometimes, fixed.
 
+## Changes from Nov 2025 to ...
+New features and enhancements:
+* Management of battery current limit when moving RC servos. New configuration parameters. There is a limit on how many servos can move at the same time. This needed to track how long servos move.
+* Very short notes and silences can be corrected to avoid partial servo movements movements (configurable). 
+* Better report at end of tune in log. Shows notes not used, shows filename and statistics, for example when maximum polyphony and similar limits were exceeded.
+* Bluetooth to announce IP addresses to make connection easier on Android hotspot subnets, where mDNS does not work. Post in the discussions if you are interested in this feature.
+* AP WiFi now times out after 3 minutes (instead of 2). As before, If WiFi is not configured, AP WiFi remains active forever.
+* Configuration option for log level (debug/info)
+* If crank sensor installed: Configuration option to pause for crank to stop at end of tune or else, continue with next tune without waiting for crank to stop.
+* Pinout.html for RC servos: Button to adjust pulse definition for "off" position easily. Show pulse usec for "off" and pulse width difference for "off". Internally both pulse widths (on and off) are stored.
+* History on tunelist page is now calculated on the fly using history.json. This makes end of tune processing much faster.
+* RC Servos: Uses movement time as input for battery consumption instead of "time the actuator is on". This gives a better battery usage estimation.
+* Sort pin list by program number and note number instead of note number only
+* For MIDI over serial, rx pin of UART must be specified in pinout, although it is not used.
+* New button to delete one day of history.
+* Touchpad will go to next tune when pressed while crank is stopped.
+* Using new romfs capability of MicroPython. Binaries are provided for installation. Put ESP32-S3 in bootloader mode, cd to bin folder and run the esptool.py command (see installation)
+* Barrel organ mode: repeats current tune until "next tune" is pressed.
+* Allow purge history of a certain date, additional to date range.
+* Added parameter to allow autmatic purge of old history, to limit file size.
+
+Optimizations:
+* Optimize all_notes_off() processing, turn off only notes that are on.
+* Using NoteDef object as key for MIDI actions. Preallocate NoteDef. 
+* Don't refresh hidden pages.
+* Optimize note on/off processing.
+* Optimized MIDI file start and rewind (filecache.py) and overall performance. Use smaller buffer size and use only one open file for multitrack files.  
+* Better file rewind time makes barrel organ mode feasible. Log now shows CPU performance indicators.
+* Optimize time at MIDI file start by caching file information for the first MIDI file in the setlist.
+* With the optimizations, MIDI processing currently takes on average about 3 to 8% of the CPU of the ESP32-S3, depending on the MIDI file. During playback, CPU load is around 20%. Processing time per MIDI event takes around 1 to 2 msec. These are good figures that make that music response be correct.
+* Updating history is now faster. Brower merges history.json and tunelib.json on the fly to compute the number of times a tune has played.
+* Allow to configure I2C frequency in General Configuration.
+
+Fixes:
+
+* PCA9685 support had call with wrong number of arguments
+* Refactoring of drivers, new class/subclass scheme of driver_base to reduce code size and make maintenance easier.
+* Fix exception if file with unknown extension is uploaded in auto mode with the filemanager page.
+* Play scale on notelist page now works if more than one instrument (program numbers) are defined.
+* Fixed page refresh problem while crank stops.
+* Corrected name of wait_and_yield_ms to wait_and_yield_usec(), enhanced scheduler.
+* Refactoring of config.py (smaller, easier to maintain).
+* Garbage collector now entirely disabled, only manual GC. GC interfered sometimes with music playback. Also: Interval between GC was reduced to lower time needed, and that makes it easier to fit GC between MIDI events.
+* stream.readline() in Microdot web server can block asyncio for some times. Added asyncio sleep_ms to facilitate interleaving of tasks.
+* Show correct note name on note.html page.
+* History.html fix numeric validation for number of days to be purged. Fix deleting 2000-01-01 entries in history
+* Calculation of average frequency on notelist.html needed to use the list of values.
+
+Dropped features:
+
+* Dropped Show and play MIDI file in browser.
+* Dropped support for *install* folder in repository with *install_software.py* and *install_data.py*. Use esptool.py instead to install or update combined MicroPython/crank organ software images. Less steps, less possibility of problems.
+* Dropped support for rotary knob to adjust tempo. Tempo can still be adjusted on the Performance page and with the crank rotation sensor.
+* History now only counts the tunes kept in the history. Formerly, the count never got reset. I.e when dropping part of the history, those performance counts are reset.
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
@@ -1415,9 +1455,9 @@ Frequency detection is done with the FFT algorithm, interpolating the maximum wi
 
 Rotation speed pulses are counted with the PCNT hardware on the ESP32-S3 chip, so counting pulses is very efficient.
 
-The development relies heavily on the asyncio, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 concurrent asyncio tasks run concurrently.
+The development relies heavily on the asyncio, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 to 35 concurrent asyncio tasks run concurrently.
 
-MicroPython version 1.22 or later is required. Since MicroPython is continually enhanced, it's best use the latest version, at the time of this writing use 1.25. Version 1.26 has problems on some ESP32-S3 DEVKIT boards with file transfer over USB. AFAIK the MicroPython team is working on this issue.
+MicroPython version 1.27 or later is required. Since MicroPython is continually enhanced, it's best use the latest version.
 
 If you want to program in MicroPython, a IDE (integrated development environment) is useful. Some free options are:
 * Microsoft Visual Studio Code, aka VSCode (free) plus ```mpremote```. You can run mpremote in a VSCode window (this is what I use). Add the MicroPython stubs from https://github.com/Josverl/micropython-stubs
@@ -1428,13 +1468,19 @@ If you want to program in MicroPython, a IDE (integrated development environment
 
 Credits to the MicroPython team for MicroPython (https://www.micropython.org) and it's libraries. This is an amazing product! 
 
-Credits to  Miguel Grinberg (microdot server, temporarily added some logging to debug my software). These library modules are available on github Microdot https://github.com/miguelgrinberg/microdot
+Credits to  Miguel Grinberg for the Microdot server. Microdot is available on Github at https://github.com/miguelgrinberg/microdot
 
 Special thanks to Peter Hinch for the asyncio tutorial at https://github.com/peterhinch/micropython-async
 
-All these are (c) Copyright by their respective authors and are available under the same MIT license as this software.
+Thanks to @Glenn20 for the ESP32 image utility at https://github.com/glenn20/mp-image-tool-esp32, although I don't use that utility anymore.
+
+Thanks to @mcauser for the original MCP27013 driver at https://github.com/mcauser/micropython-mcp23017, although I don't use that driver anymore.
+
+All these are (c) Copyright by their respective authors and are available under the same MIT license, as is this software.
 
 To ease the installation process, I have included the libraries in the repository and installation files. There is no need for a separate installation of these libraries.
+
+Also, Microdot has some very minor modifications for the purpose of this software.
 
 # 22. Testing
 
@@ -1473,19 +1519,13 @@ If no internet is accessible, current time will show as January 2000 until inter
 
 On some ESP32 N16R8 boards, the port labeled "COM" does not work well. Always use the port labeled "USB" to connect a USB cable. This port is also faster.
 
-I have seen the File Manager sometimes react very slowly when uploading several large files (large meaning 100kb or more, which is not usual). If the response of File Manager is very slow, please reload the page and start over.
-
-Password encryption gets lost when installing a new MicroPython version. It should not be necessary to update MicroPython (or very seldom) since MicroPython is very stable. If you update MicroPython, you will have to enter the passwords again on the General Configuration page.
-
 No https is available. Please raise an issue if you think this is vital. https needs you to generate a certificate and register that on your PC and cell phone, so some work would be required on your side to make that work once developed.
 
-The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a general file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
+The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a basic file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
 
 Changes to the tunelib take some time to apply. They are stored in a queue on flash, so the changes don't get lost even when power is down. Once the microcontroller is idle and not playing music, then the tunelib is updated and the Tune List, Performance and History pages will reload automatically to reflect the changes.
 
-The History column in the Tune List page shows the times a tune is played. This information is refreshed on each reboot for performance reasons, so don't expect an immediate update.
-
-If there are many tunes (for example 1500) then very large setlists (500 or more tunes) cannot be manipulated while MIDI files are playing because some notes may be delayed.  Please wait until no music is playing, and can manipulate setlists of 1500 files perfectly well.
+If there are many tunes (for example 1500) then very large setlists (500 or more tunes) cannot be manipulated while MIDI files are playing because some notes may be delayed.  Please wait until no music is playing, and you will be able to manipulate extremely large setlists.
 
 # 25. Licensing
 This software is available under the MIT license:

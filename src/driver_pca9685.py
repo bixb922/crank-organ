@@ -2,97 +2,32 @@
 #MIT License
 
 import ustruct
-import time
+from time import sleep_us
 
+from driver_base import RCServoPin, BaseDriver
 
-from driver_base import BasePin, BaseDriver
-
-#  one instance for each PCA chip
+# one instance for each PCA chip i.e. one instance for 16 outputs
 class PCA9685Driver(BaseDriver):
     def __init__(self, i2c, i2c_number, address, period_us):
         super().__init__(  i2c_number, address )
 
         self.i2c = i2c
         self.address = address
-        self.period_us = period_us
-
+        self._period_us = period_us
+        # It would be slightly faster with just reading 1 byte at "address"
+        # successful i2c.scan() takes about 16msec per board
+        # since this is only once at startup, there is no need to optimize.
         if i2c.scan().count(address) == 0:
             raise OSError(
-                f"PCA8685 not found at I2C address {address:#x}"
+                f"PCA9685 not found at I2C address {address:#x}"
             )
-        self.pca = PCA9685(i2c, address, period_us)
-        self.pin_list = [] 
-        self.stagger_all_notes_off = True
-
-    def set_servopulse( self, pulse0_us, pulse1_us ):
-        # Store temporarily here. This is
-        # valid for define_pin() calls done until next set_servopulse()
-        self.pulse0_us = pulse0_us
-        self.pulse1_us = pulse1_us 
-
-    def define_pin( self, *args ):
-        sp = PCAPin( self,  *args )
-        sp.set_device( self.pca, self.period_us, self.pulse0_us, self.pulse1_us )
-        self.pin_list.append( sp )
-        return sp
-    
-    def all_notes_off( self ):
-        if self.stagger_all_notes_off:
-            print("PCA9685Driver.all_notes_off: staggering all notes off for RC servos", repr(self))
-        # No shorter way to do this, since pulse0_us can be potentially
-        # different for each pin, so we cannot just set all to some value.
-        for sp in self.pin_list:
-            sp.value(0)
-            if self.stagger_all_notes_off:
-                time.sleep_ms(100)  # Stagger turn-off to reduce current spikes
-        if self.stagger_all_notes_off:
-            print("PCA9685Driver.all_notes_off: staggering done")
-        self.stagger_all_notes_off = False  # Only do this once
-        # Same logic applies in driver_gpioservo.py
-
-        
-class PCAPin(BasePin):
-
-    def set_device( self, pca, period_us, pulse0_us, pulse1_us ):
-        self.pca = pca
-        self.set_servopulse( period_us, pulse0_us, pulse1_us )
-        
-    def value( self, val ):
-        self.pca.set_pwm( self._pin, self._pulse_on, self._pulse_off1 if val else self._pulse_off0 )
- 
-    def set_servopulse( self, period_us, pulse0_us, pulse1_us ):
-        if not( 1000 <= pulse0_us <= 2000 and
-                1000 <= pulse1_us <= 2000 ):
-            raise ValueError("Pulse width not 1000 to 2000")
-        # self._pulse_on = PCA count (0-4095) when the pulse has to start 
-        # self._pulse_offx = PCA count (0-4095) when the pulse has to stop, x in [0,1]
-        # It is valid if off is smaller than on (i.e. the pulse times operate
-        # modulo 4096)
-
-        # Stagger the start of the pulses, perhaps it
-        # makes that the total current a bit lower 
-        self._pulse_on = round(self._pin/16*4096)
-        # Calculate pulse end for 0 
-        length0 = round(pulse0_us/period_us*4096)
-        self._pulse_off0 = (self._pulse_on + length0) % 4096
-        
-        # Calculate pulse end for 1
-        length1 = round(pulse1_us/period_us*4096)
-        self._pulse_off1 = (self._pulse_on + length1) % 4096
-
-# Low level driver
-# Derived from 
-# https://github.com/mcauser/deshipu-micropython-pca9685
-# https://github.com/pappavis/micropython-pca9685/blob/main/pca9685/servo.py
-class PCA9685:
-    def __init__(self, i2c, address, period_us):
-        self.i2c = i2c
-        self.address = address
-        self.period_us = period_us
 
         self._reset()
         # Frequency is the same for all outputs.
         self._freq( 1_000_000/period_us )
+
+    def define_pin( self, *args ):
+        return PCAServoPin( self._period_us,  self, *args )
 
     def _write(self, address, value):
         self.i2c.writeto_mem(self.address, address, bytearray([value]))
@@ -103,23 +38,61 @@ class PCA9685:
     def _reset(self):
         self._write(0x00, 0x00) # Mode1
 
-    def _freq(self, freq=None):
-        if freq is None:
-            return int(25000000.0 / 4096 / (self._read(0xfe) - 0.5))
+    def _freq(self, freq):
         prescale = int(25000000.0 / 4096.0 / freq + 0.5)
         old_mode = self._read(0x00) # Mode 1
         self._write(0x00, (old_mode & 0x7F) | 0x10) # Mode 1, sleep
         self._write(0xfe, prescale) # Prescale
         self._write(0x00, old_mode) # Mode 1
-        time.sleep_us(5)
+        sleep_us(5) # See datasheet.
         self._write(0x00, old_mode | 0xa1) # Mode 1, autoincrement on
         
-    
-    def set_pwm(self, index, on, off):
-        # on=time to turn on the pulse, off=time to turn off the pulse
-        data = ustruct.pack('<HH', on, off)
+    def set_pwm(self, index, start, stop):
+        # index=pin number 0-15
+        # start=time to start the pulse
+        # stop=time to stop the pulse
+        # both on a scale of 0 to 4095. 
+        # Write in one go.
+        data = ustruct.pack('<HH', start, stop)
         self.i2c.writeto_mem(self.address, 0x06 + 4 * index,  data)
 
-    # def get_pwm( self, index ):
-    #     data = self.i2c.readfrom_mem(self.address, 0x06 + 4 * index, 4)
-    #     return ustruct.unpack('<HH', data)
+class PCAServoPin(RCServoPin):
+    def low_level_on( self ):
+        super()._movement_start()
+        self._driver.set_pwm( self._pin, self._pulse_start, self._1_pulse_stop )
+       
+    def low_level_off( self ):
+        super()._movement_start()
+        self._driver.set_pwm( self._pin, self._pulse_start, self._0_pulse_stop )
+        
+
+
+    def set_servopulse( self, pulse0_us, pulse1_us ):
+        # Validate pulse0_us and pulse1_us
+        super().set_servopulse( pulse0_us, pulse1_us )
+        # Calculate "on" and "off" settings for a PCA9685.
+        # self._pulse_start = PCA count (0-4095) when the pulse has to start 
+        # self._0_pulse_stop = PCA count (0-4095) when the pulse has to stop for "off" position of the servo
+        # self._1_pulse_stop = PCA count (0-4095) when the pulse has to stop for "on" position of the servo
+        # It is valid if stop is smaller than start (i.e. the pulse times operate
+        # modulo 4096)
+
+        # Stagger the start of the pulses, perhaps it
+        # makes that the total current be a bit lower 
+        # Not significant if period_us is small
+        # Pulse starts at the same time for "on" and "off" position of the servo
+        self._pulse_start = round(self._pin/16*4096)
+        # Calculate pulse end for OFF position and store into self._0_pulse_stop
+        length0 = round(pulse0_us/self._period_us*4096)
+        self._0_pulse_stop = (self._pulse_start + length0) % 4096
+        
+        # Calculate pulse end for ON position and store into into self._1_pulse_stop
+        length1 = round(pulse1_us/self._period_us*4096)
+        self._1_pulse_stop = (self._pulse_start + length1) % 4096
+
+    def stop_pwm( self ):
+        # Stop PWM signal to lower power consumption and heat
+        # start=0, stop=0 stops PWM pulse train.
+        # For some servos this may reduce current to < 1mA.
+        # Some servos like the MG92B servos don't need this
+        self._driver.set_pwm( self._pin, 0, 0 )

@@ -38,7 +38,7 @@ class MyHTMLParser(HTMLParser):
             return 
         text = stripped_data.lower()
         if text not in self.translations and not stripped_data.startswith("© Copyright"):
-            print(f"    not found page {self.pagename} tag <{self.tag}> data='{stripped_data}'")
+            print(f"ERROR    not found page {self.pagename} tag <{self.tag}> data='{stripped_data}'")
             errors_found +=1
         else:
             self.translations_used.append( text )
@@ -46,7 +46,7 @@ class MyHTMLParser(HTMLParser):
 def check_script( script, translations, pagename, tag, translations_used ):
     global errors_found
     if "ttl(" in script:
-        print("    Error, there is a ttl() instead of tlt() in script!")
+        print("ERROR    Error, there is a ttl() instead of tlt() in script!")
         errors_found += 1
     # common.js has "function tlt", skip that, also skip use
     # of tlt inside translate_html()
@@ -60,7 +60,7 @@ def check_script( script, translations, pagename, tag, translations_used ):
     while "tlt(" in script:
         p = script.index("tlt(")
         if script[p+4:p+5] != '"' and script[p+5:p+6] != '"':
-            print( "    Error, tlt() does not translate literal:", script[p:p+20])
+            print( "ERROR    Error, tlt() does not translate literal:", script[p:p+20])
             errors_found += 1
         while script[p] != '"':
             p = p + 1
@@ -72,14 +72,13 @@ def check_script( script, translations, pagename, tag, translations_used ):
         tlt_text = script[p:q].lower()
         script = script[q:]
         if tlt_text not in translations:
-            print(f"    tlt() in javascript not found page {pagename} tag <{tag}> data='{tlt_text}'")
+            print(f"ERROR    tlt() in javascript not found page {pagename} tag <{tag}> data='{tlt_text}'")
             errors_found += 1
         else:
             translations_used.append( tlt_text )
 
 def read_translations(filename):
     global errors_found
-    print("Reading translations from", filename)
     t = {}
     with open(filename) as file:
         copy = False
@@ -104,7 +103,7 @@ def read_translations(filename):
                 # "key": // page where it occurs
                 key = line.split('"')[1]
                 if key != key.lower():
-                    print(f"    Must be lower case: {key}")
+                    print(f"ERROR Must be lower case: {key}")
                     errors_found += 1
             elif line[0] == "[":
                 # ["one language", "other language"],
@@ -118,20 +117,23 @@ def read_translations(filename):
 
 def main():
     filelist = []
+    # demo folder is not checked since all files originate in crank-organ/static
+    # info folder is not checked, no translations available.
     for folder in [ "crank-organ/static/", "server/mysite/iot/static/"]:
-        filelist.extend( [folder + fn for fn in os.listdir(folder) if fn.endswith(".html")] )
-    analyze_translations(folder, filelist)
+        filelist.extend( [(folder, fn) for fn in os.listdir(folder) if fn.endswith(".html")] )
+    analyze_translations( filelist )
     print("")
     if errors_found:
-        print("?Errors found in check translations")
+        print("ERROR ?Errors found in check translations")
         sys.exit(1)
 
 
-def analyze_translations(folder, filelist):
+def analyze_translations( filelist ):
     global errors_found
-    translations = read_translations(folder + "translations.js")
     translations_used = []
-    for filename in filelist:
+    for folder, fn in filelist:
+        translations = read_translations(folder + "translations.js")
+        filename = folder + fn
         if not filename.endswith(".html"):
             continue
         pagename = filename.replace("/",".").split( ".")[-2]
@@ -140,28 +142,30 @@ def analyze_translations(folder, filelist):
         there_is_translations_js = "translations.js" in data
         there_is_translate_html = "translate_html()" in data
         if not there_is_translations_js:
-            print(f"Error in {filename}: translations.js is missing")
+            print(f"ERROR in {filename}: translations.js is missing")
             errors_found += 1
             continue
         if not there_is_translate_html:
-            print("File skipped, no translations: ", filename )
+            print("info  File skipped, no translations: ", filename )
             continue
-        print("Checking:                      ", filename )
+        print("info  Checking:                 ", filename )
         parser = MyHTMLParser(pagename, translations)
         parser.feed(data)
         translations_used.extend( parser.translations_used)
 
-    with open(folder + "common.js") as file:
-        print("Checking:                       crank-organ/static/common.js")
-        check_script( file.read(), translations, "common.js", "-", translations_used )
+    folderlist = set( e[0] for e in filelist)
+    for fo in folderlist:
+        with open(fo + "common.js") as file:
+            print(f"info  Checking:                  {fo}common.js")
+            check_script( file.read(), translations, "common.js", "-", translations_used )
 
-    print("Check for unused translations:")
+    print("info  Check for unused translations:")
     unused = False
     for k in translations.keys():
         if k not in translations_used:
-            print("Unused translation", k)
+            print("ERROR Unused translation", k)
             unused = True
     if not unused:
-        print("    No unused translations")
+        print("info  No unused translations")
 
 main()

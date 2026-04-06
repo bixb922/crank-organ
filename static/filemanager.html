@@ -284,6 +284,7 @@
 
 
     async function refreshFileList(path) {
+        clearSelection();
         let body = document.getElementById("fileListBody");
         body.innerHTML = "";
 
@@ -333,6 +334,7 @@
                 // inside the block scope, to be created in each iteration
                 input.onchange = function () { selectFile(checkbox_id, file.path) };
                 input.name = "fileCheckbox";
+                let fpl = file.path.toLowerCase();
                 row.cells[0].appendChild(input);
 
                 // allow to navigate to files that can be rendered
@@ -345,13 +347,6 @@
                     fileType.startsWith("json-20"))) {
                     let link = document.createElement("a");
                     link.href = "/show_file/" + encodePath(file.path);
-                    link.innerText = file.name;
-                    row.cells[1].appendChild(link);
-                }
-                else if (mime_fileType == "mid") {
-                    // .mid files lead to another page
-                    let link = document.createElement("a");
-                    link.href = "/show_midi/" + encodePath(file.name);
                     link.innerText = file.name;
                     row.cells[1].appendChild(link);
                 }
@@ -429,6 +424,8 @@
     }
 
     async function downloadSelectedFiles() {
+        // Will not work if not authorized.
+        await fetch_json("/get_permission");
         closeLogWindow();
         for (let file of SELECTED_FILES) {
             logNotification(`Starting to download ${file}`);

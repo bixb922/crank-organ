@@ -11,23 +11,22 @@ import minilog
 import fileops
 import re
 from hashlib import sha256
-# >>> new config parameter for minimum time of repetition test
-# >>> new config parameter for WiFi Power Mode
 
 # One logger for both Config and PasswordManager
 _logger = minilog.getLogger(__name__)
 # Password mask for web form
-NO_PASSWORD = "*" * 15
+_PASSWORD_MASK = "*" * 15
+# Initial password when just installed
 _DEFAULT_PASSWORD = const("password") 
 
+
 class Config:
-    def __init__(self):
+    def __init__(self, show_log ):
+        # Capital letters config attributes cannot be changed in config.json
+
         # Get time.ticks_ms() at boot time.
         # Gets set to zero on soft reset.
-        self.boot_ticks_ms = time.ticks_ms()
-
-        
-        self.cfg = {}
+        self.BOOT_TICKS_MS = time.ticks_ms()
 
         # Data file/folder names used in the software
         self.TUNELIB_FOLDER = "tunelib/"
@@ -35,8 +34,8 @@ class Config:
         if fileops.file_exists("/sd"):
             self.TUNELIB_FOLDER = "/sd/" + self.TUNELIB_FOLDER
             self.PURGED_FOLDER = "/sd/" + self.PURGED_FOLDER
-    
         
+        # Upper case: config items that cannot be set with config.json
         # minilog folder/filenames defined in minilog module, not here
         # Timezone file/folder defined in timezone module, not here
         self.DATA_FOLDER = "data/"
@@ -53,215 +52,242 @@ class Config:
         self.SYNC_TUNELIB = "data/sync_tunelib.json"
         self.TUNELIB_JSON = "data/tunelib.json"
         
-        # Read config.json
-        self.cfg = fileops.read_json(
-                self.CONFIG_JSON, 
-                default={} )
+        # Lower letter config attributes can be changed with config.json/config.html
+        # Set default values and data types. 
+        # Defined data type is used for validations/conversions later.
+        # Data types can be str, int, float, bool.
+        self.description = "Your ESP32-S3 device"
+        self.name = "esp32s3"
 
-        # Load a fallback configuration, populate cfg with missing values if any
-        # If that value is saved, information gets complemented.
-        # Also, the save() function relies on all keys be present. Only
-        # keys present in cfg can be updated, no new keys added.
-        # Also: initially there does not need to be a config.json.
-        # After the first change, config.json is complete.
-        fallback = {
-            "description": "Your ESP32-S3 device",
-            "name": "esp32s3",
-            "access_point1": "wifi_SSID_1",
-            "password1": _DEFAULT_PASSWORD,
-            "access_point2": "wifi_SSID_2",
-            "password2": _DEFAULT_PASSWORD,
-            "ap_password": _DEFAULT_PASSWORD,
-            "password_required": False,
-            "ap_ip": "192.168.144.1",
-            "ap_max_idle": 120, 
-            "idle_deepsleep_minutes": 15,
+        # WiFi and passwords
+        self.access_point1 = "wifi_SSID_1"
+        self.password1 = _DEFAULT_PASSWORD
+        self.access_point2 = "wifi_SSID_2"
+        self.password2 = _DEFAULT_PASSWORD
+        self.ap_password = _DEFAULT_PASSWORD
+        self.password_required = False
+        self.ap_ip = "192.168.144.1"
+        self.ap_max_idle = 180 
+        self.advertise_bt = False
 
-            "battery_heartbeat_duration": 0,
-            "battery_heartbeat_period": 0,
+        # Power management
+        self.battery_heartbeat_duration = 0
+        self.battery_heartbeat_period = 0
+        self.idle_deepsleep_minutes = 15
 
-            "max_polyphony": 9,
-            "touchpad_big_change": 20000,
-            
-            "webserver_cache": True,
-            # Firefox caps max_age at 86400 seconds=1 day, Chromium at 7200 seconds=2 hours
-            "max_age": 1800,
-            
-            "mic_test_mode": False,
-            "mic_signal_low": -18,
-            "mic_store_signal": False,
-            "mic_amplitude": False,
-            
-            "servernode": "192.168.100.19:8080", # Only used if mcserver.py is present
-            "serverpassword": "password3", # Only used if mcserver.py is present
+        # Driver parameters
+        self.touchpad_big_change = 20_000
+        self.max_polyphony = 9
+        self.i2c_frequency_khz = 100 # 100, 200, 400
 
-            "automatic_delay": 0,
-            "tempo_follows_crank": False,
-            "pulses_per_revolution": 24,
-            "lower_threshold_rpsec": 0.4,
-            "higher_threshold_rpsec": 0.7,
-            "normal_rpsec": 1.2,
-            "crank_lowpass_cutoff": 1.2,
-            "rotary_tempo_mult": 1,
-            "tuning_frequency": 440,
-            "tuning_cents": 5,
-            "multiple_setlists": 0,
-        }
-        # Populate missing keys from fallback
-        for k in set(fallback)-set(self.cfg):
-            self.cfg[k] = fallback[k]
-            _logger.debug(f"Adding configuration key '{k}'")
+        # Webserver parameters
+        self.webserver_cache = True
+        self.max_age = 1800
 
-        # Delete surplus keys
-        for k in set(self.cfg.keys()) - set(fallback.keys()):
-            del self.cfg[k]
-            _logger.debug(f"key '{k}' is not needed, now deleted")
+        # Microphone and tuner
+        self.mic_test_mode = False
+        self.mic_signal_low = -18.0
+        self.mic_store_signal = False
+        self.mic_amplitude = False
+        self.tuning_frequency = 440.0
+        self.tuning_cents = 10
+
+        # MC server
+        self.servernode = ""
+        self.serverpassword = "password3"
+
+        # Music and crank
+        self.automatic_delay = 0
+        self.tempo_follows_crank = False
+        self.pulses_per_revolution = 100.0
+        self.lower_threshold_rpsec = 0.4
+        self.higher_threshold_rpsec = 0.7
+        self.normal_rpsec = 1.2
+        self.crank_lowpass_cutoff = 1.2
+        self.rotary_tempo_mult = 1.0
+        self.multiple_setlists = False 
+        self.wait_stop_turning = True
+     
+        self.barrel_mode = False
+        
+        # RC Servos 
+        self.rc_max_moving = 10
+        self.rc_moving_time = 80 # msec
+        self.rc_pwm_auto_off = True
+        
+        # Logger level 
+        self.log_debug = False 
+
+        # History
+        self.auto_purge_history = 0
+
+        # Read data/config.json and validate
+        cfg = self.read_config()
+        # No need to delete surplus keys, validation did that already
 
         # Encrypted passwords, if not done already
-        if PasswordManager().encrypt_all_passwords(self.cfg):
+        if PasswordManager().encrypt_all_passwords(cfg):
             # A password had to be encrypted.
             # Rewrite config.json with encrypted passwords.
             # No backup, the backup would show the passwords
-            fileops.write_json(self.cfg, self.CONFIG_JSON, keep_backup=False)
+            fileops.write_json(cfg, self.CONFIG_JSON, keep_backup=False)
             _logger.info("Passwords encrypted")
 
-        # Get WiFi MAC address (only to show in diag.html)
-        self.wifi_mac = binascii.hexlify(
-            network.WLAN(network.STA_IF).config("mac")
-        ).decode()
+
+        # Merge config.json into self.
+        # Variables not in config.json are left with default value
+        for k, v in cfg.items():
+            setattr( self, k, v )
 
         # Give AP more time while WiFi station mode is not fully configured
-        if self.cfg["access_point1"] == fallback["access_point1"]:
+        if "access_point1" not in cfg:
             # WiFi not configured yet, give AP mode plenty
             # of time. Alter AP max idle temporarily.
-            self.cfg["ap_max_idle"] = 3600
+            self.ap_max_idle = 3600
 
-        _logger.debug( f"Config {self.cfg['description']} wifi_mac={self.wifi_mac} hostname and AP SSID={self.cfg['name']}"  )
+        if show_log:
+            # Get WiFi MAC address (only to show in diag.html)
+            wifi_mac = binascii.hexlify(
+                network.WLAN(network.STA_IF).config("mac"), "-"
+            ).decode()        
+            _logger.debug( f"Config {self.description}, WiFi mac={wifi_mac}, hostname and AP SSID={self.name}"  )
+        
 
-    def get_config(self)->dict:
-        # Get copy of complete configuration, to be
-        # sent to client (except passwords)
+    def read_config( self ):
+        # Read config.json
+        cfg = fileops.read_json(self.CONFIG_JSON, default={} )
+        
+        # Validate config read with current definition
+        # Remove incorrect entries so that a default value is used.
+        # That prevents crashes due to incorrect contents of config.json
+        self._validate_config( cfg, on_error="remove" )
+        
+        return cfg
 
-        c = dict(self.cfg)
-        c["password1"] = NO_PASSWORD
-        c["password2"] = NO_PASSWORD
-        c["ap_password"] = NO_PASSWORD
-        c["repeat_ap_password"] = NO_PASSWORD
-        c["serverpassword"] = NO_PASSWORD
-        return c
+    
+    def get_current_config( self ):
+        # export current configuration, hide passwords, return dict.
+        # This is used by the browser/web client to get configuration information
+        cfg = { k: v for k, v in self.__dict__.items()
+                if self._is_config_variable(k) }
+        for k in ("password1", "password2", "ap_password", "repeat_ap_password", "serverpassword"):
+            cfg[k] = _PASSWORD_MASK
+        return cfg
 
-    def get_int(self, item, default=None):
-        # Return configuration item as integer, apply default if error
-        n = self.cfg.get(item, default)
-        if n is None:
-            return None
+    def get_stored_config( self ):
+        # Get fresh data from flash as dict.
+        # This is used by the browser/web client to get configuration information
+        # Use a new instance of class Config to read this, so
+        # current configuration is not touched.
+        # When config.json has been just changed, this will return
+        # the config.json. self still has the old values.
+        return Config(False).get_current_config()
+
+    def _validation_function( self, datatype ):
+        return {
+            "int": int, "str": str, "bool": bool, "float": float
+        }[datatype]
+    
+    def _get_type( self, k ):
+        # Get type of configuration variable k
+        # If not a configuration variable (wrong name or k is a method of this class)
+        # then raise AttributeError.
+        # If not correct value data type, raise ValueError
+        # Configuration variables are in lower case.
+        if "a" <= k[0:1] <= "z":
+            datatype = type(getattr(self, k)).__name__
+            try:
+                # Check valid data type (int/bool/float/str)
+                self._validation_function( datatype )
+                return datatype
+            except KeyError:
+                pass # go on to raise Attribute Error
+        # Not a configuration variable
+        raise AttributeError
+        
+    def _is_config_variable( self, k ):
         try:
-            return int(n)
-        except ValueError:
-            _logger.error(f"Config.json item {item} not an integer")
-            return default
-
-    def get_float(self, item, default=None)->float|None:
-        # Return configuration item as floating point
-        n = self.cfg.get(item, default)
-        if n is None:
-            return None
+            self._get_type( k )
+            return True
+        except:
+            pass # return false
+        
+    def _validate( self, k, v ):
+        # Calls validation function for variable named k, value v
+        # Returns v converted to correct data type 
+        # Raises AttributeError if k is not a configuration variable
+        # Raises ValueError if v is not acceptable for the data type of k
+        datatype = self._get_type( k )
         try:
-            return float(n)
+            v = self._validation_function(datatype)(v)
+            # Some special validations
+            if k == "ap_password":
+                self._validate_password( v )
+            elif k == "name":
+                self._validate_hostname( v )
+            return v
         except ValueError:
-            _logger.error(
-                f"Config.json item {item} not a floating point number"
-            )
-            return default
+            raise ValueError( f"Error: [{k}]={v} is not {datatype}" )
     
     def save(self, newconfig):
-        # Save new configuration, validate before storing
-        # Authentication is already done by webserver.py
-        # Validate data received from config.html
-        for k, v in newconfig.items():
-            if k in (
-                "max_age",
-                "ap_max_idle",
-                "idle_deepsleep_minutes",
-                "solenoid_resistance",
-                "touchpad_big_change",
-                "max_polyphony",
-                "battery_heartbeat_duration",
-                "battery_heartbeat_period",
-                "automatic_delay",
-                "tuning_cents",
-                "multiple_setlists"
-            ):
-                try:
-                    newconfig[k] = int(v)
-                except ValueError:
-                    return f"Error: [{k}]={v} is not an integer"
-
-            elif k in (
-                "mic_signal_low",
-                "pulses_per_revolution",
-                "lower_threshold_rpsec",
-                "higher_threshold_rpsec",
-                "normal_rpsec",
-                "crank_lowpass_cutoff",
-                "rotary_tempo_mult",
-                "tuning_frequency",
-            ):
-                try:
-                    newconfig[k] = float(v)
-                except ValueError:
-                    return f"Error: [{k}]={v} is not float"
-
-                if k == "mic_signal_low" and newconfig[k] > 0:
-                    return f"Error: [{k}]={v} must be negative"
-
-            elif k == "name":
-                # Validate host name
-                name = newconfig[k]
-                if len(name) > 15:
-                    return "Error: Host name exceeds 15 characters"
-                if not re.match("[A-Za-z][A-Za-z0-9]*", name):
-                    return "Error: Host name is not alphanumeric"
-            elif k == "ap_password":
-                if len(v) < 9:
-                    return "Error: Password shorter than 9 characters"
-            elif "password" in k and v == NO_PASSWORD:
-                return "Error: overwriting password with ***, programming error?"
-
-        # Copy newconfig into configuration
-
-        # Update only keys that are already in config
-        # Don't use self.cfg.update() because it could add new keys
-        for k in self.cfg:
-            if k in newconfig:
-                self.cfg[k] = newconfig[k]
-
-        # encrypt passwords if not encrypted
-        PasswordManager().encrypt_all_passwords(self.cfg)
-
-        fileops.write_json(self.cfg, self.CONFIG_JSON)
-
+        # Called from "Save changes" button of config.html page.
+        # newconfig is a dictionary with the changed values.
+        self._validate_config( newconfig, on_error="raise")
+        cfg = fileops.read_json( self.CONFIG_JSON, default={} )
+        cfg.update( newconfig )
+        PasswordManager().encrypt_all_passwords( cfg )
+        fileops.write_json(cfg, self.CONFIG_JSON )
         return
     
     def get_password(self, pwdname)->str:
         # Used by self.verify_password() and by wifimanager
-        pwd = self.cfg[pwdname]
-        return PasswordManager().decrypt_password(pwd)
+        return PasswordManager().decrypt_password(getattr( self, pwdname ))
 
     # Used by webserver to verify hashed seed+hashed password
     # sent by client
     def verify_password(self, client_password, seed ):
         # Must be same algorithm as common.js: hashWithSeed()
         h = sha256( (seed+"_"+self.get_password("ap_password")).encode()).digest()
-        hexhash =  binascii.hexlify( h ).decode() 
-        return client_password == hexhash
+        return client_password == binascii.hexlify( h ).decode() 
     
+    def _validate_hostname( self, name ):
+        if len(name) > 15 or  not re.match("[A-Za-z][A-Za-z0-9]*", name):
+            raise ValueError( "Error: hostname '{name}' exceeds 15 characters or is not alphanumeric" )
+
+    def _validate_password( self, v ):
+        # Only needed for AP password
+        if not( v.startswith(PASSWORD_PREFIX) or v == _DEFAULT_PASSWORD or v == _PASSWORD_MASK ):
+            if len(v) < 9:
+                raise ValueError( "Error: Password {k} shorter than 9 characters" )
+
+
+    def _validate_config( self, cfg, on_error ):
+        # on_error can be "raise" or "remove"
+        for k, v in cfg.items():
+            try:
+                # Validate and convert to correct data type
+                cfg[k] = self._validate( k, v )
+            except ValueError:
+                if on_error == "raise":
+                    raise
+                del cfg[k]   
+                _logger.info(f"[{k}]={v} value error, removing")
+            except AttributeError:
+                # Normally due to obsolete keys in config.json
+                del cfg[k]
+                _logger.info(f"[{k}] not needed, removing")
+            except Exception as e:
+                # Make this work anyhow, use default value.
+                # That is better than crashing....
+                del cfg[k]
+                _logger.exc( e, "Unhandled exception validating configuration item [{k}]={v} ")
+
+
 
 PASSWORD_PREFIX = "@encrypted_"
 
-
 class PasswordManager:
-    # Password are stored encrypted in config.cfg
+    # Password are stored encrypted in config instance
     # Although this doesn't make the ESP32-S3 secure....
     def _get_key(self)->bytes:
         from esp32 import NVS
@@ -338,15 +364,9 @@ class PasswordManager:
         # encrypts passwords in config.json if not yet encrypted
         # Save changes to flash
         changed = False
-        for k, v in cfg.items():
-            if not isinstance(v, str):
-                continue
-            if "password" in k:
-                if v.startswith(PASSWORD_PREFIX):
-                    # Don't encrypt again
-                    continue
-                cfg[k] = self.encrypt_passwords(v)
+        for k in ("password1", "password2", "ap_password", "repeat_ap_password", "serverpassword"):
+            if k in cfg and not cfg[k].startswith(PASSWORD_PREFIX):
+                cfg[k] = self.encrypt_passwords(cfg[k])
                 changed = True
         return changed
-
 

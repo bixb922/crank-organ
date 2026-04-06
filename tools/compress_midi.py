@@ -14,9 +14,10 @@ import unicodedata
 import mido
 from datetime import datetime, timedelta
 import hashlib, binascii
+import sys
 
 STORED_SETLIST_NUMBER = 9
-STORE_WEEKS = 3
+STORE_WEEKS = 4
 
 this_file_py = Path(__file__).name
 this_file = Path(__file__).stem
@@ -47,17 +48,22 @@ def parse_arguments():
                     nargs="*",
                     help='Input and output folder path')
 
-    parser.add_argument("--force-compress", "-f",
-                    dest="force_compress", 
-                    default=False,
+    parser.add_argument("--d0", "-d0",
+                    dest="status_d0", 
                     action=argparse.BooleanOptionalAction,
-                    help="Force compression, disregarding file datetime" )
+                    help="Use status D0 wherever possible" )
+
+    #parser.add_argument("--tunelib", "-t",
+    #                dest="tunelib",
+    #                type=str,
+    #                default=None,
+    #                help="tunelib.json file to compare with microcontroller info")
     
-    parser.add_argument("--tunelib", "-t",
-                    dest="tunelib",
-                    type=str,
-                    default=None,
-                    help="tunelib.json file to compare with microcontroller info")
+    parser.add_argument( "--known-programs", "-k",
+                        dest="known_programs", 
+                        type=int,
+                        nargs="+",
+                        help="Know midi program numbers. First program number is used to replace any program numbers of midi file not in this list (catch all program).")
     
     args = parser.parse_args()
     if len(args.folders) >= 3:
@@ -70,7 +76,7 @@ def parse_arguments():
     except FileNotFoundError:
         if len(args.folders) != 2:
             print(f"No {this_file_json} found, must specify input and output folder. Use --help to get command description")
-            sys.exit(1)
+            sys.exit()
         j = {}
     json_changed = False
     if args.folders:
@@ -80,22 +86,40 @@ def parse_arguments():
         if len(args.folders) >= 2:
             j["output_folder"] = args.folders[1]
         json_changed = True
-    if args.tunelib:
-        j["tunelib"] = args.tunelib
+    #if args.tunelib:
+    #    j["tunelib"] = args.tunelib
+    #    json_changed = True
+
+    if args.known_programs:
+        j["known_programs"] = args.known_programs
+        if set(args.known_programs)-set(range(1,129)):
+            print("Known program numbers must be between 1-128.")
+            sys.exit(1)
+        if len(args.known_programs) >= 15:
+            print("Too many known programs, maximum is 15")
+            sys.exit(1)
+        if len(args.known_programs) == 0:
+            print("At least one known program number must be specified")
         json_changed = True
     
+    if args.status_d0 is not None:
+        j["status_d0"] = args.status_d0
+        json_changed = True
+    if j["status_d0"]:
+        print("D0 MIDI compression")
+
     if json_changed:
         with open(this_file_json, "w") as file:
             json.dump( j, file )
 
 
-    return j["input_folder"], j["output_folder"], args.force_compress, j.get("bass_correction",{}), j.get("tunelib")
+    return j["input_folder"], j["output_folder"], j.get("bass_correction",{}),j.get("known_programs", [1]), j.get("status_d0",False)
 
 def zlib_compress( original_data ):
                                                                                                           
     # This will create the zlib header (8 bytes) that contains level and wbits for deflate
     # MicroPython apparently has some problems with wbits=14?
-    # Use best compression.
+    # Use best compression. (Python gzip does not have wbits=)
     zco = zlib.compressobj( level=9, wbits=13 )
     compressed_data = zco.compress( original_data )
     compressed_data += zco.flush()
@@ -128,13 +152,208 @@ def write_file( filename, data ):
     with open(filename, "wb") as file: # type:ignore
         file.write(data)
 
+class Event:
+    # Container for simplified note on/off events.
+    def __init__( self, time, event_type, channel, program1, note ):
+        self.type = event_type
+        self.channel = channel
+        self.note = note
+        self.time = time
+        self.program1 = program1
+        if self.program1 is not None and self.note is not None:
+            self.key = program1*256 + self.note # a unique key to compare notes
+
+    def set_program1( self, program1 ):
+        self.program1 = program1
+        self.key = program1*256 + self.note # a unique key to compare notes
+
+def sort_event_list( event_list ):
+    translate = {
+        "program_change":0,
+        "note_on":1,
+        "note_off":2,
+    }
+    # Time being equal sort note on before note off
+    event_list.sort( key=lambda ev: f"{ev.time:09.3f}_{translate[ev.type]}" )
+    return event_list
+
+def statistics( s, event_list ):
+    # duration = max(ev.time for ev in event_list)
+    # note_on_count = sum(1 for ev in event_list if ev.type == "note_on")
+    # note_off_count = sum(1 for ev in event_list if ev.type == "note_off")
+    # print(f"    {s} event stats count={len(event_list)} {duration=:.3f} {note_on_count=} {note_off_count=}")
+    return 
+
 def read_midi( filename ):
     midifile = mido.MidiFile( filename )
-    ticks_per_beat = midifile.ticks_per_beat
-    event_list = [ event for event in midifile ]
-    return event_list, ticks_per_beat
+    print(f"    MIDI file read, {len(midifile.tracks)} tracks, {midifile.ticks_per_beat} ticks per beat")
+    event_list = []
+    running_time = 0
+    for mido_event in midifile:
+        running_time += mido_event.time
+        if mido_event.type == "note_on" or mido_event.type == "note_off":
+            ev = Event( running_time, "note_off", mido_event.channel, None, mido_event.note)
+            if mido_event.type == "note_on" and mido_event.velocity > 0:
+                ev.type = "note_on"
+            event_list.append( ev )
+        elif mido_event.type == "program_change":
+            ev = Event( running_time, "program_change", mido_event.channel, mido_event.program+1, None)
+            event_list.append( ev )
+    # Don't solve program changes here, first sort!
+    return sort_event_list( event_list )
 
-def reformat_midi( input_filename, output_filename, bass_correction ):
+def solve_program_changes( event_list, known_programs ):
+    channelmap1 = [1]*16
+    channelmap1[9] = 129
+    programs = set( ev.program1 for ev in event_list )
+    if 129 in programs:
+        known_programs.append( 129 )
+    for ev in event_list:
+        if ev.type == "note_on" or ev.type == "note_off":
+            ev.set_program1(channelmap1[ev.channel] )
+        elif ev.type == "program_change":
+            program1 = ev.program1
+            if program1 not in known_programs:
+                program1 = known_programs[0]
+            channelmap1[ev.channel] = program1
+    return event_list
+
+def  apply_bass_correction( event_list, bass_correction ):
+    # Calculate running time and apply bass correction
+
+    if bass_correction:
+        print("    Applying bass correction", bass_correction )
+    
+    max_correction = max( bass_correction.values(), default=0 )
+    for event in event_list:
+        correction = max_correction
+        if event.type == "note_on":
+            if event.channel != 9:
+                correction -= bass_correction.get( str(event.note), 0 )
+            else:
+                correction -= bass_correction.get( "drum" + str(event.note), 0 )
+        # Keep only these events. 
+        if event.type == "note_on" or event.type == "note_off":
+            event.time = event.time + correction
+    # Sort by time. If time is equal to 1 msec, then note_on is before note_off
+    # If not the continuity may be affected
+    return sort_event_list( event_list )
+
+def pair_note_on_off( event_list ):
+    currently_on = {}
+    output_list = []
+    for event in event_list:
+        if event.type == "note_on":
+            cn = currently_on.setdefault( event.key, {"count":0, "start_time": event.time, "program1": event.program1, "note":event.note } )
+            cn["count"] += 1
+        elif event.type == "note_off" or ( event.type == "note_on" and event.velocity == 0):
+            if event.key in currently_on:
+                cn = currently_on[ event.key ]
+                cn["count"] -= 1
+                if cn["count"] <= 0:
+                    # Don'r include very, very short notes
+                    if event.time-cn["start_time"] >= 0.01:
+                        note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
+                        note_off = Event(  event.time,      "note_off", event.channel, event.program1, event.note )
+                        output_list.append( note_on )
+                        output_list.append( note_off )
+                    del currently_on[event.key]
+
+        #if event.time > 60 and event.note == 60:
+        #    s = ""
+        #    for k, cn in currently_on.items():
+        #        p = k//256 
+        #        n = k&255
+        #        s += f" {p}.{n}"
+        #    print(f"    pair {event.time:.3f} {event.type:8s} {event.program1=} {event.note=} {s}" )
+  
+    for key, cn in currently_on.items():
+        if cn["count"] > 0:
+            note = key % 256
+            program1 = key // 256
+            print(f"Note left on since {cn["start_time"]:.3f} to {event.time:.3f} {program1=} {note=}")
+            note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
+            note_off = Event(  event.time,      "note_off", event.channel, event.program1, event.note )
+            output_list.append( note_on )
+            output_list.append( note_off )
+    if currently_on:
+        print("???Error stop processing, notes left on")
+        sys.exit()
+
+    return sort_event_list( output_list )
+
+def write_midi_file( event_list, output_filename, status_d0 ):
+    # Use a high value for ticks_per_beat, if not bass correction does not work
+    # Compression could be better with a lower value....
+    tempo = 500_000
+    ticks_per_beat = 96 # better not use lower values!
+    tempo_secs = tempo/1_000_000
+ 
+    midifile = mido.MidiFile()
+    midifile.ticks_per_beat = ticks_per_beat
+    
+    trackdict = {} # translates program number (1-128, 129) to MIDO track
+    trackchannel = {} # translates program number to channel number
+    tracktime = {} # keeps MIDI time for each track
+    eventcount = {} # statistics, output events per track
+
+    available_channels = list(range(16))
+    available_channels.pop(9) # channel 10 is not available for non-drum program numbers
+   
+    drum_program = 129
+    programs = set( ev.program1 for ev in event_list )
+    # Create tracks and fill in data structures
+    for program1 in programs:
+        track = mido.MidiTrack()
+        trackdict[program1] = track
+        if program1 == drum_program:
+            # Drum program 129 goes to MIDI channel 10
+            channel = 9
+            trackchannel[program1] = channel
+            # No program change for drum channel
+        else:
+            channel = available_channels.pop(0) # assign next available channel
+            trackchannel[program1] = channel
+            track.append( mido.Message( "program_change", program=program1-1, channel=channel, time=0))
+        tracktime[program1] = 0
+        eventcount[program1] = 0
+        midifile.tracks.append( track )
+     
+
+    # Append the events to the tracks according to their channel.
+    for event in event_list:
+        if event.type == "note_on" or event.type == "note_off":
+            program1 = event.program1
+            track = trackdict[program1]
+            channel = trackchannel[program1]
+            last_time = tracktime[program1]
+
+            # Now calculate the MIDI file delta time.
+            # Due to integer vs floating point precision, delta could be -1 or -2
+            # sometimes, so do a max(delta,0)
+            delta = max(round((event.time-last_time)/tempo_secs*ticks_per_beat),0)
+            if 40 <= event.note <= 103 and status_d0:
+                n = event.note-40
+                if event.type == "note_on":
+                    n += 64
+                track.append( mido.Message( "aftertouch", value=n, time=delta, channel=channel))
+            else:
+                velocity = 0
+                if event.type == "note_on":
+                    velocity = 64
+                track.append( mido.Message( "note_on", note=event.note, velocity=velocity, time=delta, channel=channel ) )
+            # Can't simply do tracktime[channel] = start_time
+            # Must do the calculation using the MIDI delta, 
+            # if not rounding/truncating errors
+            # will start to propagate getting significant at the end
+            # of tunes.
+            tracktime[program1] += delta * tempo_secs / ticks_per_beat
+            # No need to output further "set tempo" meta events since event.time
+            # already reflects the tempo changes
+            eventcount[program1]+=1
+    midifile.save( output_filename )
+
+def reformat_midi( input_filename, output_filename, bass_correction, known_programs, status_d0 ):
     # Get rid of all messages in the file except note on, note off and program_change.
     # MIDO will have preprocessed all set tempo, so we don't need keep them.
     # Convert all note off messages to note on with velocity 0,
@@ -146,138 +365,35 @@ def reformat_midi( input_filename, output_filename, bass_correction ):
     # timing is already taken care of.
 
     # Read the midi file
-    event_list, ticks_per_beat = read_midi( input_filename )
+    event_list = read_midi( input_filename )
+    statistics("read_midi", event_list)
 
-    # Use a high value, if not bass correction does not work
-    # Compression could be better with a lower value....
-    # This combination makes 1 delta = 5 milliseconds
-    # which should be enough and enables a good compression
-    tempo = 500_000
-    ticks_per_beat = 96
-    tempo_secs = tempo/1_000_000
+    event_list = solve_program_changes( event_list, known_programs )
+
+    event_list = apply_bass_correction( event_list, bass_correction )
+    statistics("bass correction", event_list)
+
+    event_list = pair_note_on_off( event_list )
+    statistics("pair notes", event_list)
  
 
-     # Calculate running time and apply bass correction
-    running_time = 0
+    write_midi_file( event_list, output_filename, status_d0 )
 
-    if bass_correction:
-        print("    Applying bass correction", bass_correction )
-    
-    max_correction = max( bass_correction.values(), default=0 )
-    new_event_list = []
-    for event in event_list:
-        running_time += event.time
-        correction = max_correction
-        if event.type == "note_on" and event.velocity != 0:
-            if event.channel != 9:
-                correction -= bass_correction.get( str(event.note), 0 )
-            else:
-                correction -= bass_correction.get( "drum" + str(event.note), 0 )
-        # Keep only these events. 
-        if event.type == "note_on" or event.type == "note_off" or event.type == "program_change":
-            new_event_list.append( [running_time+correction, event] )
-    # Sort by running time
-    event_list = None
-    new_event_list.sort( key=lambda x: x[0] )
-
-    midifile = mido.MidiFile()
-    midifile.ticks_per_beat = ticks_per_beat
-    
-    trackdict = {}
-    tracktime = {}
-    # Make a track dictionary with one track per channel
-    # There is no need for a "track 0" since no set tempo nor other meta
-    # messages are needed. 
-    # Append the tracks to the MIDI file.
-    # First a track for channel 0, then one for each channel.
-    track0 =  mido.MidiTrack()
-    trackdict[0] = track0
-    tracktime[0] = 0
-    midifile.tracks.append( track0 )
-    # Now repeat for other channels (if any)
-    for channel in set( event.channel for _, event in new_event_list if event.channel != 0):
-        track = mido.MidiTrack()
-        trackdict[channel] = track
-        tracktime[channel] = 0
-        midifile.tracks.append( track )
-
-
-    # Insert a set_tempo event at the beginning of the first track, 
-    # (just to be sure)
-    # with the standard tempo. Deltas will be adjusted to this tempo.
-    track0.append( mido.MetaMessage( type="set_tempo", tempo=tempo, time=0))
-    
-    # Insert a initial program change for all  channels
-    # to change sound to a type of flute. Can be overridden later by the input midi file.
-    for channel, track in trackdict.items():
-        if channel == 9:
-            # Standard program for drum channel (channel 10)
-            program = 0
-        else:
-            # A kind of flute for all other channels except drum
-            program = 74
-        track.append( mido.Message( type="program_change", program=program, time=0, channel=channel) )
-
-    # Append the events to the tracks according to their channel.
-    for start_time, event in new_event_list:
-        
-        if not hasattr(event,"channel"):
-            raise RuntimeError("Event list has Meta/sysex event") 
-            
-        channel = event.channel
-        
-        # Get the MidiTrack and the time of the last event.
-        # Should not happen that track_id is not in trackdict, but
-        # if it does, use any track
-        track = trackdict[channel]
-        last_time = tracktime[channel]
-
-        # Now calculate the MIDI file delta time.
-        # Due to integer vs floating point precision, delta could be -1 or -2
-        # sometimes, so do a max(delta,0)
-        delta = max(round((start_time-last_time)/tempo_secs*ticks_per_beat),0)
-
-        if event.type == "note_on" or event.type == "note_off":
-            velocity = 0
-            if event.type == "note_on" and event.velocity != 0:
-                # Use a fixed velocity, this will optimize gzip compression
-                velocity = 64
-            # Use only Note On MIDI events, this will optimize the
-            # running status and yield smallest file.
-            track.append( mido.Message( "note_on", note=event.note, velocity=velocity, time=delta, channel=channel ) )
-            #print(f"append note_on {delta=} {event.channel=}")
-        elif event.type == "program_change":
-            # Thiss necessary should there be different instruments
-            # in the crank organ. 
-            track.append( mido.Message( "program_change", program=event.program, channel=channel, time=delta))
-            #print(f"program change {delta=} {event.channel=} {event.program=}")
-        else:
-            raise RuntimeError("Unprocessed midi event")
-        # Can't simply do tracktime[channel] = start_time
-        # Must do the calculation using the MIDI delta, 
-        # if not rounding/truncating errors
-        # will start to propagate getting significant at the end
-        # of tunes.
-        tracktime[channel] += delta * tempo_secs / ticks_per_beat
-        # No need to output further "set tempo" meta events since event.time
-        # already reflects the tempo changes
-
-    midifile.save( output_filename )
 
 
 input_filelist = []
 
-def compress_midi_file( input_folder, filename, output_folder, force_compress, bass_correction ):
+def compress_midi_file( input_folder, filename, output_folder, bass_correction, known_programs, status_d0 ):
     pf = Path( filename )
     input_filename = Path(input_folder) / pf
     output_filename = (Path(output_folder) / pf).with_suffix( pf.suffix + ".gz")
     input_size, input_date = file_info(input_filename)
     output_size, output_date = file_info(output_filename)
     input_filelist.append( (filename, input_size, input_date) )
-    if input_date >= output_date or force_compress:
+    if input_date >= output_date:
         print("Input file", filename, "processing...")
         print("    input", input_size, "bytes")
-        reformat_midi( input_filename, "temp.mid", bass_correction )
+        reformat_midi( input_filename, "temp.mid", bass_correction, known_programs, status_d0 )
         
         data = read_file( "temp.mid" )
         decompressed_size = len(data)
@@ -299,31 +415,31 @@ def remove_deleted_files( input_folder, output_folder ):
         os.remove( Path(output_folder) / filename )
         print(f"Deleting file {filename}, source (uncompressed) file not found")
 
-def compare_folder_with_tunelib( folder, tunelib_file ):
-    def compare( set1, set2 ):
-        nt = []
-        for fn in set1-set2:
-            nt.append(fn)
-        nt.sort()
-        for fn in nt:
-            print("    ", fn)
-    def nfc( s ):
-        return unicodedata.normalize( "NFC", s )
+# def compare_folder_with_tunelib( folder, tunelib_file ):
+#     def compare( set1, set2 ):
+#         nt = []
+#         for fn in set1-set2:
+#             nt.append(fn)
+#         nt.sort()
+#         for fn in nt:
+#             print("    ", fn)
+#     def nfc( s ):
+#         return unicodedata.normalize( "NFC", s )
     
-    TLCOL_FILENAME = 6
-    # TLCOL_SIZE = 11
-    if not tunelib_file:
-        return
+#     TLCOL_FILENAME = 6
+#     # TLCOL_SIZE = 11
+#     if not tunelib_file:
+#         return
 
-    with open(tunelib_file,encoding="utf8") as file:
-        tunelib = json.load( file )
+#     with open(tunelib_file,encoding="utf8") as file:
+#         tunelib = json.load( file )
         
-    tunelib_files = set( nfc(tune[TLCOL_FILENAME]) for tune in tunelib.values())
-    folder_files = set( nfc(fn) for fn in os.listdir(folder) if fn.lower().endswith(".mid") or fn.lower().endswith(".mid.gz") )
-    print("In tunelib (microcontroller) but not in folder")
-    compare( tunelib_files, folder_files )
-    print("In folder but not in tunelib (microcontroller)")
-    compare( folder_files, tunelib_files )
+#     tunelib_files = set( nfc(tune[TLCOL_FILENAME]) for tune in tunelib.values())
+#     folder_files = set( nfc(fn) for fn in os.listdir(folder) if fn.lower().endswith(".mid") or fn.lower().endswith(".mid.gz") )
+#     print("In tunelib (microcontroller) but not in folder")
+#     compare( tunelib_files, folder_files )
+#     print("In folder but not in tunelib (microcontroller)")
+#     compare( folder_files, tunelib_files )
 
 def make_setlist_newest( output_folder, input_filelist ):
     def _compute_hash(filename):
@@ -361,17 +477,18 @@ def make_setlist_newest( output_folder, input_filelist ):
 
 
 def main():
-    input_folder, output_folder, force_compress, bass_correction, tunelib_file = parse_arguments()
+    input_folder, output_folder, bass_correction, known_programs, status_d0 = parse_arguments()
     print(f"Input folder", input_folder)
     print(f"Output folder", output_folder)
-    if tunelib_file:
-        print(f"Tunelib file", tunelib_file )
-        compare_folder_with_tunelib( output_folder, tunelib_file )
+    #if tunelib_file:
+    #    print(f"Tunelib file", tunelib_file )
+    #    compare_folder_with_tunelib( output_folder, tunelib_file )
 
     input_blocks = 0
     output_blocks = 0
     input_bytes = 0
     output_bytes = 0
+    decompressed_bytes = 0
     n = 0
     max_decompressed_size = 0
     for filename in os.listdir( input_folder ):
@@ -380,15 +497,17 @@ def main():
             input_size, decompressed_size, output_size = compress_midi_file(
                 input_folder, 
                 filename, 
-                output_folder, 
-                force_compress, 
-                bass_correction )
+                output_folder,  
+                bass_correction,
+                known_programs,
+                 status_d0 )
             
             max_decompressed_size = max(max_decompressed_size, decompressed_size)
             input_blocks += size_on_flash(input_size)
             output_blocks += size_on_flash(output_size)
             input_bytes += input_size
             output_bytes += output_size
+            decompressed_bytes += decompressed_size
             n += 1
     remove_deleted_files( input_folder, output_folder )
 
@@ -405,9 +524,10 @@ def main():
     avg_output = output_blocks/n
     avg_input = input_blocks/n
     ratio = output_blocks/input_blocks
+    midi_ratio = decompressed_bytes/input_bytes
     print(f"{n} files {input_blocks=} {output_blocks=} (1 block=4096 bytes)")
     print(f"average input={avg_input:4.1f} blocks/file, average output={avg_output:4.1f} blocks/file, block compression {ratio=:4.2f}")
-    print(f"average input={input_bytes/n/1000:4.0f} kbytes/file, average output={output_bytes/n/1000:4.0f} kbytes/file, bytes compression ratio={output_bytes/input_bytes:4.2f}")
+    print(f"average input={input_bytes/n/1000:4.1f} kbytes/file, average output={output_bytes/n/1000:4.1f} kbytes/file, bytes midi reduction ratio={midi_ratio:4.1f}, bytes compression ratio={output_bytes/input_bytes:4.2f}")
 	# As of Dic 2024: overhead is 634 blocks, 512 for Micropython
 	# rest for /data, /lib y /software
     # blocks approx including micropython, *.mpy, static, data (with compiled mpy files and compressed static files)
@@ -418,7 +538,7 @@ def main():
     # If static is not compressed and micropython is not compiled
     application_overhead = 840
     print("Estimated capacities based on current average MIDI file size, no lyrics:")
-    for flash_size in [8, 16]:
+    for flash_size in (8, 16):
         blocks = flash_size*1024*1024/4096
         blocks_free = blocks - application_overhead
         #print(f"{flash_size=} {blocks=} {blocks_free=}")
@@ -476,3 +596,28 @@ main()
 # Estimated capacities based on current average MIDI file size, no lyrics:
 # N8R8 : raw capacity= 271, compressed capacity= 625 midi files
 # N16R8: raw capacity= 731, compressed capacity=1685 midi files
+
+
+# Feb 2026 with track reduction, ticks_per_beat=96
+# 681 files input_blocks=3013 output_blocks=1270 (1 block=4096 bytes)
+# average input= 4.4 blocks/file, average output= 1.9 blocks/file, block compression ratio=0.42
+# average input=16.0 kbytes/file, average output= 5.6 kbytes/file, bytes compression ratio=0.35
+# Estimated capacities based on current average MIDI file size, no lyrics:
+# N8R8 : raw capacity= 273, compressed capacity= 648 midi files
+# N16R8: raw capacity= 736, compressed capacity=1746 midi files
+
+# Feb 2026 with track reduction and --d0, ticks_per_beat=96
+# 681 files input_blocks=3013 output_blocks=1163 (1 block=4096 bytes)
+# average input= 4.4 blocks/file, average output= 1.7 blocks/file, block compression ratio=0.39
+# average input=16.0 kbytes/file, average output= 4.9 kbytes/file, bytes compression ratio=0.31
+# Estimated capacities based on current average MIDI file size, no lyrics:
+# N8R8 : raw capacity= 273, compressed capacity= 707 midi files
+# N16R8: raw capacity= 736, compressed capacity=1907 midi files
+
+# With lower ticks per beat=50 capacity increases a bit
+# 681 files input_blocks=3013 output_blocks=1105 (1 block=4096 bytes)
+# average input= 4.4 blocks/file, average output= 1.6 blocks/file, block compression ratio=0.37
+# average input=16.0 kbytes/file, average output= 4.5 kbytes/file, midi reduction ratio= 0.5, bytes compression ratio=0.28
+# Estimated capacities based on current average MIDI file size, no lyrics:
+# N8R8 : raw capacity= 273, compressed capacity= 744 midi files
+# N16R8: raw capacity= 736, compressed capacity=2007 midi files

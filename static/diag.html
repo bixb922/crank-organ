@@ -33,10 +33,10 @@
             <td>
                 <button type="button" onclick="reset()">Reset</button>
             </td>
-               
-            <td>
+			<td>
                  <button type="button" onclick="deepSleep()">Deep sleep</button>
             </td>
+
         </tr>
 		<tr><td>Versión MicroPython</td><td id="mp_version"></td></tr>
 		<tr><td>Imagen MicroPython</td>	<td id="mp_bin"></td></tr>
@@ -53,6 +53,7 @@
 		<tr><td>Configuración actuadores</td> <td id="solenoid_devices"></td></tr>
 		<tr><td>Archivos MIDI</td>		<td id="midi_files"></td></tr>
 		<tr><td>Carpeta música</td>		<td id="tunelib_folder"></td></tr>
+		<tr id="mcserver_row" style="display:none"><td>MC server</td> <td id="mcserver"></td></tr>
 		<tr><td>Manivela instalada</td>	<td id="crank_installed"></td></tr>
 		<tr id="crankGraphButton">
 			<td>
@@ -169,10 +170,13 @@ async function getDiagInfo( ) {
 	let diag = await fetch_json( "/diag" );
 	// Move corresponding (cobol?) fields from json to html page
 	setAllTextById( diag ); 
-	htmlById("solenoid_devices", diag["solenoid_devices"].replaceAll("\n", "<br>") );
+	htmlById("solenoid_devices", diag["solenoid_devices"]);
     getWifiStatus() ;
 	showHideElement( "crankGraphButton", diag["crank_installed"]);
-	
+	console.log("mcserver=", diag["mcserver"]);
+	showHideElement( "mcserver_row",  diag["mcserver"] );
+		// value was alredy set by setAllText
+
 	commonGetProgress.setSleep( 5_000 );
     commonGetProgress.startBackground();
 

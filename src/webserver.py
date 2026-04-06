@@ -2,11 +2,10 @@
 # MIT License
 # Webserver module, serves all http requests.
 
-import os
-import sys
-import gc
-import asyncio
-from time import ticks_ms, ticks_diff
+# >>> check if multipart/form-data is better than shipping json.
+
+import os, sys, gc, asyncio, machine
+from time import ticks_ms, ticks_diff, ticks_us
 from random import getrandbits
 
 from microdot import Microdot, send_file, redirect, Request, urldecode_bytes
@@ -19,11 +18,10 @@ from minilog import getLogger
 import scheduler
 import fileops
 
-import filemanager
 # Everything is needed here
-from drehorgel import battery, tunemanager, config, history, player, setlist, crank
-from drehorgel import gpio, actuator_bank, timezone, poweroff
-from drehorgel import led, wifimanager, plist, gpio
+from drehorgel import battery, tunemanager, config, history, setlist, player, crank
+from drehorgel import gpio, actuator_bank, timezone
+from drehorgel import led, wifimanager, plist, gpio, controller, poweroff
 
 from pinout import GPIOstatistics, SaveNewPinout
 
@@ -43,7 +41,7 @@ def get_session( request ):
     # This can happen with the first http request after a reboot.
     return sessions[request.cookies["session"]]
 
-MAX_AGE = config.get_int("max_age") or (24 * 60 * 60)
+MAX_AGE = config.max_age
 
 
 # Shows webserver processing time (total time is much higher)
@@ -69,7 +67,7 @@ def func_after_req( request, response ):
         response.set_cookie("session", session_id, path="/" )
         # If password_required, then login starts as False
         # If not password_required, then login will be always True
-        this_session = {"login":not config.cfg["password_required"]}
+        this_session = {"login":not config.password_required}
         # Session information will be lost with each reboot, i.e.
         # it is NOT kept in flash. This means a user is logged out
         # on reboot.
@@ -82,7 +80,6 @@ def func_after_req( request, response ):
 
 
 def is_active(since_msec=60_000):
-    # This is used by poweroff.py
     # Return true if recent web activity
     now = ticks_ms()
     return any( 
@@ -118,7 +115,7 @@ def authorize(func):
             this_session = get_session( args[0] )
         except KeyError:
             this_session = {}
-        # No need to check config.cfg["password_required"] because
+        # No need to check config.password_required because
         # that was checked when handing out the session cookie in after_request
         if this_session.get("login"):
             # Is login: authorized to call the function
@@ -128,14 +125,15 @@ def authorize(func):
         return respond_error_alert("Password required"), 401
     return wrapper
 
-organtuner_instance = None
-def get_organ_tuner():
-    global organtuner_instance
-    if not organtuner_instance:
+# Late import organtuner, it saves lots of RAM when not needed.
+_organtuner_instance = None
+def get_organtuner():
+    # Load organ tuner late, only uses resources when needed
+    global _organtuner_instance
+    if not _organtuner_instance:
         from organtuner import OrganTuner
-        organtuner_instance = OrganTuner( gpio.microphone_pin )
-    return organtuner_instance
-# call get_organ_tuner() in run_webserver() to load tuner at startup.    
+        _organtuner_instance = OrganTuner( gpio.microphone_pin )
+    return _organtuner_instance
    
 
 @app.post("/verify_password")
@@ -173,29 +171,30 @@ async def static_files( request, path ):
             # Could not make run Javascript's "await fetch" well in Safari.
             _logger.debug(f"Browser not supported {ua}")
             return "Safari not supported, use Chrome or Firefox"
-    async with scheduler.RequestSlice("webserver static_files", 100):
-        for folder in STATIC_FOLDERS:
-            filename = folder + path
-            # Check first for uncompressed file. 
-            # Could make it easier for development since
-            # uploading a uncompressed file takes precedence.
-            if fileops.file_exists(filename):
-                return send_file(filename, max_age=MAX_AGE)
-            
-            # File not found, perhaps a compressed version exists?
-            # In that case, add a header for the Content-type  according to file type
-            # and a header for Content-Encoding = gzip
-            filename_zip = filename + ".gz"
-            if fileops.file_exists( filename_zip ):
-                # If .gz file, serve this compressed file 
-                # instead of regular file
-                # On Mac, compress with gzip, for example:
-                # gzip -9 -c -k config.html > config.html.gz
-                # See https://www.gzip.org/
-                # Content type depends on the original file type
-                ct = filemanager.get_mime_type( filename )
+    # No RequestSlice here, if someone wants to load pages while
+    # playing music, let them.
+    for folder in STATIC_FOLDERS:
+        filename = folder + path
+        # Check first for uncompressed file. 
+        # Could make it easier for development since
+        # uploading a uncompressed file takes precedence.
+        if fileops.file_exists(filename):
+            return send_file(filename, max_age=MAX_AGE)
+        
+        # File not found, perhaps a compressed version exists?
+        # In that case, add a header for the Content-type  according to file type
+        # and a header for Content-Encoding = gzip
+        filename_zip = filename + ".gz"
+        if fileops.file_exists( filename_zip ):
+            # If .gz file, serve this compressed file 
+            # instead of regular file
+            # On Mac, compress with gzip, for example:
+            # gzip -9 -c -k config.html > config.html.gz
+            # See https://www.gzip.org/
+            # Content type depends on the original file type
+            ct = fileops.get_mime_type( filename )
 
-                return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
+            return send_file(filename_zip, max_age=MAX_AGE, compressed=True, content_type=ct)
     _logger.info(f"static_files {filename} not found")
     return respond_not_found()
 
@@ -203,7 +202,8 @@ async def static_files( request, path ):
 @app.route("/data/<filepath>")
 async def send_data_file(request, filepath):
     filename = config.DATA_FOLDER + filepath
-    if not fileops.file_exists(filename):
+    # Do not serve non-existent files nor temporary MIDI files
+    if not fileops.file_exists(filename) or filename.lower().endswith(".mid"):
         _logger.info(f"send_data_file {filename} not found")
         # Since a data file is requested (normally) by fetch_json() 
         # in Javascript, respond_not_found() will also
@@ -216,7 +216,6 @@ async def send_data_file(request, filepath):
 
 def get_progress():
     # Gather progress from all sources
-    # Also used by mcserver (if present)
     progress = player.get_progress()
     crank.complement_progress(progress)
     setlist.complement_progress(progress)
@@ -224,15 +223,13 @@ def get_progress():
     gpio.get_registers().complement_progress(progress)
     tunemanager.complement_progress(progress)
     battery.complement_progress(progress)
-    # commonGetProgress() in common.js filters setlist and adds tunelib
+    # commonGetProgress() in common.js filters for setlist and adds tunelib
     return progress
 
 @app.route("/get_progress")
 async def ws_get_progress(request):
-    # get_progress() itself is very fast, but set aside
-    # some CPU for responding
-    async with scheduler.RequestSlice("webserver get_progress", 100):
-        return get_progress()
+    # get_progress() itself is very fast (<10 msec)
+    return get_progress()
 
 #
 # Setlist management
@@ -324,7 +321,7 @@ async def save_titles( request ):
 #
 @app.route("/get_organtuner_json")
 async def get_organtuner_json( request ):
-    return get_organ_tuner().get_organtuner_json();
+    return get_organtuner().get_organtuner_json();
 
 @app.route("/note/<int:pin_index>")
 async def note_page(request, pin_index):
@@ -336,55 +333,61 @@ async def start_tune_all(request):
     # just queue the operation and respond, so
     # it's not of interest to return organtuner.json
     # in these functions
-    get_organ_tuner().tune_all()
+    get_organtuner().tune_all()
     return respond_ok()
 
 
 @app.route("/start_tuning/<int:pin_index>")
 async def start_tuning(request, pin_index):
     # Tune one note
-    get_organ_tuner().queue_tuning(get_organ_tuner().wait, 1000 )
-    get_organ_tuner().queue_tuning(get_organ_tuner().update_tuning, pin_index)
+    get_organtuner().queue_tuning(get_organtuner().wait, 1000 )
+    get_organtuner().queue_tuning(get_organtuner().update_tuning, pin_index)
     return respond_ok()
 
 
 @app.route("/sound_note/<int:pin_index>")
 async def sound_note(request, pin_index):
-    get_organ_tuner().queue_tuning(get_organ_tuner().sound_note, pin_index)
+    get_organtuner().queue_tuning(get_organtuner().sound_note, pin_index)
     return respond_ok()
 
 
 @app.route("/sound_repetition/<int:pin_index>")
 async def sound_repetition(request, pin_index):
-    get_organ_tuner().queue_tuning(get_organ_tuner().repeat_note, pin_index)
-    return { "repeat_times": get_organ_tuner().get_repeat_times() }
+    get_organtuner().queue_tuning(get_organtuner().repeat_note, pin_index)
+    return { "repeat_times": get_organtuner().get_repeat_times() }
 
 
 @app.route("/scale_test")
 async def scale_test(request):
-    get_organ_tuner().queue_tuning(get_organ_tuner().scale_test, 0)
+    get_organtuner().queue_tuning(get_organtuner().scale_test, 0)
     return respond_ok()
 
 @app.route("/all_pin_test")
 async def all_pin_test(request):
-    get_organ_tuner().queue_tuning(get_organ_tuner().all_pin_test, 0)
+    get_organtuner().queue_tuning(get_organtuner().all_pin_test, 0)
     return respond_ok()
 
 
 @app.route("/clear_tuning")
 async def clear_tuning(request):
-    get_organ_tuner().clear_tuning()
+    get_organtuner().clear_tuning()
     return respond_ok()
 
 
 @app.route("/stop_tuning")
 async def stop_tuning(request):
-    get_organ_tuner().stop_tuning()
+    get_organtuner().stop_tuning()
     return respond_ok()
 
 @app.route("/get_tuning_stats")
 async def get_tuning_stats(request):
-    return get_organ_tuner().get_stats()  
+    return get_organtuner().get_stats()  
+
+@app.route("/set_avg_frequency")
+async def set_avg_frequency(request):
+    get_organtuner().set_avg_frequency()
+    return respond_ok()
+
 
 # Battery information web request, common to most pages, called from common.js
 @app.route("/battery")
@@ -415,24 +418,27 @@ async def show_log(request):
 # diag.html web requests
 @app.route("/diag")
 async def diag(request):
-    try:
-        async with scheduler.RequestSlice("webserver diag", 5000, 10_000):
-            gc.collect()
-            t0 = ticks_ms()
-            gc.collect()  # measure optimal gc.collect() time
-            t1 = ticks_ms()
-            gc_collect_time = ticks_diff(t1, t0)
-            # mem_free and mem_alloc are quite slow, similar to gc.collect()
-            free_ram = gc.mem_free()  
-            used_ram = gc.mem_alloc() 
-            # statvfs takes 1.5 sec
-            vfs = os.statvfs("/")
-
-    except Exception:
-        gc_collect_time = "?"
-        free_ram = "?"
-        used_ram = "?"
+    if scheduler.is_player_active():
+        gc_collect_time = 0
+        free_ram = 0
+        used_ram = 0
         vfs = (0, 0, 0, 0, 0, 0)
+    else:
+        gc.collect()
+        t0 = ticks_ms()
+        gc.collect()  # measure optimal gc.collect() time
+        t1 = ticks_ms()
+        gc_collect_time = ticks_diff(t1, t0)
+        # mem_free and mem_alloc are quite slow, similar to gc.collect()
+        free_ram = gc.mem_free()  
+        used_ram = gc.mem_alloc() 
+        # statvfs takes 1.5 sec
+        vfs = os.statvfs("/")
+        # Normal output:
+        # Free flash + used flash about 14.6Mb
+        # Used RAM 265.000 bytes, free 7.980.000 bytes
+        # Maximum gc time during music playing 45 to 60, with some pages up to 400 
+
 
     try:
         midi_files = tunemanager.get_tune_count()
@@ -442,11 +448,10 @@ async def diag(request):
     now = timezone.now_ymdhmsz()
     tz = timezone.get_time_zone_info()
     time_zone_info = f'{tz["longName"]}, {tz["shortName"]}, offset={round(-tz["offset"]/60.0)} min'
-
-    reboot_sec = round(ticks_diff(ticks_ms(), config.boot_ticks_ms) / 1000 )
+    reboot_sec = round(ticks_diff(ticks_ms(), config.BOOT_TICKS_MS) / 1000 )
     d = {
-        "description": config.cfg["description"],
-        "name": config.cfg["name"],
+        "description": config.description,
+        "name": config.name,
         "mp_version": os.uname().version,
         "mp_bin": sys.implementation._machine, # type:ignore
         "last_refresh": now,
@@ -458,7 +463,7 @@ async def diag(request):
         "used_ram": used_ram,
         "gc_collect_time": gc_collect_time,
         "max_gc_collect_time": scheduler.max_gc_time,
-        "solenoid_devices": "".join(f"{drv} {pins} pins\n" for drv, pins in actuator_bank.get_status()),
+        "solenoid_devices": actuator_bank.get_pin_info("<br>"),
         "midi_files": midi_files,
         "tunelib_folder": config.TUNELIB_FOLDER,
         "logfilename": _logger.get_current_log_filename(),
@@ -466,27 +471,35 @@ async def diag(request):
         "compile_date": compiledate,
         "crank_installed": crank.is_installed()
     }
+    try:
+        from mcserver import mcserver # type:ignore
+        d["mcserver"] = mcserver.get_last_backup_time()
+    except:
+        d["mcserver"] = ""
+
     return d
 
 
 @app.route("/reset")
 async def reset_microcontroller(request):
-    led.ack()
-    asyncio.create_task(poweroff.wait_and_reset())
+    # Wait for web server to respond, wait for led to flash, etc
+    # Don't shut down microdot, need it to respond
+    asyncio.create_task( poweroff.wait_and_reset() )
     return respond_ok()
 
 
 @app.route("/deep_sleep")
 async def deep_sleep(request):
-    led.ack()
     asyncio.create_task(poweroff.wait_and_power_off())
     return respond_ok()
 
 
 @app.route("/wifi_scan")
 async def wifi_scan(request):
+    if scheduler.is_player_active():
+        return []
     return wifimanager.sta_if_scan()
-
+    
 
 @app.route("/get_wifi_status")
 async def get_wifi_status(request):
@@ -504,7 +517,7 @@ async def get_wifi_status(request):
     return c
 
 @app.post("/set_time_zone")
-async def update_time_zone(request):
+async def set_time_zone(request):
     timezone.set_time_zone( request.json )
     return respond_ok()
         
@@ -545,16 +558,19 @@ async def drop_setlist(request, tuneid):
 # Changes to config.json
 #
 
-@app.route("/get_config")
-async def get_config(request):
-    return config.get_config()
+@app.route("/get_current_config")
+async def get_current_config(request):
+    return config.get_current_config()
+
+@app.route("/get_stored_config")
+async def get_stored_config(request):
+    return config.get_stored_config()
+
 
 @app.post("/save_config")
 @authorize
 async def change_config(request):
-    result = config.save(request.json)
-    if result:
-        return respond_error_alert(result)
+    config.save(request.json)
     return respond_ok()
 
 #
@@ -582,12 +598,12 @@ async def get_index_page_info(request):
     # Use existing routine here in webserver and complement.
     resp = await get_pinout_filename(request)
     # Pinout filename, pinout description and server node name (if any)
-    resp["servernode"] = config.cfg["servernode"]
+    resp["servernode"] = config.servernode
     return resp
 
 
 @app.post("/save_pinout_filename")
-@authorize
+@authorize # >>> keep?
 async def save_pinout_filename(request):
     # Force reboot to make this take effect.
     setlist.stop_playback()
@@ -598,7 +614,7 @@ async def save_pinout_filename(request):
 
 
 @app.post("/save_pinout_detail/<path>")
-@authorize
+@authorize # >>> keep? separate RC servo position?
 async def save_pinout_detail(request, path):
     # Force reboot to use the player to make definitions take effect.
     # However, it's not mandatory to stop current tune and setlist,
@@ -618,7 +634,7 @@ async def save_pinout_detail(request, path):
 async def test_pin( request ):
     setlist.stop_playback()
     from solenoid import PinTest
-    alert_message = await PinTest().web_test_pin( request.json )
+    alert_message = await PinTest().web_test_pin( request.json, actuator_bank )
     if alert_message:
         return respond_error_alert( alert_message )
     return respond_ok()
@@ -627,9 +643,10 @@ async def test_pin( request ):
 async def test_drumdef( request ):
     # Drum definition does not stop playback, it's desirable
     # to use a MIDI to see how it works.
+    # Reflect changes in web form to memory, taking effect immediately
     from driver_ftoms import FauxTomDriver
     drumdef = request.json
-    for pin in FauxTomDriver().get_pin_list():
+    for pin in FauxTomDriver.get_pin_list():
         dd = drumdef[str(pin.nominal_midi_number)]
         pin.set_virtual_drum_characteristics( dd )
     return respond_ok()
@@ -639,7 +656,7 @@ async def save_drumdef( request ):
     # Don't disable music playback here, need to play
     # MIDI while testing drums.
     from driver_ftoms import FauxTomDriver
-    FauxTomDriver().save( request.json )
+    FauxTomDriver.save( request.json )
     return respond_ok()
 
 # Generic requests requests: some browsers request favicon
@@ -660,11 +677,11 @@ async def favicon_png(request):
     serve_favicon( "favicon.png" )
 
 
-# Not used
-# @app.route("/logout")
-# async def logout(request): 
-#     get_session( request )["login"] = False
-#     return {}
+# Not called from web page, used for debugging
+@app.route("/logout")
+async def logout(request): 
+     get_session( request )["login"] = False
+     return {}
 
 
 # Tunelib editor
@@ -681,23 +698,25 @@ async def tunelib_sync_progress(request):
     return {"progress": tunemanager.get_sync_progress()}
 
 @app.post("/save_tunelib")
-@authorize
 async def save_tunelib(request):
     tunemanager.queue_field_changes(request.json)
     return respond_ok()
 
 
 @app.post("/save_lyrics")
-@authorize
 async def save_lyrics( request ): 
     data = request.json
     tunemanager.save_lyrics( data["tuneid"], data["lyrics"])
     return respond_ok()
 
 @app.route("/delete_history/<int:days>")
-@authorize
 async def delete_history(request, days):
     history.delete_old(days)
+    return respond_ok()
+
+@app.route("/delete_history_date/<date>")
+async def delete_history_date(request, date):
+    history.delete_date(date)
     return respond_ok()
 
 @app.post( "/tempo_follows_crank" )
@@ -743,6 +762,16 @@ async def list_by_midi_note( request, path ):
                              "actuator_rank": actuator.get_rank_name(), 
                              "register_name": reg.name,
                              "invert": False } )
+        #for actuator in action:
+        #    notedef.append( {
+        #                      "program_number":actuator.nominal_midi_note.program_number, 
+        #                      "midi_number":actuator.nominal_midi_note.midi_number, 
+        #                      "midi_note": str(actuator.nominal_midi_note), 
+        #                      "actuator_name": str(actuator), 
+        #                      "actuator_note": str(actuator.nominal_midi_note) if actuator.nominal_midi_note else "", 
+        #                      "actuator_rank": actuator.get_rank_name(), 
+        #                      "register_name": "",
+        #                      "invert": False } )
     notedef.sort( key=sort_key )
                 
     return notedef
@@ -764,63 +793,78 @@ async def filemanager_listdir(request, path=""):
     if listpath.endswith("filemanager.html"):
         # Don't navigate to /static/filemanager.html please.
         return respond_error_alert("Use /filemanager")
+    import filemanager
     return filemanager.listdir( listpath )
 
 @app.route("/listdir_tunelib")
 async def listdir_tunelib(request):
+    import filemanager
     return filemanager.fast_listdir( config.TUNELIB_FOLDER )
 
 @app.route("/check_flash_full")
 async def check_flash_full(request):
+    import filemanager
     fstat = filemanager.status()
-    # Leave at leat 150 kb free when uploading.
+    # Leave at leat 150 kb of flash free when uploading a file.
     # Updating a file like tunelib.json or history.json needs to write the complete
     # file a second time, so there must at least be space for one additional copy of the file.
-    # >>> calculate space depending on largest file in /data?
     if fstat["total_flash"]-fstat["used_flash"] < 150_000:
         return respond_error_alert("No se puede subir archivo, memoria flash casi llena")
     return respond_ok()
 
 
 @app.post('/upload/<path_filename>')
-@authorize
+@authorize # >>> allow upload midi without password?
 async def filemanager_upload(request, path_filename ):
     path, filename = path_filename.split("+")
     path = decodePath( path )
     filename = decodePath( filename )
     _logger.info(f"Uploading {filename} to {path}")
+    import filemanager
     try:
         return filemanager.upload( request, path, filename  )
     except ValueError:
         return respond_error_alert("Error, No destination folder could be assigned, unknown file type")
 
 @app.route("/download/<path>")
+@authorize
 async def filemanager_download(request, path):
     # Download a file from the microcontroller to the PC
+    import filemanager
     return filemanager.download( decodePath( path ) )
 
+# >>> show_file of log asks for password...??
+#    "json", "json-yyyy-mm-dd": ok (check again???>>>)
+#     "gif": binary?
+#     "jpg": binary?
+#     "jpeg": binary?
+#     "png": binary?
+#     "ico": binary?
+#     "mid": binary? only with authorize or never???
+#     "html": ok
+#     "css": ok
+#     "txt": ok
+#     "js": ok
+#     "py": ok ???? or protect???
+#.    "mpy": ok, except if some modules are not frozen
+#     "log": ok
+# >>> same logic applies to download!!!!! 
 @app.route("/show_file/<path>")
 async def filemanager_show_file( request, path ):
+    import filemanager
     return filemanager.show_file( decodePath( path ) ) 
-
-@app.route("/show_midi/<path>")
-async def show_midi( request, path ):
-    # Javascript will retrieve the path passed in the URL
-    return await static_files( request, "show_midi.html" )
-
-@app.route("/get_midi_file/<path>")
-async def get_midi_file( request, path ):
-    return filemanager.get_midi_file( decodePath( path )  )
 
 @app.route("/used_flash")
 async def filemanager_status(request):
+    import filemanager
     return filemanager.status()
 
 @app.post("/delete_file")
-@authorize
+@authorize # >>> allow delete midi without password?
 async def filemanager_delete(request):
     # Delete a file
     path = request.json["delete_filename"]
+    import filemanager
     try:
         filemanager.delete( decodePath( path )  )
     except Exception as e:
@@ -829,11 +873,15 @@ async def filemanager_delete(request):
         return respond_error_alert(f"Error {e} deleting file {path}")
     return respond_ok()
 
+# >>> allow delete_file for midi files without authorize
+# >>> allow upload for midi files without authorize.
+
 @app.post("/purge_tunelib_file")
 @authorize
 async def purge_tunelib_file(request ):
     # This filename was issued by this microcontroller.
     # No decoding necessary.
+    import filemanager
     filename = request.json["purge_filename"]
     filemanager.purge_tunelib_file(  filename )
     return respond_ok()
@@ -855,7 +903,7 @@ async def get_permission( request ):
 # Catchall handler to debug possible errors at html level
 @app.get('/<path:path>')
 async def catch_all(request, path):
-    _logger.debug(f"***CATCHALL*** {path=} request=" + str(request))
+    _logger.debug(f"***CATCHALL*** {path=}")
     return respond_not_found()
 
 @app.errorhandler(RuntimeError)
@@ -864,7 +912,7 @@ async def runtime_error(request, exception):
 
 # >>> this error stops the complete application, is raised to
 # >>>  the global asyncio error handler (occurred only once in
-# during a test situation)
+# during a test situation when changing the WiFi router.
 # Traceback (most recent call last):
 #   File "crank-organ/src/microdot.py", line 1333, in handle_request
 #   File "crank-organ/src/microdot.py", line 397, in create
@@ -896,7 +944,7 @@ async def run_webserver():
 
     # Configure file cache for browser
     # MAX_AGE is applied selectively
-    if not config.cfg.get("webserver_cache", True):
+    if not config.webserver_cache:
         MAX_AGE = 0
     _logger.debug(f"{MAX_AGE=:,} sec {STATIC_FOLDERS=}")
     await app.start_server(host="0.0.0.0", port=80 )

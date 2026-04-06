@@ -16,27 +16,23 @@ from minilog import getLogger
 from drehorgel import config, controller, actuator_bank, battery
 import fileops
 import frequency
-import midi
+from midi import NoteDef
 
 from microphone import Microphone
     
-
-
 # Time spent for measuring frequency for each note
 _TARGET_DURATION = 0.8 # seconds
 # But never less than this number of frequency measurements:
 _MINIMUM_MEASUREMENTS = const(3)
 
 def avg(lst):
-    n = 0
-    sumval = 0
-    for val in lst:
-        if val is not None:
-            sumval += val
-            n += 1
-    if n > 0:
+    sumval = sum( val for val in lst if val is not None )
+    n =      sum(   1 for val in lst if val is not None )
+    try:
         return sumval / n
-    # Return none if no values in list
+    except:
+        pass # Return None if zero division error.
+
 
 # OrganTuner acts as singleton, it is instantiated on demand by webserver.py
 # That saves some time at startup and saves 85 kb of memory until needed,
@@ -51,7 +47,7 @@ class OrganTuner:
         self.tuner_queue = []
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
-        self.microphone = Microphone( microphone_pin, config.cfg["mic_test_mode"] )
+        self.microphone = Microphone( microphone_pin, config.mic_test_mode )
         # Each pair is (note_duration, silence) in milliseconds
         # note durataions get halved every two repeats
                 # Organ roll specifications have a hole size of 2 to 3 mm
@@ -75,12 +71,11 @@ class OrganTuner:
         tuning = self._calculate_tuning()
         # Get global cents and frequency data using info of ALL notes
         cents_list = [ v["cents"] for v in tuning if v and "cents" in v and v["cents"] is not None]
-        avg_frequency = avg( v["measured_freq"]/v["frequency"] for v in tuning if v and "measured_freq" in v and v["measured_freq"] is not None )
+        avg_frequency = avg( list(v["measured_freq"]/v["frequency"] for v in tuning if v and "measured_freq" in v and v["measured_freq"] is not None ))
         if avg_frequency:
-            avg_frequency = round(avg_frequency*midi.tuning_frequency,1)
-        else:
-            avg_frequency = "?"
-        tuning_cents = midi.tuning_cents # midi module has the maximum deviation allowed, set by configuration.
+            avg_frequency = round(avg_frequency*NoteDef.tuning_frequency,1)
+        # else: avg_frequency is None.
+        tuning_cents = config.tuning_cents #config module has the maximum deviation allowed, set by configuration.
         tuned = len(cents_list)
         tuned_ok = sum( 1 for c in cents_list if abs(c) <= tuning_cents )
         all_notes = len(tuning)
@@ -90,7 +85,7 @@ class OrganTuner:
                 "not_tested": all_notes - tuned,
                 "pins": all_notes, 
                 "avg_frequency": avg_frequency,
-                "tuning_frequency": midi.tuning_frequency,
+                "tuning_frequency": NoteDef.tuning_frequency,
                 "tuning_cents": tuning_cents }
 
     def queue_tuning(self, method, arg):
@@ -149,7 +144,7 @@ class OrganTuner:
 
         pin_indexes = [ x for x in range(actuator_bank.get_pin_count())]
         pin_indexes.sort( key=lambda pi: actuator_bank.get_actuator_by_pin_index(pi).nominal_midi_note.midi_number or 9999)
-        for duration in [240, 120, 60, 30]:  # In milliseconds
+        for duration in (240, 120, 60, 30):  # In milliseconds
             for _ in range(2):
                 # Play twice: one up, one down
                 for pin_index in pin_indexes:
@@ -165,17 +160,20 @@ class OrganTuner:
         # controller.note_on() will return falsish if no
         # note was found, so play_midi_note skips waiting and
         # skips note off.
-        notelist =[ midi_number for midi_number in range(128)]
-        for duration in [700, 240, 120, 60, 30]:  # In milliseconds
+        
+        notelist = [ p.nominal_midi_note for p in actuator_bank.get_all_pins() ]
+        notelist.sort( key=lambda x: x.program_number*256 + x.midi_number )
+        for duration in (700, 240, 120, 60, 30):  # In milliseconds
+            # Play twice: one up, one down
             for _ in range(2):
-                # Play twice: one up, one down
-                for midi_number in notelist:
+                for midi_note in notelist:
                     # Queue notes, that makes scale test interruptible
-                    self.queue_tuning( self.play_midi_note, ( midi_number, duration, 100) )
+                    self.queue_tuning( self.play_midi_note, ( midi_note, duration, 100) )
                 # alternate ascending and descending
                 notelist.reverse()
             await asyncio.sleep_ms(500)
-
+        return
+                     
     async def play_pin( self, arg ):
         #  Make a pipe sound
         pin_index, duration, silence = arg
@@ -187,15 +185,13 @@ class OrganTuner:
 
     async def play_midi_note( self, arg ):
         #  Make a midi note sound
-        midi_number, duration, silence = arg
-        # Play program_number=1 (piano), that should
-        # work for most "nominal" midi note definitios
-        # except drums.
+        midi_note, duration, silence = arg
+
         # controller.note_on will return falsish if 
         # no note was found. If so, skip waiting and note_off.
-        if controller.note_on(  1,  midi_number ):
+        if controller.note_on(  midi_note ):
             await asyncio.sleep_ms(round(duration))
-            controller.note_off( 1, midi_number)
+            controller.note_off( midi_note )
             await asyncio.sleep_ms(round(silence))
 
     def clear_tuning(self):
@@ -296,9 +292,7 @@ class OrganTuner:
         midi_note = actuator.nominal_midi_note
         self.logger.info(f"start update_tuning {actuator=} {midi_note=}")
         # Do the tuning. Don't need average frequency and amplitude
-        _, _, freqlist, amplist = await self._get_note_pitch(
-            pin_index, midi_note
-        )
+        freqlist, amplist = await self._get_note_pitch( pin_index )
         # Update organtuner.json information
         d = self.stored_tuning[pin_index]
         d["amplist"] = amplist
@@ -311,15 +305,15 @@ class OrganTuner:
     def calcdb(self, amp, maxamp):
         if amp is not None and maxamp:
             dbval = 20 * log10(amp / maxamp)
-            if dbval >= config.cfg["mic_signal_low"]:
+            if dbval >= config.mic_signal_low:
                 return dbval
 
 
-    async def _get_note_pitch(self, pin_index, midi_note):
-        store_signal = config.cfg.get("mic_store_signal", False)
+    async def _get_note_pitch(self, pin_index ):
         freqlist = []
         amplist = []
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
+        midi_note = actuator.nominal_midi_note
         actuator.on()
         # Wait for sound to stabilize before calling tuner
         await asyncio.sleep_ms(300)
@@ -329,7 +323,7 @@ class OrganTuner:
             # Measure during _TARGET_DURATION but not less than _MINIMUM_MEASUREMENTS times
             while sum_durations <= _TARGET_DURATION or iteration < _MINIMUM_MEASUREMENTS:
                 # Store the first signal, if config says so
-                store_this = (store_signal and iteration==0)
+                store_this = (config.mic_store_signal and iteration==0)
                 # Save signal only for iteration 0
                 try:
                     ( frequency, amplitude, duration,
@@ -340,7 +334,7 @@ class OrganTuner:
                     duration = 1
                 # Configuration option mic_amplitude is True means
                 # that the amplitude is measured and stored.
-                if not config.cfg.get("mic_amplitude", False):
+                if not config.mic_amplitude:
                     amplitude = None 
                 nominal = midi_note.frequency()
                 # If too far away, ignore.
@@ -368,13 +362,8 @@ class OrganTuner:
             self.logger.exc(e, "Exception in _get_note_pitch")
         finally:
             actuator.off()
-
-        if len(freqlist) == 0:
-            return None, 0, freqlist, amplist
-
-        frequency = avg( freqlist )
-        amplitude = avg( amplist )
-        return frequency, amplitude, freqlist, amplist
+       
+        return freqlist, amplist
 
     def get_organtuner_json( self ):
         # Return updated tuning to the browser.
@@ -400,7 +389,7 @@ class OrganTuner:
 
         for v in tuning:
             # Reconstruct a NoteDef for the MIDI note to get frequency, cents, tuning
-            midi_note = midi.NoteDef(v.get("program_number",0), v["midi_number"])
+            midi_note = NoteDef(v.get("program_number",0), v["midi_number"])
             
             # Calculate frequency (adjusted by tuning frequency)
             # and use that to calculate cents
@@ -421,3 +410,7 @@ class OrganTuner:
             v["centslist"] = centslist
         # Calculated values are not stored
         return tuning
+    
+    def set_avg_frequency( self ):
+        stats = self.get_stats()
+        NoteDef.set_tuning_frequency( stats["avg_frequency"] )

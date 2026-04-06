@@ -172,7 +172,6 @@ With these techniques, web response is quite fast, and the load on the microcont
 Some asyncio tasks:
 * The setlist and music playback
 * Battery monitor
-* Power off/idle monitor
 * Touchpad driver
 * Crank driver (2 tasks)
 * WiFi STA and AP mode supervision. The software allows you to connect to a WiFi router (i.e. home router and cell phone hotspot when not at home), so this task switches between WiFi stations when necessary.
@@ -181,6 +180,7 @@ Some asyncio tasks:
 * Background garbage collector
 * Mini scheduler, see below
 * Some tasks at startup that can be delayed a bit to have the system up  faster (get time from NTP  server, purge history, etc)
+* Tasks to keep track of time while a RC servo moves (one task per note on). This seems to be more efficient than keeping track of the time and doing ticks_diff() to compute active RC servos.
 
 Advantages:
 * Asyncio is about responsiveness. The tasks have to yield frequently.

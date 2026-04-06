@@ -4,9 +4,7 @@ from microdot import send_file
 from drehorgel import tunemanager, config
 import fileops
 
-
 # Compress midi, html, css and js files in the browser: NO, bad idea.
-# >>> show compilation date on filemanager root to aid software upload.
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
@@ -23,20 +21,6 @@ DESTINATION_FOLDERS = {
     "jpg": "/software/static/",
 }
 
-MIME_TYPES = {
-    # default is text/plain;charset=UTF-8 
-    "json": "application/json;charset=UTF-8",
-    "gif": "image/gif",
-    "jpg": "image/jpeg",
-    "jpeg": "image/jpeg",
-    "png": "image/png",
-    "ico": "image/vnd.microsoft.icon",
-    "mid": "audio/midi",
-    "html": "text/html",
-    "css": "text/css",
-    "js": "javascript"
-}
-
 def _check_midi_file( path, file_size=-1 ):
     # Check if file operation affected a MIDI file.
     # If so, queue a file update or deletion in tunemanager.
@@ -48,10 +32,7 @@ def _check_midi_file( path, file_size=-1 ):
             tunemanager.queue_file_updated( path, file_size )
         else:
             tunemanager.queue_file_deleted( path )
-
-def get_mime_type( filename ):
-    # Default MIME type is text/plain
-    return MIME_TYPES.get( fileops.get_file_type(filename), "text/plain")  + ";charset=UTF-8"
+        
 
 def listdir(path):
     if not path.endswith("/"):
@@ -73,6 +54,7 @@ def listdir(path):
             date = fileops.get_file_date(path + fileinfo["name"])
             getdate += 1
         fileinfo["date"] = date
+    del tunelibfd
     return listing
 
 def fast_listdir(path):
@@ -127,15 +109,23 @@ def upload( request, path, filename  ):
         # automatic path
         # Sort files to destination folder depending on file type
         # But main.py has it's special folder!
-        # So try with the filename first, then with type:
+        # So try with the filename first, then with the file type:
         folder = DESTINATION_FOLDERS.get( 
                     filename,
                     DESTINATION_FOLDERS.get( fileops.get_file_type( filename ) ) )
-        # Create folder if it does not exist
-        fileops.make_folder( folder )   
+        if not folder:
+            raise ValueError(f"Unknown file type for {filename}")
 
     if folder is None:
         raise ValueError
+
+    # Create folder if it does not exist
+    if "software" in folder:
+        # Only case of nested folders, should more nested
+        # folders be supported?
+        fileops.make_folder( "/software" )
+    fileops.make_folder( folder )   
+
 
     path = folder + filename
    
@@ -196,6 +186,7 @@ def _formatLogGenerator(filename):
     # Generator function to yield log lines
     def log_generator():
         # Format log as HTML
+        # >>> could be done better in browser
         with open(filename) as file:
             yield "<!DOCTYPE html><head></head><body><title>Error log</title>"
             yield '<body><table>'
@@ -241,10 +232,7 @@ def _formatLogGenerator(filename):
 
 
 def show_file( filename ):
-    
-    if not fileops.file_exists( filename ):
-        return "", 404
-    
+
     if filename.endswith(".log"):
         return _formatLogGenerator( filename )
     
@@ -270,11 +258,6 @@ def status():
 def delete(path):
     os.remove(path)
     _check_midi_file( path )
-
-def get_midi_file( request_path ): 
-    physical_name = fileops.find_decompressed_midi_filename( config.TUNELIB_FOLDER + request_path )
-    return send_file( physical_name,
-                     content_type=get_mime_type("mid") )
 
 
 def purge_tunelib_file( fn ):

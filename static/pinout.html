@@ -321,7 +321,7 @@ async function getPinoutDetail( ) {
             pininfo.f = f;
             // Make a deep copy of the pininfo variable to prepare for the function closure.
             let testPinArgs = JSON.parse( JSON.stringify( pininfo ) );
-            let testFunction = function() { testPin( testPinArgs )} ;
+            let testFunction = function() { testPin( testPinArgs, "" )} ;
             
             let row = insertFormRow( tbody, `row_${f}_midi`, [
                 makeInput( `midi.pin.${f}`, 3, pin ),
@@ -341,6 +341,11 @@ async function getPinoutDetail( ) {
             row.cells[2].id = `program_name.${f}`;
             row.cells[3].onchange = function() { showNoteName(f) };      
             row.cells[4].id = `nn.${f}`;
+            if( pininfo.type == "gpioservo" || pininfo.type == "pca9685"){
+                // alternate test buttons aid adjusting "off" position of a RC Servo
+                row.insertCell(-1).appendChild( makeButton( `up${f}`,   "▲", function(){ testPin( testPinArgs, "up"  )} ));
+                row.insertCell(-1).appendChild( makeButton( `down${f}`, "▼", function(){ testPin( testPinArgs, "down")} ));
+            }
         }
         else if( pdtype == "i2c" ){
             pininfo.i2ccount += 1 ;
@@ -395,15 +400,18 @@ async function getPinoutDetail( ) {
             pininfo.uart = pd[1];
             pininfo.txpin = pd[2];
             pininfo.channel = pd[3];
+            pininfo.rxpin = pd[4];
             let row = insertFormRow( tbody, `row_${f}_serial`, [
                 "MIDI over serial",
                 "UART (1-2)",
                 makeInput( `serial.uart.${f}`, 4, pininfo.uart),
                 "GPIO txpin",
-                makeInput( `serial.pin.${f}`, 3, parseInt(pininfo.txpin)),
+                makeInput( `serial.txpin.${f}`, 3, parseInt(pininfo.txpin)),
                 "Output MIDI channel (1-16)",
                 // Change channel from internal/physical number (0-15) to MIDI numbering (1-16)
                 makeInput( `serial.channel.${f}`, 3, pininfo.channel+1 ),
+                "UART RX (unused)",
+                makeInput( `serial.rxpin.${f}`, 3, pininfo.rxpin )
             ]);
             titlerow( row );
             rownum += 1;
@@ -431,14 +439,17 @@ async function getPinoutDetail( ) {
             pininfo.pulse1 = pd[2];
             let period = pininfo.period;
             let pulse0box = makeInput( `servopulse.pulse0.${f}`, 5, pd[1] );
-            let pulse1box = makeInput( `servopulse.pulse1.${f}`, 5, pd[2] );
+            let pulse1diffBox = makeInput( `servopulse.pulse1diff.${f}`, 5, pd[2]-pd[1] );
             let row = insertFormRow( tbody, `row_${f}_servopulse`, [
                  "Servo pulse duration (PWM)",
                  "Off (μsec)", 
                  pulse0box,
-                 "On (μsec)",
-                 pulse1box]
+                 "On (μsec difference)",
+                 pulse1diffBox]
                 );
+            for( let c of row.cells ){
+                c.style.borderTop = "1px solid black";
+            }
         }
         else {
             console.warn("Unknown pdtype", pdtype );
@@ -539,19 +550,20 @@ async function savePinoutDetail(){
         }
         else if( pdtype == "serial"){
             let uart = document.getElementById( `serial.uart.${f}` ).value ;
-            let pin = document.getElementById( `serial.pin.${f}` ).value ; 
-            let channel =   document.getElementById( `serial.channel.${f}` ).value ; 
+            let pin = document.getElementById( `serial.txpin.${f}` ).value ; 
+            let channel = document.getElementById( `serial.channel.${f}` ).value ;
+            let rxpin = document.getElementById( `serial.rxpin.${f}` ).value ; 
             // Show MIDI numbering but store physical chanel number
-            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel )-1 ] ) ;   
+            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel )-1, valnum( rxpin )] ) ;   
         }
         else if( pdtype == "gpioservo" ){
             let period = document.getElementById( `gpioservo.period.${f}` ).value ;
             newpd.push( ["gpioservo", valnum( period )]);
         }
         else if( pdtype == "servopulse"){
-            let pulse0 = document.getElementById( `servopulse.pulse0.${f}` ).value ;
-            let pulse1 = document.getElementById( `servopulse.pulse1.${f}` ).value ;
-            newpd.push( ["servopulse", pulse0, pulse1 ]);
+            let pulse0 = parseInt(document.getElementById( `servopulse.pulse0.${f}` ).value );
+            let pulse1diff = parseInt(document.getElementById( `servopulse.pulse1diff.${f}` ).value) ;
+            newpd.push( ["servopulse", pulse0, pulse0+pulse1diff ]);
         }
         else if ( pdtype == "pca9685"){
             let addr = document.getElementById( `pca9685.address.${f}` ).value ;           
@@ -586,12 +598,12 @@ function getRadioButtonValue( element_name ) {
 function valnum( s ){
     if( isNaN( s )) {
         alert("Value is not numeric: " + s );
-        throw new Error("Value not numeric") ;
+        throw new Error("Value must be numeric") ;
         return ;
     }
     if( s < 0 ){
         alert("Value is <= 0: " + s ); 
-        throw new Error("Value less than zero") ;
+        throw new Error("Value must be positive") ;
     }
     if( s == ""){
         return "";
@@ -599,7 +611,10 @@ function valnum( s ){
     return parseInt( s );
 }
 
-async function testPin( pininfo ){
+async function testPin( pininfo, updown ){
+    // updown == "": normal test button
+    // updown == "up": up button, increment RC servo position 0 and move to new "off" position
+    // updown == "down": same as up but move "off" position a bit down
     // Update pininfo with values from the form
     if( pininfo.type == "gpioservo" || pininfo.type == "pca9685"){
         for( let r = pininfo.f; r >= 0; r-- ){
@@ -608,10 +623,19 @@ async function testPin( pininfo ){
             if( !pulse0 ){
                 continue;
             }
-            let pulse1 = document.getElementById( `servopulse.pulse1.${r}` );
-            pininfo.pulse0 = pulse0.value ;
-            pininfo.pulse1 = pulse1.value ;
-            break
+            if( updown == "up" ){
+                pulse0.value = Math.min( parseInt( pulse0.value ) + 10, 2000 ) ;
+                markField( pulse0.id );
+            }
+            else if( updown == "down"){
+                pulse0.value = Math.max( parseInt( pulse0.value ) - 10, 1000 );
+                markField( pulse0.id );
+            }
+            let pulse1diff = document.getElementById( `servopulse.pulse1diff.${r}` );
+            pininfo.pulse0 = parseInt(pulse0.value) ;
+            pininfo.pulse1 = parseInt(pulse0.value) + parseInt(pulse1diff.value) ;
+            console.log("pulse0.value=", pulse0.value, "pusle2diff.value=", pulse1diff.value, "pininfo.pulse0=", pininfo.pulse0, "pininfo.pulse1=", pininfo.pulse1);
+            break;
         }
     }
     // Get midi number in the moment Test button was pressed
@@ -620,10 +644,20 @@ async function testPin( pininfo ){
     // then the server will reply with error message.
     let button = document.getElementById(`test${pininfo.f}`);
     let originalText = button.innerText;
-    button.innerText = "Testing";
+    if( updown == "" ){
+        button.innerText = "Testing";
+    }
+    pininfo.repeat = 8;
+    pininfo.pause = 500;
+    if( updown == "up" || updown == "down" ){
+        // Up or down button to change servopulse0
+        pininfo.repeat = 0 // only servo off.
+        pininfo.pause = 120 ;
+    }
     await fetch_json( "/test_pin", pininfo );
     button.innerText = originalText;
 }
+ 
 
 async function testCrank(f){
     // Display raw counter value for 1 minute
@@ -649,13 +683,13 @@ function showNoteName( f ){
         if( instrument != DRUM_PROGRAM ){
             let v = e.value ; 
             if( !isNaN(v) && v != "" ){
-                nn = noteName( parseInt(v) ) ;
+                nn = noteName( instrument, v ) ;
             }
         }
         textById( `nn.${f}`,  nn ) ; 
         let n = document.getElementById( "program_name." + f );
         if( n != null && p != null ){
-            n.innerText = program_name( p.value );
+            n.innerText = programName( p.value );
         }
         return;
     }
@@ -916,6 +950,7 @@ function sortTable() {
 }
 function titlerow( row ){
     for( let c of row.cells ){
+        c.style.borderTop = "2px solid black";
         c.style.fontWeight = "bold";
     }
 }

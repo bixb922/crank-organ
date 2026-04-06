@@ -1,120 +1,149 @@
 # (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
 
-# Records event log. Limits total event log size, so event logs can't
+# Records event log. Limits total and individual event log size, so event logs can't
 # hog flash memory.
+
+# Usage:
+#   import minilog
+#   logger = minilog.getLogger( __name __ )
+#   logger.debug("debug message")
+#   logger.info("informational message")
+#   logger.exc( exception, "exception message")
+    
 # Default mode is: debug messages to console, info messages to flash.
 from micropython import const
 import sys
 import io
 import os
 import re
+from time import localtime
 
-from scheduler import singleton
-from drehorgel import timezone
+from compiledate import compiledate 
 
-# DEBUG: only to console, rather fast
-# INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is immediately persistent 
-DEBUG = const(0) 
-INFO = const(1)
-ERROR = const(2)
-EXCEPTION = const(3)
+# DEBUG: only to console, fast
+# INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is always persistent 
 _LEVELNAMES = ["DEBUG", "INFO", "ERROR", "EXCEPTION"]
 
-_FOLDER = "data/"  # Do not define in config, minilog should be autonomous.
+_FOLDER = const("data/")  # Do not use config, minilog should be autonomous.
 
-# BaseLogger class is internal to minilog, does the work.
-# The call interface is with function getLogger and class Logger
 
-_FILE_LEVEL = INFO
-# Normal playing = about 120 bytes of log usage.
-# 1 logfile = about 160 tunes = 8 hours of playing at 20 tunes/hr
+# Normal music playing = about 500-1000 bytes of log usage.
+# 1 logfile of 20k = about 40 tunes = 4 hours of playing at a normal rate
+# 2 log files cover about 1 day of intense activity.
 # Limiting number of log files and size of logfiles ensures
 # that logfiles never fill flash completely, even with a
 # runaway error
 _KEEP_FILES = const(4)
 _MAX_LOGFILE_SIZE = const(20_000)
 
-@singleton
-class BaseLogger:
-    def __init__(self):
-        # Count of event logs since reboot
-        self.error_count = 0
+    
+class getLogger:
+    _file_level = "INFO"
+    _error_count = 0 # Count of event logs since reboot
+    _current_log_num = 0 # from 1 up. 0 means "class not initialized"
+    # Other class variables:
+    #   _file    handle of current error.log file
+    #   _timezone
+
+    @classmethod
+    def set_file_level( cls, log_debug ):
+        # Can only set DEBUG or INFO levels.
+        cls._file_level = "DEBUG" if log_debug else "INFO"
+
+    @classmethod
+    def set_timezone( cls, timezone ):
+        # timezone must be injected before the first log entry 
+        # is written.
+        cls._timezone = timezone
+
+    @classmethod
+    def _class_init(cls):
+        if cls._current_log_num:
+            # already initialized
+            return
+        
         # Compute new filename for error.log
         # Find error<nnn>.log file with highest nnn
-        self.max_num = max((n for n, _ in self._filenumbers()),default=0)
-        self.current_log_filename = self._makefilename(self.max_num)
-        self.file = open(self.current_log_filename, "a")
-        # logging an entry takes 150 msec, rest of __init__ is <15msec
-        # But it is important to log a RESTART to flash.
-        self.log(__name__, INFO, "=== RESTART ===")
+        cls._current_log_num = max((n for n in cls._filenumbers()),default=1)
+        cls._file = open(cls._makefilename(cls._current_log_num), "a")
+        # logging an entry can take 150 msec, rest of __init__ is <15msec
+        # But it is important to log the RESTART to flash.
+        cls.log(__name__, "INFO", f"=== RESTART version {compiledate} ===")
 
-    def _check_max_logfile_size(self):
-        # If maximum filesize exceeded, use new file name
-        if self.file.tell() < _MAX_LOGFILE_SIZE:
-            return
-        self.file.close()
-        self.max_num += 1
-        self.current_log_filename = self._makefilename(self.max_num)
-        self.file = open(self.current_log_filename, "w")
-        self.log(
-            __name__, DEBUG, f"now logging to {self.current_log_filename}"
-        )
 
-        # Delete oldest
-        for n, filename in self._filenumbers():
-            if (self.max_num - n) >= _KEEP_FILES:
+        # Delete oldest log file
+        for n in cls._filenumbers():
+            if (cls._current_log_num - n) >= _KEEP_FILES:
+                filename = cls._makefilename(n)
                 os.remove(filename)
-                self.log(__name__, INFO, f"old log {filename} deleted")
+                cls.log(__name__, "INFO", f"old log {filename} deleted")
 
-    def _makefilename(self, n):
+    @classmethod
+    def _makefilename(cls, n):
         return f"{_FOLDER}error{n}.log"
 
-    def _filenumbers(self):
+    @classmethod
+    def _filenumbers(cls):
         # List numbers of error logs, example:
         # error10.log, error11.log, error12.log
         # will yield 10, 11, 12 as integers
         pattern = re.compile("^error([0-9]+)\\.log$")
-        filenumber = None
+        notfound = True  # to detect if a file number was found
         for filename in os.listdir(_FOLDER):
             match = re.match(pattern, filename)
-            if not match:
-                # This is not a error*.log file
-                continue
-            # group(0): entire string, group 1: number error<nnn>.log
-            try:
-                filenumber = int(match.group(1))
-            except ValueError:
-                # Not a number, skip this file
-                continue
-            yield filenumber, _FOLDER + filename
-        if filenumber is None:
-            # No error*.log file yet
-            yield 0, self._makefilename(0)
+            if match:
+                # group(0): entire string, group(1): number nnn of error<nnn>.log
+                try:
+                    notfound = False
+                    yield int(match.group(1))
+                except ValueError:
+                    # Not a number, skip this file
+                    continue
+        # No error*.log file yet, initalize 
+        if notfound:
+            yield 1
+        # Return None to stop iteration
 
-    def _formatRecord(self, module, level, message):
-        now = timezone.now_ymdhmsz()
-        return f"{now} - {module} - {_LEVELNAMES[level]} - {message}"
+    @classmethod
+    def _formatRecord(cls, module, level, message):
+        try:
+            tz = cls._timezone.now_ymdhmsz()
+        except:
+            # Should not happen.
+            tz = "??:??:??"
+        return f"{tz} - {module} - {level} - {message}"
+        
+    @classmethod
+    def _write(cls, s):
+        cls._file.write(s)
+        cls._file.flush()
+        if cls._file.tell() < _MAX_LOGFILE_SIZE:
+            return
+        # If maximum filesize exceeded with this write, switch to new file
+        cls._file.close()
+        cls._current_log_num += 1
+        filename = cls._makefilename(cls._current_log_num)
+        cls._file = open(filename, "w")
+        cls.log( __name__, "DEBUG", f"now logging to log file {filename}" )
 
-    def _write(self, s):
-        self.file.write(s)
-        self.file.flush()
-        self._check_max_logfile_size()
 
-    def log(self, module, level, message):
-        s = self._formatRecord(module, level, message)
+    @classmethod
+    def log(cls, module, level, message):
+        s = cls._formatRecord(module, level, message)
         print(s)
-        if level >= _FILE_LEVEL:
-            self._write(f"{s}\n")
+        if _LEVELNAMES.index(level) >= _LEVELNAMES.index(cls._file_level):
+            cls._write(f"{s}\n")
 
-        if level == ERROR:
-            self.error_count += 1
+        if level == "ERROR" or level == "EXCEPTION":
+            cls._error_count += 1
 
-    def exception(self, module, message, exception):
+    @classmethod
+    def _exception(cls, module, message, exception):
         # Count exceptions as errors
-        self.error_count += 1
+        cls._error_count += 1
 
-        s = self._formatRecord(module, EXCEPTION, message)
+        s = cls._formatRecord(module, "EXCEPTION", message)
         # Format exception to a string
         with io.BytesIO() as bytefile:
             sys.print_exception(exception, bytefile)
@@ -123,43 +152,30 @@ class BaseLogger:
         # Output exception to console and file
         print(s)
         print(exception_text)
-        self._write(f"{s}\n{exception_text}\n")
+        cls._write(f"{s}\n{exception_text}\n")
 
+    # ============================
+    # Instance methods
+    def __init__(self, module ):
+        # initialize class, if not already initalized.
+        getLogger._class_init()
+        self.module = module
+
+    # For all methods here, call corresponding class method.
     def get_current_log_filename(self):
-        return self.current_log_filename
+        return self._makefilename( self._current_log_num )
 
     def get_error_count(self):
-        return self.error_count
-
-# To start a logger in a module use
-# import minilog
-# logger = minilog.getLogger( __name __ )
-# logger.debug("debug message")
-# logger.info("informational message")
-# logger.exc( exception, "exception message")
-class getLogger:
-    # This class is the public interface to minilog
-    # Instead of making BaseLogger a singleton,
-    # we pass it as a optional keyword argument to getLogger
-    # to ensure it is only created once.
-    def __init__(self, module, baselogger=BaseLogger() ):
-        self.module = module
-        self.baselogger = baselogger
+        return self._error_count
 
     def debug(self, message):
-        self.baselogger.log(self.module, DEBUG, message)
+        self.log(self.module, "DEBUG", message)
 
     def info(self, message):
-        self.baselogger.log(self.module, INFO, message)
+        self.log(self.module, "INFO", message)
 
     def error(self, message):
-        self.baselogger.log(self.module, ERROR, message)
+        self.log(self.module, "ERROR", message)
 
     def exc(self, exception, message):
-        self.baselogger.exception(self.module, message, exception)
-
-    def get_current_log_filename(self):
-        return self.baselogger.get_current_log_filename()
-
-    def get_error_count(self):
-        return self.baselogger.get_error_count()
+        self._exception(self.module, message, exception)

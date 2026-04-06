@@ -81,15 +81,13 @@ async function updateNoteInfo( notelist ) {
 	let detail = "";
 	if( program_number ){
 		detail += programNameList[program_number] ;
-		if( program_number != 129 ){
-			detail += " " + noteName(note_number);
-		}
+		detail += " " + noteName(program_number, note["midi_number"]);
 	}
 	textById( "note_name", note["name"] ) ;
 	textById( "detail", detail );
 	showHideElement( "detail", detail );
 
-	textById( "frequency", note["frequency"] );
+	textById( "frequency", Math.round(note["frequency"]*10)/10 );
     let cents = note["cents"] ;
 	let s = "-" ;
     if( cents != null ){
