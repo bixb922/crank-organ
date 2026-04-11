@@ -147,6 +147,8 @@ class RequestSlice:
                         )
                 except ValueError:
                     pass
+                # Note that at this point, run_always_flag may be true, so the
+                # exception is undeserved... but nothing bad will happen.
                 raise RuntimeError("MIDI player did not let this task run")
 
         self.t0 = ticks_ms()  # For debug
@@ -223,6 +225,23 @@ def collect_garbage(reset=False, report=False):
         max_gc_time = max( max_gc_time, t ) # for statistics on diag page only
     if report:
         print(f"GC timeout garbage collection took {t} msec, max {max_gc_time} msec, average {avg_gc_time} msec, {is_player_active()=}") 
+
+# >>> check gc timeout
+# 2026-04-09 12:34:05GMT-4 - player - INFO - Actuator stats: max polyphony=12
+# 2026-04-09 12:34:06GMT-4 - history - DEBUG - 802 elements in history
+# 2026-04-09 12:34:23GMT-4 - player - INFO - Start tuneid=ik6rF-7NL '~LM068 A029 O du lieber Augustin rvb 1' tracks=5
+# GC timeout garbage collection took 32 msec, max 35 msec, average 32 msec, is_player_active()=True
+# GC timeout garbage collection took 33 msec, max 35 msec, average 32 msec, is_player_active()=True
+# GC timeout garbage collection took 33 msec, max 35 msec, average 32 msec, is_player_active()=True
+# 2026-04-09 12:35:35GMT-4 - player - INFO - MIDI processing: midi_events=1252, msec/event=1.1, busy=1.9%, avg gc=32 msec, late ratio=0.18%
+# 2026-04-09 12:35:36GMT-4 - player - INFO - End tuneid=ik6rF-7NL '~LM068 A029 O du lieber Augustin rvb 1' midi_fn=tunelib/LM068_A029 O du lieber Augustin rvb 1.mid, played 72.04s of 72.04s
+# 2026-04-09 12:35:36GMT-4 - player - INFO - Actuator stats: max polyphony=8
+# 2026-04-09 12:35:36GMT-4 - history - DEBUG - 803 elements in history
+# GC timeout garbage collection took 31 msec, max 35 msec, average 32 msec, is_player_active()=False
+# 2026-04-09 12:35:53GMT-4 - player - INFO - Start tuneid=ieLbmwEM5 '~marche des patineurs  yvette horner r1' tracks=15
+# 2026-04-09 12:38:48GMT-4 - player - INFO - MIDI processing: midi_events=12432, msec/event=1.1, busy=8.0%, avg gc=34 msec, late ratio=0.38%
+# 2026-04-09 12:38:48GMT-4 - player - INFO - End tuneid=ieLbmwEM5 '~marche des patineurs  yvette horner r1' midi_fn=tunelib/marche des patineurs - yvette horner r1.mid, played 173.94s of 173.94s
+
     if reset:
         avg_gc_time = t*2 # gc time just before playing, reset history
     else:

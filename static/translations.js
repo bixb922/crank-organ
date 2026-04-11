@@ -179,10 +179,10 @@ let translationDict = {
 	["History", "Chronik"],
 "historia truncada": // history.html
     ["History purged", "Chronik gekürzt"],
-"hz": // notelist.html
-	["Hz", "Hz"],	
+"hz.": // notelist.html
+	["Hz.", "Hz."],	
 "hz,": // notelist.html
-	["Hz,", "Hz,"],
+	["Hz,", "Hz,"],	
 "imagen micropython": // diag.html 
 	["MicroPython image", "MicroPython image"],
 "índice": // index.html
@@ -309,7 +309,7 @@ let translationDict = {
 	["Time playing", "Zeit Musikwiedergabe"],
 "título": // tunelist.html play.html 
 	["Title", "Titel"],
-"usar frequencia media": // notelist.html
+"usar frecuencia media": // notelist.html
 	[ "Use average frequency", "Frequenzmittelwert verwenden"],
 "ver log": // diag.html 
 	["Show log", "Log anzeigen"],
@@ -319,6 +319,8 @@ let translationDict = {
 	["Time zone", "Zeitzone"],
 	
 // Server translations
+"admin": // admin.html
+	["Admin", "Admin"],
 "bienvenido al organillo en internet": // server index.html
 	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
 "aquí está la historia, en fotos, de la construcción del organillo": // server index.html	

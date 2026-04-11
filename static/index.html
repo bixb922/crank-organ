@@ -261,6 +261,9 @@ async function battery_zero() {
 }
     
 async function battery_level(){
+	// this click handler takes very long... since it
+	// asks for user input. That reports as a Violation in the 
+	// browser console.
     let level = window.prompt(tlt("Ingresa nivel carga actual de la batería, 100=lleno, 0=vacío (usado para estimar descarga), reset=borrar calibración"), "")
     if( level == "" || level == " " || level == null ) {
         return ;

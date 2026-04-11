@@ -2,6 +2,16 @@
 
 This is a collection of links and random thoughts on building a crank organ.
 
+To build a crank organ yourself, you need to build:
+* A bellows. This is a good starting point, without bellows, there is no air for the pipes. Search for the links to Melvin Wright's bellows in this file.
+* Pipes. 20 pipes is a good starting point. There are many links below that describe pipe measures and pipe building. "Closed pipes" is a type of pipes that fits very well with crank organs.
+* Pipes are inserted with a small tube into a box called the "wind chest". There is little description on how to make a wind chest, since it's only a box. My photo log here https://drehorgel.pythonanywhere.com/info/static/gallery.html shows how I made the wind chests.
+* Solenoid valves for each pipe. The easiest way is to purchase organ pipe valves, see links below. If you really want to make pipe valves yourself, see this article about valves with RC servos: [RC servos for crank organ valves](/doc-servo/servos.md)
+* The electronics, see here [](/doc-hardware/README.md)
+* A case where all components fit in. The easiest way is to build something to your tase once you have all components is finished.
+
+This article here falls short of being a complete guide, but there are links to very good descriptions on how to build a crank organ yourself.
+
 # Contents
 1.  [Links](#1-links)
      * [Forum](#forum)
@@ -23,8 +33,9 @@ This is a collection of links and random thoughts on building a crank organ.
 3.  [MIDI organ construction as compared to roll/book organs](#3-midi-organ-construction-as-compared-to-roll-book-organs)
 4.  [Bellows and spring](#4-bellows-and-spring)
 5.  [Pipes](#5-pipes)
-6.  [Crank](#6-crank)
-7.  [MIDI Files](#7-midi-files)
+6.  [Piccolo pipes](#6-piccolo-pipes)
+7.  [Crank](#7-crank)
+8.  [MIDI Files](#8-midi-files)
      * [How to get MIDI files](#how-to-get-midi-files)
      * [Purchase MIDI files](#purchase-midi-files)
      * [Adapt existing MIDI files](#adapt-existing-midi-files)
@@ -242,7 +253,7 @@ You can use very small solenoids to open air to control a pneumatic valve. It is
 
 Here are many links about the topic of actuators to open the air flow of crank organ valves: https://orgue-bernard.blog4ever.com/le-bobinage-d-un-relais# (there is a box to select the languages on the upper left of the page). The discussion there is very thorough.
 
-Some have used RC Servo motors (those used for radiocontrolled model airplanes or cars). I would like to test this and have no definitive results. I believe these may be to slow for fast and short notes. Paper roll based organs can handle 30 milliseconds on/30 milliseconds off repetition rates, while even the fastest RC servos need more time. Experimentation is the only way to solve this.
+I believe a good solution for do-it-yourself valves are RC servo motors (those used for radiocontrolled model airplanes or cars). They are not as fast as solenoid valves. See here for details ![RC servos for crank organ valves](/doc-servo/servos.md)
 
 With non-MIDI organs, on many plans the pipes are connected with plastic tubes to the windchest. This is excellent to save space and completely appropriate for pneumatic valves. For MIDI organs, however, I think the easiest is to put the pallet valves direcly under the pipe foot, dispensing with tubes. There is also less chance of air escaping. It will be more difficult to fit the resulting windchest in a small space. I believe  the resulting organ will be a bit larger than using plastic tubes, but easier to build.
 
@@ -297,9 +308,22 @@ The easiest stopper is this one: https://orgue-bernard.blog4ever.com/les-tampons
 
 Another aspect of the pipes that I found important are the "ears": some pipes have small walls on each side of the mouth. They need to be a few millimeters wide only. They alter the sound of the attack. If not present, the pipe makes a thhwwt sound before the note sound (german: Die Pfeife spuckt). For many builders, this sound can be desirable, since it gives a percussive quality to the sound. With the ears present, this percussion is much lower.
 
+# 6. Piccolo pipes
+
+Piccolo pipes are much more unusual than the closed pipes described in the last section. Their sound is a bit sweeter, and they are especially appropriate for high notes, hence the name: "piccolo" means "small" in italian.
+
+Here is a description on how to make piccolo pies: https://www.melright.com/busker/jsart09.htm
+
+Here is my spreadsheed with the dimensions I used: [piccolo pipe dimensions](/building/piccolo_dimensions.xlsx)
+
+And here are my videos on piccolo pipe construction:
+
+https://www.youtube.com/watch?v=2PqB4W6jTFo
+
+https://www.youtube.com/watch?v=A8HaATFwoJs
 
 
-# 6. Crank
+# 7. Crank
 
 This crank organ build log has good ideas to make a crank: http://organcrank.blogspot.com/2012_12_16_archive.htmlhttp://organcrank.blogspot.com/2012_12_16_archive.html
 
@@ -310,7 +334,7 @@ I used this one: https://www.mcmaster.com/products/rotary-shafts/shafts-3~/keyed
 In my photo gallery: https://drehorgel.pythonanywhere.com/iot/static/gallery.html are some photos that show my crank construction.
 
 
-# 7. MIDI Files
+# 8. MIDI Files
 
 ## How to get MIDI files
 

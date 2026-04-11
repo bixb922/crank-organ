@@ -524,19 +524,30 @@ def main():
     avg_output = output_blocks/n
     avg_input = input_blocks/n
     ratio = output_blocks/input_blocks
-    midi_ratio = decompressed_bytes/input_bytes
+    # midi_ratio = decompressed_bytes/input_bytes # shows what's done by -d0, around 0.5
     print(f"{n} files {input_blocks=} {output_blocks=} (1 block=4096 bytes)")
     print(f"average input={avg_input:4.1f} blocks/file, average output={avg_output:4.1f} blocks/file, block compression {ratio=:4.2f}")
-    print(f"average input={input_bytes/n/1000:4.1f} kbytes/file, average output={output_bytes/n/1000:4.1f} kbytes/file, bytes midi reduction ratio={midi_ratio:4.1f}, bytes compression ratio={output_bytes/input_bytes:4.2f}")
+    print(f"average input={input_bytes/n/1000:4.1f} kbytes/file, average output={output_bytes/n/1000:4.1f} kbytes/file, bytes compression ratio={output_bytes/input_bytes:4.2f}")
 	# As of Dic 2024: overhead is 634 blocks, 512 for Micropython
 	# rest for /data, /lib y /software
     # blocks approx including micropython, *.mpy, static, data (with compiled mpy files and compressed static files)
     # and data files, 4 error.log files, a tunelib.json and lyrics.json
     # with 2 backups each, estimated size.
     # If static is compressed and micropython is compiled:
-    application_overhead = 720
+    # application_overhead = 720 # in blocks
     # If static is not compressed and micropython is not compiled
-    application_overhead = 840
+    # application_overhead = 840 # in blocks
+
+    # Starting April 2026, with software in ROMFs there is much less overhead
+    # Space is needed for data files. Largest file in /data will be tunelib.json and backups
+    # Here is an estimate:
+    #       11 blocks standard pinout files
+    #       5*3=15 blocks for 3 versions of error.log
+    #       3*(150_000/4096)=110 blocks for 3 versions of tunelib.json
+    #       3*(100_000/4096)=75 blocks for 3 versions of lyrics.json
+    #       15 blocks for other json files
+    #       total=225 blocks, YMMV.
+    application_overhead = 250 # blocks of 4096 bytes
     print("Estimated capacities based on current average MIDI file size, no lyrics:")
     for flash_size in (8, 16):
         blocks = flash_size*1024*1024/4096

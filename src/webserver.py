@@ -801,18 +801,6 @@ async def listdir_tunelib(request):
     import filemanager
     return filemanager.fast_listdir( config.TUNELIB_FOLDER )
 
-@app.route("/check_flash_full")
-async def check_flash_full(request):
-    import filemanager
-    fstat = filemanager.status()
-    # Leave at leat 150 kb of flash free when uploading a file.
-    # Updating a file like tunelib.json or history.json needs to write the complete
-    # file a second time, so there must at least be space for one additional copy of the file.
-    if fstat["total_flash"]-fstat["used_flash"] < 150_000:
-        return respond_error_alert("No se puede subir archivo, memoria flash casi llena")
-    return respond_ok()
-
-
 @app.post('/upload/<path_filename>')
 @authorize # >>> allow upload midi without password?
 async def filemanager_upload(request, path_filename ):
@@ -823,9 +811,8 @@ async def filemanager_upload(request, path_filename ):
     import filemanager
     try:
         return filemanager.upload( request, path, filename  )
-    except ValueError:
-        return respond_error_alert("Error, No destination folder could be assigned, unknown file type")
-
+    except Exception as e:
+        return respond_error_alert(f"Error uploading {repr(e)}")
 @app.route("/download/<path>")
 @authorize
 async def filemanager_download(request, path):

@@ -32,6 +32,9 @@ def _check_midi_file( path, file_size=-1 ):
             tunemanager.queue_file_updated( path, file_size )
         else:
             tunemanager.queue_file_deleted( path )
+    if "tunelib" in path:
+        # Abort sync to avoid duplicate work for tunlib.json and for /tunelib/*-mid
+        tunemanager.abort_sync()
         
 
 def listdir(path):
@@ -84,6 +87,9 @@ def fast_listdir(path):
         
 def upload( request, path, filename  ):
     # Upload a file from the PC to the microcontroller
+    # Check flash full, send message to javascript client.
+    if is_flash_full():
+        raise RuntimeError("Flash full, can't upload")
 
     # Javascript must use String.normalize("NFC") for filenames
     # See filemanager.html encodePath()
@@ -254,6 +260,13 @@ def status():
         'total_flash': stat[0]*stat[2],
         'used_flash': stat[0]*(stat[2]-stat[3])
     }
+
+def is_flash_full():
+    fstat = status()
+    # Leave at least 200 kb of flash free when uploading a file.
+    # If not, json files or error.log files cannot be written 
+    # and that is kind of fatal...
+    return fstat["total_flash"]-fstat["used_flash"] < 200_000
 
 def delete(path):
     os.remove(path)

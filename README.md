@@ -68,6 +68,7 @@ Main documents:
 
 * [Description of the controller software.](doc-software/README.md)
 * [Description of the controller hardware and construction plans](doc-hardware/README.md)
+* [Building a crank organ](/building/README.md)
 
 Specific documents:
 * [Battery](doc-hardware/battery.md). Describes  options for a battery for a crank organ.
@@ -80,7 +81,7 @@ This is work in progress, but I am actively using this solution on a daily basis
 # 3. To see a demo
 To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
 
-This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning.
+This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning. There is no need to install any software on your PC.
 
 
 
@@ -88,12 +89,17 @@ This demo simulates the operation of the software in this repository closely. Th
 
 | Folder     | Contents                             |
 |------------|--------------------------------------|
-|install|Installation files                      |
+|bin| Compiled binary files of the software for ESP32-S3|
+|building | Description and links on how to build a crank organ |
+|data| Pinout templates for 20, 26 and 31 note organs |
+|design-and-development| Design details and internals | 
+|doc-hardware | Description of electronic hardware |
+|doc-software | Description of the crank organ software in this repository|
+|doc-servos| How to build valves using RC servos |
+|kicad|KiCad source files for the electronics|
 |src| Full source code in MicroPython language |
 |static| Web pages for the microcontroller (HTML, CSS, Javascript)   |
-|data| Pinout templates for 20, 26 and 31 note organs |
 |tools|Some tools used during development of this software |
-|kicad|KiCad source files|
 
 [Here](doc-software/README.md) is a change log, see section titled "Recent changes".
 

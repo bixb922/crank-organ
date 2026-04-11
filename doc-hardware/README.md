@@ -50,8 +50,13 @@
 8.  [Microphone](#8-microphone)
 9.  [Crank rotation sensor](#9-crank-rotation-sensor)
 10.  [Registers](#10-registers)
-11.  [Related documents](#11-related-documents)
-12.  [Copyright and license](#12-copyright-and-license)
+11.  [Troubleshooting](#11-troubleshooting)
+     * [The microcontroller unexpectedly restarts](#the-microcontroller-unexpectedly-restarts)
+         * [Microcontroller power](#microcontroller-power)
+         * [Loose contact](#loose-contact)
+     * [I2C timeouts (MCP23017, PCA9685)](#i2c-timeouts-mcp23017-pca9685)
+12.  [Related documents](#12-related-documents)
+13.  [Copyright and license](#13-copyright-and-license)
 # 1. Introduction
 
 This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue or open a discussion item in this repository.
@@ -648,14 +653,36 @@ The white light symbol is only printed on this switch, so it was easy to sand aw
 
 One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
 
-# 11. Related documents
+# 11. Troubleshooting
+
+Before powering up, be sure that you have verified every contact with every other contact for continuity.
+
+## The microcontroller unexpectedly restarts
+
+MicroPython crashes are very, very rare. No software condition causes a MicroPython crash, i.e. there are no reboots due to a software problem. All software conditions raise exceptions, and exceptions are trapped and logged.
+
+So if the microcontroller restarts unexpectedly, there can be two main causes:
+
+### Microcontroller power
+
+The microcontroller should be connected to a 5V DC adapter. I recommend using a 5V DC-DC adapter to produce those 5V. The input side for this adapter should go directly to the battery (always with a fuse in between). When those 5V go to the source of the solenoids or RC servos, a short overload can make the input voltage dip to under 5V and the microcontroller will restart.
+
+### Loose contact
+
+Check the 44 pin headers of the ESP32S3. If they are a bit loose in their sockets, bend them very slightly.  Check for loose connections.
+
+## I2C timeouts (MCP23017, PCA9685)
+
+If the error log of the software shows I2C bus timeouts with these devices, that is normally due to a loose or flaky contact.
+
+# 12. Related documents
 [Batteries](battery.md)
 
 [Crank sensor](crank-sensor.md)
 
 [Valves with RC servos instad of pallet valves](/doc-servo/servos.md)
 
-# 12. Copyright and license
+# 13. Copyright and license
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 

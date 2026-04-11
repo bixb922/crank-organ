@@ -632,7 +632,7 @@ class PageHeader{
 			}
 		}
 		else if( !progress["playback_enabled"]){
-			banner = tlt("Tocar música deshabilitado por afinador, pinout");
+			banner = tlt("Tocar música deshabilitado por afinador, pinout. Debe reiniciar para reestablecer.")
 		}
 	    else if( progress["automatic_delay"] ){
 	 		banner = tlt("Partida automática activada") + `, ${progress["automatic_delay"]} s` ;

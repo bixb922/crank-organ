@@ -99,7 +99,7 @@ class TimeZone:
             # old timezones instead of mixing new time zone with old offset
             # until reboot.
             fileops.write_json( newtz, _TZFILE, keep_backup=True )
-            self.logger.info("Timezone info updated, takes effect next reboot") 
+            self.logger.info("Timezone info updated, takes effect next hard reset") 
         
         # If we don't have ntptime, use the timestamp provided
         # by the browser. This is normally case if using AP mode

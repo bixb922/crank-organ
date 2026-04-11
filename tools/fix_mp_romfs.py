@@ -7,15 +7,11 @@
     # ./install.sh esp32s3
     # source export.sh
 # To generate micropython  image:
-    # git clone https://www.github.com/micropython/micropython.git
-
-	# To generate micropython 1.26.preview image:
-	# % git rebase -i f77fd62
-    # and edit file with vi (or whatever editor git uses)
-	# to remove first line which is commit d737112 "esp32/esp32_common.cmake: Use the tinyusb source files from ESP-IDF"
-	# Copy manifest.py and boot.py to some folder without spaces, for example ~/
-    # Adjust folders in this program, run fix_mp_romfs.py
-    # to add partitions file and define necessary compilation flags. 
+# For a certain version add: --branch v1.28.0
+    # git clone --depth 1 https://github.com/micropython/micropython.git
+    # Adjust folders in this program, then run fix_mp_romfs.py
+    # Running that program will
+    #to add partitions file and define necessary compilation flags. 
     # Establish esp-idf:
     # % cd esp-idf
     # % source export.sh
@@ -28,16 +24,16 @@
     # % python3 crank-organ/tools/fix_mp_romfs.py
     #
     # Copy manifest.py and boot.py to a folder with no spaces
-    # Compile micropython:
-    # % cd micropython/ports/esp32
-	# % rm -f -r build-ESP32_GENER* folders
-	# % make clean	
-	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT submodules
     # No spaces allowed in FROZEN_MANIFEST path (even if enclosed in "")
     # Create a soft link:
     # ln -s "/Users/username/some folder/another folder/crank-organ/tools/" crank_organ_tools
-	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/crank_organ_tools/mainfest.py
-    # Preferable without manifest, if not the ESP32 will become difficult to manage.
+    #
+    # Compile micropython:
+    # % cd micropython/ports/esp32
+	# % rm -f -r build-ESP32_GENER* folders
+	# % make clean
+	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT submodules
+	# % make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT FROZEN_MANIFEST=/Users/username/crank_organ_tools/manifest.py
     # The output are the .bin files
     # .bin files are now in micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT folder
     # Copy to bin folder with 

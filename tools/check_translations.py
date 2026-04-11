@@ -13,7 +13,7 @@ do_not_translate = ["", "\xa0", "\xa0\xa0","\xa0\xa0\xa0",
      "⏪ "," ⏩","nnn",",","Host name","(","Reset", "Deep sleep",
      "[bytes]","Host name, AP SSID, BLE name:",
      "IP", "Connection status","SSID","IP","WiFi scan",
-     "SSID","dBm","Cents","Pin","👑", "🎼🎵🎶", "...", "×"]
+     "SSID","dBm","Cents","Pin","👑", "🎼🎵🎶", "...", "×", "."]
 class MyHTMLParser(HTMLParser):
     def __init__(self, pagename, translations):
         self.pagename = pagename
@@ -124,7 +124,7 @@ def main():
     analyze_translations( filelist )
     print("")
     if errors_found:
-        print("ERROR ?Errors found in check translations")
+        print(f"ERROR ?{errors_found} errors found in check translations")
         sys.exit(1)
 
 

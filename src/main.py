@@ -47,5 +47,5 @@ if romfs_compiledate >= flash_compiledate:
     sys.path.pop(0)
 
 # Start up the software
-import startup
+import startup # type:ignore
 

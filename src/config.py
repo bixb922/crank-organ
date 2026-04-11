@@ -68,7 +68,7 @@ class Config:
         self.password_required = False
         self.ap_ip = "192.168.144.1"
         self.ap_max_idle = 180 
-        self.advertise_bt = False
+        self.advertise_bt = False # >>> should be true? or at least while WiFi not configured?
 
         # Power management
         self.battery_heartbeat_duration = 0

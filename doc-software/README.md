@@ -51,7 +51,6 @@
      * [Error log](#error-log)
 14.  [File manager](#14-file-manager)
      * [Update MIDI files](#update-midi-files)
-     * [Update software](#update-software)
      * [View files](#view-files)
      * [Download files](#download-files)
 15.  [Turning the system on](#15-turning-the-system-on)
@@ -59,6 +58,7 @@
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
      * [Prerequisites installing and configuring the software](#prerequisites-installing-and-configuring-the-software)
      * [Installation instructions](#installation-instructions)
+     * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
      * [Update to a newer version](#update-to-a-newer-version)
 17.  [Other stuff](#17-other-stuff)
@@ -75,6 +75,7 @@
      * [Automatic shutdown when idle](#automatic-shutdown-when-idle)
      * [The onboard RGB LED](#the-onboard-rgb-led)
      * [Another way to do initial configuration](#another-way-to-do-initial-configuration)
+     * [ROMFS](#romfs)
 18.  [Backup](#18-backup)
 19.  [Recent changes](#19-recent-changes)
      * [Changes from Nov 2023 to March 2024:](#changes-from-nov-2023-to-march-2024)
@@ -91,7 +92,8 @@
      * [Changes June 15 to June 23, 2025](#changes-june-15-to-june-23-2025)
      * [Changes June 24 to July 5, 2025](#changes-june-24-to-july-5-2025)
      * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
-     * [Changes from Nov 2025 to ...](#changes-from-nov-2025-to)
+     * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
+     * [More changes during April 2026](#more-changes-during-april-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -412,6 +414,8 @@ Use the [File Manager](#file-manager) to upload files to the /tunelib folder of 
 
 MIDI files become visible after a few seconds (10 or 20 seconds). You may need to refresh the tunelist or play page to make changes visible. You also can enter the "Edit Tunelib" button to force a check and update for all changed files.
 
+If you update many tunes: processing each tune takes on average 3 seconds. So if you upload, say, 500 tunes, you'll have to wait 1500 seconds until the update is complete. You can view progress by starting the "Tunelib editor" page.
+
 You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB. 
 
 ## The Tunelib Editor page (Tunelib Editor button on index page)
@@ -725,7 +729,7 @@ On the System page, the following buttons will appear:
 
 ## Error log
 
-The "Show log" button will show the latest error log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder. They can also be accessed wit the [File Manager](#file-manager).
+The "Show log" button will show the latest error log. Look at the log if the neopixel led flashes red, or if you see some malfunction. Several past log files are stored in the data folder. They can also be accessed with the [File Manager](#file-manager).
 
 If there is some problem, please post the relevant part of the error log in a Github issue, with previous history, and the description of the situation here on Github (section: Issues). I'd like to fix issues that crop up.
 
@@ -755,21 +759,6 @@ Use the "Update to auto folder" button to upload MIDI files. After some time, th
 
 Use the "Edit Tunelib" option to add title, genre, author, rating, etc.
 
-## Update software
-See here: [Update to a newer version](#update-to-a-newer-version). The preferred method is to use ```esptool.py``` to upload images. This update procedure does *not* affect MIDI files nor the configuration.
-
-If you update from a crank organ software version prior to November 2025, then you can free some flash space running this command at the PC:
-```
-mpremote rm -r /software
-```
-
-However, individual ```.py```, ```.mpy``` ```.html```, ```.html.gz``` as well as images and CSS files can be uploaded with the file manager. The uploaded file has priority over the files baked into the ```.bin``` images.
-
-This software uses the ROMFS capability of MicroPython to include the compiled and compressed software in the .bin file. Only boot.py is frozen together with the MicroPython image. This allows more flexibility than freezing the software, frees about 600 kb of flash, speeds up startup, frees more than 100 kB of RAM, shortens garbage collection times, makes installation easier, and provides a integrated MicroPython/application software bundle.
-
-If you want to apply a patch, change the corresponding .py or .html or .js file and upload that file with the ""Update to auto folder" button. These files end up in /software/mpy and /software/static and have priority over ROMFS files in the /rom folder.  
-
-If you want to compile the .bin files yourself, you will have to dig into ```crank-organ/tools/Makefile``` and ```crank-organ/tools/fix_mp_romfs.py```. Please read the comments. Some tweaking will surely be required. 
 
 ## View files
 Files that are "underlined" in the File Manager can be clicked to view their content.
@@ -832,33 +821,37 @@ Push the reset button again. Use ```mpremote``` to connect to the ESP32S3. Press
 ```
 boot.py mount readsize=4096, progsize=128, lookahead=512
 timezone - Could not read timezone.json: [Errno 2] ENOENT
-2024-06-25 15:26:10UTC - minilog - INFO - === RESTART ===
-2024-06-25 15:26:11UTC - config - INFO - Generating new key
-2024-06-25 15:26:11UTC - config - INFO - Passwords encrypted
-2024-06-25 15:26:11UTC - config - DEBUG - Config Your ESP32-S3 device wifi_mac=7cdfa1e8c240 hostname and AP SSID=esp32s3
-2024-06-25 15:26:11UTC - led - DEBUG - init done
-2024-06-25 15:26:12UTC - wifimanager - DEBUG - AP mode started ssid esp32s3 config ('192.168.144.1', '255.255.255.0', '192.168.144.1', '192.168.144.1')
-2024-06-25 15:26:12UTC - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
-2024-06-25 15:26:12UTC - wifimanager - DEBUG - init ok
-2024-06-25 15:26:12UTC - solenoid - DEBUG - init complete self.solenoid_def.device_info={}
-2024-06-25 15:26:12UTC - tunemanager - DEBUG - init ok, 0 tunes in data/tunelib.json
-2024-06-25 15:26:12UTC - tachometer - DEBUG - Crank sensor not enabled
-2024-06-25 15:26:12UTC - tachometer - DEBUG - crank init ok
-2024-06-25 15:26:12UTC - battery - INFO - init error loading json, rebuilding. OSError(2,)
-2024-06-25 15:26:12UTC - battery - DEBUG - init ok
-2024-06-25 15:26:12UTC - history - DEBUG - init done
-2024-06-25 15:26:13UTC - player - DEBUG - init ok
-2024-06-25 15:26:13UTC - setlist - DEBUG - init ok
-2024-06-25 15:26:13UTC - organtuner - INFO - new data/organtuner.json written
-2024-06-25 15:26:13UTC - organtuner - DEBUG - init ok
-2024-06-25 15:26:14UTC - setlist - DEBUG - Setlist loaded 0 elements
-2024-06-25 15:26:14UTC - startup - DEBUG - Starting asyncio loop
-2024-06-25 15:26:14UTC - webserver - DEBUG - USE_CACHE=True MAX_AGE=300 sec
-2024-06-25 15:26:14UTC - solenoid - DEBUG - clap 8
-Total startup time (without main, until asyncio ready) 4357 msec
-2024-06-25 15:26:15UTC - battery - DEBUG - Can't calibrate: no calibration data
-2024-06-25 15:26:27UTC - wifimanager - INFO - Status'(wifi_SSID_1 201)', could not connect to wifi_SSID_1
-2024-06-25 15:26:28UTC - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_2
+00:00:06 - minilog - INFO - === RESTART ===
+00:00:06 - config - INFO - Generating new key
+00:00:06 - config - INFO - Passwords encrypted
+00:00:06 - config - DEBUG - Config Your ESP32-S3 device wifi_mac=7cdfa1e8c240 hostname and AP SSID=esp32s3
+00:00:06 - led - DEBUG - init done
+00:00:07 - wifimanager - DEBUG - AP mode started ssid esp32s3 IP ('192.168.144.1', '255.255.255.0')
+00:00:07 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
+00:00:07 - wifimanager - DEBUG - init ok
+00:00:08 - pinout - INFO - Current pinout data/20_note_Carl_Frei.json
+00:00:08 - solenoid - DEBUG - init complete GPIO 20 pins
+00:00:08 - tachometer - DEBUG - Crank sensor not enabled
+00:00:08 - tachometer - DEBUG - crank init ok
+00:00:08 - history - DEBUG - init ok
+00:00:08 - battery - DEBUG - init ok
+00:00:09 - tunemanager - DEBUG - init ok, 690 tunes in data/tunelib.json, 0 lyrics in data/lyrics.json
+00:00:09 - player - DEBUG - init ok
+00:00:09 - setlist - DEBUG - init ok
+00:00:09 - poweroff - DEBUG - init ok
+Microdot: using await for Request._safe_readline()
+00:00:03 - setlist - DEBUG - init ok
+00:00:03 - poweroff - DEBUG - init ok
+Microdot: using await for Request._safe_readline()
+00:00:03 - wifimanager - DEBUG - AP mode started ssid esp32s3 config ('192.168.144.1', '255.255.255.0')
+00:00:03 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
+00:00:03 - webserver - DEBUG - MAX_AGE=1,800 sec STATIC_FOLDERS=['/software/static/', '/rom/static/']
+Total startup time (without main, until asyncio ready) 3036 msec
+Memory used at startup 130496 gc=26 msec
+00:00:03 - setlist - DEBUG - Setlist 0 loaded 0 tunes
+00:00:04 - battery - DEBUG - Can't calibrate: no calibration data
+00:00:18 - wifimanager - INFO - Status for wifi_SSID_1 201 STAT_NO_AP_FOUND, could not connect to wifi_SSID_1
+00:00:20 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_2
 ```
 
 If there is an entry that says ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
@@ -878,6 +871,25 @@ If you can't configure WiFi, see (here)(##another-way-to-configure)
 If you are updating from a previous version, see ![Update software](#update-software)
 
 On the "System" page you can verify the RAM and flash size. About 2Mb of the flash are used by MicroPython and this software. The software detects the size of the flash automatically.
+
+## Software update
+
+If you update from a crank organ software version prior to November 2025, then do this prior to installing the new version:
+```
+mpremote rm main.py
+mpremote rm boot.py
+mpremote rm -r /software
+mpremote rm -r /lib
+```
+All these files now reside as compiled and compressed files in the ```bin``` files. Only ```main.py``` is copied to the flash partition where the file system and MIDI files reside.
+
+If you don't know the date of your version, you can see this in the "System" page.
+
+Update to a newer version with the procedure explained in the previous section: ![Installation instructions](#installation-instructions). You need to do the ```esptool.py``` command explained there.
+
+This update procedure does *not* affect MIDI files nor the configuration.
+
+If you want to compile the .bin files yourself, you will have to dig into ```crank-organ/tools/Makefile``` and ```crank-organ/tools/fix_mp_romfs.py```. Please read the comments. Some tweaking will surely be required. Changed ```.py, .mpy, .html, .css .js``` files can also be uploaded with the Filemanager to the ```/software/mpy``` and ```/software/static``` folders. Use the "Auto folder" button.
 
 ## WiFi capabilities
 
@@ -947,11 +959,11 @@ Use ```compress_midi.py --help``` for help with the utility program. Input and o
 
 Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes. 
 
-There is an additional feature of compress_midi.py: it leaves a file named ```setlist_9.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same upload operation in the file manager). Then recall the stored playlist in the Play page and you will have a number 9 setlist of the last 2 or 3 weeks of modifications. This allows to check and play recent tunes.
+There is an additional feature of compress_midi.py: it leaves a file named ```setlist_9.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same "upload to auto folder" operation in the file manager). Then recall the stored playlist in the Performance page and you will have a number 9 setlist of the last 4 weeks of modifications. This facilitates checking recent tunes.
 
 ## SD card
 
-If the microcontroller has a SD or TF card controller please modify boot.py to mount at /sd, including the following lines: 
+If the microcontroller has a SD (also called TF) card controller, please modify boot.py to mount at /sd, including the following lines: 
 ```
 import os
 import machine
@@ -977,7 +989,7 @@ If no internet access is available nor a browser loads a page on the microcontro
 
 MIDI over serial (MIDI over a DIN connector) is supported. On the pinout page (Pin and MIDI configuration) select the "64 notes MIDI over serial data/64_note_midi_over_serial.json". 
 
-The provided configuration has defined 64 notes from MIDI 48 to MIDI 111. You can select the MIDI channel here, and all notes are sent to that channel.
+The provided configuration has predefined 64 notes from MIDI 48 to MIDI 111. You can select the MIDI channel here, and all notes are sent to that channel.
 
 No program change messages are sent. In fact, only note on and note off messages are sent, and with fixed velocity, as it is normal for pipes. If you have another requirement, please post an issue in this repository.
 
@@ -1084,6 +1096,14 @@ Now restart the microcontroller. After about 5 to 10 seconds, you should see the
 You should be able to connect to the microcontroller with your browser at ```http://esp32s3.local``` or with the IP address that is displayed, in this example:  ```http://192.168.100.104```
 
 Now the microcontroller's home page should appear, and you can continue configuration with the brower.
+
+## ROMFS
+
+Since 2025 MicroPython has the ROMFS feature. The compiled software in the crank-organ/bin folder uses this feature.
+
+This feature allows to put all software in the ```bin``` images. The File Manager (or mpremote ls) can show the contents of the ```/rom``` folder, which is located inside the area reserved for the MicroPython image.
+
+This frees up about 700 kilobytes of flash (i.e. the ```/software``` and the ```/lib``` folders can now be deleted), making room for more MIDI files. Since the files are memory mapped, the execution of the MicroPython code is directly from flash. The software is not loaded in RAM. This frees about 150 kb of RAM making garbage collection times much lower (30 to 40 milliseconds). This in turn makes a possible impact of the garbage collector on music playback highly unlikely. Software start up times are also faster, around 2 to 4 seconds.
 
 
 # 18. Backup
@@ -1391,7 +1411,7 @@ Fixes:
 * Corrected calculation of average frequency of tuner
 * Upload file on file manager used to hang sometimes, fixed.
 
-## Changes from Nov 2025 to ...
+## Changes from Nov 2025 to April 2026
 New features and enhancements:
 * Management of battery current limit when moving RC servos. New configuration parameters. There is a limit on how many servos can move at the same time. This needed to track how long servos move.
 * Very short notes and silences can be corrected to avoid partial servo movements movements (configurable). 
@@ -1408,11 +1428,13 @@ New features and enhancements:
 * New button to delete one day of history.
 * Touchpad will go to next tune when pressed while crank is stopped.
 * Using new romfs capability of MicroPython. Binaries are provided for installation. Put ESP32-S3 in bootloader mode, cd to bin folder and run the esptool.py command (see installation)
-* Barrel organ mode: repeats current tune until "next tune" is pressed.
+* Barrel organ mode: repeats current tune until "next tune" is pressed. 
 * Allow purge history of a certain date, additional to date range.
 * Added parameter to allow autmatic purge of old history, to limit file size.
+* New button on Note list (tuning) page to set current frequency average as reference for tuning. Restart microcontroller to switch back to configured frequency.
 
 Optimizations:
+* MIDI music playback has been optimized considerably.
 * Optimize all_notes_off() processing, turn off only notes that are on.
 * Using NoteDef object as key for MIDI actions. Preallocate NoteDef. 
 * Don't refresh hidden pages.
@@ -1423,6 +1445,7 @@ Optimizations:
 * With the optimizations, MIDI processing currently takes on average about 3 to 8% of the CPU of the ESP32-S3, depending on the MIDI file. During playback, CPU load is around 20%. Processing time per MIDI event takes around 1 to 2 msec. These are good figures that make that music response be correct.
 * Updating history is now faster. Brower merges history.json and tunelib.json on the fly to compute the number of times a tune has played.
 * Allow to configure I2C frequency in General Configuration.
+* Show IP address submask together with address on diag.html
 
 Fixes:
 
@@ -1439,12 +1462,23 @@ Fixes:
 * History.html fix numeric validation for number of days to be purged. Fix deleting 2000-01-01 entries in history
 * Calculation of average frequency on notelist.html needed to use the list of values.
 
+
 Dropped features:
 
 * Dropped Show and play MIDI file in browser.
 * Dropped support for *install* folder in repository with *install_software.py* and *install_data.py*. Use esptool.py instead to install or update combined MicroPython/crank organ software images. Less steps, less possibility of problems.
 * Dropped support for rotary knob to adjust tempo. Tempo can still be adjusted on the Performance page and with the crank rotation sensor.
 * History now only counts the tunes kept in the history. Formerly, the count never got reset. I.e when dropping part of the history, those performance counts are reset.
+
+Please post in discussions if you are unhappy with some dropped feature.
+
+## More changes during April 2026
+* Use MicroPython 1.28.0 for the compiled ```.bin``` files.
+* Speed up boot, skip reading tunelib.json, lyrics.json.
+* Move check of minimum free flash from browser to server.
+* Postpone tunelib sync if file upload occurs during tunelib sync. This makes massive updates to the tunelib easier to handle.
+* Updated tables of content of documentation.
+* Updated message "pinout, tuner needs reboot".
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
@@ -1511,7 +1545,7 @@ The security and protection of this software is designed for a WiFi network such
 
 Although it is possible to connect several clients (several cell phones or PCs) simultaneously, it is recommended to connect only one client at a time, mainly because many users may delay notes when playing back music.
 
-While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music.
+While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music. 
 
 If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed. Post an issue and I'll assist, or look at the examples provided.
 
@@ -1521,11 +1555,10 @@ On some ESP32 N16R8 boards, the port labeled "COM" does not work well. Always us
 
 No https is available. Please raise an issue if you think this is vital. https needs you to generate a certificate and register that on your PC and cell phone, so some work would be required on your side to make that work once developed.
 
-The File manager doesn't rename files, doesn't allow to delete folders nor rename files. Use ```mpremote``` as a basic file manager. It is for updating tunes and software, and to browse files and folders in the microcontroller.
+The File manager doesn't rename files and doesn't allow to delete folders. Use ```mpremote``` as a file manager. The File Manager is intended for updating tunes (and software, if you want to do a incremental update).
 
-Changes to the tunelib take some time to apply. They are stored in a queue on flash, so the changes don't get lost even when power is down. Once the microcontroller is idle and not playing music, then the tunelib is updated and the Tune List, Performance and History pages will reload automatically to reflect the changes.
+If you have a very, very large setlist, for example 500 or more tunes, then changing the setlist will interfere with playing music. Please wait until no music is playing, and you will be able to manipulate even extremely large setlists.
 
-If there are many tunes (for example 1500) then very large setlists (500 or more tunes) cannot be manipulated while MIDI files are playing because some notes may be delayed.  Please wait until no music is playing, and you will be able to manipulate extremely large setlists.
 
 # 25. Licensing
 This software is available under the MIT license:

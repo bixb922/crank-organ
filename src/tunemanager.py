@@ -25,6 +25,7 @@ from drehorgel import timezone
 # >>> document how to do large changes to tunelib
 # >>> document restore tunelib backup
 # >>> save checkpoints if large sync
+# >>> add option to stop background sync for MIDI bulk uploads
 
 import sys
 if  sys.implementation.version[0] <= 1 and sys.implementation.version[1] < 26: # type:ignore
@@ -121,15 +122,14 @@ class TuneManager:
         self.tunelib_signature = ""
         self.empty_cache()
         self.midifile_cache_task = asyncio.create_task( self.midifile_cache_process() )
-        # Create tunelib.json and lyrics.json if not there.
-        # to make javascript happy. Checking if file exists 
-        # before reading could cut boot time by 2 seconds if there
-        # are 1500 MIDI files.
-        ly = self._read_lyrics() 
-        tu = self._read_tunelib()
-        self.logger.debug(f"init ok, {len(tu)} tunes in {tunelib_filename}, {len(ly)} lyrics in {lyrics_filename}")
-        del ly
-        del tu
+        # Create tunelib.json and lyrics.json if not there,
+        # to make javascript happy.
+        if not fileops.file_exists( self.lyrics_filename ):
+            self._read_lyrics() 
+        if not fileops.file_exists( self.tunelib_filename ):
+            self._read_tunelib()
+        self.recent_changes = 0 # counts changes queued since last sync
+        self.logger.debug(f"init ok")
 
     def _compute_tunelib_signature( self, tunelib ):
         # A number that changes (well, almost always) when the tunelib changes.
@@ -330,6 +330,7 @@ class TuneManager:
                 # the time it takes to ship changes on the tunelibedit.html page
                 # and more than the time it takes to upload a file.
                 if file_stat[6] > 2 and (time.time() - file_stat[8]) < 12:
+                    # >>> if time was wrong, this can take forever...???
                     self.logger.debug( f"Sync file is too young, waiting for next cycle" )
                     continue 
             self.sync_event.clear()
@@ -345,6 +346,7 @@ class TuneManager:
         changed = False
         newtunelib = self._read_tunelib()
         change_queue = self._read_sync_file()
+        self.recent_changes = 0 # count changes since start of sync
         await asyncio.sleep_ms(20) # let browser catch up
 
         # If there is a "sync all" in change_queue, then queue all files
@@ -371,8 +373,8 @@ class TuneManager:
                                 for tune in newtunelib.values() 
                                 if tune[TLCOL_FILENAME] not in filedict )
         await asyncio.sleep_ms(50) # let browser catch up
+        n = 0
         for op, p1,p2,p3 in change_queue:
-            await asyncio.sleep_ms(50)
             if op == TLOP_FILE_UPDATE or op == TLOP_FILE_DELETE:
                 # [TLOP_FILEUPDATE, p1:filename, p2:filesize, 0 ]
                 # [TLOP_FILEDELETE, p1:filename, 0, 0 ]
@@ -380,7 +382,14 @@ class TuneManager:
                 operation = self._sync_one_file( newtunelib, op, p1, p2  )
                 if operation:
                     changed = True
+                    n += 1
                     self._sync_progress( f"{operation} {p1} to tunelib.json" )
+                    await asyncio.sleep_ms(100)
+                    if n % 10 == 0:
+                        # Make asyncio responsive, for example,
+                        # if upload in progress.
+                        await asyncio.sleep_ms(1000)
+
             elif op == TLOP_REPLACE_FIELD:
                 # Change data field in tunelib.json
                 # [TLOP_FIELD, p1:tuneid, p2:tlcol, p3:new_value]
@@ -398,6 +407,13 @@ class TuneManager:
             # TLOP_SYNCALL that already has been processed
             # or may be a old format entry where a filename
             # is in this position. Just ignore, must do a sync all.
+            
+            
+            # Check if a related file has ben uploaded, postpone syncing
+            # Priority of upload is higher than priority of sync.
+            if self.recent_changes > 0:
+                self.logger.debug("Recent file uploads, postpone sync")
+                return
 
         changed = changed or self._sync_lyrics( newtunelib  )
         await asyncio.sleep_ms(50)
@@ -608,3 +624,10 @@ class TuneManager:
     def empty_cache( self ):
         self.cached_midifile = None
         self.cached_tune = [""]
+
+    def abort_sync( self ):
+        # Some file related to tunelib has changed or has
+        # been uploaded, such as /tunelib/*.mid or tunelib.json
+        # Signal sync process to abort, if in progress.
+        # If no sync in progress, this won't do anything.
+        self.recent_changes += 1

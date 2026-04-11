@@ -234,7 +234,9 @@ Also, on the ESP32 family, ```asyncio.sleep_ms()``` is rather imprecise. It is n
 
 Early on I decided that, if possible, I wanted to use  MicroPython images with no added C code, avoiding generating a .bin file. I have generated .bin files, no problem with that. But I wanted to avoid that task and the dependency on tool chains. For example ESP-IDF changes frequently. And I was not thrilled to write C code.
 
-When PR#8381 becomes available, for sure I'll put all code and HTML pages into ROMFS.
+Update in April 2026: the latest version now uses ROMFS feature of MicroPython. This frees flash, speeds up startup and, most importantly, reduces garbage collect time to around 30 or 40 milliseconds. Also, the software is distributed together with a matching MicroPython version.
+
+However, it needs to generate a MicroPython image. The software is now distributed compiled and compressed in ```bin``` files. The changes to MicroPython are in ```/crank-organ/tools/fix_mp_romfs.py``` so they can easily be applied to a new MicroPython version by running that script.
 
 # 11. Tuner
 
@@ -355,6 +357,7 @@ Once installed, the user has to configure the system, but to connect, the user n
 
 The AP mode is also the fallback in case there is no WiFi station available. This might happen while performing when the cell phone fails. If idle, the AP mode is disabled after a few minutes to save battery energy.
 
+As of April 2026, software is compiled into ```bin``` files using the MicroPython ROMFS feature. I still use ```freezefs``` to distribute compressed data files.
 
 # 13. MIDI File compression
 
@@ -362,7 +365,7 @@ MIDI files for the crank organ take about 20 kb on average. On a ESP32-S3 N16R8 
 
 MIDI files can be very efficient in size if they use a feature called "running status". Also, all MIDI meta messages that carry text information are not strictly needed. Thus, all MIDI files are preprocessed on the PC to maximize running status usage and to strip all text events away. For many MIDI files, this reduced file size by 70% of the original size.
 
-After that optimization, MIDI files are compressed before uploading and decompressed before each use. Decompressing is done with the standard ```deflate``` module included and delays start for about 0.3 seconds. No big deal, but now the flash space allows for 1800 files. When measured in 4096 byte blocks, file size drops to 40% of uncompressed size.
+After that optimization, MIDI files are compressed before uploading and decompressed before each use. Decompressing is done with the standard ```deflate``` module included and delays start for about 0.3 seconds. No big deal, but now the flash space allows for 1800 files. When measured in 4096 byte blocks, file size drops to 40% of uncompressed size. The decompression is done ahead of time, since the next tune is known. This means that the response to tune start is suitably fast.
 
 If I can make a new MIDI file every few days, I have space for some decades of arrangements of new tunes :stuck_out_tongue_winking_eye: 
 
@@ -385,11 +388,11 @@ There are several PRs to add PCNT support to MicroPython. PR #12346 is the lates
 
 A PCNT driver entirely in MicroPython was written. It uses the ESP32's registers directly, bypassing ESP-IDF. No interrupts are needed, but the PCNT count has to be read before it overflows. In practice, since the overflow is around 32000 counts, and since it is safe to assume that it is possible to read the counter several times a second, this allows to count pulse rates of at least 100 kHz, more than enough for this purpose.
 
-The MicroPython PCNT driver is [here](https://github.com/bixb922/crank-organ/blob/main/src/pcnt.py). The driver works with the ```Counter``` and ```Encoder``` classes of PR#12346, so should that PR be merged some day, I can drop the driver. The driver can work for both a plain ESP32 and a ESP32-S3 (the ESP32 register definitions are commented).
+The MicroPython PCNT driver is [here](https://github.com/bixb922/crank-organ/blob/main/src/pcnt.py). The driver works with the ```Counter``` and ```Encoder``` classes of PR#12346. That driver was merged in 2025, so I could drop including my own driver.
 
-This allows the use of an industrial quadrature encoder of 200 pulses per revolution. It also could be, say, 5000 pulses per second, but there is no gain. In 2 phase mode, this yields 400 pulses per second. Reading 10 times a second with asyncio has very low overhead and yields a precision of around 2% for each reading, which is enough for the task.
+This allows the use of an industrial quadrature encoder of, for example, 200 pulses per revolution. It also could be, say, 5000 pulses per second, but there is no big gain. In 2 phase mode, this yields 400 pulses per second. Reading 10 times a second with asyncio has very low overhead and yields a precision of around 2% for each reading, which is enough for the task.
 
-L
+
 # 15. Local time
 
 Having the local time is really not needed for this application, but it is nice to record the date and time tunes have been played, and the date when MIDI files are updated to know which tunes are new.
@@ -397,13 +400,13 @@ Having the local time is really not needed for this application, but it is nice 
 So an asyncio task to get NTP time in the background was added. But time zone information was also needed. Requirements:
 * No user actions nor user configuration
 * Works immediately after boot
-* Precision is not vital, for example, it doesn't need to be perfect for handling time zone transitions (transitions occur deep in the night anyhow, and who plays the crank organ at 11pm or 2am?).
+* Precision is not vital, for example, it doesn't need to be perfect for handling time zone transitions (transitions occur deep in the night anyhow, and who plays the crank organ at 11pm or 2am???).
 
 Options are:
 * Use some of the existing time zone modules in Python. But most of these need the user to configure the time zone.
 * Use a daily call to ```worldtimeapi.org```. This was implemented, but in spite of calling at most once a day, there were lots of rejected calls. This is a free service, and the response was spotty.
 
-So finally the current time offset is obtained with Javascript in the browser. The Javascript code in the browser sends this offset to the microcontroller with a web service. This ensures that when the user interacts, the time zone is always set correctly. This service is called when loading the ```common.js``` file. Since this file is cached, the service is called only every 10 minutes or so (low overhead). The microcontroller also stores the time zone offset in flash to be used after reboot. The same call also sets the UTC time, in case NTP does not respond.
+So finally the current time offset is obtained with Javascript in the browser. The Javascript code in the browser sends the time zone offset to the microcontroller with a web service. This ensures that when the user interacts, the time zone is always set correctly. This service is called when loading the ```common.js``` file. Since this file is cached, the service is called only every 10 minutes or so (low overhead). The microcontroller also stores the time zone offset in flash to be used after reboot. The same call also sets the UTC time, in case NTP does not respond.
 
 
 # 16. Stability
@@ -419,6 +422,8 @@ Also, exception handling and other techniques allow to write resilient code. Mus
 * Several alternatives for each critical functions. For example, to start a tune, the crank sensor is used. Should that not work, there is a touchpad sensor. And as a third option, a page on the browser allows you to start a tune. (Came in handy on a certain performance I remember.)
 * Another critical failure point: If the cell phone configured for WiFi connection fails, any cell phone can connect to AP mode. Or, if that's not an option, you turn the crank, and tunes are shuffled and music plays. (I have already used that, it saved the day!)
 * Etc.
+
+Testing is done the old fashioned way. i.e. manually. The MIDI file parser has test drivers with a good coverage.
 
 # 17. File manager
 
