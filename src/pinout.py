@@ -234,7 +234,7 @@ class PinoutParser:
         pass
     
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
-        # Check if needed?
+        # Not implemented
         return
         
     
@@ -300,7 +300,7 @@ class GPIODef(PinoutParser):
             self.touchpad_pin = x
 
     def define_tempo( self, gpio_a, gpio_b, gpio_switch):
-        raise NotImplementedError # >>>
+        print(f"Not implemented: define tempo, ignored")
     
         # if gpio_a and gpio_b:
         #     self.tempo_a = gpio_a
@@ -392,11 +392,12 @@ class SaveNewPinout(PinoutParser):
         self._add_GPIO_to_list(gpio)
 
     def define_tempo( self, gpio_a, gpio_b, gpio_switch ):
-        # >>> check if needed
-        self._add_GPIO_to_list(gpio_a)
-        self._add_GPIO_to_list(gpio_b)
-        self._add_GPIO_to_list(gpio_switch)
-
+        # Not implemented
+        #self._add_GPIO_to_list(gpio_a)
+        #self._add_GPIO_to_list(gpio_b)
+        #self._add_GPIO_to_list(gpio_switch)
+        return
+    
     def define_midi(self, pin, midi_note, rank, register_name):
         if self.current_driver == "GPIODriver" or self.current_driver == "GPIOServoDriver":
             if not pin:
@@ -621,10 +622,11 @@ class GPIOstatistics(PinoutParser):
         self._add_gpio( scl )
  
     def define_tempo( self, gpio_a, gpio_b, gpio_switch ):
-        # >>> check if needed
-        self._add_gpio( gpio_a )
-        self._add_gpio( gpio_b )
-        self._add_gpio( gpio_switch )
+        # Not implemented
+        # self._add_gpio( gpio_a )
+        # self._add_gpio( gpio_b )
+        # self._add_gpio( gpio_switch )
+        return
 
     def define_serial_driver(self, uart, pin, channel, rxpin):
         self._add_gpio( pin )

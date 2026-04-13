@@ -3,7 +3,6 @@
  ["microphone", 10],
  ["tachometer", 1, 2],
  ["touchpad", 9],
- ["tempo", 40, 38, 47],
  ["register", 41, "Bourdon", false],
  ["register", 21, "Octave", false],
  ["register", 39, "Piccolo", false],

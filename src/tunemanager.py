@@ -22,10 +22,8 @@ from drehorgel import timezone
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
 # >>> document use case: copy midi file with mpremote.
-# >>> document how to do large changes to tunelib
-# >>> document restore tunelib backup
-# >>> save checkpoints if large sync
-# >>> add option to stop background sync for MIDI bulk uploads
+# >>> document how to restore tunelib from a backup
+# >>> save checkpoints if large sync?
 
 import sys
 if  sys.implementation.version[0] <= 1 and sys.implementation.version[1] < 26: # type:ignore
@@ -424,7 +422,7 @@ class TuneManager:
         await asyncio.sleep_ms(50)
         if changed:
             self._write_tunelib_json(newtunelib)
-            self._sync_progress("tunelib.json updated" )
+            self._sync_progress("tunelib.json written back to flash" )
         # delete all changes that were processed this time
         # There may be more changes in the queue that were
         # queued AFTER _sync_now() started

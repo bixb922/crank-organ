@@ -4,7 +4,6 @@
 ["microphone", 6],
 ["tachometer", 8],
 ["touchpad", 7],
-["tempo", 9, 10, 11],
 
 ["gpioservo", 5000],
   ["servopulse", 1500, 1700],

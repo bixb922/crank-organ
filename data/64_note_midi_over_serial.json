@@ -4,7 +4,6 @@
 ["microphone", ""],
 ["tachometer", ""],
 ["touchpad", 5],
-["tempo", "", "", ""],
 
 ["serial",  1, 10, 0, 9 ],
     ["midi", 0, "",  48, "" ],
