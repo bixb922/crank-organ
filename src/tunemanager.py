@@ -328,7 +328,6 @@ class TuneManager:
                 # the time it takes to ship changes on the tunelibedit.html page
                 # and more than the time it takes to upload a file.
                 if file_stat[6] > 2 and (time.time() - file_stat[8]) < 12:
-                    # >>> if time was wrong, this can take forever...???
                     self.logger.debug( f"Sync file is too young, waiting for next cycle" )
                     continue 
             self.sync_event.clear()

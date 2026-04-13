@@ -198,17 +198,47 @@ From left to right you can see:
 * 5V DC-DC buck converter
 * At the far right: the decoy trigger, set to 12V
 
-
+The only minor drawback of a USB battery pack is that is has to be unplugged when not in use. There is no useful way to put a switch on a USB battery pack.
 
 # 8. Tool battery packs
 
-Electric tools also have battery packs. These packs include a BMS, with a good protection, but they can deliver a very strong current. So I think they always should be protected with a fuse with the maximum current expected. 
+Electric power tools such as an electric screw driver also have battery packs. These packs usually deliver 18 to 20V. They include a BMS, with a good protection, and they can deliver a very strong current (tens of amperes). In spite of the protection of the battery pack, a fuse must be added.
 
-For most brands there are adapters available, and most of these batteries have some kind of indicator to show level, for example, 3 or 4 leds.
+For most brands there are adapters available. Also most of these batteries have some kind of indicator to show charge level, for example, 3 or 4 leds to indicate full/half empty/nearly empty.
 
-I like that the current can be quite high. 2A is not very much if you want to sound drum notes with many pipes (see the software description), because you may need a peak current of 3A to 4A for 10 or 15 solenoid valves, although only for a very short time.
+I like it that the current can be quite high. 2A (2 amperes) is quite enough for typical 90 Ohm solenoid valves. However, 2A is not very much if you want to sound drum notes with many pipes (see the software description), because you may need a peak current of 3A to 4A for 10 or 15 solenoid valves, although only for a very short time. A tool battery delivers that current and more, while a small USB pack typically peaks out at 2A.
 
-I haven't tested these battery packs yet. Make sure that they have a BMS included.
+A 2.5Ah battery pack should last for 100 to 130 tunes. The capacity in Wh (watt-hours) is the rated Ah (ampere-hours) times the battery voltage 18V, so 2.5Ah means 2.5*18=45Wh.
+
+Another advantage over a USB battery pack is that you can add a switch. I use a switch with an incorporated LED. The fuse is in the box below the switch.
+
+![Battery with switch](20251015-battery-switch.jpg)
+
+I finally switched from a USB battery pack to a tool battery pack, for the higher current needed to make note clusters sound and for the convenience of a switch.
+
+The circuit for fuse and switch is as follows:
+
+
+```mermaid
+flowchart LR
+TB[Tool battery]
+FUSE[fuse]
+SW[switch]
+DC13[13V DC-DC converter]
+DC5[5V DC-DC converter]
+V13[13V to solenoids]
+V5[5V to ESP32]
+GND[Ground to circuit]
+TB--positive+/red-->FUSE
+FUSE--positive+/red-->SW
+SW--positive+/red-->DC13--positive+/red-->V13
+SW--positive+/red-->DC5--positive+/red-->V5
+TB--negative-/black-->GND
+GND--negative-/black-->DC5
+GND--negative-/black-->DC13
+DC13--negative-/black-->V13
+DC5--negative-/black-->V5
+```
 
 
 # 9. Feedback
