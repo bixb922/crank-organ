@@ -5,7 +5,6 @@
 from micropython import const 
 import machine 
 import asyncio
-from time import ticks_ms, ticks_diff, ticks_add
 
 from drehorgel import config, led
 
@@ -37,7 +36,8 @@ class TouchButton:
         # self.double_event = self.down_event
         
         if gpio_pin:
-            self.task = asyncio.create_task(self._tp_process( gpio_pin ) )
+            self.tp = machine.TouchPad( machine.Pin(gpio_pin) )
+            self.task = asyncio.create_task(self._tp_process( ) )
         # If no gpio_pin, don't assign pin, don't create task.
         # Events will never get set.
 
@@ -57,9 +57,8 @@ class TouchButton:
     #     self.double_event = ev
 
  
-    async def _tp_process(self, gpio_pin ):
+    async def _tp_process(self ):
         # At startup, wait a bit before reacting and for touchpad reading to settle
-        tp = machine.TouchPad( machine.Pin(gpio_pin) )
         await asyncio.sleep_ms(1000)
         # Last_up and previous_up are times of previous touches
         # Initialize last_up and previous up in the very past
@@ -68,10 +67,10 @@ class TouchButton:
 
         # previous_up = ticks_add(ticks_ms(),-DOUBLE_TOUCH_MAX) 
         # last_up = previous_up
-        tpval_ant = tp.read()
+        tpval_ant = self.read()
         while True:
             await asyncio.sleep_ms( MSEC_BETWEEN_SAMPLES )  # type:ignore
-            tpval = tp.read()
+            tpval = self.read()
             # See if this is a transition: hand leaving the touchpad
             if tpval-tpval_ant<(-big_change):
                 led.off()
@@ -98,3 +97,6 @@ class TouchButton:
 
                 
             tpval_ant = tpval
+
+    def read(self):
+        return self.tp.read()

@@ -1483,10 +1483,11 @@ Please post in discussions if you are unhappy with some dropped feature.
 * Updated tables of content of documentation.
 * Updated message "pinout, tuner needs reboot".
 * Remove "tempo" entries from pinout json files. Tempo encoder is not supported anymore, but a crank rotation sensor certainly is supported. 
-* Freeze both boot.py and main.py.
+* Freeze both boot.py and main.py. Make MicroPython smaller by deleting unused features.
 * Allow any ```.py``` or ````.mpy``` in ```software/mpy``` to override modules in the binary image, and do not make that dependent on the compile date.
 * Provide scan button for I2C on pinout page. This allows to find all devices on an I2C bus. PinTest uses class methods.
 * Fix phases keyword in Counter() call.
+* Provide mic test button on pinout page. Outputs a refreshing graph of mic signal.
 
 
 # 20. Programming language

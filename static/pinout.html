@@ -251,7 +251,7 @@ async function getPinoutDetail( ) {
             insertFormRow( tbody,`row_${f}_microphone`, [
                 "Microphone pin",
                 makeInput( `microphone.${f}`, 3, pd[1] ),
-                makeButton( `micbutton.${f}`, "Mic test", ()=>test_mic(f) ),
+                makeButton( `micbutton.${f}`, "Test mic", ()=>test_mic(f) ),
                 micText
             ] );
             let micCanvas = document.createElement("canvas");
@@ -266,10 +266,15 @@ async function getPinoutDetail( ) {
             ;
         }
         else if( pdtype == "touchpad"){
-            insertFormRow( tbody,`row_${f}_touchpad`, [
+            let touchResult = document.createElement("span");
+            touchResult.id = `touchresult.${f}`;
+            let row = insertFormRow( tbody,`row_${f}_touchpad`, [
                 "Touchpad pin",
-                makeInput( `touchpad.${f}`, 3, pd[1] )
+                makeInput( `touchpad.${f}`, 3, pd[1] ),
+                makeButton( `touchtest.${f}`, "Test touchpad", ()=>test_touchpad(f)),
+                touchResult
             ] );
+            row.cells[3].colSpan = 3;
         }
         else if( pdtype == "tempo" ){
             insertFormRow( tbody,`row_${f}_tempo`, [
@@ -1089,6 +1094,23 @@ function zeroCrossings( signal ){
     }
     return zc;
 }
+
+async function test_touchpad(f){
+    let pin = document.getElementById( `touchpad.${f}`).value;
+    let touchResult = document.getElementById( `touchresult.${f}` );
+    if( touchResult.innerHTML != "" ){
+        // Avoid recursion
+        return ;
+    }
+    for( let n=50; n>=0; n--){
+        let resp = await fetch_json( `/test_touchpad/${pin}` );
+        let value = parseInt(resp["value"]);
+        let graph = "￭".repeat(value/30_000);
+        touchResult.innerHTML = `count=${n} pin=${pin} value=${value.toLocaleString()}<br>${graph}`;
+    }
+    touchResult.innerHTML = "";
+}
+
 getPinoutList();
 
 commonGetProgress.setSleep( 5_000 );

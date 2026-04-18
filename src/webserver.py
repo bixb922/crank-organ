@@ -680,6 +680,15 @@ async def test_mic(request, pin):
     duration, signal = mic.sample_microphone( NoteDef(0,69) )
     return {"signal": list(signal), "duration": duration }
 
+@app.route("/test_touchpad/<pin>")
+async def test_touchpad( request, pin ):
+    setlist.stop_playback()
+    try:
+        from touchpad import TouchButton
+        tb = TouchButton( int(pin) )
+    except:
+        return respond_error_alert( f"Invalid pin: {pin}")
+    return {"value": tb.read() }
 
 # Generic requests requests: some browsers request favicon
 def serve_favicon( fn ):
