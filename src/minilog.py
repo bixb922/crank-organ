@@ -13,11 +13,7 @@
     
 # Default mode is: debug messages to console, info messages to flash.
 from micropython import const
-import sys
-import io
-import os
-import re
-from time import localtime
+import sys, io, os, re
 
 from compiledate import compiledate 
 
@@ -28,7 +24,7 @@ _LEVELNAMES = ["DEBUG", "INFO", "ERROR", "EXCEPTION"]
 _FOLDER = const("data/")  # Do not use config, minilog should be autonomous.
 
 
-# Normal music playing = about 500-1000 bytes of log usage.
+# Normal music playing = about 500-1000 bytes of log usage per tune.
 # 1 logfile of 20k = about 40 tunes = 4 hours of playing at a normal rate
 # 2 log files cover about 1 day of intense activity.
 # Limiting number of log files and size of logfiles ensures

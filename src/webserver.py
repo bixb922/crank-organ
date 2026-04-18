@@ -17,6 +17,7 @@ from compiledate import compiledate
 from minilog import getLogger
 import scheduler
 import fileops
+from midi import NoteDef
 
 # Everything is needed here
 from drehorgel import battery, tunemanager, config, history, setlist, player, crank
@@ -634,11 +635,17 @@ async def save_pinout_detail(request, path):
 async def test_pin( request ):
     setlist.stop_playback()
     from solenoid import PinTest
-    alert_message = await PinTest().web_test_pin( request.json, actuator_bank )
+    alert_message = await PinTest.web_test_pin( request.json, actuator_bank )
     if alert_message:
         return respond_error_alert( alert_message )
     return respond_ok()
     
+@app.post("/scan_i2c")
+async def scan_i2c( request ):
+    # No need to stop playback
+    from solenoid import PinTest
+    return {"scan":PinTest.scan_i2c( request.json )}
+
 @app.post("/test_drumdef")
 async def test_drumdef( request ):
     # Drum definition does not stop playback, it's desirable
@@ -658,6 +665,21 @@ async def save_drumdef( request ):
     from driver_ftoms import FauxTomDriver
     FauxTomDriver.save( request.json )
     return respond_ok()
+
+@app.route("/test_mic/<pin>")
+async def test_mic(request, pin):
+    setlist.stop_playback()
+    try:
+        from microphone import Microphone
+        mic = Microphone( int(pin), False )
+    except:
+        # pin cannot be used, example: no ADC pin.
+        # pin not numeric
+        # pin number out of range
+        return  respond_error_alert( f"Invalid pin: {pin}")
+    duration, signal = mic.sample_microphone( NoteDef(0,69) )
+    return {"signal": list(signal), "duration": duration }
+
 
 # Generic requests requests: some browsers request favicon
 def serve_favicon( fn ):
@@ -835,7 +857,7 @@ async def filemanager_download(request, path):
 #     "py": ok ???? or protect???
 #.    "mpy": ok, except if some modules are not frozen
 #     "log": ok
-# >>> same logic applies to download!!!!! 
+# >>> same logic applies to download!
 @app.route("/show_file/<path>")
 async def filemanager_show_file( request, path ):
     import filemanager

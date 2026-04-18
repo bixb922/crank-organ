@@ -56,8 +56,8 @@
 15.  [Turning the system on](#15-turning-the-system-on)
 16.  [Installation](#16-installation)
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
-     * [Prerequisites installing and configuring the software](#prerequisites-installing-and-configuring-the-software)
-     * [Installation instructions](#installation-instructions)
+     * [Installing prerrequisite software](#installing-prerrequisite-software)
+     * [Installing crank organ software](#installing-crank-organ-software)
      * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
      * [Update to a newer version](#update-to-a-newer-version)
@@ -792,7 +792,7 @@ For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schema
 
 Use Chrome or Firefox on a cell phone, PC, MAC or tablet to control the microcontroller. Safari is not supported.
 
-## Prerequisites installing and configuring the software
+## Installing prerrequisite software
 
 Installation is easiest done on the command line, i.e. using cmd on windows or Terminal on Mac. You should be familiar with commands such as dir or ls and cd. 
 
@@ -805,7 +805,7 @@ Python includes the pip "Pip Installs Python"  utility. Install the ```esptool.p
 Install the git utility, to access github.com easily, namely to clone this repository to your PC with ```git clone https://www.github.com/bixb922/crank-organ```
 
 
-## Installation instructions
+## Installing crank organ software
 
 The ```git clone``` command from above should have created a ```crank-organ``` folder with several subfolders. The complete software (source code and documentation) is in these folders. The ```crank-organ/bin``` subfolder has the installation files.
 
@@ -856,6 +856,8 @@ Memory used at startup 130496 gc=26 msec
 
 If there is an entry that says ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
 
+After installation, there should be 3 folders in the microcontroller: ```rom``` is where the software is. This is a read-only folder. ```data``` is the folder for configuration files and error log. ```tunelib``` is the folder for MIDI files. ```mprmote ls``` will show the files on the microcontroller.
+
 Now connect with WiFi. WiFi starts to be active about 10 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 seconds after power on, and will stay on until you configure WiFi and reboot. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on older Android phones. 
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
@@ -874,14 +876,14 @@ On the "System" page you can verify the RAM and flash size. About 2Mb of the fla
 
 ## Software update
 
-If you update from a crank organ software version prior to November 2025, then do this prior to installing the new version:
+If you want to update from a crank organ software version prior to November 2025, then execute these commands on your PC prior to installing the new version:
 ```
 mpremote rm main.py
 mpremote rm boot.py
 mpremote rm -r /software
 mpremote rm -r /lib
 ```
-All these files now reside as compiled and compressed files in the ```bin``` files. Only ```main.py``` is copied to the flash partition where the file system and MIDI files reside.
+All these files now reside as compiled and compressed files in the ```bin``` files. 
 
 If you don't know the date of your version, you can see this in the "System" page.
 
@@ -889,7 +891,7 @@ Update to a newer version with the procedure explained in the previous section: 
 
 This update procedure does *not* affect MIDI files nor the configuration.
 
-If you want to compile the .bin files yourself, you will have to dig into ```crank-organ/tools/Makefile``` and ```crank-organ/tools/fix_mp_romfs.py```. Please read the comments. Some tweaking will surely be required. Changed ```.py, .mpy, .html, .css .js``` files can also be uploaded with the Filemanager to the ```/software/mpy``` and ```/software/static``` folders. Use the "Auto folder" button.
+If you want to compile the .bin files yourself, you will have to dig into ```crank-organ/tools/Makefile``` and ```crank-organ/tools/fix_mp_romfs.py```. Please read the comments. Some tweaking will surely be required. Changed ```.py, .mpy, .html, .css .js``` files can also be uploaded with the Filemanager to the ```/software/mpy``` and ```/software/static``` folders. Use the "Auto folder" button. 
 
 ## WiFi capabilities
 
@@ -1105,6 +1107,7 @@ This feature allows to put all software in the ```bin``` images. The File Manage
 
 This frees up about 700 kilobytes of flash (i.e. the ```/software``` and the ```/lib``` folders can now be deleted), making room for more MIDI files. Since the files are memory mapped, the execution of the MicroPython code is directly from flash. The software is not loaded in RAM. This frees about 150 kb of RAM making garbage collection times much lower (30 to 40 milliseconds). This in turn makes a possible impact of the garbage collector on music playback highly unlikely. Software start up times are also faster, around 2 to 4 seconds.
 
+```main.py``` and ```boot.py``` can be found in the ```crank-organ/tools``` folder. If you want to use a stock MicroPython image, copy them to the root of the flash system. If you use the binary files supplied in the ```crank-organ/bin``` folder, then both are baked into the binary files as "frozen files".
 
 # 18. Backup
 Microcontroller flash storage is fairly robust. It is very unlikely to end up with corrupt files.
@@ -1479,11 +1482,17 @@ Please post in discussions if you are unhappy with some dropped feature.
 * Postpone tunelib sync if file upload occurs during tunelib sync. This makes massive updates to the tunelib easier to handle.
 * Updated tables of content of documentation.
 * Updated message "pinout, tuner needs reboot".
+* Remove "tempo" entries from pinout json files. Tempo encoder is not supported anymore, but a crank rotation sensor certainly is supported. 
+* Freeze both boot.py and main.py.
+* Allow any ```.py``` or ````.mpy``` in ```software/mpy``` to override modules in the binary image, and do not make that dependent on the compile date.
+* Provide scan button for I2C on pinout page. This allows to find all devices on an I2C bus. PinTest uses class methods.
+* Fix phases keyword in Counter() call.
+
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
-The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in avalable time slots between notes.
+The MIDI file parser is written in highly optimized MicroPython, with very little overhead. The timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in available time slots between notes.
 
 Frequency detection is done with the FFT algorithm, interpolating the maximum with a second order polynomial to get the vertex.
 
@@ -1491,7 +1500,7 @@ Rotation speed pulses are counted with the PCNT hardware on the ESP32-S3 chip, s
 
 The development relies heavily on the asyncio, which is a framework to run many tasks on a very small computer (the ESP32-S3) and still have a responsive system. Around 25 to 35 concurrent asyncio tasks run concurrently.
 
-MicroPython version 1.27 or later is required. Since MicroPython is continually enhanced, it's best use the latest version.
+MicroPython version 1.27 or later is required. The binary files provided in the ```crank-organ/bin``` folder include MicroPython.
 
 If you want to program in MicroPython, a IDE (integrated development environment) is useful. Some free options are:
 * Microsoft Visual Studio Code, aka VSCode (free) plus ```mpremote```. You can run mpremote in a VSCode window (this is what I use). Add the MicroPython stubs from https://github.com/Josverl/micropython-stubs
@@ -1518,7 +1527,7 @@ Also, Microdot has some very minor modifications for the purpose of this softwar
 
 # 22. Testing
 
-Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If I see a glitch or bug, I'd like to correct those as soon as possible. Please report problems as Github issue or discussion on this repository.
+Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If you find a glitch or bug, I'd like to correct those as soon as possible. Please report problems as Github issue or discussion on this repository.
 
 
 # 23. Troubleshooting

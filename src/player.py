@@ -111,7 +111,7 @@ class MIDIPlayer:
             midifile = open_midi( midi_fn ) # fileops.open_midi
             self.process_map[0]( midifile )
             if midifile.format_type not in (0,1):
-                # Should not happen, but only type 0 and 1 files supported.
+                # Should not happen, only type 0 and 1 files are supported.
                 self.logger.info(f"Invalid MIDI file format {midifile.format_type} for '{title}' {midi_fn}")
                 return
             self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)}" )

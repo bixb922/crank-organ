@@ -33,13 +33,15 @@ class Microphone:
         
     def _sample_adc(self, midi_note):
         if self.adc_device:
-            return self._sample_microphone(midi_note)
+            return self.sample_microphone(midi_note)
         if self.mic_test_mode:
             return  self._generate_signal(midi_note)
         # Return dummy signal, no frequency
         return 1, bytearray(10)
     
-    def _sample_microphone(self,midi_note):
+    def sample_microphone(self,midi_note):
+        # Used by organtuner and by webserver /test_mic.
+        
         # Get the time between samples
         step = frequency.compute_time_step_usec( midi_note.frequency()  )
         # Calculate delay needed in loop below. The magic number

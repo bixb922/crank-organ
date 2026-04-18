@@ -10,11 +10,9 @@
 # see below "subclasses of PinoutParser"
 
 # >>> describe pinout.json file
-# >>> test buttons for: touchpad, microphone)
+# >>> test buttons for: touchpad
 
-import os
-import machine
-import re
+import os, machine, re
 
 from minilog import getLogger
 from midi import NoteDef
@@ -710,7 +708,7 @@ class ActuatorDef(PinoutParser):
         sclpin = machine.Pin(scl)
         sdapin = machine.Pin(sda)
 
-        if PinTest().testI2Cconnected(sda, scl):
+        if PinTest.testI2Cconnected(sda, scl):
             from drehorgel import config
             i2cfreq = config.i2c_frequency_khz 
             assert 10 <= i2cfreq <= 800, "I2C frequency must between 10 and 800 kHz"

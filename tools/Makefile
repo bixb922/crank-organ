@@ -2,8 +2,8 @@
 # >>> update Microdot to latest version. Use native authentication.
 
 # This makefile is used during software development.
-# Use gmake -fcrank-organ/tools/Makefile
-# Run from folder just above crank-organ
+# Run from folder just above crank-organ:
+# Use gmake -C crank-organ/tools
 
 # Target compile: compiles .py and compresses html/js/css
 # Target update: compiles/compresses and updates microcontroller
@@ -12,11 +12,6 @@
 # on PC,
 # forces all files to compile/regenerate again
 #
-#
-# Target installdevice: install device. After that: connect with
-# default configuration, set config and do gmake restoredata. Needs gmake freeze to get install files first. Needs backupdata first.
-#
-# Target deepcleandevice: formats device. No backup.
 #
 
 # MPY_CROSS = mpy-cross-multi --micropython 1.24
@@ -97,12 +92,7 @@ translations.js.gz
 # and copy to device and device/update folder. 
 # device/update is used to test if file was copied to device.
 # Does NOT update: *.jpg, *.ico, *.png, /data/*
-update: compile device/update/main.py $(addprefix device/update/, $(MPY_FILES)) $(addprefix device/update/,  $(STATIC_FILES))
-
-device/update/main.py: crank-organ/src/main.py
-	echo device update main.py
-	$(MPREMOTE) cp $< :main.py
-	cp $< device/update/$(notdir $<)
+update: compile $(addprefix device/update/, $(MPY_FILES)) $(addprefix device/update/,  $(STATIC_FILES))
 
 device/update/%.mpy: device/mpy/%.mpy
 	echo device update mpy: $<
@@ -150,29 +140,14 @@ prepare_git: romfs
 	python3 crank-organ/tools/update-toc.py
 	-rm device/mpy/mcserver.mpy
 	-rm device/mpy/mcserver.py
-# 	python3 -m freezefs crank-organ/data crank-organ/install/install_data.py --target=/data --on-import=extract --overwrite=always --compress
-# 	-rm -r freezetemp/
-# 	-mkdir freezetemp/
-# 	-mkdir freezetemp/software/
-# 	-mkdir freezetemp/software/mpy/
-# 	-mkdir freezetemp/software/static/
-# 	cp crank-organ/src/* freezetemp/software/mpy/
-# 	cp crank-organ/static/* freezetemp/software/static/
-# 	cp crank-organ/src/main.py freezetemp/
-# 	cp crank-organ/tools/boot.py freezetemp/
-# 	rm freezetemp/software/mpy/main.py
-# 	python3 -m freezefs freezetemp crank-organ/install/install_software.py --target=/ --on-import=extract --overwrite=always --compress
-# 	-rm -r freezetemp
 
 
  
-deepcleandevice: backupdata
-	$(MPREMOTE)e exec "import os;os.umount('/');os.VfsLfs2.mkfs(bdev);os.mount(bdev,'/'))
-
 cleandevice: backupdata
-	-$(MPREMOTE) exec "import shutil;shutil.rmtree('software')"
-	-$(MPREMOTE) exec "import shutil;shutil.rmtree('signals')"
+	-$(MPREMOTE) mpremote rm -r software
+	-$(MPREMOTE) rm -r signals
 	-$(MPREMOTE) rm /main.py
+	-$(MPREMOTE) rm /boot.py
 	-$(MPREMOTE) mkdir software
 	-$(MPREMOTE) mkdir software/mpy
 	-$(MPREMOTE) mkdir software/static
@@ -188,48 +163,13 @@ cleanpc:
 	-mkdir device/static
 	-mkdir device/update
 
-initdevice: compile
-	-$(MPREMOTE) mkdir software
-	-$(MPREMOTE) mkdir software/static
-	-$(MPREMOTE) mkdir software/mpy
-	$(MPREMOTE) cp crank-organ/static/favicon.ico :/software/static/
-	$(MPREMOTE) cp crank-organ/static/favicon.png :/software/static/
-	$(MPREMOTE) cp crank-organ/static/crank.jpg :/software/static/
-	$(MPREMOTE) cp crank-organ/src/main.py :/
-	$(MPREMOTE) cp crank-organ/tools/boot.py :/
-	$(MPREMOTE) cp -r device/mpy/ :/software/mpy/
-	$(MPREMOTE) cp -r device/static/ :/software/static/
-
 initpc:
 	mkdir device
 	mkdir device/mpy
 	mkdir device/static
 
-#installdevice: 
-#	$(MPREMOTE) run crank-organ/install/install_software.py  
-#	$(MPREMOTE) run crank-organ/install/install_data.py 
-
 
 romfs: compile
-	# V1.26 previews:
-	# git rebase -i f77fd62... and edit file 
-	# to remove commit d737112 "esp32/esp32_common.cmake: Use the tinyusb source files from ESP-IDF"
-	#
-	# Run tools/fix_mp_romfs.py
-	# Then: generate MicroPython:
-	# make -C mpy-cross
-	# cd ports/esp32
-	# make clean
-	# make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT submodules
-	# make BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT
-	# 
-	# Then:
-	# gmake romfs
-	# 
-	# Then:
-	# cd crank-organ/bin
-	# sh flash_mp.sh
-	#
 	-mkdir crank-organ/bin
 	-rm -r -f romfs_temp
 	mkdir romfs_temp
@@ -241,8 +181,6 @@ romfs: compile
 	cp crank-organ/static/*.ico romfs_temp/static/
 	cp crank-organ/static/*.png romfs_temp/static/
 	cp crank-organ/static/*.jpg romfs_temp/static/
-	# use uncompiled/uncompressed files for main.py
-	cp crank-organ/src/main.py romfs_temp/
 	python3 -m freezefs crank-organ/data temp.py --target=/data --on-import=extract --compress
 	$(MPY_CROSS) temp.py -o romfs_temp/install_data.mpy
 	mpremote romfs --no-mpy -o crank-organ/bin/romfs.bin build romfs_temp 

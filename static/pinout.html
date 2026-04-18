@@ -246,11 +246,24 @@ async function getPinoutDetail( ) {
             row.cells[5].id = `tachovalue${f}`;
         }
         else if( pdtype == "microphone"){
+            let micText = document.createElement("span");
+            micText.id = `mictext.${f}`;
             insertFormRow( tbody,`row_${f}_microphone`, [
                 "Microphone pin",
-                makeInput( `microphone.${f}`, 3, pd[1] )
+                makeInput( `microphone.${f}`, 3, pd[1] ),
+                makeButton( `micbutton.${f}`, "Mic test", ()=>test_mic(f) ),
+                micText
             ] );
-            
+            let micCanvas = document.createElement("canvas");
+            micCanvas.height = 150;
+            micCanvas.width = 100;
+            micCanvas.id = `miccanvas.{f}`;
+            let row = insertFormRow( tbody,`row_${f}_micgraphrow`, [
+                micCanvas
+            ] );
+            row.style.display = "none";
+            row.cells[0].colSpan = 4;
+            ;
         }
         else if( pdtype == "touchpad"){
             insertFormRow( tbody,`row_${f}_touchpad`, [
@@ -359,7 +372,11 @@ async function getPinoutDetail( ) {
                 makeInput( `i2c.sda.${f}`, 3, pininfo.sda),
                 "SCL",
                 makeInput( `i2c.scl.${f}`, 3, pininfo.scl),
+                makeButton( `i2cscan${f}`, "Scan I2C", function(){ scanI2C( `i2cresult.${f}`, pininfo )} ),
+                "" // for test result
             ]);
+            row.cells[6].id = `i2cresult.${f}`;
+            row.cells[6].colSpan = 3;
             titlerow( row );
             rownum += 1;
         }
@@ -571,6 +588,10 @@ async function savePinoutDetail(){
             newpd.push( ["pca9685", valnum(addr), valnum( period )]);
 
         }
+        else if ( pdtype == "micgraphrow"){
+            // Row with microphone graph has no pinout information, ignore
+            ;
+        }
         else {
             console.warn("error found pdype=", pdtype, "while saving");
         }
@@ -660,11 +681,13 @@ async function testPin( pininfo, updown ){
  
 
 async function testCrank(f){
-    // Display raw counter value for 1 minute
+    // Update raw counter value for 1 minute
     let endTest = Date.now() + 60_000;
+    let tachovalue = document.getElementById(`tachovalue${f}`)
     while( Date.now() <= endTest ){
-        document.getElementById(`tachovalue${f}`).innerText = (await fetch_json("/tacho_raw_value"))["value"];
+        tachovalue.innerText = (await fetch_json("/tacho_raw_value"))["value"];
     }
+    tachovalue.innerText = "Test ended";
 }
 
 function showNoteName( f ){
@@ -818,6 +841,7 @@ function pad(num, size) {
 
 async function get_available_pins(){
     function list_to_string( lst ){
+        // Convert adjacent ranges as a-b
         if( lst.length == 0){
             return "";
         }
@@ -954,7 +978,117 @@ function titlerow( row ){
         c.style.fontWeight = "bold";
     }
 }
+
+async function scanI2C( idresult, pininfo ){
+    let result = await fetch_json( "/scan_i2c", pininfo ) ;
+    textById( idresult, result["scan"] );
+}
    
+async function test_mic(f){
+    let micpin = document.getElementById( `microphone.${f}` ).value;
+    if( micpin == "" || !micpin ){
+        return;
+    }
+    let micgraphrow = document.getElementById(`row_${f}_micgraphrow`);
+    let mictext = document.getElementById(`mictext.${f}`);
+    let graph_canvas = document.getElementById(`miccanvas.{f}`);
+    graph_canvas.width = window.innerWidth*0.9;
+    let ctx = graph_canvas.getContext("2d");
+
+    // Toggle display if already active
+    if( micgraphrow.style.display == "" ){
+        // "Row is visible" means test_mic is currently running. 
+        // Signal loop below to cancel using micgraphrow.style.display as flag.
+        mictext.innerText = "";
+        micgraphrow.style.display = "none";
+        return;
+    }
+    micgraphrow.style.display = "";
+    for( n = 15; n >= 0; n-- ){
+        let resp = await fetch_json(`/test_mic/${micpin}`);
+        let signal = resp["signal"];
+        micgraph( graph_canvas, ctx, signal );
+        let duration = resp["duration"];
+        let zc = zeroCrossings(signal);
+        mictext.innerText = `count=${n} pin=${micpin} duration=${Math.round(duration*100)/100} sec zero crossings=${zc}`;
+        if( micgraphrow.style.display == "none"){
+            // cancelled
+            break;
+        }
+    }
+    mictext.innerText = "";
+    micgraphrow.style.display = "none";
+    clearMicGraph(graph_canvas, ctx );
+}
+function clearMicGraph( graph_canvas, ctx ){
+    ctx.beginPath();
+    ctx.fillStyle = "white";
+    ctx.fillRect( 0, 0, graph_canvas.width, graph_canvas.height);
+    ctx.stroke();
+}
+function micgraph( graph_canvas, ctx, signal ){
+
+    clearMicGraph( graph_canvas, ctx );
+    // Top and bottom line
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "gray";
+    ctx.setLineDash( [5,2]);
+    let gh = graph_canvas.height;
+    let gw = graph_canvas.width;
+    ctx.moveTo( 0,  1 );
+    ctx.lineTo( gw, 1);
+    ctx.moveTo( 0,  gh-1 );
+    ctx.lineTo( gw, gh-1);
+    ctx.stroke();
+
+    // Zero
+    ctx.beginPath();
+    ctx.setLineDash( [2,2]);
+    ctx.moveTo( 0,  gh/2 );
+    ctx.lineTo( gw, gh/2 );
+    ctx.moveTo( 0, gh/2 );
+    ctx.stroke();
+
+    // Left and right borders
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.moveTo( 0,   0 );
+    ctx.lineTo( 0,  gh );
+    ctx.moveTo( gw,  0 );
+    ctx.lineTo( gw, gh );
+    ctx.stroke();
+
+
+    // Actual graph
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "black";
+    ctx.setLineDash( [] );
+    for( i=0; i<signal.length; i++){
+        let x = i/signal.length*gw;
+        let y = (signal[i]/4096)*gh;
+        y = Math.max( Math.min(y, gh-1), 1 );
+        if( i == 0){
+            ctx.moveTo( x, y );
+        }
+        else{
+            ctx.lineTo( x, y);
+        }
+    }
+    ctx.stroke();
+}
+function zeroCrossings( signal ){
+    let previous = signal[0];
+    let zc = 0;
+    for( let x of signal ){
+        if( previous < 2048 && x >= 2048 ){
+            zc += 1;
+        }
+        previous = x;
+    }
+    return zc;
+}
 getPinoutList();
 
 commonGetProgress.setSleep( 5_000 );

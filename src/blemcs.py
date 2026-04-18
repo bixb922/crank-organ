@@ -1,3 +1,6 @@
+# (c) Copyright 2026 Hermann Paul von Borries
+# MIT License
+
 import bluetooth
 import struct
 from micropython import const
@@ -21,6 +24,8 @@ _IRQ_CENTRAL_DISCONNECT = const(2)
 
 _FLAG_READ = const(0x0002)
 
+# >>> show how many users are connected, at least show activity.
+
 # https://devzone.nordicsemi.com/f/nordic-q-a/24170/16bit-uuid-misunderstandings
 
 # Using Media Control Services standard registered UUID
@@ -41,6 +46,7 @@ _CHARACTERISTIC_UUIDS = [
 ]
 # Same order as UUIDs
 _CHARACTERISTIC_NAMES = [ "stassid1", "stassid2", "apssid", "staip1", "staip2",  "apip", "status"]
+assert len(_CHARACTERISTIC_NAMES) == len(_CHARACTERISTIC_UUIDS)
 
 _SERVICE_DESCRIPTOR = (
     _MCS_UUID,

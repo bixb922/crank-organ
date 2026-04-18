@@ -1,3 +1,6 @@
+# License and copyright see here:
+# https://github.com/miguelgrinberg/microdot/blob/main/LICENSE
+
 """
 microdot
 --------

@@ -161,7 +161,8 @@ async def signal_ready( controller ):
     _led.off()
 
 
-async def main():
+async def start():
+    # Start the software, called with asyncio.run by main.py
     global _led, _logger
 
     # Ensure /data and /tunelib folders are there
@@ -214,7 +215,6 @@ async def main():
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
 
-asyncio.run(main())
 # >>> ideas. 
 # >>> Universal board
 # >>> Support for MIDI over USB

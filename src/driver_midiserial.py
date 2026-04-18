@@ -65,7 +65,7 @@ class MIDISerialDriver(BaseDriver):
    
 # >>> should also send program number?
 # >>> currently repr is based on MIDI note number only, if pin
-# >>> differ by program number...???
+# >>> differ by program number...??? what is the use case?
 class VirtualMIDIPin(SolePin):
     # This code supposes the MIDI drives solenoids and not RC Servos
     

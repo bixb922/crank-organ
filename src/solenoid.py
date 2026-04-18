@@ -114,8 +114,8 @@ class ActuatorBank:
 # a probability this is not true. But if it says "not connected",
 # then there is no I2C device on these pins.
 class PinTest:
- 
-    def _basicTestGPIO(self, gpio_pin):
+    @classmethod
+    def _basicTestGPIO(cls, gpio_pin):
         # Test if a GPIO pin has some kind of load
         # i.e. something connected
         gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_UP)
@@ -134,11 +134,12 @@ class PinTest:
 
     # Test several times if something pulls the voltage
     # up or down on the pin
-    def _testGPIO(self, pin, repeat=10):
+    @classmethod
+    def _testGPIO(cls, pin, repeat=10):
         res = set()
         for _ in range(repeat):
             sleep_ms(1)
-            r = self._basicTestGPIO(pin)
+            r = cls._basicTestGPIO(pin)
             res.add(r)
         if len(res) == 1:
             return res.pop()
@@ -146,16 +147,26 @@ class PinTest:
             return "FLO"
 
     # Used by solenoid.py to check if something on I2C
-    def testI2Cconnected(self, sda, scl):
-        sdaok = self._testGPIO(sda) == "I2C"
-        sclok = self._testGPIO(scl) == "I2C"
+    @classmethod
+    def testI2Cconnected(cls, sda, scl):
+        sdaok = cls._testGPIO(sda) == "I2C"
+        sclok = cls._testGPIO(scl) == "I2C"
         return sdaok and sclok
-
-    async def web_test_pin( self, pininfo, actuator_bank ):
+    
+    @classmethod
+    async def web_test_pin( cls, pininfo, actuator_bank ):
         # Called by web server to test a pin, expects a "pininfo" dict
         # with info filled out by pinout.html
         # The "pininfo" dictionary has all fields about the pin,
-        # some fields may be superfluous.
+        # some fields are superfluous since all past fields
+        # are just carried over from the previous entry in pinout.json.
+        # An example for a PCA9685 I2C bus just after a GPIO RC servo pin:
+        # pininfo={'pin': 15, 'scl': 4, 'f': '89', 
+        # 'pulse0': 1500, 'pulse1': 1800, 'sda': 5, 
+        # 'gpioservocount': 1, 'mcpcount': -1, 'midi': 99, 
+        # 'i2ccount': 0, 'pcacount': 1, 'type': 'pca9685', 
+        # 'pcaaddr': 65, 'period': 5000}
+
         
         _logger.debug(f"Web test pin {pininfo=}")
         driver_type = pininfo["type"]
@@ -211,3 +222,17 @@ class PinTest:
         await asyncio.sleep_ms(120)
         actuator.low_level_off()
         # RC Servo low_level_off will eventually call stop_pwm()
+
+    @classmethod
+    def scan_i2c( cls, pininfo ):
+        # Called by web server to scan for I2C devices on a pair of pins.
+        # Expects a "pininfo" dict with info filled out by pinout.html
+        # The "pininfo" dictionary has all fields about the pin, some fields may be superfluous.
+        sda = pininfo["sda"]
+        scl = pininfo["scl"]
+        _logger.debug(f"Scan I2C {sda=} {scl}")
+        if not cls.testI2Cconnected(sda, scl):
+            return "I2C not connected or no pull up resistors.)"
+        i2c = machine.SoftI2C( sda=machine.Pin(sda), scl=machine.Pin(scl)  )
+        # return a list of hex addresses, example: "0x20, 0x21, 0x22"
+        return ", ".join( f"0x{addr:02x}" for addr in i2c.scan() )

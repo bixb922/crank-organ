@@ -1,3 +1,5 @@
+# (c) Copyright 2025-2026 Hermann Paul von Borries
+# MIT License
 import os
 from microdot import send_file
 

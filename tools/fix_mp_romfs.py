@@ -41,6 +41,7 @@
 
 from pathlib import Path
 from shutil import copy
+import os
 
 home_path = Path.home()
 port_path = home_path / "micropython/ports/esp32"
@@ -56,7 +57,7 @@ PARTITION_FILENAME = "partitions-4MiB-BIG-romfs.csv"
 def add_partition_csv():
     partition_dst = port_path / PARTITION_FILENAME
     copy( my_path / PARTITION_FILENAME, partition_dst )
-    print(partition_dst, "copied as new partition file")
+    print(partition_dst.name, "copied as new partition file")
 
 def fix_sdkconfig_board():
     sdkconfig_filename = board_path / "sdkconfig.board"
@@ -64,37 +65,67 @@ def fix_sdkconfig_board():
         sdkconfig = input.read()
 
     if "CONFIG_PARTITION_TABLE_CUSTOM" in sdkconfig:
-        print(f"{sdkconfig_filename} already up to date")
+        print(f"{sdkconfig_filename.name} already has custom ROMFS partition defined")
         return
     sdkconfig += "\nCONFIG_PARTITION_TABLE_CUSTOM=y\n"
     sdkconfig += f'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="{PARTITION_FILENAME}"\n'
     with open( sdkconfig_filename, "w") as output:
         output.write( sdkconfig )
-    print(f"{sdkconfig_filename} updated")
+    print(f"{sdkconfig_filename} added custom ROMFS partition")
 
 def fix_mpconfigboard():
+    def add_define( define, value ):
+        nonlocal mpconfigport, dirty
+        define_line = f"#define {define} ({value})"
+        if define_line in mpconfigport:
+            
+            print( f"{mpconfig_filename.name} already has {define} defined as {value}")
+        else:
+            dirty = True
+            mpconfigport += "\n"
+            mpconfigport += "#ifdef " + define + "\n"
+            mpconfigport += "#undef "+ define + "\n"
+            mpconfigport += "#endif\n"
+            mpconfigport += define_line + "\n"
+            print(f"{mpconfig_filename} added {define} defined as {value}")
+    
+    def remove_module( module_name ):
+        module_path = board_path / "modules"
+        frozen_path = board_path / "build-ESP32_GENERIC_S3-SPIRAM_OCT" / "frozen_mpy"
+        try:
+            os.remove( module_path / (module_name+".py") )
+            print(f"{module_name} removed from {module_path}")
+            os.remove( frozen_path / (module_name+".mpy") )
+            print(f"{module_name} .mpy removed from {frozen_path}")
+        except OSError:
+            print(f"{module_name} not found in {module_path}, no need to remove")
+
+
     mpconfig_filename = board_path / "mpconfigboard.h"
     with open(mpconfig_filename ) as input:
         mpconfigport = input.read()
     dirty = False
-    if "MICROPY_VFS_ROM" in mpconfigport:
-        print(f"{mpconfig_filename} already has VFS_ROM defined")
-    else:
-        dirty = True
-        mpconfigport += "\n#define MICROPY_VFS_ROM (1)\n"
+    add_define( "MICROPY_VFS_ROM", 1 )
 
-    if "MICROPY_PY_DEFLATE_COMPRESS" in mpconfigport:
-        print( f"{mpconfig_filename} already has compression defined")
-    else:
-        dirty = True
-        mpconfigport += "\n#define MICROPY_PY_DEFLATE_COMPRESS (1)\n"
-
+    # Disable features to reduce MicroPython's size in bin image
+    add_define( "MICROPY_PY_APA106", 0) #
+    remove_module( "apa106" ) # remove apa105.py
+    add_define( "MICROPY_PY_BTREE", 0)
+    add_define( "MICROPY_PY_ESPNOW", 0) # remove _espnow
+    remove_module( "espnow" ) # remove espnow.py too
+    add_define( "MICROPY_PY_HEAPQ", 0 )
+    add_define( "MICROPY_PY_FRAMEBUF", 0)
+    # >>> Still can  remove: requests, webrepl, onewire, thread, 
+    # See https://github.com/orgs/micropython/discussions/12303 for repl, webrepl
+    # #define MICROPY_ENABLE_COMPILER (0)
+    # will disable repl and make more difficult to inject code.
+    
     if dirty:
         with open( mpconfig_filename, "w" ) as output:
             output.write( mpconfigport )
         print(f"{mpconfig_filename} updated")
     else:
-        print(f"{mpconfig_filename} no need to update.")
+        print(f"{mpconfig_filename.name} no need to update.")
 
 def main():
     add_partition_csv()
@@ -117,3 +148,9 @@ main()
 # Total startup time (without main, until asyncio ready) 4373 msec
 # Memory used at startup 130192
 # gc time from 17 to 60 msec
+
+# April 2026 romfs size:
+# Image size is 236886 bytes
+# ROMFS0 partition has size 262144 bytes (64 blocks of 4096 bytes each)
+# Writing 236870 bytes to output file crank-organ/bin/romfs.bin
+# 25285 bytes still free.
