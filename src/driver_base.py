@@ -30,7 +30,13 @@ class BaseDriver:
     def __repr__( self ):
         return self._repr
     
+    def __hash__( self ):
+        return hash(self._repr)
     
+    def __eq__( self, other):
+        return self._repr == other._repr
+    
+
 class BasePin:
     # Abstract class for driver_*.py MIDI device actuator drivers
     # Represents a single pin/actuator 
@@ -178,7 +184,13 @@ class BasePin:
         # Sets pulse with for ON and OFF states for RC servos.
         pass
 
-
+    def __hash__( self ):
+        return hash( repr(self) )
+    
+    def __eq__( self, other ):
+        return repr(self) == repr(other)
+    
+    
 class SolePin(BasePin):
     # Superclass for all drivers that move solenoids
     # Subclasses must implement:

@@ -253,7 +253,7 @@ You can use very small solenoids to open air to control a pneumatic valve. It is
 
 Here are many links about the topic of actuators to open the air flow of crank organ valves: https://orgue-bernard.blog4ever.com/le-bobinage-d-un-relais# (there is a box to select the languages on the upper left of the page). The discussion there is very thorough.
 
-I believe a good solution for do-it-yourself valves are RC servo motors (those used for radiocontrolled model airplanes or cars). They are not as fast as solenoid valves. See here for details ![RC servos for crank organ valves](/doc-servo/servos.md)
+I believe a good solution for do-it-yourself valves are RC servo motors (those used for radiocontrolled model airplanes or cars). They are not as fast as solenoid valves. See here for details [RC servos for crank organ valves](/doc-servo/servos.md)
 
 With non-MIDI organs, on many plans the pipes are connected with plastic tubes to the windchest. This is excellent to save space and completely appropriate for pneumatic valves. For MIDI organs, however, I think the easiest is to put the pallet valves direcly under the pipe foot, dispensing with tubes. There is also less chance of air escaping. It will be more difficult to fit the resulting windchest in a small space. I believe  the resulting organ will be a bit larger than using plastic tubes, but easier to build.
 

@@ -240,7 +240,7 @@ async function getPinoutDetail( ) {
                 makeInput( `tachometer_counter.${f}`, 3, pd[1] ),
                 "second output (optional)",
                 makeInput( `tachometer_encoder.${f}`, 3, second_pin ),
-                makeButton( `tachotest${f}`, "Test crank", ()=>{testCrank(f)} ),
+                makeButton( `tachotest${f}`, "Test", ()=>{testCrank(f)} ),
                 ""
             ] );
             row.cells[5].id = `tachovalue${f}`;
@@ -248,22 +248,22 @@ async function getPinoutDetail( ) {
         else if( pdtype == "microphone"){
             let micText = document.createElement("span");
             micText.id = `mictext.${f}`;
-            insertFormRow( tbody,`row_${f}_microphone`, [
+            let mrow = insertFormRow( tbody,`row_${f}_microphone`, [
                 "Microphone pin",
                 makeInput( `microphone.${f}`, 3, pd[1] ),
-                makeButton( `micbutton.${f}`, "Test mic", ()=>test_mic(f) ),
+                makeButton( `micbutton.${f}`, "Test", ()=>test_mic(f) ),
                 micText
             ] );
+            mrow.cells[3].colSpan = 3;
             let micCanvas = document.createElement("canvas");
             micCanvas.height = 150;
             micCanvas.width = 100;
             micCanvas.id = `miccanvas.{f}`;
-            let row = insertFormRow( tbody,`row_${f}_micgraphrow`, [
+            let grow = insertFormRow( tbody,`row_${f}_micgraphrow`, [
                 micCanvas
             ] );
-            row.style.display = "none";
-            row.cells[0].colSpan = 4;
-            ;
+            grow.style.display = "none";
+            grow.cells[0].colSpan = 6;
         }
         else if( pdtype == "touchpad"){
             let touchResult = document.createElement("span");
@@ -271,7 +271,7 @@ async function getPinoutDetail( ) {
             let row = insertFormRow( tbody,`row_${f}_touchpad`, [
                 "Touchpad pin",
                 makeInput( `touchpad.${f}`, 3, pd[1] ),
-                makeButton( `touchtest.${f}`, "Test touchpad", ()=>test_touchpad(f)),
+                makeButton( `touchtest.${f}`, "Test", ()=>test_touchpad(f)),
                 touchResult
             ] );
             row.cells[3].colSpan = 3;
@@ -377,7 +377,7 @@ async function getPinoutDetail( ) {
                 makeInput( `i2c.sda.${f}`, 3, pininfo.sda),
                 "SCL",
                 makeInput( `i2c.scl.${f}`, 3, pininfo.scl),
-                makeButton( `i2cscan${f}`, "Scan I2C", function(){ scanI2C( `i2cresult.${f}`, pininfo )} ),
+                makeButton( `i2cscan${f}`, "Test", function(){ scanI2C( `i2cresult.${f}`, pininfo )} ),
                 "" // for test result
             ]);
             row.cells[6].id = `i2cresult.${f}`;
@@ -997,7 +997,7 @@ async function test_mic(f){
     let micgraphrow = document.getElementById(`row_${f}_micgraphrow`);
     let mictext = document.getElementById(`mictext.${f}`);
     let graph_canvas = document.getElementById(`miccanvas.{f}`);
-    graph_canvas.width = window.innerWidth*0.9;
+    graph_canvas.width = Math.min( window.screen.width, window.innerWidth*0.95 );
     let ctx = graph_canvas.getContext("2d");
 
     // Toggle display if already active
@@ -1009,13 +1009,15 @@ async function test_mic(f){
         return;
     }
     micgraphrow.style.display = "";
-    for( n = 15; n >= 0; n-- ){
+    for( n = 30; n >= 0; n-- ){
         let resp = await fetch_json(`/test_mic/${micpin}`);
         let signal = resp["signal"];
-        micgraph( graph_canvas, ctx, signal );
-        let duration = resp["duration"];
+        micGraph( graph_canvas, ctx, signal );
+        let duration = resp["duration"]*1000;
         let zc = zeroCrossings(signal);
-        mictext.innerText = `count=${n} pin=${micpin} duration=${Math.round(duration*100)/100} sec zero crossings=${zc}`;
+        let gpiotest = resp["gpiotest"];
+        // gpiotest NC: not connected
+        mictext.innerText = `count=${n} pin=${micpin} duration=${Math.round(duration)} msec zero crossings=${zc} gpiotest=${gpiotest}`;
         if( micgraphrow.style.display == "none"){
             // cancelled
             break;
@@ -1031,7 +1033,7 @@ function clearMicGraph( graph_canvas, ctx ){
     ctx.fillRect( 0, 0, graph_canvas.width, graph_canvas.height);
     ctx.stroke();
 }
-function micgraph( graph_canvas, ctx, signal ){
+function micGraph( graph_canvas, ctx, signal ){
 
     clearMicGraph( graph_canvas, ctx );
     // Top and bottom line
@@ -1047,14 +1049,6 @@ function micgraph( graph_canvas, ctx, signal ){
     ctx.lineTo( gw, gh-1);
     ctx.stroke();
 
-    // Zero
-    ctx.beginPath();
-    ctx.setLineDash( [2,2]);
-    ctx.moveTo( 0,  gh/2 );
-    ctx.lineTo( gw, gh/2 );
-    ctx.moveTo( 0, gh/2 );
-    ctx.stroke();
-
     // Left and right borders
     ctx.beginPath();
     ctx.setLineDash([]);
@@ -1066,13 +1060,14 @@ function micgraph( graph_canvas, ctx, signal ){
 
 
     // Actual graph
+    // Signal is 0-4096 with the "zero" not necessarily at 2048.
     ctx.beginPath();
     ctx.lineWidth = 1;
     ctx.strokeStyle = "black";
     ctx.setLineDash( [] );
     for( i=0; i<signal.length; i++){
         let x = i/signal.length*gw;
-        let y = (signal[i]/4096)*gh;
+        let y = gh - (signal[i]/4096)*gh;
         y = Math.max( Math.min(y, gh-1), 1 );
         if( i == 0){
             ctx.moveTo( x, y );
@@ -1102,10 +1097,12 @@ async function test_touchpad(f){
         // Avoid recursion
         return ;
     }
-    for( let n=50; n>=0; n--){
+    for( let n=20; n>=0; n--){
         let resp = await fetch_json( `/test_touchpad/${pin}` );
+        // Get TouchPad.read() value
         let value = parseInt(resp["value"]);
-        let graph = "￭".repeat(value/30_000);
+        // Make a simple horizontal bar graph of the value read.
+        let graph = "￭".repeat(Math.min(value/20_000, 25));
         touchResult.innerHTML = `count=${n} pin=${pin} value=${value.toLocaleString()}<br>${graph}`;
     }
     touchResult.innerHTML = "";

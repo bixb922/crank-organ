@@ -35,7 +35,7 @@ class ActuatorBank:
 
         # Gather some info for diag.html
         pi = self.get_pin_info(", ")
-        _logger.debug(f"init complete {pi}")
+        _logger.debug(f"init done {pi}")
 
     def all_notes_off( self ):
         # Don't flash led if some problem occurs during all notes off,
@@ -70,7 +70,7 @@ class ActuatorBank:
             pin_info.append( 
                 (drv_repr[:-1], 
                 sum( 1 for pin in self.pin_list if repr(pin).startswith(drv_repr))) )
-        return sep.join(f"{drv} {pins} pins" for drv, pins in pin_info)
+        return sep.join(f"{drv}={pins} pins" for drv, pins in pin_info)
 
     def get_actuator_by_pin_index(self, pin_index):
         # organtuner.py refers to a pin with it's index
@@ -122,20 +122,20 @@ class PinTest:
         with_pull_up = gp.value()
         gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_DOWN)
         with_pull_down = gp.value()
-        gp = machine.Pin(gpio_pin, machine.Pin.IN)
-
+        # "None" is necessary to revert to "no pull up/down"
+        gp = machine.Pin(gpio_pin, machine.Pin.IN, None)
         n = with_pull_up * 2 + with_pull_down
-        # 00 = something pulls down for all cases. Might be a ULN2803 or
+        # DEV = 00 = something pulls down for all cases. Might be a ULN2803 or
         # some other device.
-        # 01 = ??? probably not connected
-        # 10 = input follows the pull ups, not connected
-        # 11 = there is something that pulls up this pin, example: I2C
+        # ??? = 01 = ??? probably not connected
+        # NC  = 10 = input follows the pull ups, not connected
+        # I2C = 11 = there is something that pulls up this pin, example: I2C
         return ("DEV", "???", "NC", "I2C")[n]
 
     # Test several times if something pulls the voltage
     # up or down on the pin
     @classmethod
-    def _testGPIO(cls, pin, repeat=10):
+    def testGPIO(cls, pin, repeat=10):
         res = set()
         for _ in range(repeat):
             sleep_ms(1)
@@ -149,8 +149,8 @@ class PinTest:
     # Used by solenoid.py to check if something on I2C
     @classmethod
     def testI2Cconnected(cls, sda, scl):
-        sdaok = cls._testGPIO(sda) == "I2C"
-        sclok = cls._testGPIO(scl) == "I2C"
+        sdaok = cls.testGPIO(sda) == "I2C"
+        sclok = cls.testGPIO(scl) == "I2C"
         return sdaok and sclok
     
     @classmethod

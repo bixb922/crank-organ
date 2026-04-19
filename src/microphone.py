@@ -17,6 +17,28 @@ from array import array
 import fft_arrays as fft_module # Allow for different fft modules
 import frequency
 
+# Interpretation of the ADC sampled values
+# depends on mic used. For example
+# the MAX9814 board has Automatic Gain Control (AGC)
+# so the amplitude will normally be neither to small nor
+# too large.
+# The output of that mic is 2V peak-to-peak, and 1.25V corresponds
+# to "zero". The signal really swings from 0.25 to 2.25V
+# (1.25V +- 1V).
+# With attenuation of 11dB (attn=ADC.ATTN_11DB), the ADC
+# reads voltages from 150mV - 2450mV, so the mic output is
+# perfectly in the optimal range of the ADC. 1.25V. According to
+# the official ESP32-S3
+# documentation, the raw signal reading (which is 0-4095) would be
+# 418 for the lowest voltage, 2090 for "zero" and 3762 for the
+# highest possible output. In practice, for this mic the
+# zero is at a reading of 1490.
+# All this is not relevant at all for tuning, 
+# since FFT filters out the
+# fixed bias (i.e. no normalization is necessary) and also filters
+# out high frequency components due to a possible signal distortion should
+# the signal exceed the 2Vpp maximum swing.
+
 class Microphone:
     def __init__(self, gpio_microphone_pin, mic_test_mode):
         # Allocate memory as a first step to ensure availability

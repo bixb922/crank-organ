@@ -10,7 +10,6 @@
 # see below "subclasses of PinoutParser"
 
 # >>> describe pinout.json file
-# >>> test buttons for: touchpad
 
 import os, machine, re
 

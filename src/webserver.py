@@ -22,8 +22,8 @@ from midi import NoteDef
 # Everything is needed here
 from drehorgel import battery, tunemanager, config, history, setlist, player, crank
 from drehorgel import gpio, actuator_bank, timezone
-from drehorgel import led, wifimanager, plist, gpio, controller, poweroff
-
+from drehorgel import wifimanager, plist, gpio, poweroff
+from solenoid import PinTest
 from pinout import GPIOstatistics, SaveNewPinout
 
 app = Microdot()
@@ -634,7 +634,6 @@ async def save_pinout_detail(request, path):
 @app.post("/test_pin")
 async def test_pin( request ):
     setlist.stop_playback()
-    from solenoid import PinTest
     alert_message = await PinTest.web_test_pin( request.json, actuator_bank )
     if alert_message:
         return respond_error_alert( alert_message )
@@ -643,7 +642,6 @@ async def test_pin( request ):
 @app.post("/scan_i2c")
 async def scan_i2c( request ):
     # No need to stop playback
-    from solenoid import PinTest
     return {"scan":PinTest.scan_i2c( request.json )}
 
 @app.post("/test_drumdef")
@@ -677,8 +675,10 @@ async def test_mic(request, pin):
         # pin not numeric
         # pin number out of range
         return  respond_error_alert( f"Invalid pin: {pin}")
-    duration, signal = mic.sample_microphone( NoteDef(0,69) )
-    return {"signal": list(signal), "duration": duration }
+    gpiotest = PinTest.testGPIO( int(pin) )
+    # >>> test gpiotest with microphone.
+    duration, signal = mic.sample_microphone( NoteDef(0,95) )
+    return {"signal": list(signal), "duration": duration, "gpiotest": gpiotest }
 
 @app.route("/test_touchpad/<pin>")
 async def test_touchpad( request, pin ):

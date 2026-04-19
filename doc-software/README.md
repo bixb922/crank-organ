@@ -41,7 +41,8 @@
      * [Select scale](#select-scale)
      * [Transpose scale (only if necessary)](#transpose-scale-only-if-necessary)
      * [Test solenoids or RC servos](#test-solenoids-or-rc-servos)
-     * [Adjust "on" and "off" position of each RC servo](#adjust-on-and-off-position-of-each-rc-servo)
+     * [Test touchpad, microphone, crank and I2C bus](#test-touchpad-microphone-crank-and-i2c-bus)
+     * [Adjust "on" and "off" position for each RC servo](#adjust-on-and-off-position-for-each-rc-servo)
      * [Redefine MIDI notes (only if necessary)](#redefine-midi-notes-only-if-necessary)
      * [Microphone, crank sensor, touchpad and neopixel LED (important)](#microphone-crank-sensor-touchpad-and-neopixel-led-important)
      * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
@@ -60,9 +61,8 @@
      * [Installing crank organ software](#installing-crank-organ-software)
      * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
-     * [Update to a newer version](#update-to-a-newer-version)
 17.  [Other stuff](#17-other-stuff)
-     * [Increase MIDI file capacity](#increase-midi-file-capacity)
+     * [Increase MIDI file capacity (compression)](#increase-midi-file-capacity-compression)
      * [SD card](#sd-card)
      * [Time zone](#time-zone)
      * [MIDI over serial](#midi-over-serial)
@@ -608,13 +608,30 @@ Next to each solenoid pin definition there is a test button. If the hardware and
 
 If a solenoid is connected to the wrong port, instead of swapping wires, you can change the MIDI to port association here. 
 
-Pin and scale definitions must be saved before testing, but MIDI note number can be changed on the fly without saving. A "Pin not found" message can mean that the scale definition was not saved, or a MCP23017/PCA9685 is not detected on the I2C bus.
+The solenoid or RC servo should move a few times after clicking the Test button. Unlike the tuner page, multiple button clicks are not queued but done simultaneously. I.E. you can press a new button before the current solenoids stop moving.
 
-## Adjust "on" and "off" position of each RC servo
+## Test touchpad, microphone, crank and I2C bus
 
-For RC servos there is a arrow up and arrow down position to adjust the position of the "off" position in small steps. The servo "off" position is changed immediately.
+There is a ```Test``` button next to these devices on the pinout configuration page:
 
-The "on" position needs you to enter a value, and then use the Test button to see the "on" position of the servo. 200 is normally a good starting point.
+* For the microphone it will refresh a graph of the sound detected. Make some sounds and see the signal wiggle. If the microphone is not connected, this entry will probably show some noise, since the ADC inputs of the ESP32-S3 pick up electrical ambient noise.
+* For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used, and air/skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be lower than that difference. 
+* For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because it detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
+* Crank: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
+
+The tests will stop after 30 seconds to 1 minute. It is best to reboot after activating these tests, since they can change the hardware configuration of the ESP32-S3.
+
+If you change a pin number, the test button will work on the pin numbers just entered, not the saved ones. This allows for quick testing of different pins.
+
+Registers do not have a test button. The register status appears on the bottom of the Performance page.
+
+## Adjust "on" and "off" position for each RC servo
+
+For RC servos there is a arrow up and arrow down position to adjust the position of the "off" position in small steps. The servo "off" position is changed immediately following the values entered or following the up and down arrows.
+
+The "on" position needs you to enter a value into the "on (usec difference)" box, and then use the ```Test``` button to verify the "on" position of the servo. 200 is normally a good starting point.
+
+Once your adjustments are done, save the changes with the save button on the bottom of the page.
 
 ## Redefine MIDI notes (only if necessary)
 
@@ -691,6 +708,9 @@ For a MIDI over serial, the pin number has no meaning, but it must be present. S
 
 For MIDI over serial, it will be best that you only include the MIDI note numbers that your configuration really has, and leave the unused MIDI positions of the board with a blank MIDI note number. This will speed up the tuning.
 
+See the hardware section for connection diagramos for MIDI output over a 5 pin DIN connector.
+
+
 ## Available GPIO pins
 This page provides summary of available GPIO pins. The summary is updated when loading the page or after saving changes. This is an example:
 
@@ -709,11 +729,9 @@ Available GPIO Touchpad pins|	1-3,6-14	(12 )|
 * Available GPIO ADC1 pins: ESP32-S3 Analog-Digital-Converter bank 1. Select the microphone pin from this list. (Bank 2 cannot be used, this bank is reserved for WiFi)
 * Available GPIO Touchpad pins: Select a pin for the touchpad function from this list.
 
-The output pins of the ESP32-S3 cannot drive solenoids (electromagnets) directly. The current they supply is not enough, and solenoids produce high currents when turned off that must be absorbed with a "kick back diode". Always connect the GPIO output to a driver such as the ULN2803 IC, which will amplify the current and provide kick back diodes.
+The output pins of the ESP32-S3 cannot drive solenoids (electromagnets) directly. The current they supply is not enough, and solenoids produce very high current pulses when turned off that must be absorbed with a "kick back diode". Always connect the GPIO output to a driver such as the ULN2803 IC, which will amplify the current and provide kick back diodes.
 
-However, the output pins of the ESP32-S3 can perfectly be connected to standard RC Servos. Up to 8 servos can be connected to the ESP32-S3.
-
-See the hardware section for connection diagramos for MIDI output over a 5 pin DIN connector.
+However, the output pins of the ESP32-S3 can perfectly be connected to standard RC Servos. Up to 8 servos can be connected to the ESP32-S3 GPIO ports.
 
 # 13. System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
@@ -723,6 +741,7 @@ On the System page, the following buttons will appear:
 * Reset: resets (reboots) the microcontroller
 * Deep sleep: puts the microcontroller in deep sleep mode. In this mode, the microcontroller will draw very little energy. To power on again, you will have to power off and on the battery.
 * Show log: shows the last error log.
+* If the crank sensor is configured: crank graph.
 * Scan WiFi: repeats a scan for WiFi access points, ordered by signal intensity.
 
 ![WiFi](system_info_wifi.jpg)
@@ -768,13 +787,13 @@ Some files can be downloaded. Compressed MIDI files cannot be read back.
 
 # 15. Turning the system on
 
-TLDR: turn on, and turn the crank or touch the touchpad and music starts.
+TLDR: turn on, wait some seconds and turn the crank or touch the touchpad and music starts.
 
-It takes about 5 to 8 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed the boot.
+It takes about about 3 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed initialization.
 
-If a RGB (neopixel) LED is on the board and configured, it will show changing blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, or if it turns a solid red, an error has occurred, see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
+If a RGB (neopixel) LED is on the board and configured, it will show changing blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, or if it turns a solid red, an error has occurred. Please see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
 
-The software will automatically load the current setlist. If you turn the crank (with crank sensor installed) or release the touchpad, the playback will start. 
+The software will automatically load the current setlist. If you turn the crank (with crank sensor installed) or release the touchpad or press the "Start" button on the Performance page, MIDI playback will start. 
 
 If there is no current setlist stored (empty setlist), turning the crank or releasing the touchpad  will shuffle all tunes randomly (first all tunes with 3 stars rating, if none, all tunes). 
 
@@ -786,15 +805,17 @@ You don't need your cell phone turned on to play music, only to alter the setlis
 # 16. Installation
 ## Prerequisite hardware and software
 
-This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash + 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash + 8 Megabytes RAM ( Megabytes, not Gigabytes...). The ESP32-S3 is most easily available as a board (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository),  a We-Act clone or a VCC-GND clone.
+This software is designed for a ESP32-S3 N8R8 or N16R8 microcontroller. N8R8 means 8 Megabytes of flash + 8 Megabytes of RAM. N16R8 means 16 Megabytes of flash + 8 Megabytes RAM (Megabytes, not Gigabytes...). The ESP32-S3 is most easily available as a board (modules) like the ESP32-S3-Devkit-C or similar boards. There are many vendors offering these boards, I use a "ESP32-S3-Devkit-C N16R8" clone (see also the hardware description in this repository), a We-Act clone or a VCC-GND clone.
 
-For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schematic. It's best to connect a touchpad, which really is any metal knob or disc such as a drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology. The touchpad is used to start tunes.
+For a 20 pipe organ, see the hardware section (doc-hardware folder) for a schematic. It's best to connect a touchpad, which really is any metal knob or disc such as a metallic drawer knob connected with a single wire to the input port of the ESP32-S3. The touchpad senses the touch of the hand with a capacitive sensing technology. The touchpad is used to start tunes.
+
+Plastic knobs that look like metal are not appropriate for the touch pad.
 
 Use Chrome or Firefox on a cell phone, PC, MAC or tablet to control the microcontroller. Safari is not supported.
 
 ## Installing prerrequisite software
 
-Installation is easiest done on the command line, i.e. using cmd on windows or Terminal on Mac. You should be familiar with commands such as dir or ls and cd. 
+Installation is easiest done on the command line, i.e. using ```cmd``` on Windows or Terminal on Mac. You should be familiar with commands such as ```dir``` or ```ls``` and ```cd```. 
 
 No programming required. Configuration is done later via web pages and forms with a browser over WiFi.
 
@@ -870,7 +891,7 @@ Once WiFi is configured, further updates can be made with the [File Manager](#fi
 
 If you can't configure WiFi, see (here)(##another-way-to-configure)
 
-If you are updating from a previous version, see ![Update software](#update-software)
+If you are updating from a previous version, see [Update software](#update-software)
 
 On the "System" page you can verify the RAM and flash size. About 2Mb of the flash are used by MicroPython and this software. The software detects the size of the flash automatically.
 
@@ -887,7 +908,7 @@ All these files now reside as compiled and compressed files in the ```bin``` fil
 
 If you don't know the date of your version, you can see this in the "System" page.
 
-Update to a newer version with the procedure explained in the previous section: ![Installation instructions](#installation-instructions). You need to do the ```esptool.py``` command explained there.
+Update to a newer version with the procedure explained in the previous section: [Installation instructions](#installation-instructions). You need to do the ```esptool.py``` command explained there.
 
 This update procedure does *not* affect MIDI files nor the configuration.
 
@@ -927,41 +948,31 @@ flowchart LR
 
 See [General Configuration](#general-configuration) to configure WiFi.
 
-## Update to a newer version
-
-Follow the installation instructions. You need to repeat the ```esptool.py``` command described there with the new .bin files from the repository.
-
-The ```Makefile``` in the ```crank-organ/tools``` folder of the Github repository also can:
-* Compile changes to mpy files
-* Upload changed mpy or html files via mpremote
-* Generate a romfs image, to be deployed with ```esptool.py````
-
-
 # 17. Other stuff
 
-## Increase MIDI file capacity
+## Increase MIDI file capacity (compression)
 
-The software accepts compressed MIDI files. With average size crank organ music MIDI files (what I'm trying to say: withthe tunes I have) the capacity without compression is about 700 files for the 16MB flash version of the ESP32-S3. With compression the capacity is about 1500 MIDI files for the 16MB version and 700 files for the 8MB version of the ESP32-S3 board.
+The software accepts both uncompressed and compressed MIDI files. With average size crank organ music MIDI files. To compress MIDI files use the ```compress_midi.py``` utility of the ```crank-organ/tools``` folder.
+
+The capacity without compression is about 700 files for the 16MB flash version of the ESP32-S3. With compression the capacity is  1500 to 2000 MIDI files for the 16MB version and half of that for the 8MB version of the ESP32-S3 board.
 
 The ```compress_midi.py``` utility included here runs on your PC. It compresses all MIDI files in an input folder to an ouput folder. The input files are not changed. The output folder should start empty. If ```compress_midi.py``` is run again, only changed files are processed.
 
 The ```compress_midi.py``` is in the ```tools``` folder of the repository and runs on your PC or Mac or Linux (not on the microcontroller). You need to do: ```pip install mido``` as a prerrequisite (pip is a Python utility on the PC to install software packages. mido is package to read and write MIDI files).
 
 The compression is done in several steps by ```compress_midi.py```:
-* Only note on, note off and program change MIDI events are kept, the rest of the MIDI events are discarded. Set tempo meta events are processed and incorporated into the MIDI times. All meta messages are discarded. Pulses per beat is set to a lower (standard) value of 96, which should be precise enough for mechanical music. All this makes the MIDI file much faster to process and considerably smaller.
+* Only note on, note off and program change MIDI events are kept, the rest of the MIDI events are discarded. Set tempo meta events are processed and incorporated into the MIDI times. All meta messages are discarded. Pulses per beat is set to a lower (standard) value, which should be precise enough for mechanical music. All this makes the MIDI file much faster to process and considerably smaller.
+* The number of channels is reduced to the number of instruments in the --known_programs parameter of the command. This parameter must list all instruments or program nubmers used in the Pinout page. You do not need to include channel 10 drum/percussion in this list.
 * All note on and note off events are converted to note on events with running status. This can give in a significant file size reduction.
-* Then the files are compressed by ```compress_midi.py``` using the gzip algorthm and written to the output folder with .gz suffix. In other words, ```foo.mid``` becomes ```foo.mid.gz```.
+* Then the files are compressed by ```compress_midi.py``` using the gzip algorithm and written to the output folder with .gz suffix. In other words, ```foo.mid``` becomes ```foo.mid.gz```.
 
-
-Finally, you should copy these files to the microcontroller using the "Update to auto folder" button of the File Manager. This will replace all *.mid files with their *.mid.gz compressed counterpart.
+Finally, you should copy these files to the microcontroller using the "Update to auto folder" button of the File Manager. This will upload the file or replace all *.mid files with their *.mid.gz compressed counterpart.
 
 The music player will automatically recognize either the .mid file or the .mid.gz file and decompress on the fly if necessary.
 
 Use ```compress_midi.py --help``` for help with the utility program. Input and output folder name need to be specified only once because they are kept in ```compress_midi.json``` in the current folder on the PC.
 
-Average compression for my 300+ MIDI files is to 40% of the original size, considering that the allocation unit of the flash is blocks of 4096 bytes. 
-
-There is an additional feature of compress_midi.py: it leaves a file named ```setlist_9.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same "upload to auto folder" operation in the file manager). Then recall the stored playlist in the Performance page and you will have a number 9 setlist of the last 4 weeks of modifications. This facilitates checking recent tunes.
+There is an additional feature of compress_midi.py: it leaves a file named ```setlist_9.json```in the compressed file folder. This can be uploaded together with the MIDI files (with the same "upload to auto folder" operation in the file manager). Then recall the stored playlist in the Performance page and you will have a number 9 setlist of the last 4 weeks of modifications. This facilitates checking recent tunes. You need "multiple setlists" enabled in the General Configuration page to use this feature.
 
 ## SD card
 
@@ -983,7 +994,7 @@ With the SD card, only about 500kb of free flash memory is necessary. The /tunel
 ## Time zone
 When connected to a router or cell phone hot spot, the software uses NTP (Network Time Protocol) to acquire the UTC time. If internet is not reachable, current time is set when a page is loaded on the browser.
 
-The time zone (for example America/Lima or India/Kolkata) is obtained from the browser automatically, then stored. There is no need for configuration.
+The time zone (for example America/Lima or India/Kolkata) is obtained from the browser automatically, then stored. There is no need for manual configuration.
 
 If no internet access is available nor a browser loads a page on the microcontroller, time starts on Jan 1st, 2000. This does not impair operation at all, allowing to crank the organ without internet access, or even without a cell phone. The history page will show the tunes as if played on 2000-01-01, and the error log will show time only.
 
@@ -996,8 +1007,6 @@ The provided configuration has predefined 64 notes from MIDI 48 to MIDI 111. You
 No program change messages are sent. In fact, only note on and note off messages are sent, and with fixed velocity, as it is normal for pipes. If you have another requirement, please post an issue in this repository.
 
 MIDI output over serial can be combined with valves or actuators connected via GPIO outputs, MCP23017 outputs or RC servo outputs.
-
-This option has little testing. Please report any problem.
 
 ## RC servo motors as actuators
 
@@ -1487,7 +1496,8 @@ Please post in discussions if you are unhappy with some dropped feature.
 * Allow any ```.py``` or ````.mpy``` in ```software/mpy``` to override modules in the binary image, and do not make that dependent on the compile date.
 * Provide scan button for I2C on pinout page. This allows to find all devices on an I2C bus. PinTest uses class methods.
 * Fix phases keyword in Counter() call.
-* Provide mic test button on pinout page. Outputs a refreshing graph of mic signal.
+* Provide mic test button on pinout page. Shows a graph of mic signal.
+* Provide touchpad test button on pinout page. Shows touchpad value.
 
 
 # 20. Programming language

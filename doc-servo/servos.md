@@ -151,7 +151,7 @@ Then configure the GPIO ports in the "Pinout and MIDI configuration", using the 
 
 There is a nice board that has all the electronics to drive servos:
 
-![PCA9685 board](pca9685-board.jpg)
+![PCA9685 board](pca9685-board.png)
 
 For detailed information on how to connect this to a microcontroller and other details see here: https://www.adafruit.com/product/815. Look for a Download button on the documentation page, and download that PDF. 
 
@@ -177,6 +177,17 @@ For 20 note crank organs, 1 PCA9685 is needed. The ESP32-S3 can provide up to 8 
 
 PCA9685 can be connected in series (see the Adafruit writeup), but each board needs another address. The software can handle that. Several boards can be connected to one I2C bus of the ESP32-S3. The restriction here is that each board provides pull up resistors and there is a limit for the I2C bus on how many pull up resistors there can be, but 2 or 3 PCA9685 on the same I2C bus are definitely ok. There is no speed impact when connecting several boards to the same I2C bus.
 
+There seem to be many variants of PCA9685 boards out there. Some have a on-board electrolytical capacitor:
+
+![Electrolytical capacitor](pca9685-electrolytical-capacitor.jpg)
+
+If the board doesn't have one, solder a 1000µF 25V electrolytical capacitor in this place. Take care of polarity!
+
+Some boards also have a reverse voltage protection. That is useful to avoid damage to the electronics in case you insert the connector the wrong way:
+
+![Reverse voltage protection](pca9685-reverse-voltage.jpeg)
+
+
 # 5. Power supply
 
 The SG90 needs a 5V power supply. The USB output of a PC can drive only a few SG90. See [here](/doc-hardware/battery.md) for an article about power supplies. A power supply of 5V 2A should be enough. Don't forget to use fuse next to the battery.
@@ -185,7 +196,7 @@ In standby (not exerting any force) a SG90 draws less than 5mA. When moving, say
 
 With normal music, it is very uncommon to move 10 servos at the same time. Even having 10 notes on at the same time is uncommon and will have other problems, such as a dwindling air supply. The peak consumption will be about 1A. Leaving some margin, a 5V 2A power supply should be enough.
 
-A RC servo motor should never have it's arm blocked or held in place. This situation will consume lots of energy and may break the gears inside the servo. 
+A RC servo motor should never have it's arm blocked or held in place. This situation will consume lots of energy, may break the gears inside the servo and will fry the motor.
 
 # 6. Software parameters for servo motors
 
@@ -193,15 +204,17 @@ Use the "40 note RC servo: 8 GPIO PWM and  2x16 PCA9685" template. Select that t
 
 Leave unused entries blank. If only one PCA9685 is used, leave the I2C SDA and SCL and address of the second PCA blank.
  
-Instead of a 50 Hz (= 20 millisecond = 20000 microseconds) refresh rate, it is advisable to lower the rate to get faster response. The refresh period should never be below 3 or 4 milliseconds, so a proposed period is 5000 microseconds. This period should be set for all servos. There seems to be no need to vary it for an individual servo. The template sets the period to that value.
+For digital servos: Instead of a 50 Hz (= 20 millisecond = 20000 microseconds) refresh rate, it is advisable to lower the rate to get faster response. The refresh period should never be below 3 or 4 milliseconds, so a proposed period is 5000 microseconds. This period should be set for all servos. There seems to be no need to vary it for an individual servo. The template sets the period to that value. A faster rate makes the servo start acting a bit faster.
 
-A pulse width of 1000 microseconds normally means 0° angle and 2000 microseconds means 180° angle. Some servos have other definitions, for example some operate between 500 microseconds and 2500 microseconds. See the servo's specifications.
+For analog servos: Use a 20 millisecond = 20000 microsecond refresh rate. There is normally no advantage lowering that rate.
 
-The software accepts pulse widths from 1000 to 2000, since normally a small rotation variation is needed. "Off" should be 1500 (center position) and "on" around 1700 (or 1300 if rotation is in the opposite direction).
+A pulse width of 1000 microseconds normally means 0° angle and 2000 microseconds means 180° angle. Some servos have other definitions, for example some operate between 500 microseconds and 2500 microseconds. See the servo motor's specifications.
+
+The software accepts pulse widths from 1000 to 2000, since normally only a small rotation variation is needed. "Off" should be 1500 (center position) and the "on" position should be about 200 microseconds different than the center position.
 
 Pulse width can be set for each output:
 
-![set pulse width](pulse0_pulse1.png)
+![set pulse width](pulse0_pulse1.jpg)
 
 You should connect the servos to the microcontroller BEFORE tying the string between the horn and the valve. First make the software set the  neutral position at pulse width 1500. The factory setting of the servos may be any position.
 
