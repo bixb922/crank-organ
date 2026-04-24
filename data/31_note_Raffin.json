@@ -2,7 +2,7 @@
 ["description","31 note Raffin scale. One I2C bus with 2 MCP23017 controllers"],
 ["neopixel", 48],
 ["microphone", 4],
-["tachometer", 5],
+["tachometer", "", ""],
 ["touchpad", ""],
 
 ["i2c", 17, 18],

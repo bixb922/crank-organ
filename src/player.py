@@ -21,7 +21,6 @@ CANCELLED = const("cancelled")
 ENDED = const("ended")
 PLAYING = const("playing")
 
-_PROCESSABLE_EVENTS = (NOTE_ON, NOTE_OFF, PROGRAM_CHANGE, AFTERTOUCH)
 class MIDIPlayerProgress:
     def __init__(self):
         self.boot_session = hex(getrandbits(24))
@@ -66,8 +65,8 @@ class MIDIPlayer:
             NOTE_ON:  lambda c, d, n: controller.note_on( n ),
             NOTE_OFF: lambda c, d, n: controller.note_off( n ),
             PROGRAM_CHANGE: self._program_change,
-            0xd0: self.processd0,
-            0: lambda _: None # RFU
+            AFTERTOUCH: self.processd0,
+            None: self._midi_file_start,
         }
 
         self.logger.debug("init ok")
@@ -109,10 +108,7 @@ class MIDIPlayer:
                 return
             # Get MidiFile object
             midifile = open_midi( midi_fn ) # fileops.open_midi
-            self.process_map[0]( midifile )
-            if midifile.format_type not in (0,1):
-                # Should not happen, only type 0 and 1 files are supported.
-                self.logger.info(f"Invalid MIDI file format {midifile.format_type} for '{title}' {midi_fn}")
+            if not self.process_map[None]( midifile ):
                 return
             self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)}" )
             controller.all_notes_off()
@@ -214,7 +210,9 @@ class MIDIPlayer:
             if status == NOTE_ON and midi_event.velocity == 0:
                 # Note on with velocity 0 is equivalent to note off
                 status = NOTE_OFF
-            if midi_event.delta_us == 0 and status not in _PROCESSABLE_EVENTS:
+            # An optimization. Often there are for example many control changes
+            # with 0 delta time. 
+            if midi_event.delta_us == 0 and status not in self.process_map:
                 continue
             
             # midi_time is the calculated MIDI time since the start of the MIDI file
@@ -260,7 +258,6 @@ class MIDIPlayer:
                     ActuatorStats.count( "early notes") 
                     ActuatorStats.max( "max note early",  wtdiff )
                 
-            # Turn one note on or off. Process program change
             self._process_midi(status, midi_event)
 
         total = ticks_diff(ticks_ms(),msec_start) 
@@ -313,6 +310,12 @@ class MIDIPlayer:
 
         if status in self.process_map:
             self.process_map[status](channel, value, curr_note )
+
+    def _midi_file_start( self, midifile ):
+        if midifile.format_type in (0,1):
+            return True
+        # Should not happen, only type 0 and 1 files are supported.
+        self.logger.info(f"Invalid MIDI file format {midifile.format_type} for {midifile.filename}")
 
     def _program_change( self, channel, program, _ ):
         if channel != DRUM_CHANNEL:

@@ -731,9 +731,8 @@ class ActuatorDef(PinoutParser):
 
                 self.current_driver = self.driver_factory( MCP23017Driver(self.current_i2c, self.current_i2c_number, address) )
             except OSError as e:
-                logger.exc(
-                    e,
-                    f"MCP23027 at {self.current_i2c=} {address=} not found, disabled",
+                logger.error(
+                    f"MCP23027 at {self.current_i2c=} {address=} disabled. {e}",
                 )
                 
     def define_pca9685_driver(self, address, period_us ):
@@ -749,9 +748,8 @@ class ActuatorDef(PinoutParser):
                     self.current_i2c, self.current_i2c_number, address, period_us
                     ) )
             except OSError as e:
-                logger.exc(
-                    e,
-                    f"PCA9685 at {self.current_i2c=} {address=} not found, disabled",
+                logger.error(
+                    f"PCA9685 at {self.current_i2c=} {address=} disabled. {e}",
                 )
 
     def define_gpio_driver( self ):

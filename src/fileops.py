@@ -61,6 +61,7 @@ def read_json(filename, default=None, recreate=False):
             f = find_latest_backup(filename)
             with open(f) as file:
                 j = json.load(file)
+                # >>> make this an error message?
                 print(f"fileops.read_json using backup file {f}")
                 return j
         except (OSError, ValueError):

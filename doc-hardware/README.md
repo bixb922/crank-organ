@@ -89,7 +89,7 @@ See also the software section for a description of the program that matches the 
 # 3. Description
 The controller is based on a ESP32-S3 microcontroller. I am using readily available N8R8 (8 MB flash, 8MB RAM) or N16R8 (16 MB flash, 8 MB RAM) models. 8 MB RAM is much more than needed (the application uses about 350 kb of RAM, plus the RAM needed by MicroPython).
 
-8 MB flash means 6 Mb available for use. Assuming a MIDI file has about 20 kb average, this means 300 MIDI files. 16 MB means 14 Mb free, and 700 MIDI files. With compression (see the software section) this goes up to 700 average MIDI files for 8Mb flash and 1800 average MIDI files for 16Mb flash. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
+With 16Mb of flash, 2Mb are used by the software, 14Mb are free. This is good for about 700 MIDI files. If the compression feature is used (see software description), 1500 to 2000 MIDI files can be stored. Although it is possible to add a SD card (and the software supports that well), this should be enough for most purposes. An SD card also means more complexity and more points of failure (the card may come loose), so the SD card reader is really optional.
 
 The ESP32-S3 also has enough GPIO ports to drive 20 solenoids, and hundreds of solenoids with a port expander such as a MCP23017. It has WiFi to connect a smartphone, tablet or PC for control. The capacity is large enough to put a web server in the ESP32-S3, so control is be done with a standard browser. No special app is needed on the PC or smartphone.
 
@@ -123,7 +123,7 @@ I have tested this setup with some ESP32-S3 boards similar a  ESP32-DEVKITC-1 V1
 
 On Octal Flash boards such as N16R8V, less than 20 pins are available. From the Espressif documents: "In module variants that have embedded OSPI PSRAM, i.e., that embed ESP32-S3R8, pins IO35, IO36, and IO37 connect to the OSPI PSRAM and are not available for other uses."
 
-MicroPython images for N8R8 boards can be downloaded directly from the MicroPython site. For N16R8 boards, there is a tool to resize the MicroPython image, no need to generate new images. See the software installation.
+The software provided is for ESP32-S3 N16R8 microcontrollers (and will also work for ESP32-S3 N8R8 microcontrollers).
 
 
 # 5. Circuit diagram
@@ -184,7 +184,7 @@ If you know another good quality brand, please post in the discussion forums to 
 
 It's better to get a board where the schematic diagram is available online. This aids to solve some questions about the board, namely if a diode is necessary (see section on diodes below) or where the RGB LED (neopixel) is connected, if any.
 
-Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V. These regulators accept 12V as input and regulate that down to 3.3V, so no additional voltage regulator would be needed.  See the data sheet or ask the vendor to verify if the ESP32-S3 allows to be connected to 12V, in that case the 12V to 5V regulator might not be necessary.
+Some ESP32-S3 have a AMS1117 or SGM2212 regulator to get the voltage at the 5V pin down to the necessary 3.3V.
 
 
 ### Two 22 pin contacts for ESP32-S3
@@ -201,7 +201,7 @@ This is a standard current amplifier, that takes the signal from the GPIO ports 
 
 ULN and TBD are plug compatible. The TBD leaves more voltage available for the solenoids. When on, the TBD takes away about 0.3V while the ULN2003A may take away up to 1V from the 12V. That means a bit more power consumption for the TBD compared to the ULN, but  better behaviour if battery level is low. Solenoids will have a bit more of force to move too.
 
-ULN2003A and TBD62003A have flyback diodes included (also called kickback diodes). No need to worry about these. 
+ULN2003A and TBD62003A have flyback diodes included (also called kickback diodes). No need to worry to add these. The kickback diodes absorb the current peak that occurs when a solenoid is turned off. 
 
 Both IC can handle 90 Ohm 12V solenoids well. If the resistance is lower, you'd have to check the data sheets for the individual and combined current limit.
 

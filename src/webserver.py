@@ -108,7 +108,7 @@ def respond_not_found( ):
     return error_page, 404, {'Content-Type': 'text/html'}
 
 # Define own (async) decorator to check authorization
-# func MUST be a async function 
+# Wrapped function MUST be a async function 
 def authorize(func):
     async def wrapper(*args, **kwargs):
         try:
@@ -450,6 +450,8 @@ async def diag(request):
     tz = timezone.get_time_zone_info()
     time_zone_info = f'{tz["longName"]}, {tz["shortName"]}, offset={round(-tz["offset"]/60.0)} min'
     reboot_sec = round(ticks_diff(ticks_ms(), config.BOOT_TICKS_MS) / 1000 )
+    used_flash = vfs[0] * (vfs[2] - vfs[3])
+    free_flash = vfs[0] * vfs[3]
     d = {
         "description": config.description,
         "name": config.name,
@@ -458,8 +460,8 @@ async def diag(request):
         "last_refresh": now,
         "time_zone_info":  time_zone_info,
         "reboot_mins": f"{reboot_sec//60}:{reboot_sec%60:02d}",
-        "free_flash": vfs[0] * vfs[3],
-        "used_flash": vfs[0] * (vfs[2] - vfs[3]),
+        "free_flash": free_flash,
+        "used_flash": used_flash,
         "free_ram": free_ram,
         "used_ram": used_ram,
         "gc_collect_time": gc_collect_time,
@@ -478,6 +480,7 @@ async def diag(request):
     except:
         d["mcserver"] = ""
 
+    _logger.info(f"diag: {used_flash=:_} {free_flash=:_}  {used_ram=:_} {free_ram=:_} {gc_collect_time=} max gc={scheduler.max_gc_time} º{midi_files=}")
     return d
 
 
@@ -537,6 +540,7 @@ def tacho_irq_report(request):
 @app.route("/tacho_raw_value")
 def tacho_raw_value(request):
     setlist.stop_playback()
+    # >>> is done with saved pin, not latest value
     return {"value": crank.td.raw_value() }
 
 @app.route("/top_setlist/<tuneid>")

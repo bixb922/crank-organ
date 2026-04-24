@@ -95,7 +95,7 @@ class BasePin:
         # nominal_midi_number: note number of nominal_midi_note
         self._driver = driver
         self._pin = pin
-        self._rank = rank  # >>> this takes 2600 bytes for 38 pins
+        self._rank = rank # >>> Could be added by browser to save 100 bytes/pin of RAM
         # nominal_midi_note and nominal_midi_number are used as (readonly) properties
         # outside this class.  
         self.nominal_midi_note = nominal_midi_note 

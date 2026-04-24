@@ -93,7 +93,7 @@ def init():
     
     # The tempo encoder operates as a independent task,
     # >>>tempo encoder not of interest?
-    #  = None
+    # tempo_encoder = None
     # if gpio.tempo_a and gpio.tempo_b:
     #    tempo_encoder = TempoEncoder( crank, gpio.tempo_a, gpio.tempo_b, gpio.tempo_switch, config.rotary_tempo_mult )
         

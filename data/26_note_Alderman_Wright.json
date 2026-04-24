@@ -2,7 +2,7 @@
 ["description","26 note Alderman/Melvin Wright scale. Two I2C bus each with one MCP23017"],
 ["neopixel", 48],
 ["microphone", 4],
-["tachometer", 5],
+["tachometer", "", ""],
 ["touchpad", ""],
     
 ["i2c", 11, 12],

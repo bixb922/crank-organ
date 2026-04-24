@@ -2,7 +2,7 @@
 ["description", "64 notes MIDI over serial"],
 ["neopixel", 48],
 ["microphone", ""],
-["tachometer", ""],
+["tachometer", "", ""],
 ["touchpad", 5],
 
 ["serial",  1, 10, 0, 9 ],

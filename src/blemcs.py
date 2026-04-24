@@ -24,7 +24,11 @@ _IRQ_CENTRAL_DISCONNECT = const(2)
 
 _FLAG_READ = const(0x0002)
 
-# >>> show how many users are connected, at least show activity.
+# >>> show how many users are connected, show web activity?
+# >>> show uptime?
+# >>> show current track title and allow next track button?
+# >>> make client translatable
+
 
 # https://devzone.nordicsemi.com/f/nordic-q-a/24170/16bit-uuid-misunderstandings
 
@@ -42,7 +46,10 @@ _CHARACTERISTIC_UUIDS = [
     "c9eb91e8-03ca-4739-a774-8fbee561caee",
     "98bfa6b0-55fc-4197-905e-635d68e58bf6",
     "35dcf9be-89be-404b-bb7f-61dde7160e96",
-    "b17957bc-c797-470c-b844-6015c9f7f390"
+    "b17957bc-c797-470c-b844-6015c9f7f390",
+    # For future use:
+    # "cbfa8818-2956-4483-a8ca-01f138f7fe67",
+    # "7e2a565b-501f-4746-a4a4-d112dbd83c75"
 ]
 # Same order as UUIDs
 _CHARACTERISTIC_NAMES = [ "stassid1", "stassid2", "apssid", "staip1", "staip2",  "apip", "status"]
@@ -64,7 +71,8 @@ class BLEMCS:
         self.handles = dict()
         for i, h in enumerate(services[0]):
             self.handles[_CHARACTERISTIC_NAMES[i]] = h
-        #self._connections = set()
+        # Not necessary to handle the connections:
+        # self._connections = set()
         self._payload = self._advertising_payload( name, _MCS_UUID )
         # Write characteristic with initial status
         self.status = bytearray("nnn".encode())

@@ -614,10 +614,12 @@ The solenoid or RC servo should move a few times after clicking the Test button.
 
 There is a ```Test``` button next to these devices on the pinout configuration page:
 
+![Test button](pinout_test_buttons.jpg)
+
 * For the microphone it will refresh a graph of the sound detected. Make some sounds and see the signal wiggle. If the microphone is not connected, this entry will probably show some noise, since the ADC inputs of the ESP32-S3 pick up electrical ambient noise.
-* For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used, and air/skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be lower than that difference. 
-* For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because it detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
-* Crank: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
+* For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used and the air or skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be a bit lower than that difference. 
+* For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because the test detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
+* For the crank sensor: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
 
 The tests will stop after 30 seconds to 1 minute. It is best to reboot after activating these tests, since they can change the hardware configuration of the ESP32-S3.
 
@@ -1029,7 +1031,7 @@ You can replace the crank organ of the index page by replacing the file /softwar
 ``` 
 
 ## Registers
-You can switch groups of pipes on and off with a register, either using the web interface or with hardware switches. See an example in /data/48_notes_custom.json. I use this to activate Piccolo flutes and for an Octave register. If you are interested, please post an issue in this Github repository and I'll explain.
+You can switch groups of pipes on and off with a register, either using the web interface or with hardware switches. See an example in /data/48_notes_custom.json. I have used this to activate Piccolo flutes and for an Octave register. If you are interested, please post an issue in this Github repository and I'll explain.
 
 ## Percussion sounds made with pipes a.k.a. "fake drums"
 
@@ -1039,15 +1041,15 @@ Sounding several pipes together very shortly makes a percussive sound, much like
 ## Crank rotation sensor and tempo
 The crank rotation sensor can start tunes, and can influence tempo of the music. See hardware section for discussion of sensors.
 
-The crank rotation sensor can be a simple rotation sensor or a quadrature rotation sensor, this second type of sensor can distinguish forward and backward motion. More advanced sensors are usually quadrature encoding rotation sensors.
+The crank rotation sensor can be a simple rotation sensor or a quadrature rotation sensor, this second type of sensor can distinguish forward and backward motion. More advanced sensors are usually quadrature encoding rotation sensors. Quadrature encoders have 2 signal outputs, typically called A and B. They can also have a Z output that issues a pulse once per revolution and is not necessary here.
 
 The crank sensor must be configured first in the pinout page. There is a line called "Tachometer" (meaning: rotation speed sensor) and either one or two GPIO pins can be configured for the sensor:
 * One pin means this is a simple encoder
-* Two pins means this is a quadrature encoder. Quadrature encoder typically have outputs marked A and B. The order is not relevant.
+* Two pins means this is a quadrature encoder. Quadrature encoder typically have outputs marked A and B. The order is not relevant for this application.
 
 Once configured there, go to the General Configuration page, "Crank and tune play parameters" section:
-* "Tempo follows crank": if checked, the music tempo (music playback speed) follows the crank speed. If you turn faster, music plays faster. If you turn slower, music plays slower. This setting can be temporarily changed on the "Performance" page, since there is also a "Tempo follows crank" checkbox. 
-* Pulses per revolution: If the sensor has a toothed disk, the number of tooths. If the sensor is a industrial sensor: the number of pulses per revolution specified on the sensor. In both cases, the ESP32-S3 will count both rising and falling edges and then divide by 2.
+* "Tempo follows crank": if checked, the music tempo (music playback speed) follows the crank speed. If you turn faster, music plays faster. If you turn slower, music plays slower. This setting can be temporarily overridden on the "Performance" page, since there is also a "Tempo follows crank" checkbox. 
+* Pulses per revolution: If the sensor has a toothed disk, the number of tooths. If the sensor is a industrial sensor: the number of pulses per revolution specified on the sensor. In both cases, the ESP32-S3 may count both rising and falling edges and then divide by the number of edges or phases.
 
 If the crank starts to turn, music will start to play. The "tempo follows crank" setting does not influence this.
 
@@ -1106,15 +1108,15 @@ Now restart the microcontroller. After about 5 to 10 seconds, you should see the
 ```
 You should be able to connect to the microcontroller with your browser at ```http://esp32s3.local``` or with the IP address that is displayed, in this example:  ```http://192.168.100.104```
 
-Now the microcontroller's home page should appear, and you can continue configuration with the brower.
+Now the microcontroller should appear on WiFi and you should be able to acces the microcontroller's home page. There you can continue configuration with the brower.
 
 ## ROMFS
 
-Since 2025 MicroPython has the ROMFS feature. The compiled software in the crank-organ/bin folder uses this feature.
+Since 2025 MicroPython has the ROMFS feature. The compiled software in the ```crank-organ/bin``` folder uses this feature.
 
-This feature allows to put all software in the ```bin``` images. The File Manager (or mpremote ls) can show the contents of the ```/rom``` folder, which is located inside the area reserved for the MicroPython image.
+This feature allows to make compiled executable files called  ```bin``` images. These are copied to flash memory with the ``èptool.py``` utility and contain MicroPython *and* the complete software. The software appears in a readonly folder at ```/rom```. The File Manager (or mpremote ls) can show the contents of the ```/rom``` folder, which is located inside the area reserved for the MicroPython image.
 
-This frees up about 700 kilobytes of flash (i.e. the ```/software``` and the ```/lib``` folders can now be deleted), making room for more MIDI files. Since the files are memory mapped, the execution of the MicroPython code is directly from flash. The software is not loaded in RAM. This frees about 150 kb of RAM making garbage collection times much lower (30 to 40 milliseconds). This in turn makes a possible impact of the garbage collector on music playback highly unlikely. Software start up times are also faster, around 2 to 4 seconds.
+This frees up about 500 kilobytes of flash (i.e. the ```/software``` and the ```/lib``` folders can now be deleted), making room for more MIDI files. Since the files are memory mapped, the execution of the MicroPython code is directly from flash. The software is not loaded in RAM. This frees about 150 kb of RAM making garbage collection times much lower (25 to 40 milliseconds). This in turn makes a possible impact of the garbage collector on music playback highly unlikely. Software start up times are also faster, many times around 2 to 3 seconds.
 
 ```main.py``` and ```boot.py``` can be found in the ```crank-organ/tools``` folder. If you want to use a stock MicroPython image, copy them to the root of the flash system. If you use the binary files supplied in the ```crank-organ/bin``` folder, then both are baked into the binary files as "frozen files".
 
@@ -1123,17 +1125,19 @@ Microcontroller flash storage is fairly robust. It is very unlikely to end up wi
 
 However, 
 once you configure your microcontroller and enter data in your Tunelib, you should backup relevant files:
-* /tunelib/*.mid: all MIDI files. Instead of doing backup, it's best to have a /tunelib and a /tunelib_compressed folder somewhere on the PC and then copy the latest MIDI files with the [File Manager](#file-manager) to the microcontroller.
+* /tunelib/*.mid and /tunelib/*.mid.gz: all MIDI files. Instead of doing backup, it's best to have a /tunelib and a /tunelib_compressed folder somewhere on the PC and then upload the latest MIDI files with the [File Manager](#file-manager) to the microcontroller.
 * /data/tunelib.json: it holds the additional information about each tune, such as title, genre, year, date added, rating.
 * /data/lyrics.json: the lyrics of the tunes.
 * /data/config.json: contains encrypted passwords, WiFi and general configuration. 
 * /data/battery_calibration.json: contains the data to calculate battery usage, if you did a calibration
 * /data/setlist_stored_1.json to /data/setlist_stored_9.json: the stored setlists.
+* /data/setlist_titles.json: the titles of setlists (if multiple setlists are enabled)
 
 Files that may be of interest to backup only if you change pinout configuration:
 
 * /data/20_note_Carl_Frei.json or the pinout .json you are using (with the information about MIDI to pin information).
 * /data/pinout.txt (although this file is very easy to restore using the pinout and MIDI configuration page)
+* If you have RC servos and have adjusted the RC servo pulse lengths using the Pinout page, please backup the updated pinout.json file.
 
 This really is not so important to back up:
 * /data/history.json: only if you are interested in conserving the history of when tunes have played
@@ -1143,6 +1147,7 @@ These files don't need backup:
 * /data/organtuner.json. This file is refreshed when tuning, and contains the last tuning.
 * /data/error_nnn.log. These are error logs, they are interesting only if there is a problem.
 * /data/battery.json. It has the current battery usage information. It is updated every minute.
+* /data/midi_cached.mid and /data/midi_fileops.mid: these are temporary MIDI files
 * Files in the data folder ending with a date are backups of configuration files. Older backups are deleted automatically.
 * Files in the signals folder are waveforms stored while tuning. They are kept for debugging purposes.
 
@@ -1150,9 +1155,9 @@ To copy files to your PC: use the [File Manager](#file-manager), navigate to the
 
 Also: Always keep a copy of the MIDI files on your PC.
 
-To restore a backup: If you start with an empty ESP32S3, install the software as per installation instructions. Copy the backed up tunelib.json, lyrics.json and config.json to the /data folder. Copy the MIDI files to the /tunelib folder.
+To restore a backup: If you start with an empty ESP32S3, install the software as per installation instructions. Copy the MIDI files to the /tunelib folder. Then copy the backed up tunelib.json, lyrics.json and config.json to the /data folder. Reboot.
 
-Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 backup files are kept in the data folder. The date in the filename is the day the backup was stored, excluding the changes of that date. These backups are used as fallback in case of possible problems.
+Also: for important files such as tunelib.json, pinout files, lyrics, up to 3 backup files are kept in the data folder. At most one backup file per day is kept. The date in the filename is the day the backup was stored, excluding the changes of that date. These backups are used as fallback in case of possible problems.
 
 
 # 19. Recent changes

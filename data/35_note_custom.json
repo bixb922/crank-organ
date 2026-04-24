@@ -1,7 +1,7 @@
 [["description", "35 note custom scale"], 
 ["neopixel", 48], 
 ["microphone", 10], 
-["tachometer", ""], 
+["tachometer", "", ""], 
 ["touchpad", 9], 
 ["register", "", ""],
 ["register", "", ""],

@@ -30,7 +30,7 @@ Also, the maximum solenoid valves that are closed at any time are around 10 or 1
 Peterson organ valves require 12V at the valve. Since the driver electronics take away a bit less than 1V (this is the collector-emmitter voltage drop of a transistor), the power source must deliver around 13V to 13.5V. More voltage can overheat the solenoid valves. See the document "Valve performance chart" here: 
 http://www.petersonemp.com/manuals/manuals/Pipe%20Valves/Pipe%20Valve%20performance%20chart%20revised%2008-14-2014.pdf
 
-Electronic circuits such as the one I propose in this repository, usually need 5V. If they tolerate 12 to 15V input, they can be connected directly to the battery. If not, a DC-DC buck converter to 5V is needed. See wiring diagram below.
+The ESP32-S3 microcontroller needs 5V as power supply. A "DC-DC buck converter" to provide 5V is needed. See wiring diagram below. In turn, the ESP32-S3 boards convert those 5V to 3.3V for operation, and can output 3.3V for other circuits that need that voltage.
 
 With 13V at the source, a 90 Ohm solenoid valve will consume about 1,75W. This means that with an average of 3 valves on  the power consumption will be about 5,3W while playing music.
 
@@ -39,6 +39,8 @@ In practice, I have measured that with a 33Wh (Watt-hour) battery, about 100 to 
 Commercial batteries are usually rated in mAh (milliampere-hours) or Ah (ampere hours). To convert mAh to Wh, you multiply by the voltage of the battery. For example a AA rechargable battery may be rated at 2000 mAh = 2Ah. The voltage of a battery is 1.2V, so this is equivalent to 2,4Wh for each AA battery.
 
 For Lithium-Ion batteries, the Wh are usually calculated at 3.3V, which is what a single Li-ion battery delivers. So a 10000 mAh Li-ion battery pack will deliver 3.3*10000/1000 = 33 Watt-hours (33 Wh).
+
+For tool batteries, their voltage is usually 18V. You get Wh multiplying their Ah (ampere hour) rating by 18. For example, a 2.5Ah tool battery provides 18*2.5=45 Watt-hours.
 
 # 3. Battery technologies
 
@@ -54,11 +56,11 @@ Lead-acid batteries are quite heavy. These are the batteries used in cars and mo
 
 AA batteries are easily available. To recharge, you will have to take the batteries out of their battery holder and insert into a battery charger. This may be a bit of a chore. AA chargers are widely available.
 
-LiFePo4 have a very stable voltage. Even when almost empty, the voltage does not decay much. So no voltage converter is needed for these batteries. You will need a special LiFePo4 battery charger.
+LiFePo4 have a very stable voltage. Even when almost empty, the voltage does not decay much. So no voltage converter is needed for these batteries. You will need a special LiFePo4 battery charger and a BMS (Battery Management Systm) to prevent overload or unnecessary discharge.
 
-Lithium-ion batteries are very lightweight, and work very well. Their voltage decays to about 3.1V per cell when almost empty. USB battery packs usually have lithium-ion batteries. A BMS is mandatory.
+Lithium-ion batteries are very lightweight, and work very well. Their voltage decays to about 3.1V per cell when almost empty. USB battery packs usually have lithium-ion batteries. A BMS (Battery Management Systm) is mandatory.
 
-All rechargable batteries fail when discharged completely. The software that is available in this repository will calculate the battery level and show that on the cell phone.
+All rechargable batteries fail when discharged completely. The software that is available in this repository will calculate the battery level and show that on the cell phone. The BMS will turn of the battery before discharging completely.
 
 
 
@@ -143,7 +145,7 @@ It's best to use a battery with integrated BMS, since then the manufacturer did 
 
 This is a very simple, cheap and lightweight solution.
 
-Use two battery holders of 6 AA batteries each for a total of 12 batteries. Use Ni-MH AA batteries, they provide 1.2 volts nominal, for a total of 14.4 Volts.
+Use two battery holders of 6 AA batteries each for a total of 12 batteries. Use Ni-MH AA batteries, they provide 1.2 volts nominal, for a total of 14.4 Volts. No BMS is needed for AA batteries.
 
 Be sure to put a fuse next to the battery pack.
 Put some kind of switch to turn on and off. 

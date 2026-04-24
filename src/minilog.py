@@ -19,7 +19,12 @@ from compiledate import compiledate
 
 # DEBUG: only to console, fast
 # INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is always persistent 
-_LEVELNAMES = ["DEBUG", "INFO", "ERROR", "EXCEPTION"]
+# First element True=write to flash, False=only print to console. 
+# Second element is color code for console output.
+_LEVELS = { "DEBUG":(False, "\x1b[32m"), 
+            "INFO": (True, "\x1b[0m"), 
+            "ERROR": (True, "\x1b[31m"), 
+            "EXCEPTION": (True, "\x1b[35m")}
 
 _FOLDER = const("data/")  # Do not use config, minilog should be autonomous.
 
@@ -127,8 +132,8 @@ class getLogger:
     @classmethod
     def log(cls, module, level, message):
         s = cls._formatRecord(module, level, message)
-        print(s)
-        if _LEVELNAMES.index(level) >= _LEVELNAMES.index(cls._file_level):
+        cls.print_console( s, level )
+        if _LEVELS[level][0]:
             cls._write(f"{s}\n")
 
         if level == "ERROR" or level == "EXCEPTION":
@@ -146,9 +151,13 @@ class getLogger:
             exception_text = bytefile.getvalue().decode() # type: ignore
             exception_text = "       " + exception_text.replace("\n", "\n       ")
         # Output exception to console and file
-        print(s)
+        cls.print_console(s, "EXCEPTION") 
         print(exception_text)
         cls._write(f"{s}\n{exception_text}\n")
+
+    @classmethod
+    def print_console( cls, message, level ):
+        print(_LEVELS[level][1] + message + "\x1b[0m") # color to console
 
     # ============================
     # Instance methods

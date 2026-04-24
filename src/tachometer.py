@@ -73,11 +73,12 @@ class TachoDriver:
         # if filter_ns is higher, the highest possible value is set.
         if tachometer_pin1 and not tachometer_pin2:
             # One pin defined means: simple counter for crank
-            self.phases = 1 # rising edge only.
+            self.phases = 2 # rising and falling edge
+            print(f">>>{Counter.RISING=:02x} {Counter.FALLING=}")
             counter = Counter( 0, 
                     Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
                     direction=Counter.UP,
-                    edge=Counter.RISING, # self.phases = 1
+                    edge=Counter.RISING + Counter.FALLING, # self.phases = 2
                     filter_ns=20_000) # Highest filter value possible
         else:
             self.phases = 4

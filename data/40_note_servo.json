@@ -2,7 +2,7 @@
 ["description", "40 note RC servo: 8 GPIO PWM and  2x16 PCA9685"],
 ["neopixel", 48],
 ["microphone", 6],
-["tachometer", 8],
+["tachometer", "", ""],
 ["touchpad", 7],
 
 ["gpioservo", 5000],
