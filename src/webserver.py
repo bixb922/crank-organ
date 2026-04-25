@@ -874,7 +874,10 @@ async def filemanager_download(request, path):
 @app.route("/show_file/<path>")
 async def filemanager_show_file( request, path ):
     import filemanager
-    return filemanager.show_file( decodePath( path ) ) 
+    try:
+        return filemanager.show_file( decodePath( path ) ) 
+    except OSError as e:
+        return respond_error_alert(f"File not found: {e}")
 
 @app.route("/used_flash")
 async def filemanager_status(request):

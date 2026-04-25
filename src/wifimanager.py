@@ -198,7 +198,6 @@ class WiFiManager:
 
             if self.sta_if.isconnected():
                 self.sta_if_status = access_point + " connected"
-                # >>> set ble status "ap has client"
                 return
             # Problems? Get the status and log it
             status = self.sta_if.status()

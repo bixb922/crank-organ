@@ -1503,6 +1503,13 @@ Please post in discussions if you are unhappy with some dropped feature.
 * Fix phases keyword in Counter() call.
 * Provide mic test button on pinout page. Shows a graph of mic signal.
 * Provide touchpad test button on pinout page. Shows touchpad value.
+* Update docs. Update docs and scripts for latest esptool version
+* Add color to log, both mpremote and html
+* Device not found on I2C is now an error, not an exception.
+* Counter for crank sensor now uses both rising and falling edge.
+* Show call to /diag page in error log as info.
+* Show error if file cannot be shown (file manager).
+
 
 
 # 20. Programming language

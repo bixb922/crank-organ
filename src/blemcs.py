@@ -19,7 +19,7 @@ _ADV_TYPE_UUID16_COMPLETE = const(0x3)
 #_ADV_MAX_PAYLOAD = const(31)
 
 # Interrupt constants
-_IRQ_CENTRAL_CONNECT = const(1)
+# _IRQ_CENTRAL_CONNECT = const(1)
 _IRQ_CENTRAL_DISCONNECT = const(2)
 
 _FLAG_READ = const(0x0002)
@@ -34,8 +34,6 @@ _FLAG_READ = const(0x0002)
 
 # Using Media Control Services standard registered UUID
 _MCS_UUID = bluetooth.UUID(0x1848)
-# Pending: add track title (=tune title) and other info, allow next button.
-# Must find a nice BLE app or device.
 
 # Some private UUID
 # UUID order and name order must be equivalent to Javascript client

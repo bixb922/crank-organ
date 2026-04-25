@@ -195,9 +195,18 @@ def _formatLogGenerator(filename):
     def log_generator():
         # Format log as HTML
         # >>> could be done better in browser
-        # >>> add color
+        color = { "DEBUG": "logdeb", "ERROR": "logerr", "EXCEPTION": "logexc" }
         with open(filename) as file:
-            yield "<!DOCTYPE html><head></head><body><title>Error log</title>"
+            yield "<!DOCTYPE html><head>"
+            yield "<style>"
+            yield ".logdeb { color: gray; }"
+            yield ".logerr { color: red; }"
+            yield ".logexc { color: magenta; }"
+            yield ".loginfo { color: black; }"
+            yield ".logdate1 {text-wrap:nowrap}"
+            yield ".logdate2 {font-size:large;font-weight:bold;text-wrap:nowrap}"
+            yield "</style>"
+            yield "</head><body><title>Error log</title>"
             yield '<body><table>'
             current_date = "***"
             while True:
@@ -222,12 +231,13 @@ def _formatLogGenerator(filename):
 
                     if d != current_date:
                         # Show date once only
-                        yield "<tr><td style='font-size:large;font-weight:bold;text-wrap:nowrap;'>" + d + "</td></tr>"
+                        yield "<tr><td class='logdate2'>" + d + "</td></tr>"
                         current_date = d
-
-                    yield "<tr>"
+                    
+                    c = color.get( p[2], ".loginfo" )
+                    yield f"<tr class='{c}'>"
                     try:
-                        yield "<td style='text-wrap:nowrap;'>" + t + "</td>"
+                        yield "<td class='logdate1'>" + t + "</td>"
                         yield "<td>" + p[1] + "</td>"
                         yield "<td>" + p[2] + "</td>"
                         yield "<td>" + escapeHtml( " - ".join(p[3:]) ) + "</td>"
@@ -235,7 +245,7 @@ def _formatLogGenerator(filename):
                         pass
                     yield "</tr>"
         yield "</table></body>"
-
+    
     return log_generator(), 200, {"Content-Type": "text/html; charset=UTF-8"}
 
 

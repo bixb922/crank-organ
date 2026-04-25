@@ -214,7 +214,3 @@ async def start():
         signal_ready(drehorgel.controller),
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
-
-# >>> ideas. 
-# >>> Universal board
-# >>> Support for MIDI over USB

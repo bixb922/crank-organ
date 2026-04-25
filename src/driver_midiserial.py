@@ -6,6 +6,8 @@ from machine import UART
 
 from driver_base import SolePin, BaseDriver
 
+# >>> Add support for MIDI over USB?
+
 # Not a singleton, there could be different serial
 # drivers, each for a uart/pin/channel combination
 class MIDISerialDriver(BaseDriver):
