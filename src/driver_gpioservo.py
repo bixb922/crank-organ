@@ -10,7 +10,8 @@ from driver_base import RCServoPin, BaseDriver
 class GPIOServoDriver(BaseDriver):
 
     def __init__( self, period_us ):
-        super().__init__( )
+        # Restriction: all GPIOServos have the same period_us.
+        super().__init__()
         self._period_us = period_us # Needed to calculate duty cycle
 
     def define_pin( self, *args ):

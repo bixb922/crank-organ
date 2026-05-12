@@ -184,7 +184,7 @@ class Battery:
         self.calibrated = False
         bcj = self.read_calibration_data()
         if len(bcj) == 0:
-            self.logger.debug("Can't calibrate: no calibration data")
+            self.logger.debug("Calibration disabled, no calibration data")
             return
         
         # Import matrix here to save memory if not used
@@ -235,7 +235,7 @@ class Battery:
             return
         self.tune_capacity = -beta[0]/divisor
         self.calibrated = True
-        self.logger.debug(f"Calibration coefficients: {self.coefficients=}, tune capacity: {self.tune_capacity}")
+        self.logger.debug(f"Calibration coefficients: {self.coefficients=}, tune capacity: {self.tune_capacity:.0f}")
 
     def estimate_percent_remaining(self)->None|float:
         if self.calibrated:

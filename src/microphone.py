@@ -16,6 +16,7 @@ from array import array
 
 import fft_arrays as fft_module # Allow for different fft modules
 import frequency
+from minilog import getLogger
 
 # Interpretation of the ADC sampled values
 # depends on mic used. For example
@@ -46,13 +47,17 @@ class Microphone:
         self.buffer_size = fft_module.BUFFER_SIZE
         self.adc_signal = array("i", (0 for _ in range(self.buffer_size))) # type:ignore
         self.mic_test_mode = mic_test_mode
+        self.adc_device = None
         if gpio_microphone_pin and not mic_test_mode:
-            self.adc_device = ADC(
+            try:
+              self.adc_device = ADC(
                 Pin(gpio_microphone_pin, Pin.IN), atten=ADC.ATTN_11DB
-            )
-        else:
-            self.adc_device = None
-        
+              )
+            except Exception as e:
+                getLogger.log_exc( __name__, e, "Can't initialize microphone pin {gpio_microphone_pin}" )
+                # adc_device is None, so mic is disabled
+
+
     def _sample_adc(self, midi_note):
         if self.adc_device:
             return self.sample_microphone(midi_note)
@@ -92,11 +97,12 @@ class Microphone:
         n = len(self.adc_signal)
         
         # Simulate a signal wave for testing
+        # >>> should this be 440 or the "adjusted" frequency?
         nominal_freq = midi_note.frequency()
         r = random.random()
         # Randomly show some frequencies in red or out of range
         freq = nominal_freq
-        if True:
+        if True: # >>> no random element in frequencies!!!!
             if r<0.05:
                 freq = nominal_freq*1.18
             elif r>0.95:
@@ -107,13 +113,13 @@ class Microphone:
                 freq = nominal_freq/1.03
         # Introduce some randomness in samples per period
         # to compensate possible aliasing effects
-        spp = frequency.SAMPLES_PER_PERIOD + random.uniform(-0.05,0.05)
+        spp = frequency._SAMPLES_PER_PERIOD + random.uniform(-0.05,0.05)
         step = 1/freq/spp
         duration = n * step
         # Check that step doesn't hit maximum sampling rate
         #assert step > 1/30_000
         if step < 1/30_000:
-            print(f"Warning: step too small for sampling rate {freq=}, {frequency.SAMPLES_PER_PERIOD=} {step=} {1/30_000=}")
+            print(f"Warning: step too small for sampling rate {freq=}, {frequency._SAMPLES_PER_PERIOD=} {step=} {1/30_000=}")
         freq_step = 1/duration
         print(f"generate debugging signal {step=:.4f}sec {freq_step=:.1f}Hz rate={1/step:.0f}samples/sec {duration=:.2f}sec samples={n} periods={duration*freq:.1f} nominal frequency={nominal_freq:.1f}Hz real frequency={freq:.1f}Hz")
         # Amplitude from 500 to 2000. Emulate a 12 bit ADC with
@@ -131,7 +137,7 @@ class Microphone:
                     sin(w*2*i+phase)*amp*0.06 +
                     sin(w*3*i+phase)*amp*0.40 +
                     sin(w*4*i+phase)*amp*0.03 +
-                    sin(w*5*i+phase)*amp*0.05 
+                    sin(w*5*i+phase)*amp*0.10 
                 + (random.random()*500-250)
                 )
                 + 2048
@@ -159,7 +165,7 @@ class Microphone:
             for i in range(len(s)):
                 s[i] = read()
             d = time.ticks_diff(time.ticks_ms(), t0)/1000
-            frequency.save( s, d, midi_note, d/len(s), frequency.HIRES_FILE_PREFIX )
+            frequency.save( s, d, midi_note, d/len(s))
 
 
 # Performance test of tuner

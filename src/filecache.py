@@ -75,8 +75,8 @@ class _FileInstance:
         # Generator to read portions of buffer_size bytes from a MIDI file track
         # and then return byte by byte.
         # Reading is limited from initial_position to
-        # initial_position + length of the track. 
-        # This allows to read a track chunk
+        # initial_position+length of the track. 
+        # This allows to read a track chunk of a MIDI file
         # and get a end of file condition when the track chunk is fully read.
         # There is a _FileInstance (and a byte_reader) for each track
         # of the MIDI file.

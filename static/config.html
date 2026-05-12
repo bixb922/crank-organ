@@ -122,8 +122,15 @@
 		varies with the crank speed. This is the setting at startup. Can be changed temporarily on the performance page.</label>
 	<br>
 	<label for="pulses_per_revolution">Pulses per revolution of crank revolution sensor. It's the
-		number of pulses the crank sensor gives for each revolution.</label>
+		number of pulses the crank sensor gives for each revolution multiplied by 4 for a encoder or by 2 for a counter. Get the value with the test crank button of the pinout page</label>
 	<input id="pulses_per_revolution" type="text" size="4" oninput="markField('pulses_per_revolution')">
+	<br>
+	<label for="crank_interval">Sampling interval for crank speed measurement, in milliseconds:</label>
+	<input id="crank_interval" type="text" size="4" oninput="markField('crank_interval')">
+	<br>
+
+	<label for="stopped_rpsec">Crank speed to consider the crank as stopped, in revolutions per second:</label>
+	<input id="stopped_rpsec" type="text" size="4" oninput="markField('stopped_rpsec')">
 	<br>
 	<label for="lower_threshold_rpsec">Low threshold: to detect crank is still turning. When lower than this speed, the
 		crank is considered as 'not turning anymore'. in revolutions per second:</label>
@@ -137,16 +144,12 @@
 		the recorded tempo in the MIDI file, in revolutions per second:</label>
 	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
 	<br>
-	<label for="crank_lowpass_cutoff">Crank variations faster than this rev/sec value are smoothed out.
-		The higher, the more responsive is the crank,
-		The lower, the smoother but slower reacting is the crank. Starting and stopping the crank always has fast response.
-		Reasonable values seem to be from 0.6 to 1.6. Use 999 to disable.
+	<label for="filter_window_len">
+		Window size for moving average of crank revolutions/sec filter. Values: 4 to 8, zero to disable filter:
 	</label>
-	<input id="crank_lowpass_cutoff" type="text" size="4" oninput="markField('crank_lowpass_cutoff')" />revolutions per second.
+	<input id="filter_window_len" type="text" size="2" oninput="markField('filter_window_len')">
 	<br>
-	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier:</label>
-	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
-	<br>
+
 	<label for="tuning_cents">When tuning a pipe, if the frequency is off more than this quantity of cents, show result in red.</label>
 	<input id="tuning_cents" type="text" size="4" oninput="markField('tuning_cents')">
 	<br>
@@ -189,7 +192,6 @@
 	<br>
 
 
-	i2c_frequency
 	<label for="i2c_frequency_khz">I2C bus frequency in kHz. MicroPyton SoftI2C is used, so values between 10 and 800 kHz may work. No decimals, integer only:</label>
 	<input id="i2c_frequency_khz" name="i2c_frequency_khz" type="text" size="6"
 		oninput="markField('i2c_frequency_khz')" />
@@ -226,6 +228,16 @@
 	<input id="rc_moving_time" name="rc_moving_time" type="text" size="4" oninput="markField('rc_moving_time')" />
 	<br>
 	
+	<label for="rc_min_pulse">
+		Pulse width for RC servo, in microseconds.
+		Typical values are 1000 and 2000, or 600 and 2400.
+		Check the specs of your RC servo.
+		No decimals, integer only. Minimum: 
+	</label>
+	<input id="rc_min_pulse" name="rc_min_pulse" type="text" size="4" oninput="markField('rc_min_pulse')" />
+	<label for="rc_max_pulse">Maximum:</label>
+	<input id="rc_max_pulse" name="rc_max_pulse" type="text" size="4" oninput="markField('rc_max_pulse')" />
+	<br>
 	
 	<input id="rc_pwm_auto_off" name="rc_pwm_auto_off" type="checkbox" oninput="markField('rc_pwm_auto_off')" />
 	<label for="rc_pwm_auto_off">Turn PWM pulse train off to conserve energy when the RC servo movement has stopped and the note is off.</label>
@@ -250,11 +262,7 @@
 
 	<div class="middlediv">Debug/test settings</div>
 
-	<input id="webserver_cache" name="webserver_cache" type="checkbox" oninput="markField('webserver_cache')" />
-	<label for="webserver_cache">Cache pages in browser. Uncheck only for debugging as not caching pages is slow and
-		slows down the microcontroller unnecessarily</label>
 
-	<br>
 	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds
 		seems appropriate. No decimals, integer only:</label> 
 	<input id="max_age" name="max_age" type="text" size="6" oninput="markField('max_age')" />
@@ -273,6 +281,18 @@
 	oninput="markField('log_debug')">
 	<label for="log_debug">Log debug messages to error.log on flash. Not checked: Normal setting, stores error and info messages. Checked: adds debugging messages (this is slow).</label>
 	<br>
+
+	
+	<input type="checkbox" name="dump_tacho_data" id="dump_tacho_data" value="dump_tacho_data"
+	oninput="markField('dump_tacho_data')">
+	<label for="dump_tacho_data">Dump crank (tachometer) data to flash.</label>
+	<br>
+
+	<input type="checkbox" name="debug_tacho" id="debug_tacho" value="debug_tacho"
+	oninput="markField('debug_tacho')">
+	<label for="debug_tacho">Debug mode for crank sensor. Generates some signals to test crank graph and filter.</label>
+	<br>
+
 	<button type="button" onclick="save()">Save changes</button>
 
 

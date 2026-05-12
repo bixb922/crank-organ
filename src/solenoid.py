@@ -3,15 +3,15 @@
 # Solenoid note on/note off, hides difference between GPIO and MCP23027
 # Uses MIDIdict to search efficently for the pin function given a MIDI Note
 
-import machine
+from machine import Pin, SoftI2C
 import asyncio
 from time import sleep_ms
-import minilog
+from minilog import getLogger
 from drehorgel import led
 from midi import DRUM_PROGRAM
 from driver_base import RCServoPin, BasePin, SolePin
 
-_logger = minilog.getLogger(__name__)
+_logger = getLogger(__name__)
 
 
 class ActuatorBank:
@@ -118,12 +118,12 @@ class PinTest:
     def _basicTestGPIO(cls, gpio_pin):
         # Test if a GPIO pin has some kind of load
         # i.e. something connected
-        gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_UP)
+        gp = Pin(gpio_pin, Pin.IN, Pin.PULL_UP)
         with_pull_up = gp.value()
-        gp = machine.Pin(gpio_pin, machine.Pin.IN, machine.Pin.PULL_DOWN)
+        gp = Pin(gpio_pin, Pin.IN, Pin.PULL_DOWN)
         with_pull_down = gp.value()
         # "None" is necessary to revert to "no pull up/down"
-        gp = machine.Pin(gpio_pin, machine.Pin.IN, None)
+        gp = Pin(gpio_pin, Pin.IN, None)
         n = with_pull_up * 2 + with_pull_down
         # DEV = 00 = something pulls down for all cases. Might be a ULN2803 or
         # some other device.
@@ -197,10 +197,10 @@ class PinTest:
             actuator = actuator_bank.get_pin_by_repr(pin_repr) 
         except KeyError:
              return f"Pin not found: {pin_repr}"
-
+        from drehorgel import config
         try:
             # Non RC Servo pins will ignore this call
-            actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]))
+            actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]) )
         except (KeyError, AttributeError):
             # No pulse0/pulse1 info in pininfo, ignore.
             # Or actuator does not support set_servopulse, ignore.
@@ -233,6 +233,6 @@ class PinTest:
         _logger.debug(f"Scan I2C {sda=} {scl}")
         if not cls.testI2Cconnected(sda, scl):
             return "I2C not connected or no pull up resistors.)"
-        i2c = machine.SoftI2C( sda=machine.Pin(sda), scl=machine.Pin(scl)  )
+        i2c = SoftI2C( sda=Pin(sda), scl=Pin(scl)  )
         # return a list of hex addresses, example: "0x20, 0x21, 0x22"
         return ", ".join( f"0x{addr:02x}" for addr in i2c.scan() )

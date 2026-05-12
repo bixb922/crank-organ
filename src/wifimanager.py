@@ -22,12 +22,12 @@ import blemcs
 
 # 15 seconds waiting for this device in station mode to connect to an AP
 # After this time, the device will try with the other AP
-_STATION_WAIT_FOR_CONNECT = 15_000
+_STATION_WAIT_FOR_CONNECT = const(15_000)
 
 # WiFi error status codes. This allows to show the error
 # name for WiFi errors (such as "STAT_WRONG_PASSWORD") instead
 # of error codes (such as 202).
-STATUS_CODE_DICT = { getattr(network, errcode): errcode for errcode in dir(network) if errcode.startswith("STAT_")}
+_STATUS_CODE_DICT = { getattr(network, errcode): errcode for errcode in dir(network) if errcode.startswith("STAT_")}
 
 
 
@@ -201,7 +201,7 @@ class WiFiManager:
                 return
             # Problems? Get the status and log it
             status = self.sta_if.status()
-            self.sta_if_status = access_point + " " + str(status) + " " + STATUS_CODE_DICT.get( status, "" )
+            self.sta_if_status = access_point + " " + str(status) + " " + _STATUS_CODE_DICT.get( status, "" )
             await self.loginfo(
                 f"Status for {self.sta_if_status}, could not connect to {access_point}"
             )

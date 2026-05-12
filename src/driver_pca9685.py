@@ -9,6 +9,7 @@ from driver_base import RCServoPin, BaseDriver
 # one instance for each PCA chip i.e. one instance for 16 outputs
 class PCA9685Driver(BaseDriver):
     def __init__(self, i2c, i2c_number, address, period_us):
+        # period_us is the same for all pins of a PCA9685.
         super().__init__(  i2c_number, address )
 
         self.i2c = i2c

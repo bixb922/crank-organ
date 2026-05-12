@@ -13,6 +13,7 @@ from driver_base import SolePin, BaseDriver
 class MIDISerialDriver(BaseDriver):
 
     def __init__( self, uart_number, txpin, channel, rxpin ):
+        self.txpin = txpin
         super().__init__( txpin )
         # "pin" is the GPIO tx pin to use for MIDI output.
         # "uart_number" is the UART number to use, 1 or 2.

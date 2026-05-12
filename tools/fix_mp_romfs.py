@@ -115,7 +115,7 @@ def fix_mpconfigboard():
     remove_module( "espnow" ) # remove espnow.py too
     add_define( "MICROPY_PY_HEAPQ", 0 )
     add_define( "MICROPY_PY_FRAMEBUF", 0)
-    # >>> Still can  remove: requests, webrepl, onewire, thread, 
+    # >>> Still can remove: requests, webrepl, onewire, thread, 
     # See https://github.com/orgs/micropython/discussions/12303 for repl, webrepl
     # #define MICROPY_ENABLE_COMPILER (0)
     # will disable repl and make more difficult to inject code.

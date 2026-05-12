@@ -208,6 +208,11 @@ function createArray(N, step){
 } ;
 
 async function crankGraph(){
+	function horizontalLine( chart, datasetNumber, value, length ){
+		let lineData = Array( length );
+		lineData.fill( value ) ;
+		chart.data.datasets[datasetNumber].data = lineData ;
+	}
 	showHideElement("crankGraphButton", false);
 	showHideElement("description_span", false);	
 	showHideElement("wifi_span", false);
@@ -237,33 +242,83 @@ async function crankGraph(){
 	// Define graphs, no data
 	const rpsChartCanvas = document.getElementById("rpsChart");
 	let rpsChart = new Chart(rpsChartCanvas, {
-		type: 'bar',
+		type: 'line',
 		data: {
 		labels: [],
 		datasets: [
 			{
+				label: 'filtered rev/s',
+				data: [],
+				borderWidth: 3,
+				borderColor: '#428B26',
+				backgroundColor: 'white',
+				pointRadius: 2,
+				order:1,
+				cubicInterpolationMode: 'monotone', 
+      			tension: 0.4
+			},
+			{
+				label: 'raw rev/s',
+				data: [],
+				borderWidth: 3,
+				borderColor: '#9B5B26',
+				backgroundColor: 'white',
+				pointRadius: 2,
+				order:1,
+				cubicInterpolationMode: 'monotone', 
+      			tension: 0.4
+			},
+			{
 				label:"normal",
 				type:"line",
 				data: [],
-				borderWidth: 1,
+				borderWidth: 2,
 				borderColor: '#425B26',
-				backgroundColor: '#D0D86B',
-				pointRadius: 1,
+				backgroundColor: 'white',
+				pointRadius: 0,
 			},
 			{
-				label: 'rev/s',
+				label:"higher threshold",
+				type:"line",
 				data: [],
-				borderWidth: 1,
-				borderColor: '#425B26',
-				backgroundColor: '#5090E0'
-			}
+				borderWidth: 2,
+				borderColor: '#41A026',
+				backgroundColor: 'white',
+				pointRadius: 0,
+			},
+			{
+				label:"lower threshold",
+				type:"line",
+				data: [],
+				borderWidth: 2,
+				borderColor: '#B08026',
+				backgroundColor: 'white',
+				pointRadius: 0,
+			},
+
+			{
+				label:"stopped",
+				type:"line",
+				data: [],
+				borderWidth: 2,
+				borderColor: '#E04226',
+				backgroundColor: 'white',
+				pointRadius: 0,
+			},
+
 		]
 		},
 		options: {
 			aspectRatio: 1.2,// width/height
 			animation: false,
 			scales:{
-				y:{min:0, max:2.5}
+				x:{type:'linear'},
+				y:{min:0, max:2}
+			},
+			elements: {
+				point:{
+					radius: 0
+				}
 			}
 		}
 		}
@@ -272,13 +327,17 @@ async function crankGraph(){
 
 	for(;;){
 		await sleep_ms(100);
-	
 		let tdata = await fetch_json( "/tacho_irq_report") ;
+		let dataLength = tdata["rpsecList"].length;
+
 		rpsChart.data.labels = tdata["timesList"];
-		rpsChart.data.datasets[1].data = tdata["rpsecList"];
-		let rpsn = Array( tdata["rpsecList"].length );
-		rpsn.fill( tdata["normal_rpsec"]) ;
-		rpsChart.data.datasets[0].data = rpsn ;
+		rpsChart.data.datasets[0].data = tdata["rpsecList"];
+		rpsChart.data.datasets[1].data = tdata["rawList"];
+
+		horizontalLine( rpsChart, 2, tdata["normal_rpsec"], dataLength );
+		horizontalLine( rpsChart, 3, tdata["higher_threshold_rpsec"], dataLength );
+		horizontalLine( rpsChart, 4, tdata["lower_threshold_rpsec"], dataLength );
+		horizontalLine( rpsChart, 5, tdata["stopped_rpsec"], dataLength );
 		rpsChart.update();
 
 	}

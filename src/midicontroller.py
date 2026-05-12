@@ -26,6 +26,8 @@ class Register:
             raise ValueError
         # First gpio defined for a register is the valid one
         if gpio_number:
+            # If gpio_number is invalid, pinout.py will trap 
+            # the exception and skip the register definition
             register_gpio = Pin( gpio_number, Pin.IN, Pin.PULL_UP )
             self.register_task = asyncio.create_task( self._register_process( register_gpio ))
         # If no gpio_number supplied, don't change anything.

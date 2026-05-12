@@ -277,13 +277,14 @@ async function getPinoutDetail( ) {
             row.cells[3].colSpan = 3;
         }
         else if( pdtype == "tempo" ){
-            insertFormRow( tbody,`row_${f}_tempo`, [
-                "Tempo encoder knob pins A and B",
-                makeInput( `tempo_a.${f}`, 3, pd[1] ),
-                makeInput( `tempo_b.${f}`, 3, pd[2] ),
-                "Switch",
-                makeInput( `tempo_s.${f}`, 3, pd[3] ),
-            ] );
+            // >>> deprecated. If file is saved, "tempo" will disappear.
+            // insertFormRow( tbody,`row_${f}_tempo`, [
+            //     "Tempo encoder knob pins A and B",
+            //     makeInput( `tempo_a.${f}`, 3, pd[1] ),
+            //     makeInput( `tempo_b.${f}`, 3, pd[2] ),
+            //     "Switch",
+            //     makeInput( `tempo_s.${f}`, 3, pd[3] ),
+            // ] );
         }
         else if( pdtype == "register"){  
             insertFormRow( tbody,`row_${f}_register`, [
@@ -527,13 +528,14 @@ async function savePinoutDetail(){
         else if( pdtype == "tachometer"){
             let v1 = document.getElementById( `tachometer_counter.${f}`).value ;
             let v2 = document.getElementById( `tachometer_encoder.${f}`).value ;
-            newpd.push( [pdtype, v1, v2] );
+            newpd.push( [pdtype, valnum(v1), valnum(v2)] );
         }
         else if( pdtype == "tempo"){
-            let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
-            let tempo_b = document.getElementById( `tempo_b.${f}`).value ;
-            let tempo_s  = document.getElementById( `tempo_s.${f}`).value ;
-            newpd.push( [pdtype, tempo_a, tempo_b, tempo_s ]);
+            // >>> deprecated.
+            //let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
+            //let tempo_b = document.getElementById( `tempo_b.${f}`).value ;
+            //let tempo_s  = document.getElementById( `tempo_s.${f}`).value ;
+            //newpd.push( [pdtype, valnum(tempo_a), valnum(tempo_b), valnum(tempo_s) ]);
         }
         else if( pdtype == "register" ){
             let pin = document.getElementById( `${pdtype}.${f}`).value ;
@@ -583,9 +585,9 @@ async function savePinoutDetail(){
             newpd.push( ["gpioservo", valnum( period )]);
         }
         else if( pdtype == "servopulse"){
-            let pulse0 = parseInt(document.getElementById( `servopulse.pulse0.${f}` ).value );
-            let pulse1diff = parseInt(document.getElementById( `servopulse.pulse1diff.${f}` ).value) ;
-            newpd.push( ["servopulse", pulse0, pulse0+pulse1diff ]);
+            let pulse0 = document.getElementById( `servopulse.pulse0.${f}` ).value ;
+            let pulse1diff = document.getElementById( `servopulse.pulse1diff.${f}` ).value ;
+            newpd.push( ["servopulse", valnum(pulse0), valnum(pulse0)+valnum(pulse1diff) ]);
         }
         else if ( pdtype == "pca9685"){
             let addr = document.getElementById( `pca9685.address.${f}` ).value ;           
@@ -622,6 +624,8 @@ function getRadioButtonValue( element_name ) {
 }
 
 function valnum( s ){
+    // >>> PULSE1DIFF can be negative!!!!
+    // >>> test all calls of valnum
     if( isNaN( s )) {
         alert("Value is not numeric: " + s );
         throw new Error("Value must be numeric") ;
@@ -637,30 +641,60 @@ function valnum( s ){
     return parseInt( s );
 }
 
+function valnum( s ){
+    if( isNaN( s )) {
+        alert("Value is not numeric: " + s );
+        throw new Error("Value must be numeric") ;
+        return ;
+    }
+    if( s < 0 ){
+        alert("Value is <= 0: " + s ); 
+        throw new Error("Value must be positive") ;
+    }
+    if( s == ""){
+        return "";
+    }
+    return parseInt( s );
+}
+
+
 async function testPin( pininfo, updown ){
     // updown == "": normal test button
     // updown == "up": up button, increment RC servo position 0 and move to new "off" position
     // updown == "down": same as up but move "off" position a bit down
     // Update pininfo with values from the form
+    let config = await configCache.get();
+    let rc_min_pulse = config["rc_min_pulse"];
+    let rc_max_pulse = config["rc_max_pulse"];
     if( pininfo.type == "gpioservo" || pininfo.type == "pca9685"){
         for( let r = pininfo.f; r >= 0; r-- ){
             // Only rescue servo pulse width
-            let pulse0 = document.getElementById( `servopulse.pulse0.${r}` );
-            if( !pulse0 ){
+            let pulse0element = document.getElementById( `servopulse.pulse0.${r}` );
+            let pulse1diff_element = document.getElementById( `servopulse.pulse1diff.${r}` );
+            if( !pulse0element || !pulse1diff_element ){
+                // No servopulse defined for this midi definition?
                 continue;
             }
+            let pulse0 = parseInt( pulse0element.value );
+            let pulse1diff = parseInt(pulse1diff_element.value);
+            let upperLimit = rc_max_pulse ;
+            if( pulse1diff > 0 ) {
+                upperLimit -= pulse1diff;
+            }
+            let lowerLimit = rc_min_pulse ;
+            if( pulse1diff < 0 ) {
+                lowerLimit -= pulse1diff;
+            }
             if( updown == "up" ){
-                pulse0.value = Math.min( parseInt( pulse0.value ) + 10, 2000 ) ;
-                markField( pulse0.id );
+                pulse0element.value = Math.min( pulse0 + 10, upperLimit) ;
+                markField( pulse0element.id );
             }
             else if( updown == "down"){
-                pulse0.value = Math.max( parseInt( pulse0.value ) - 10, 1000 );
-                markField( pulse0.id );
+                pulse0element.value =  Math.max( pulse0 - 10, lowerLimit );
+                markField( pulse0element.id );
             }
-            let pulse1diff = document.getElementById( `servopulse.pulse1diff.${r}` );
-            pininfo.pulse0 = parseInt(pulse0.value) ;
-            pininfo.pulse1 = parseInt(pulse0.value) + parseInt(pulse1diff.value) ;
-            console.log("pulse0.value=", pulse0.value, "pusle2diff.value=", pulse1diff.value, "pininfo.pulse0=", pininfo.pulse0, "pininfo.pulse1=", pininfo.pulse1);
+            pininfo.pulse0 = pulse0 ;
+            pininfo.pulse1 = pulse0 + pulse1diff;
             break;
         }
     }

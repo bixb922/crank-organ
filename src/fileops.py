@@ -10,7 +10,7 @@ import time
 from deflate import DeflateIO, AUTO
 import scheduler
 
-KEEP_OLD_VERSIONS = const(2)
+_KEEP_OLD_VERSIONS = const(2)
 
 def backup(filename):
     # organtuner: for each note tuned
@@ -61,7 +61,6 @@ def read_json(filename, default=None, recreate=False):
             f = find_latest_backup(filename)
             with open(f) as file:
                 j = json.load(file)
-                # >>> make this an error message?
                 print(f"fileops.read_json using backup file {f}")
                 return j
         except (OSError, ValueError):
@@ -83,7 +82,7 @@ async def delete_old_versions(filename):
     # Request time slice and wait indefinitely for it.
     async with scheduler.RequestSlice("backup", 500):
         matched_files = get_all_backup_files(filename)
-        while len(matched_files) > KEEP_OLD_VERSIONS:
+        while len(matched_files) > _KEEP_OLD_VERSIONS:
             await asyncio.sleep_ms(1)
             delete_file = matched_files.pop(0)
             os.remove(delete_file)

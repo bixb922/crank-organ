@@ -194,7 +194,7 @@ def _formatLogGenerator(filename):
     # Generator function to yield log lines
     def log_generator():
         # Format log as HTML
-        # >>> could be done better in browser
+        # >>> could be done in browser
         color = { "DEBUG": "logdeb", "ERROR": "logerr", "EXCEPTION": "logexc" }
         with open(filename) as file:
             yield "<!DOCTYPE html><head>"

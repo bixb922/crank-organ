@@ -311,10 +311,12 @@ class RCServoPin(BasePin):
         BasePin._battery_consumption += 2 * RCServoPin.config_rc_moving_time
 
     def set_servopulse( self, pulse0_us, pulse1_us ):
+        from drehorgel import config
         # To be completed by the subclass. Servo pulse width is in microseconds
         # and can is set individually for each RC servo pin.
-        if not( 1000 <= pulse0_us <= 2000 and 1000 <= pulse1_us <= 2000 ):
-            raise ValueError("Pulse width must be between 1000 and 2000")
+        if not( config.rc_min_pulse <= pulse0_us <= config.rc_max_pulse and 
+                config.rc_min_pulse <= pulse1_us <= config.rc_max_pulse ):
+            raise ValueError(f"Pulse width must be between {config.rc_min_pulse} and {config.rc_max_pulse}")
 
     def _actuator_change( self, new_value ):
         # Limit the maximum of moving servos (both turning on and off)
@@ -346,3 +348,21 @@ class RCServoPin(BasePin):
         # Using pin.off() will enable check _actuator_change again after this delay.
         # That means that a note_off could be delayed several times.
         self.off()
+
+# Exception processing pinout file for line ['midi', 7, '', 79, '17 G violin G5', ''] Pulse width must be between 1000 and 2000
+# Traceback (most recent call last):
+#   File "main.py", line 41, in <module>
+#   File "asyncio/core.py", line 1, in run
+#   File "asyncio/core.py", line 1, in run_until_complete
+#   File "asyncio/core.py", line 1, in run_until_complete
+#   File "crank-organ/src/startup.py", line 204, in start
+#   File "crank-organ/src/drehorgel.py", line 74, in init
+#   File "crank-organ/src/pinout.py", line 674, in __init__
+#   File "crank-organ/src/pinout.py", line 103, in __init__
+#   File "crank-organ/src/pinout.py", line 180, in parse
+#   File "crank-organ/src/pinout.py", line 170, in <lambda>
+#   File "crank-organ/src/pinout.py", line 772, in define_midi
+#   File "crank-organ/src/driver_pca9685.py", line 72, in set_servopulse
+#   File "crank-organ/src/driver_base.py", line 317, in set_servopulse
+# ValueError: Pulse width must be between 1000 and 2000
+

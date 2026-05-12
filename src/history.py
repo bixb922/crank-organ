@@ -3,13 +3,14 @@
 import time, asyncio
 
 from drehorgel import timezone, config
-import minilog, fileops, scheduler
+import fileops, scheduler
+from minilog import getLogger
 
 _SECONDS_PER_DAY = const(24*3600)
 
 class HistoryManager:
     def __init__(self):
-        self.logger = minilog.getLogger(__name__)
+        self.logger = getLogger(__name__)
         self.logger.debug("init ok")
         # Creating the history early on allows browser to
         # read data/history.json directly.

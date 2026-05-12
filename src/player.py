@@ -17,9 +17,9 @@ from midi import DRUM_PROGRAM, DRUM_CHANNEL, NoteDef
 from fileops import open_midi
 from actuatorstats import ActuatorStats
 
-CANCELLED = const("cancelled") 
-ENDED = const("ended")
-PLAYING = const("playing")
+_CANCELLED = const("cancelled") 
+_ENDED = const("ended")
+_PLAYING = const("playing")
 
 class MIDIPlayerProgress:
     def __init__(self):
@@ -27,13 +27,13 @@ class MIDIPlayerProgress:
         self.progress = {"tune": None, "playtime": 0, "status": ""}
 
     def tune_started(self, tuneid):
-        self.progress = {"tune": tuneid, "playtime": 0, "status": PLAYING}
+        self.progress = {"tune": tuneid, "playtime": 0, "status": _PLAYING}
 
     def tune_ended(self):
-        self.progress["status"] = ENDED
+        self.progress["status"] = _ENDED
 
     def tune_cancelled(self):
-        self.progress = {"tune": None, "playtime": 0, "status": CANCELLED}
+        self.progress = {"tune": None, "playtime": 0, "status": _CANCELLED}
 
     def report_exception(self, message):
         self.progress["status"] = message
@@ -57,7 +57,10 @@ class MIDIPlayer:
         # Default startup value for tempo follows crank, can ge changed
         # from play.html page. Can be changed with UI. Will
         # reset after each tune
-        self.set_tempo_follows_crank( config.tempo_follows_crank )
+        # Put some initial values here, will be replaced before waiting for a tune
+        self.tempo_follows_crank = config.tempo_follows_crank
+        self.started_by_crank = crank.is_installed()
+        
         self.current_note = NoteDef( 0, 0 )
         self.repeats = 0
         
@@ -151,6 +154,8 @@ class MIDIPlayer:
                                 start_time,
                                 self.time_played_us + duration*1000*(self.repeats-1), 
                                 duration )
+            #>>>self.set_tempo_follows_crank( config.tempo_follows_crank )
+
             # scheduler.fdump() # for debug 
             
     def _insert_history(self, tuneid, start_time, time_played_us, duration ):
@@ -175,7 +180,8 @@ class MIDIPlayer:
     
 
     async def _play(self, midifile, delay_start=50_000 ):
-        
+        print(f">>>player._play: {config.tempo_follows_crank=} {self.tempo_follows_crank=} {self.started_by_crank=}")
+
         self._reset_channelmap1()
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
         # Leave some time to process possible events previous
@@ -342,52 +348,53 @@ class MIDIPlayer:
     
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
         # Recompute delta time due to crank or UI velocity setting
-        additional_wait = 0
-        if not self.tempo_follows_crank or crank.is_turning():
+        if crank.is_turning():
+        #>>> formerly if not self.tempo_follows_crank or crank.is_turning():
             # Change playback speed with UI settings 
             # and with crank rpsec if crank sensor is enabled
             normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank)
             if normalized_vel < 0.1:
                 # Avoid division by zero.
                 # Also a very slow speed is meaningless here, 
-                # crank should inform that it has stopped...?
+                # crank should have signaled that it has stopped...
                 normalized_vel = 1
-            additional_wait = round(midi_event_delta_us / normalized_vel)
+            return round(midi_event_delta_us / normalized_vel)
 
-
-        # We get here if the crank is not turning and tempo_follows_crank is enabled.
         # Wait for the crank to start turning again and return the waiting time
         # to be added to the MIDI time delaying the rest of the tune.
-        if not crank.is_turning() and crank.is_installed():
+        if self.started_by_crank and not crank.is_turning(): # >>> TEST!!!!
+        # >>>Formerly if self.tempo_follows_crank and not crank.is_turning():
             # Let async tasks run freely while waiting
+            start_wait = ticks_us()
             scheduler.run_always()
-            # And wait for the crank to turn
+            self.logger.debug("waiting for crank to turn")
+            # Don't let a note on during wait, it may
+            # be realistical but it's not nice
+            controller.all_notes_off()
+            # Wait for the crank to start turning
+            await crank.wait_start_turning()
 
-            additional_wait += await self._wait_for_crank_to_turn()
-            # Resume scheduler, don't add a wait here
+            # Now the crank is turning again. Resume scheduler
             await scheduler.wait_and_yield_usec(1)
-            ActuatorStats.count("crank stop")
-
-        return additional_wait
     
-    async def _wait_for_crank_to_turn( self ):
-         # Turning too slow or stopped, wait until crank turning
-        # and return the waiting time. MIDI time is then delayed
-        # by the same amount than the time waiting for the crank to turn
-        # again, so playing can resume without a hitch.
-        self.logger.debug("waiting for crank to turn")
-        start_wait = ticks_us()
-        # Don't let a note on during wait, it may
-        # be realistical but it's not nice
-        controller.all_notes_off()
-        # Wait for the crank to start turning
-        await crank.wait_start_turning()
-        
-        # Lengthen MIDI time by the wait
+            ActuatorStats.count("crank stop")
+        # Lengthen MIDI time by wait time
         return ticks_diff(ticks_us(), start_wait)
+    
 
     def set_tempo_follows_crank( self, v ):
         # Store setting
         # If crank not installed, don't follow crank....
+        # Depends on:
+        #   Configuration option
+        #   Tempo follows crank check box on performance page
+        #   If started by crank
+        #   
         self.tempo_follows_crank = v and crank.is_installed()
-
+        print(f">>>player: set_tempo_follows crank: argument={v} {self.tempo_follows_crank=} {crank.is_installed()=}")
+    
+    def set_started_by_crank( self, v ):
+        # False if crank not installed
+        # False if started by touchpad or web start button
+        # True if crank installed and started by crank turning
+        self.started_by_crank = v  and crank.is_installed()

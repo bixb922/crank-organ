@@ -5,12 +5,15 @@
 # hog flash memory.
 
 # Usage:
-#   import minilog
-#   logger = minilog.getLogger( __name __ )
-#   logger.debug("debug message")
+#   from minilog import getLogger
+#   logger = getLogger( __name __ )
+#   logger.debug("debugging message")
 #   logger.info("informational message")
-#   logger.exc( exception, "exception message")
-    
+#   logger.exc( exception, "message")
+# For occasional usage:
+#   from minilog import getLogger
+#   getLogger.log_exc( __name__, exception, "message" )
+
 # Default mode is: debug messages to console, info messages to flash.
 from micropython import const
 import sys, io, os, re
@@ -117,6 +120,7 @@ class getLogger:
         
     @classmethod
     def _write(cls, s):
+        cls._class_init() # initialize if not done already.
         cls._file.write(s)
         cls._file.flush()
         if cls._file.tell() < _MAX_LOGFILE_SIZE:
@@ -138,9 +142,9 @@ class getLogger:
 
         if level == "ERROR" or level == "EXCEPTION":
             cls._error_count += 1
-
+   
     @classmethod
-    def _exception(cls, module, message, exception):
+    def log_exc(cls, module, exception, message ):
         # Count exceptions as errors
         cls._error_count += 1
 
@@ -162,16 +166,15 @@ class getLogger:
     # ============================
     # Instance methods
     def __init__(self, module ):
-        # initialize class, if not already initalized.
-        getLogger._class_init()
         self.module = module
 
     # For all methods here, call corresponding class method.
     def get_current_log_filename(self):
         return self._makefilename( self._current_log_num )
 
-    def get_error_count(self):
-        return self._error_count
+    @classmethod
+    def get_error_count(cls):
+        return cls._error_count
 
     def debug(self, message):
         self.log(self.module, "DEBUG", message)
@@ -183,4 +186,4 @@ class getLogger:
         self.log(self.module, "ERROR", message)
 
     def exc(self, exception, message):
-        self._exception(self.module, message, exception)
+        self.log_exc(self.module, exception, message )

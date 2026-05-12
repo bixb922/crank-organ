@@ -329,7 +329,7 @@ async def note_page(request, pin_index):
     return await static_files( request, "note.html" )
 
 @app.route("/tune_all")
-async def start_tune_all(request):
+async def start_tune_all_notes(request):
     # All tuning requests (except clear_tuning)
     # just queue the operation and respond, so
     # it's not of interest to return organtuner.json
@@ -480,7 +480,7 @@ async def diag(request):
     except:
         d["mcserver"] = ""
 
-    _logger.info(f"diag: {used_flash=:_} {free_flash=:_}  {used_ram=:_} {free_ram=:_} {gc_collect_time=} max gc={scheduler.max_gc_time} º{midi_files=}")
+    _logger.info(f"diag: {used_flash=:_} {free_flash=:_}  {used_ram=:_} {free_ram=:_} {gc_collect_time=} max gc={scheduler.max_gc_time} {midi_files=}")
     return d
 
 
@@ -540,7 +540,7 @@ def tacho_irq_report(request):
 @app.route("/tacho_raw_value")
 def tacho_raw_value(request):
     setlist.stop_playback()
-    # >>> is done with saved pin, not latest value
+    # >>> test is done with saved pin, not latest value
     return {"value": crank.td.raw_value() }
 
 @app.route("/top_setlist/<tuneid>")
@@ -595,7 +595,7 @@ async def get_pinout_filename(request):
 
 @app.route("/get_used_pins/<path>")
 async def get_used_pins( request, path ):
-    return GPIOstatistics(decodePath(path)).get_used_pins()
+    return GPIOstatistics(decodePath(path), False).get_used_pins()
 
 @app.route("/get_index_page_info")
 async def get_index_page_info(request):
@@ -628,7 +628,8 @@ async def save_pinout_detail(request, path):
     output_filename = decodePath(path)
     try:
         # SaveNewPinout class will validate and do a init of pint
-        SaveNewPinout(request.json, output_filename)
+        # Raise error if pinout is not valid
+        SaveNewPinout(output_filename, request.json, True)
         _logger.debug("save_pinout_detail pinout.save complete")
         return respond_ok()
     except RuntimeError as e:
@@ -781,9 +782,9 @@ async def list_by_midi_note( request, path ):
     from pinout import ActuatorDef
 
     # Parse the pinout.json here, don't disturb what is already
-    # loaded. The result of parsing here is lost when exiting
+    # loaded. The result of parsing here is deleted when exiting
     # list_midi_note.
-    actuator_def = ActuatorDef(filename, RegisterBank()) # It's not necessare to store actuator_def
+    actuator_def = ActuatorDef( RegisterBank(), filename, False) 
     controller = actuator_def.get_controller()
     notedef = []
     for action in controller.get_notedict().values():
@@ -969,8 +970,6 @@ async def run_webserver():
 
     # Configure file cache for browser
     # MAX_AGE is applied selectively
-    if not config.webserver_cache:
-        MAX_AGE = 0
     _logger.debug(f"{MAX_AGE=:,} sec {STATIC_FOLDERS=}")
     await app.start_server(host="0.0.0.0", port=80 )
 

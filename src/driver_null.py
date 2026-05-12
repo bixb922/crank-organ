@@ -8,7 +8,7 @@
 
 from driver_base import BasePin, BaseDriver
 
-null_pin_serial = 0
+NULL_PIN_SERIAL = 0
 
 class NullDriver(BaseDriver):
 
@@ -18,10 +18,10 @@ class NullDriver(BaseDriver):
 
 class NullPin(BasePin):
     def __init__( self, *args ):
-        global null_pin_serial
+        global NULL_PIN_SERIAL
         super().__init__( *args )
-        self._pin = null_pin_serial
-        null_pin_serial += 1
+        self._pin = NULL_PIN_SERIAL
+        NULL_PIN_SERIAL += 1
 
 
     def on( self ):

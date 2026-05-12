@@ -17,10 +17,10 @@ def del_key(key, dictionary):
     if key in dictionary:
         del dictionary[key]
 
-CURRENT_SETLIST = const(0)
-STORED_SETLIST = const(1) 
+_CURRENT_SETLIST = const(0)
+_STORED_SETLIST = const(1) 
 
-MAX_SETLIST_SLOTS = const(10)
+_MAX_SETLIST_SLOTS = const(10)
 
 class Setlist:
     def __init__(self):
@@ -38,10 +38,12 @@ class Setlist:
         
         self.music_start_event = asyncio.Event()
         crank.register_start_crank_event(self.music_start_event)
+
         # TouchButton acts correctly if gpio.touchpad_pin is not defined
         touch_button = touchpad.TouchButton(gpio.touchpad_pin)
-        touch_button.register_up_event( self.music_start_event )
+        touch_button.register_up_callback( self.start_tune )
 
+        # Touch while playing cancels tune
         # Dictionary of tune requests: key=tuneid, data=spectator name
         # Not in use.
         # self.tune_requests = {}
@@ -56,7 +58,7 @@ class Setlist:
 
         # blink_empty_task: blink if setlist is empty
         self.blink_empty_task = asyncio.create_task( self._blink_empty() )
-        # next_tune_task: touchpad+crank stopped=>next tune
+        # next_tune_task: if touchpad AND crank has stopped then move to next tune
         self.next_tune_task = asyncio.create_task( self._next_tune_process(touch_button) )
         # Handle of the player currently playing a tune.
         # If None, no tune is playing
@@ -66,11 +68,15 @@ class Setlist:
 
     # Functions related to the different ways to start a tune
     def start_tune(self):
-        # Called by webserver if start button on performance page is pressed
-        self.music_start_event.set()
         # Reset "tempo follows crank" if started by web button
+        # or by touchpad
         # Perhaps the crank isn't working? This is safer!
+        # "Crank starts to turn" does not call start_tune.
+        # Don't follow crank for this tune only. Gets reset
+        # to configured value by player for the next tune.
         player.set_tempo_follows_crank(False)
+        player.set_started_by_crank(False)
+        self.music_start_event.set()
         
     
     async def _wait_for_start( self ):
@@ -100,13 +106,21 @@ class Setlist:
                 pass
 
         # Read current setlist, if empty load setlist 1
-        self.load( CURRENT_SETLIST )
+        self.load( _CURRENT_SETLIST )
         # If empty, current setlist stays empty...
                   
         while True:
 
             # Ensure this loop will always yield
             await asyncio.sleep_ms(100)
+
+            # Assume tune will be started with crank (if installed)
+            # If started by web button or touchpad, self.start_tune() 
+            # will set "started by crank" to False.
+            # >>> needs testing
+            player.set_started_by_crank( crank.is_installed() )
+            # Can ge changed by user on performance page during self.-_wait_for_start()
+            player.set_tempo_follows_crank( config.tempo_follows_crank )
 
             # Wait for music to start (crank turns, or touch pad
             # was touched or web button or automatic playback or whatever)
@@ -234,7 +248,7 @@ class Setlist:
         # setlist 0 is written twice at start of tune?
         
         # >>> consider guarding with RequestSlice in webserver.py
-        if not( 0 <= slot < MAX_SETLIST_SLOTS):
+        if not( 0 <= slot < _MAX_SETLIST_SLOTS):
             raise ValueError
 
         # Save setlist in RAM to file
@@ -244,7 +258,7 @@ class Setlist:
         )
 
     def _save_current( self ):
-        self.save( CURRENT_SETLIST )
+        self.save( _CURRENT_SETLIST )
 
     def load(self, slot, into_current=True):
         # >>> consider guarding with RequestSlice, better in webserver.py?
@@ -377,7 +391,7 @@ class Setlist:
     # The webserver get_progress() calls this function.
     def complement_progress(self, progress):
         progress["setlist"] = self.current_setlist
-        # progress["tune_requests"] = {} # self.tune_requests # >>> can be dropped
+        # progress["tune_requests"] = {} 
         progress["automatic_delay"] = config.automatic_delay
         progress["playback_enabled"] = self.playback_enabled
         if self.waiting_for_start_tune_event:
@@ -419,7 +433,7 @@ class Setlist:
     def sync( self, tunelib ):
         # setlist.sync is not strictly necessary since javascript
         # layer checks if setlist's tuneids are in tunelib.
-        for slot in range(MAX_SETLIST_SLOTS):
+        for slot in range(_MAX_SETLIST_SLOTS):
             stored_setlist = self.load( slot, False )
             # self.load() will return [] if file does not exist
             delete = set(stored_setlist)-set(tunelib)
@@ -427,9 +441,9 @@ class Setlist:
                 del stored_setlist[stored_setlist.index(tuneid)]
             if delete:
                 self.save( slot, slist=stored_setlist )
-                if slot == CURRENT_SETLIST:
+                if slot == _CURRENT_SETLIST:
                     # And reload from stored
-                    self.load( CURRENT_SETLIST )
+                    self.load( _CURRENT_SETLIST )
 
     def stop_playback( self ):
         # Called to stop playback of music immediately until the next reboot.
@@ -456,8 +470,8 @@ class Setlist:
     
     def get_titles( self ):
         if config.multiple_setlists:
-            # returns slot 1-(MAX_SETLIST_SLOTS-1), title, number of tunes
-            # The "titles file" has MAX_SETLIST_SLOTS elements. 
+            # returns slot 1-(_MAX_SETLIST_SLOTS-1), title, number of tunes
+            # The "titles file" has _MAX_SETLIST_SLOTS elements. 
             # Element 0 is the "current setlist" and is skipped here.
             titles =  fileops.read_json( config.SETLIST_TITLES_JSON, default=["current", "","", "","","","","","",""])
             # [slot_number, title, number of tunes in setlist]
@@ -470,14 +484,14 @@ class Setlist:
     
     def save_titles( self, titles ):
         # User changed titles using browser.
-        if len(titles) != MAX_SETLIST_SLOTS:
+        if len(titles) != _MAX_SETLIST_SLOTS:
             raise ValueError
         fileops.write_json( titles, config.SETLIST_TITLES_JSON, keep_backup=False )
     
     async def _next_tune_process( self, touch_button ):
         tpevent = asyncio.Event()
-        # register_up_event supports many registered events.
-        touch_button.register_up_event( tpevent )
+        # register_up_callback supports many registered callbacks.
+        touch_button.register_up_callback( lambda: tpevent.set() )
         while True:
             while not self.player_task:
                 await asyncio.sleep_ms(200)
@@ -499,3 +513,4 @@ class Setlist:
             return tuneid
         if self.current_setlist:
             return self.current_setlist[0]
+        

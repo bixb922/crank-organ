@@ -92,45 +92,45 @@ translations.js.gz
 # and copy to device and device/update folder. 
 # device/update is used to test if file was copied to device.
 # Does NOT update: *.jpg, *.ico, *.png, /data/*
-update: compile $(addprefix device/update/, $(MPY_FILES)) $(addprefix device/update/,  $(STATIC_FILES))
+update: compile $(addprefix compiled/update/, $(MPY_FILES)) $(addprefix compiled/update/,  $(STATIC_FILES))
 
-device/update/%.mpy: device/mpy/%.mpy
+compiled/update/%.mpy: compiled/mpy/%.mpy
 	echo device update mpy: $<
 	$(MPREMOTE) cp $< :software/mpy/$(notdir $<)
-	cp $< device/update/$(notdir $<)
+	cp $< compiled/update/$(notdir $<)
 
-device/update/%.gz : device/static/%.gz
+compiled/update/%.gz : compiled/static/%.gz
 	echo device update gz: $<
 	$(MPREMOTE) cp $< :software/static/$(notdir $<)
-	cp $< device/update/$(notdir $<)
+	cp $< compiled/update/$(notdir $<)
 
 
 # Target "compile": compile py to mpy, compress html/js to gz
-# Compilation results to device/mpy
-# Compression results to device/static
-compile: $(addprefix device/mpy/, $(MPY_FILES)) $(addprefix device/static/,  $(STATIC_FILES)) compiledate
+# Compilation results to compiled/mpy
+# Compression results to compiled/static
+compile: $(addprefix compiled/mpy/, $(MPY_FILES)) $(addprefix compiled/static/,  $(STATIC_FILES)) compiledate
 
 compiledate:
 	python3 crank-organ/tools/write_compiledate.py
-	$(MPY_CROSS) -march=xtensawin crank-organ/src/compiledate.py -o device/mpy/compiledate.mpy
+	$(MPY_CROSS) -march=xtensawin crank-organ/src/compiledate.py -o compiled/mpy/compiledate.mpy
 
-device/mpy/mcserver.mpy: server/mcserver.py
+compiled/mpy/mcserver.mpy: server/mcserver.py
 	echo mpy-cross $<
 	$(MPY_CROSS) -march=xtensawin $< -o $@
 	
-device/mpy/%.mpy: crank-organ/src/%.py
+compiled/mpy/%.mpy: crank-organ/src/%.py
 	echo mpy-cross $<
 	$(MPY_CROSS) -march=xtensawin $< -o $@
 
-device/static/%.js.gz: crank-organ/static/%.js
+compiled/static/%.js.gz: crank-organ/static/%.js
 	echo gzip $<
 	gzip -9 -c -k $< > $@
 
-device/static/%.html.gz: crank-organ/static/%.html
+compiled/static/%.html.gz: crank-organ/static/%.html
 	echo gzip $<
 	gzip -9 -c -k $< > $@
 
-device/static/%.css.gz: crank-organ/static/%.css
+compiled/static/%.css.gz: crank-organ/static/%.css
 	echo gzip $<
 	gzip -9 -c -k $< > $@
 
@@ -138,8 +138,8 @@ device/static/%.css.gz: crank-organ/static/%.css
 prepare_git: romfs
 	python3 crank-organ/tools/check_translations.py
 	python3 crank-organ/tools/update-toc.py
-	-rm device/mpy/mcserver.mpy
-	-rm device/mpy/mcserver.py
+	-rm compiled/mpy/mcserver.mpy
+	-rm compiled/mpy/mcserver.py
 
 
  
@@ -157,16 +157,16 @@ cleandevice: backupdata
 
 	
 cleanpc:
-	-rm -r -f device
-	-mkdir device
-	-mkdir device/mpy
-	-mkdir device/static
-	-mkdir device/update
+	-rm -r -f compiled
+	-mkdir compiled
+	-mkdir compiled/mpy
+	-mkdir compiled/static
+	-mkdir compiled/update
 
 initpc:
-	mkdir device
-	mkdir device/mpy
-	mkdir device/static
+	mkdir compiled
+	mkdir compiled/mpy
+	mkdir compiled/static
 
 
 romfs: compile
@@ -175,9 +175,9 @@ romfs: compile
 	mkdir romfs_temp
 	mkdir romfs_temp/static
 	# use compiled/compressed files for py and static
-	cp device/mpy/* romfs_temp/
+	cp compiled/mpy/* romfs_temp/
 	-rm romfs_temp/mcserver.mpy
-	cp device/static/* romfs_temp/static/
+	cp compiled/static/* romfs_temp/static/
 	cp crank-organ/static/*.ico romfs_temp/static/
 	cp crank-organ/static/*.png romfs_temp/static/
 	cp crank-organ/static/*.jpg romfs_temp/static/

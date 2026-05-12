@@ -108,7 +108,6 @@
         return curPath;
     }
     let CURRENT_PATH = getCurrentPath();
-    let SELECTED_FILES = [];
     let UPLOAD_MODE = "currentFolder";
 
 
@@ -246,18 +245,25 @@
         return "/" + pathElements.join("/");
     }
 
+    function getSelectedFiles(){
+        let selected_files = []
+        for( let cb of document.getElementsByName("fileCheckbox")){
+            if( cb.checked ){
+                selected_files.push( cb.getAttribute("myfilepath"));
+            }
+        }
+        return selected_files;
+    }
+    function getSelectedFileCount(){
+        return getSelectedFiles().length;
+    }
 
     function selectFile(checkbox_id, path) {
         let checkbox = document.getElementById(checkbox_id);
-        if (checkbox.checked) {
-            SELECTED_FILES.push(path);
-        }
-        else {
-            SELECTED_FILES = SELECTED_FILES.filter(f => f !== path);
-        };
         let d = document.getElementById("selectedFilesSpan");
-        if (SELECTED_FILES.length > 0) {
-            d.innerText = "" + SELECTED_FILES.length + " files selected";
+        let count = getSelectedFileCount();
+        if( getSelectedFileCount() > 0 ){
+            d.innerText = "" + count + " files selected";
         }
         else {
             d.innerText = "";
@@ -267,7 +273,7 @@
 
 
     function updateButtons() {
-        if (SELECTED_FILES.length > 0) {
+        if (getSelectedFileCount() > 0) {
             document.getElementById("downloadFilesButton").classList.remove("inactive");
             document.getElementById("deleteFilesButton").classList.remove("inactive");
         }
@@ -282,10 +288,10 @@
 
 
     async function refreshFileList(path) {
-        clearSelection();
         let body = document.getElementById("fileListBody");
         body.innerHTML = "";
-
+        body.innerText = "";
+        
         // Get file list for path from server and show
         CURRENT_PATH = path;
         showPath();
@@ -332,6 +338,7 @@
                 // inside the block scope, to be created in each iteration
                 input.onchange = function () { selectFile(checkbox_id, file.path) };
                 input.name = "fileCheckbox";
+                input.setAttribute( "myfilepath", file.path );
                 let fpl = file.path.toLowerCase();
                 row.cells[0].appendChild(input);
 
@@ -425,7 +432,7 @@
         // Will not work if not authorized.
         await fetch_json("/get_permission");
         closeLogWindow();
-        for (let file of SELECTED_FILES) {
+        for (let file of getSelectedFiles()) {
             logNotification(`Starting to download ${file}`);
             downloadFile(file);
             // Pace downloads a bit... if not they are launched
@@ -438,7 +445,6 @@
     }
 
     function clearSelection() {
-        SELECTED_FILES = [];
         for (let checkbox of document.getElementsByName("fileCheckbox")) {
             checkbox.checked = false;
         };
@@ -452,10 +458,10 @@
         let body = document.getElementById("fileListBody");
         let sizeTitle = document.getElementById("thisFolderSize");
         closeLogWindow();
-        if (!confirm(`Do you want to delete ${SELECTED_FILES.length} selected file(s) from the flash on the microcontroller?`)) {
+        if (!confirm(`Do you want to delete ${getSelectedFileCount()} selected file(s) from the flash on the microcontroller?`)) {
             return;
         }
-        for (let file of SELECTED_FILES) {
+        for (let file of getSelectedFiles()) {
             try {
                 let data = await fetch_json("/delete_file", {"delete_filename": file });
                 logNotification(`File "${file}" deleted`);
@@ -625,9 +631,13 @@
         // Select files that are useful to backup
         let pinfo = await fetch_json("/get_pinout_filename");
         let pinout_filename =  pinfo["pinout_filename"].split("/")[1];
+        // >>> select all json and txt?
         let check_these = [ "pinout.txt", "config",
-            "drumdef", "history", "setlist_stored_",
+            "drumdef", "history", "setlist_stored_", 
+            "setlist_titles", 
             "tunelib", "lyrics", pinout_filename ];
+        // organtuner, timezone, battery are rebuilt when necessary
+        // error logs don't need backup. *.mid files are temporary.
         let body = document.getElementById("fileListBody");
         for( let row of body.rows ){
             let filename = row.cells[1].innerText ;
@@ -637,8 +647,9 @@
                 }
             for( let ct of check_these ){
                 if( filename.includes(ct)){
-                    // Mark checkbox
                     row.cells[0].children[0].checked = true ;
+                    let checkbox = row.cells[0].children[0]; 
+                    selectFile( checkbox.id, checkbox.getAttribute("myfilepath") );
                     continue;
                 }
             }

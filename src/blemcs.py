@@ -3,9 +3,6 @@
 
 import bluetooth
 import struct
-from micropython import const
-
-from micropython import const
 import struct
 import bluetooth
 
@@ -37,7 +34,7 @@ _MCS_UUID = bluetooth.UUID(0x1848)
 
 # Some private UUID
 # UUID order and name order must be equivalent to Javascript client
-_CHARACTERISTIC_UUIDS = [
+_CHARACTERISTIC_UUIDS = const((
     "2a7c3e29-62f9-47bf-8b00-69db8c3c88f1",
     "49f99c64-b2c8-40de-a944-ea4fd48b497a",
     "1732b3cb-c879-4157-a106-65d38cac591b",
@@ -48,9 +45,9 @@ _CHARACTERISTIC_UUIDS = [
     # For future use:
     # "cbfa8818-2956-4483-a8ca-01f138f7fe67",
     # "7e2a565b-501f-4746-a4a4-d112dbd83c75"
-]
+))
 # Same order as UUIDs
-_CHARACTERISTIC_NAMES = [ "stassid1", "stassid2", "apssid", "staip1", "staip2",  "apip", "status"]
+_CHARACTERISTIC_NAMES = const(( "stassid1", "stassid2", "apssid", "staip1", "staip2",  "apip", "status"))
 assert len(_CHARACTERISTIC_NAMES) == len(_CHARACTERISTIC_UUIDS)
 
 _SERVICE_DESCRIPTOR = (
@@ -97,7 +94,7 @@ class BLEMCS:
             nonlocal payload
             payload += struct.pack("BB", len(value) + 1, adv_type) + value
 
-        print(f"BLEMCS Advertise {name=}, service {uuid=}")
+        print(f"BLEMCS Advertise {name=}")
         payload = bytearray()
         _append(0x01, struct.pack("B", 0x06)) # Flags: General Discoverable, LE only
         _append(0x09, name[0:15].encode()) # limit length

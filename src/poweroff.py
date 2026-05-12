@@ -32,6 +32,7 @@ class PowerManager:
 
             tune = progress["tune"]
             # Any activity in the last minute?
+            # >>> add check for tunelib sync
             if (
                 playtime != last_playtime
                 or tune != last_tune

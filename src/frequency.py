@@ -1,26 +1,21 @@
 # (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
-from micropython import const
 import os
 from math import sqrt
 
 import scheduler
 import fileops
 
-SIGNAL_FOLDER = const("/signals")
-RAW_FILE_PREFIX = const("raw")
-FFT_FILE_PREFIX = const("fft")
-HIRES_FILE_PREFIX = const("hires")
 # Indicate the range around the nominal frequency to be detected
-# PLUS_MINUS_SEMITONES=3 means 3 semitones down and 3 semitones up from
+# _PLUS_MINUS_SEMITONES=3 means 3 semitones down and 3 semitones up from
 # the nominal frequency are measured. Outside that range will give no reading.
 # The smaller, the better the precision and the higher the measuring time.
-PLUS_MINUS_SEMITONES = 3
-# Frequencies from f/ACCEPTED_FREQUENCY_RANGE to f*ACCEPTED_FREQUENCY_RANGE
+_PLUS_MINUS_SEMITONES = const(3)
+# Frequencies from f/_ACCEPTED_FREQUENCY_RANGE to f*_ACCEPTED_FREQUENCY_RANGE
 # are detected.
-ACCEPTED_FREQUENCY_RANGE = 2**(PLUS_MINUS_SEMITONES/12)
+_ACCEPTED_FREQUENCY_RANGE = const(2**(_PLUS_MINUS_SEMITONES/12))
 
-# SAMPLES_PER_PERIOD:
+# _SAMPLES_PER_PERIOD:
 # Smaller means less error in computation of frequency
 # Since the 3rd harmonic is strong, it should always show up.
 # For bass notes, the microphone also might attenuate the fundamental,
@@ -30,14 +25,22 @@ ACCEPTED_FREQUENCY_RANGE = 2**(PLUS_MINUS_SEMITONES/12)
 # So the 3rd armonic should always be present in the spectrum.
 # 3rd harmonic = 3 times the fundamental in Hz. Because of Nyquist Theorem,
 # the harmonic needs at least 2 samples per period, so 3*2 = 6 as the
-# smallest value for SAMPLES_PER_PERIOD if the 3rd harmonic is strong.
-# i.e. SAMPLES_PER_PERIOD has to be > 6.
+# smallest value for _SAMPLES_PER_PERIOD if the 3rd harmonic is strong.
+# i.e. _SAMPLES_PER_PERIOD has to be > 6.
 # If much larger, there will be a certain loss of precision, since the
 # buffer size is fixed and the frequency resolution of the spectrum is
-# 1/duration = 1/nominal_frequency/SAMPLES_PER_PERIOD, so if the duration
+# 1/duration = 1/nominal_frequency/_SAMPLES_PER_PERIOD, so if the duration
 # is smaller, the frequency resolution suffers.
 #.
-SAMPLES_PER_PERIOD = 6*ACCEPTED_FREQUENCY_RANGE
+_SAMPLES_PER_PERIOD = const(6*_ACCEPTED_FREQUENCY_RANGE)
+
+
+# File names, Used by microphone.py 
+_SIGNAL_FOLDER = const("/signals")
+_RAW_FILE_PREFIX = const("raw")
+_FFT_FILE_PREFIX = const("fft")
+_HIRES_FILE_PREFIX = const("hires")
+
 
 def vertex( x1, y1, x2, y2, x3, y3 ):
     # return vertex (maximum or minimum) of parabola
@@ -84,7 +87,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     freq_step = 1/duration
     if save_result:
         with scheduler.MeasureTime("save signal to flash"):
-            save( signal, duration, midi_note, time_step, RAW_FILE_PREFIX )
+            save( signal, duration, midi_note, time_step, _RAW_FILE_PREFIX )
 
     # Search in a range of some semitones around the fundamental.
     # In this range there is no harmonic expected, so find_max needs to
@@ -93,11 +96,11 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     # no frequency will be found.
     # The range is also in line with the sampling rate,
     # see comment where SAMPLES_PER_SEC is defined.
-    # SAMPLES_PER_SEC and ACCEPTED_FREQUENCY_RANGE must be defined
+    # SAMPLES_PER_SEC and _ACCEPTED_FREQUENCY_RANGE must be defined
     # so thatthe from and to positions are not at the border of the fft result
     # (at lest 3 elements away from those) to avoid IndexError 
-    from_position = int(nominal_freq/ACCEPTED_FREQUENCY_RANGE/freq_step)-3
-    to_position = int(nominal_freq*ACCEPTED_FREQUENCY_RANGE/freq_step)+3
+    from_position = int(nominal_freq/_ACCEPTED_FREQUENCY_RANGE/freq_step)-3
+    to_position = int(nominal_freq*_ACCEPTED_FREQUENCY_RANGE/freq_step)+3
     
     # print(f"search peak fft from {from_position}={from_position*freq_step}Hz to {to_position}={to_position*freq_step}Hz {nominal_freq=}  {amplitude=} {duration=}")
 
@@ -105,7 +108,7 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
 
     if save_result:
         with scheduler.MeasureTime("save fft to flash"):
-            save( fft_module.fft_abs(result, 0, len(result)), duration, midi_note, freq_step, FFT_FILE_PREFIX )
+            save( fft_module.fft_abs(result, 0, len(result)), duration, midi_note, freq_step, _FFT_FILE_PREFIX )
 
     # Get abs of the fft only in the range of desired
     # frequency range
@@ -116,13 +119,14 @@ def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_resul
     freq =  (get_peak( result ) + from_position) * freq_step
     return freq, amplitude
 
-def save( signal, duration, midi_note, step, prefix ):
+def save( signal, duration, midi_note, step, prefix=_HIRES_FILE_PREFIX ):
     # Save a signal, can be raw or FFT in /signals folder 
-    fileops.make_folder( SIGNAL_FOLDER )
-    filename = f"{SIGNAL_FOLDER}/{prefix}{midi_note.midi_number}.tsv"
-    if prefix == FFT_FILE_PREFIX:
+    # Also used by microphone.py for saving hires signal
+    fileops.make_folder( _SIGNAL_FOLDER )
+    filename = f"{_SIGNAL_FOLDER}/{prefix}.{midi_note.program_number}.{midi_note.midi_number}.tsv"
+    if prefix == _FFT_FILE_PREFIX:
         units = "Hz"
-    elif prefix == RAW_FILE_PREFIX or prefix == HIRES_FILE_PREFIX:
+    elif prefix == _RAW_FILE_PREFIX or prefix == _HIRES_FILE_PREFIX:
         units = "ms"
     else:
         units = "?"
@@ -140,11 +144,11 @@ def compute_amplitude( signal ):
     return sqrt(sum( (s-avgsignal)**2 for s in signal ))/len(signal)
             
 def compute_time_step_usec( nominal_frequency  ):
-    return 1/nominal_frequency/SAMPLES_PER_PERIOD*1_000_000
+    return 1/nominal_frequency/_SAMPLES_PER_PERIOD*1_000_000
 
 def clear_stored_signals():
     try:
-        for filename in os.listdir(SIGNAL_FOLDER):
-            os.remove(SIGNAL_FOLDER + "/" + filename)
+        for filename in os.listdir(_SIGNAL_FOLDER):
+            os.remove(_SIGNAL_FOLDER + "/" + filename)
     except OSError:
         pass

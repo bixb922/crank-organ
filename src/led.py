@@ -6,18 +6,21 @@
 from micropython import const
 import asyncio
 import neopixel
-import machine
+from machine import Pin
 
-LED_FILE = "data/led.txt"
+from minilog import getLogger
+
+_LED_FILE = const("data/led.txt")
 
 # 1=lowest, 255=highest
-VERY_LOW = const(4)
-LOW = const(8)
-MEDIUM = const(32)
-STRONG = const(128)
-VERY_STRONG = const(255)
+_VERY_LOW = const(4)
+_LOW = const(8)
+_MEDIUM = const(32)
+_STRONG = const(128)
+_VERY_STRONG = const(255)
 
 class NoLED:
+    # Using NoLED allows for a easy shutdown of the LED operation
     def __setitem__( self, key, value ):
         pass
     def write(self):
@@ -25,19 +28,20 @@ class NoLED:
 
 class BlinkingLed:
     def __init__(self):
-        p = get_led()        
-        if p:
-            self.neopixel_led = neopixel.NeoPixel(machine.Pin(p), 1)
-        else:
-            # Using NoLED allows for a easy shutdown of the LED operation
-            self.neopixel_led = NoLED()
+        self.neopixel_led = NoLED()
+        self.blink_setlist_task = None
+        try: 
+            p = get_led()        
+            if p:
+                self.neopixel_led = neopixel.NeoPixel(Pin(p), 1)
 
-        self.off()
-        self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
+            self.off()
+            self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
+            self.problem_task = asyncio.create_task(self._problem_process())
+        except Exception as e:
+            getLogger.log_exc(__name__, e, "Could not initialize neopixel LED:" )
+            # LED is now disabled but software should work ok with NoLed.
 
-    def set_logger( self, logger ):
-        # Use logger instance to get error count
-        self.problem_task = asyncio.create_task(self._problem_process(logger))
 
     # Simple (permanent) led on and off
     def on(self, color):
@@ -48,16 +52,16 @@ class BlinkingLed:
         self.on((0, 0, 0))
 
     # Problem encountered? run permanent task flashing red
-    async def _problem_process(self, logger):
+    async def _problem_process(self):
         # Wait until asyncio is running
         await asyncio.sleep_ms(1000)
         
         while True:
             await asyncio.sleep_ms(1000)
             # Problem: error or exception entry in log
-            if logger.get_error_count() > 0:
+            if getLogger.get_error_count() > 0:
                 # Replace this task with a blinking task
-                self.problem_task = self._blink_background((MEDIUM, 0, 0))
+                self.problem_task = self._blink_background((_MEDIUM, 0, 0))
                 # Don't blink for setlist empty anymore, could be confusing
                 if self.blink_setlist_task:
                     self.blink_setlist_task.cancel() # type:ignore
@@ -71,35 +75,35 @@ class BlinkingLed:
     def starting(self, phase):
         self.on(
             (
-                (0, 0, VERY_LOW),
-                (0, 0, LOW),
-                (0, VERY_LOW, VERY_LOW),
-                (0, LOW, 0),
+                (0, 0, _VERY_LOW),
+                (0, 0, _LOW),
+                (0, _VERY_LOW, _VERY_LOW),
+                (0, _LOW, 0),
             )[phase % 4]
         )
 
     # Setlist flashes
     def start_tune_flash(self):
-        self._blink_background((0, STRONG, 0), repeat=1)
+        self._blink_background((0, _STRONG, 0), repeat=1)
     def shuffle_all_flash(self):
-        self._blink_background((0, 0, STRONG), repeat=1)
+        self._blink_background((0, 0, _STRONG), repeat=1)
     def stop_tune_flash(self):
-        self._blink_background((MEDIUM, STRONG, 0), repeat=1)
+        self._blink_background((_MEDIUM, _STRONG, 0), repeat=1)
 
     def touch_start(self):
-        color = (LOW,LOW,LOW)
+        color = (_LOW,_LOW,_LOW)
         self.on(color)
 
     def ack(self):
         # Acknowledge some action, such as reboot.
         self._blink_background(
             (
-                (0, 0, MEDIUM),
-                (0, MEDIUM, 0),
-                (0, MEDIUM, MEDIUM),
-                (MEDIUM, 0, 0),
-                (MEDIUM, 0, MEDIUM),
-                (MEDIUM, MEDIUM, 0),
+                (0, 0, _MEDIUM),
+                (0, _MEDIUM, 0),
+                (0, _MEDIUM, _MEDIUM),
+                (_MEDIUM, 0, 0),
+                (_MEDIUM, 0, _MEDIUM),
+                (_MEDIUM, _MEDIUM, 0),
             ),
             timeon=200,
             timeoff=10,
@@ -109,13 +113,13 @@ class BlinkingLed:
     def connected(self):
         # Create a background task to avoid
         # delaying caller
-        self._blink_background((LOW, LOW, LOW), repeat=6, timeoff=200)
+        self._blink_background((_LOW, _LOW, _LOW), repeat=6, timeoff=200)
 
     def heartbeat(self):
-        self._blink_background((VERY_LOW, VERY_LOW, VERY_LOW), repeat=1, timeon=50 )
+        self._blink_background((_VERY_LOW, _VERY_LOW, _VERY_LOW), repeat=1, timeon=50 )
 
     def short_problem(self):
-        self._blink_background((STRONG, MEDIUM, 0), repeat=1, timeon=150)
+        self._blink_background((_STRONG, _MEDIUM, 0), repeat=1, timeon=150)
 
     def severe(self):
         # Magenta on, no blink
@@ -124,7 +128,7 @@ class BlinkingLed:
         if self.problem_task:
             # No more flashing for problem
             self.problem_task.cancel() # type:ignore    
-        self.on((MEDIUM, 0, MEDIUM))
+        self.on((_MEDIUM, 0, _MEDIUM))
 
     def _blink_background(
         self, colors, repeat=1_000_000_000, timeon=50, timeoff=2000
@@ -155,7 +159,7 @@ class BlinkingLed:
         while True:
             await asyncio.sleep_ms(900)
             if self.blink_setlist:
-                self.on( (0,0,VERY_LOW ) )
+                self.on( (0,0,_VERY_LOW ) )
                 await asyncio.sleep_ms(80)
                 self.off()
 
@@ -166,16 +170,16 @@ class BlinkingLed:
 
 def set_led( pin ):
     # Caching pin makes this module decoupled from pinout
-    # and led starts sooner. led.txt is only written if
+    # and led starts sooner. led.txt is only created if
     # the pin has changed and is different from the default 48.
     if get_led() != pin:
         # Write led.txt only if pin definition is different
-        with open(LED_FILE, "w") as file:
+        with open(_LED_FILE, "w") as file:
             file.write(str(pin))
 
 def get_led():
     try:
-        with open(LED_FILE) as file:
+        with open(_LED_FILE) as file:
             return int(file.read())
     except: 
         return 48

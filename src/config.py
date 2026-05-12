@@ -7,15 +7,16 @@ import time
 import os
 import network
 import binascii
-import minilog
+from minilog import getLogger
 import fileops
 import re
 from hashlib import sha256
 
 # One logger for both Config and PasswordManager
-_logger = minilog.getLogger(__name__)
+_logger = getLogger(__name__)
 # Password mask for web form
-_PASSWORD_MASK = "*" * 15
+_PASSWORD_MASK = const("***************")
+#                       123456789.12345
 # Initial password when just installed
 _DEFAULT_PASSWORD = const("password") 
 
@@ -68,7 +69,7 @@ class Config:
         self.password_required = False
         self.ap_ip = "192.168.144.1"
         self.ap_max_idle = 180 
-        self.advertise_bt = False # >>> should be true once find_bt is implemented
+        self.advertise_bt = False # >>> make client translatable
 
         # Power management
         self.battery_heartbeat_duration = 0
@@ -81,7 +82,6 @@ class Config:
         self.i2c_frequency_khz = 100 # 100, 200, 400
 
         # Webserver parameters
-        self.webserver_cache = True
         self.max_age = 1800
 
         # Microphone and tuner
@@ -96,24 +96,32 @@ class Config:
         self.servernode = ""
         self.serverpassword = "password3"
 
-        # Music and crank
-        self.automatic_delay = 0
+        # Crank
         self.tempo_follows_crank = False
         self.pulses_per_revolution = 100.0
+        self.crank_interval = 200
+        self.stopped_rpsec = 0.1
         self.lower_threshold_rpsec = 0.4
         self.higher_threshold_rpsec = 0.7
         self.normal_rpsec = 1.2
-        self.crank_lowpass_cutoff = 1.2
-        self.rotary_tempo_mult = 1.0
+        self.filter_window_len =  6
+        self.dump_tacho_data = False
+        self.debug_tacho = False
+        
+        # Playing and setlists
         self.multiple_setlists = False 
         self.wait_stop_turning = True
-     
+        self.automatic_delay = 0
+        # >>> put on performance page for current tune?
+        # >>> use a touchpad gesture?
         self.barrel_mode = False
         
         # RC Servos 
         self.rc_max_moving = 10
         self.rc_moving_time = 80 # msec
         self.rc_pwm_auto_off = True
+        self.rc_min_pulse = 1000
+        self.rc_max_pulse = 2000
         
         # Logger level 
         self.log_debug = False 
@@ -121,37 +129,40 @@ class Config:
         # History
         self.auto_purge_history = 0
 
-        # Read data/config.json and validate
-        cfg = self.read_config()
-        # No need to delete surplus keys, validation did that already
+        try:
+            # Read data/config.json and validate
+            cfg = self.read_config()
+            # No need to delete surplus keys, validation did that already
 
-        # Encrypted passwords, if not done already
-        if PasswordManager().encrypt_all_passwords(cfg):
-            # A password had to be encrypted.
-            # Rewrite config.json with encrypted passwords.
-            # No backup, the backup would show the passwords
-            fileops.write_json(cfg, self.CONFIG_JSON, keep_backup=False)
-            _logger.info("Passwords encrypted")
+            # Encrypted passwords, if not done already
+            if PasswordManager().encrypt_all_passwords(cfg):
+                # A password had to be encrypted.
+                # Rewrite config.json with encrypted passwords.
+                # No backup, the backup would show the passwords
+                fileops.write_json(cfg, self.CONFIG_JSON, keep_backup=False)
+                _logger.info("Passwords encrypted")
 
 
-        # Merge config.json into self.
-        # Variables not in config.json are left with default value
-        for k, v in cfg.items():
-            setattr( self, k, v )
+            # Merge config.json into self.
+            # Variables not in config.json are left with default value
+            for k, v in cfg.items():
+                setattr( self, k, v )
 
-        # Give AP more time while WiFi station mode is not fully configured
-        if "access_point1" not in cfg:
-            # WiFi not configured yet, give AP mode plenty
-            # of time. Alter AP max idle temporarily.
-            self.ap_max_idle = 3600
+            # Give AP more time while WiFi station mode is not fully configured
+            if "access_point1" not in cfg:
+                # WiFi not configured yet, give AP mode plenty
+                # of time. Alter AP max idle temporarily.
+                self.ap_max_idle = 3600
 
-        if show_log:
-            # Get WiFi MAC address (only to show in diag.html)
-            wifi_mac = binascii.hexlify(
-                network.WLAN(network.STA_IF).config("mac"), "-"
-            ).decode()        
-            _logger.debug( f"Config {self.description}, WiFi mac={wifi_mac}, hostname and AP SSID={self.name}"  )
-        
+            if show_log:
+                # Get WiFi MAC address (only to show in diag.html)
+                wifi_mac = binascii.hexlify(
+                    network.WLAN(network.STA_IF).config("mac"), "-"
+                ).decode()        
+                _logger.debug( f"Config {self.description}, WiFi mac={wifi_mac}, hostname and AP SSID={self.name}"  )
+            
+        except Exception as e:
+            _logger.exc( e, "Could not parse config.json, using defaults")
 
     def read_config( self ):
         # Read config.json
@@ -234,6 +245,9 @@ class Config:
         # newconfig is a dictionary with the changed values.
         self._validate_config( newconfig, on_error="raise")
         cfg = fileops.read_json( self.CONFIG_JSON, default={} )
+        # Remove bad or superfluous stuff from current config
+        # before updating. This also ensures that obsolete keys are removed.
+        self._validate_config( cfg, on_error="remove")
         cfg.update( newconfig )
         PasswordManager().encrypt_all_passwords( cfg )
         fileops.write_json(cfg, self.CONFIG_JSON )
@@ -256,7 +270,7 @@ class Config:
 
     def _validate_password( self, v ):
         # Only needed for AP password
-        if not( v.startswith(PASSWORD_PREFIX) or v == _DEFAULT_PASSWORD or v == _PASSWORD_MASK ):
+        if not( v.startswith(_PASSWORD_PREFIX) or v == _DEFAULT_PASSWORD or v == _PASSWORD_MASK ):
             if len(v) < 9:
                 raise ValueError( "Error: Password {k} shorter than 9 characters" )
 
@@ -276,15 +290,16 @@ class Config:
                 # Normally due to obsolete keys in config.json
                 del cfg[k]
                 _logger.info(f"[{k}] not needed, removing")
+                # No exception/error is needed.
             except Exception as e:
                 # Make this work anyhow, use default value.
                 # That is better than crashing....
                 del cfg[k]
-                _logger.exc( e, "Unhandled exception validating configuration item [{k}]={v} ")
+                _logger.exc( e, f"Unhandled exception validating configuration item [{k}]={v}, item deleted ")
 
 
 
-PASSWORD_PREFIX = "@encrypted_"
+_PASSWORD_PREFIX = const("@encrypted_")
 
 class PasswordManager:
     # Password are stored encrypted in config instance
@@ -310,7 +325,7 @@ class PasswordManager:
     def encrypt_passwords(self, password)->str:
         if not isinstance(password, str):
             raise ValueError("Can't encrypt object that isn't str")
-        if password.startswith(PASSWORD_PREFIX):
+        if password.startswith(_PASSWORD_PREFIX):
             raise ValueError("Can't encrypt twice")
 
         pass_encoded = password.encode()
@@ -333,15 +348,15 @@ class PasswordManager:
 
         c = aes(self._get_key(), 1).encrypt(pass_buffer)
 
-        return PASSWORD_PREFIX + binascii.hexlify(c).decode()
+        return _ + binascii.hexlify(c).decode()
 
     def decrypt_password(self, c)->str:
         if not isinstance(c, str):
             raise ValueError("Can't decrypt object that isn't str")
-        if not c.startswith(PASSWORD_PREFIX):
+        if not c.startswith(_PASSWORD_PREFIX):
             # Not encrypted, no need to do magic
             return c
-        c = binascii.unhexlify(c[len(PASSWORD_PREFIX) :])
+        c = binascii.unhexlify(c[len(_PASSWORD_PREFIX) :])
         from cryptolib import aes
 
         pass_buffer = aes(self._get_key(), 1).decrypt(c)
@@ -365,7 +380,7 @@ class PasswordManager:
         # Save changes to flash
         changed = False
         for k in ("password1", "password2", "ap_password", "repeat_ap_password", "serverpassword"):
-            if k in cfg and not cfg[k].startswith(PASSWORD_PREFIX):
+            if k in cfg and not cfg[k].startswith(_PASSWORD_PREFIX):
                 cfg[k] = self.encrypt_passwords(cfg[k])
                 changed = True
         return changed

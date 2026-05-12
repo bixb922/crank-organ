@@ -8,6 +8,7 @@ import machine
 import scheduler
 import fileops
 
+
 # Don't use config.py, because timezone is needed before
 _TZFILE = const("data/timezone.json")
 _NTP_RETRIES = const(3)
@@ -29,11 +30,12 @@ class TimeZone:
         } )
 
 
-    def setLogger(self, getLogger):
+    def set_logger(self, getLogger):
         self.logger = getLogger(__name__)
        
 
     def network_up(self):
+        # >>> move to async polling process?
         # wifimanager calls here when network is up
         if self.ntp_task or self.has_time():
             # Avoid reentering task while it is active

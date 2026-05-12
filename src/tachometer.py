@@ -11,47 +11,36 @@ from machine import Encoder, Counter # type:ignore
 
 from minilog import getLogger
 from drehorgel import config
+from scheduler import is_player_active
 
 # Factor to convert the milliseconds  to revolutions per second (rpsec)
-# and vice-versa. rpsec = FACTOR/msec, msec = FACTOR/rpsec
-FACTOR = 1000/config.pulses_per_revolution
-
-def low_pass_filter( fc, step, htr ):
-    # This is a low pass filter for the crank. The special
-    # aspect is that if the rev/sec of the crank drops below
-    # config.higher_threshold_rpsec, then the response is immediate (without filtering).
-    # As a result, stopping and starting the crank movement has fast response.
-    # Over config.higher_threshold_rpsec  the crank movement is smoothed out.
-    rc = 1/(6.28*fc)
-    alpha = step/(rc+step)
-    current = 0
-    rpsec = 0
-    yield -1 # needed to prime generator.send()
-    while True:
-        rpsec = yield (current:=rpsec*alpha + current*(1-alpha) if rpsec >= htr else rpsec)
-       
-# class LowPassFilter:
-# Replaced by low_pass_filter() above.
-#     def __init__( self, fc, step ):
-#         # step = estimated time between samples.
-#         # Time constant rc of low pass filter is 
-#         # 1/(2*pi*cutoff frequency)
-#         rc = 1/(6.28*fc)
-#         self.alpha = step/(rc+step)
-#         self.current = 0
-
-#     def filter( self, rpsec ):
-#         if rpsec >= config.higher_threshold_rpsec :
-#             self.current = rpsec*self.alpha + self.current*(1-self.alpha)
-#         else:
-#             # Below config.higher_threshold_rpsec , there is no filtering.
-#             # This allows to process "stop crank" situations with good response.
-#             # In other words:
-#             # When the crank is still turning between config.lower_threshold_rpsec
-#             # and config.higher_threshold_rpsec , there is no smoothing out...
-#             self.current = rpsec
-#         return self.current
+# and vice-versa. rpsec = _FACTOR/msec, msec = _FACTOR/rpsec
+_FACTOR = 1000/config.pulses_per_revolution
     
+def rpsec_filter(filter_window_len, stopped_rpsec, higher_threshold_rpsec):
+    if filter_window_len == 0:
+        # yield raw always,
+        while True:
+            raw = yield 0 # Return number to keep pylint happy
+            yield raw
+
+    moving = [0]
+    while True:
+        raw = yield 0 # Return number to keep pylint happy
+        moving.append( raw )
+        while len(moving)>filter_window_len:
+            moving.pop(0)
+
+        big_up = min(moving)<stopped_rpsec and raw>higher_threshold_rpsec
+        big_down = max(moving)>higher_threshold_rpsec and raw<stopped_rpsec
+        
+        if big_up or big_down:
+            # Make a faster response if crank starts or stops.
+            # Reduce moving window to the minimum to get fast response
+            moving = [raw]
+            yield raw
+        else:
+            yield sum(moving)/len(moving)
 
 # This is the low level driver for the crank rotation sensor
 # Main output is get_rps() which returns the "rotations per second"
@@ -62,120 +51,131 @@ class TachoDriver:
         self.counter_task = None
         self.counter = None
         self.rpsec = 0
-        self.phases = 1
+        # For diag.html report of crank frequencies
+        self.report_rps = []
+
         if not tachometer_pin1 or config.automatic_delay:
+            # Disable if first pin was not defined.
             # Disable crank sensor for "automatic_delay" so music
             # will not pause at the end of the song.
-            self.logger.debug("Crank sensor not enabled")
+            self.logger.debug("Configuration does not enable crank sensor")
             return
         
         # Maximum value for filter_ns is 12787.5 nanosec = 13 microseconds
         # if filter_ns is higher, the highest possible value is set.
-        if tachometer_pin1 and not tachometer_pin2:
-            # One pin defined means: simple counter for crank
-            self.phases = 2 # rising and falling edge
-            print(f">>>{Counter.RISING=:02x} {Counter.FALLING=}")
-            counter = Counter( 0, 
-                    Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
-                    direction=Counter.UP,
-                    edge=Counter.RISING + Counter.FALLING, # self.phases = 2
-                    filter_ns=20_000) # Highest filter value possible
-        else:
-            self.phases = 4
-            # Two pins defined means: rotary encoder for crank
-            counter = Encoder( 0,
-                    phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
-                    phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
-                    phases=self.phases, 
-                    filter_ns=20_000) # Highest filter value possible
-            
-        self.counter = counter
+        try:
+            if tachometer_pin1 and not tachometer_pin2:
+                # One pin defined means: simple counter for crank
+                # Count 2 per sensor pulse (highest rate possible)
+                self.counter = Counter( 0, 
+                        Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
+                        direction=Counter.UP,
+                        edge=Counter.RISING + Counter.FALLING, 
+                        filter_ns=20_000) # Highest filter value possible
+            else:
+                # Two pins defined means: rotary encoder for crank
+                # Count 4 per sensor pulse (highest rate possible)
+                self.counter = Encoder( 0,
+                        phase_a=Pin( tachometer_pin1, Pin.IN, Pin.PULL_UP ), 
+                        phase_b=Pin( tachometer_pin2, Pin.IN, Pin.PULL_UP ), 
+                        phases=4, 
+                        filter_ns=20_000) # Highest filter value possible
+            # Start the sensor process
+            self.counter_task = asyncio.create_task( self._sensor_process() )
+        except Exception as e:
+            self.logger.exc( e, "Could not initialize counter/encoder")
 
-        # For diag.html report of crank frequencies
-        self.report_rps = []
-        self.report_times = []
+
         
-        # Start the sensor process
-        self.counter_task = asyncio.create_task( self._sensor_process(counter) )
 
-    async def _sensor_process( self, counter ):
+    async def _sensor_process( self ):
+        if not self.counter:
+            return
         last_time = ticks_ms()
-        counter.value(0) # Reset value counter to 0
+        self.counter.value(0) # Reset value counter to 0
         # step: Delay between 2 reads of the crank in millisec
         # If too small, precision decreases
         # If too large, response to changes is slower
-        step = 200
-        # Most crank variations occur at the crank rev/sec frequency
-        # Filter whatever is faster than that.
-        # If fc were set to 0, that disables the crank altogether
-        # Prevent setting fc to 0
-        fc = max( 0.2, config.crank_lowpass_cutoff ) 
-        # old version: lpf = LowPassFilter( fc, step/1_000 )
-        lpf = low_pass_filter( fc,  step/1_000,  config.higher_threshold_rpsec)
-        next(lpf) # Needed to prime generator
+        step = config.crank_interval
+
+        filter = rpsec_filter( config.filter_window_len, 
+                            config.stopped_rpsec,
+                            config.higher_threshold_rpsec)
+        if config.filter_window_len:
+            self.logger.info(f"Crank filter enabled with filter_window_len={config.filter_window_len}, stopped_rpsec={config.stopped_rpsec}, lower_threshold_rpsec={config.lower_threshold_rpsec}, higher_threshold_rpsec={config.higher_threshold_rpsec}")
+        else:
+            self.logger.info(f"Crank filter disabled")
 
         while True:
             # Wait approximately "step" milliseconds
+            # sleep_ms does not need to be precise.
+
+            # The goal is to have about 50 pulses per step.
+            # 50 pulses means a maximal error of 1 pulse in 50, about 2%
+            # at nominal speed.
             await asyncio.sleep_ms(step)
+
             # Get pulses since last call, i.e. value(0) resets
             # the counter to 0. 
             # Take abs() because if a Encoder is present, value
             # can be negative if crank is turned in the opposite
             # direction. When using abs() neither the order of the pins
             # nor the direction of rotation matters
-            # If there is a Counter instead of Encoder, value() will aways be positive anyhow.
-            # Divide by self.phaes to account for Encoder/Counter phases
 
-            # At 200 nominal pulses/rev, counter.value()
-            # will read 400 nominal pulses. For a sleep time of
-            # 100 msec and 1.2 rev/sec normal speed, this means
-            # 400*100/1000*1.2 = 40*1.2 = 48 pulses for each reading.
-            # 48 pulses means a maximal error of 1 pulse in 48, about 2%
-            # at nominal speed.
-            # Reading at 100 millisec is similar to human reaction time,
-            # so delay should quite tolerable.
-            pulses =  abs(counter.value(0))/self.phases
+            # Don't divide pulses by number of phases to make this reading here equal
+            # to what test crank button on web page reports.
+            pulses =  abs(self.counter.value(0))
             new_time = ticks_ms()
             time_ms = ticks_diff( new_time, last_time )
             last_time = new_time
-            # print(f"{pulses=} {time_ms=} {pulses/time_ms*1000=:.1f}")
+
             # time_ms should never be 0, because there is a sleep_ms in this loop
             # so there should never a division by 0 here
-            #self.rpsec = pulses * FACTOR / time_ms
-            # Apply low pass filter
-            # >>>self.rpsec = lpf.filter( pulses * FACTOR / time_ms )
-            self.rpsec = lpf.send( pulses * FACTOR / time_ms )
-            self._accumulate_readings( new_time, self.rpsec )
+            raw = pulses * _FACTOR / time_ms
+
+            # Apply filter
+            next(filter) # Needed to advance the generator
+            self.rpsec = filter.send( raw )
+
+            self._accumulate_readings( new_time, raw, self.rpsec )
 
     def get_rpsec( self ):
         return self.rpsec
 
     def is_installed(self):
+        # If counter task not started or cancelled, there is no crank.
         return bool(self.counter_task)
 
-    def _accumulate_readings( self, ticks, rpsec ):
+    def _accumulate_readings( self, ticks_start, raw, rpsec):
         # This is for debugging only.
         # These lists are used in the diag.html page
         # to show a graph of the rpsec values over time.
-        self.report_rps.append( rpsec ) 
-        self.report_times.append( ticks )
-        self.report_rps = self.report_rps[-20:]
-        self.report_times = self.report_times[-20:]
+        self.report_rps.append( ( ticks_start, raw, rpsec) )
+        
+        # Keep 3000 milliseconds (3 seconds) of data
+        while ticks_diff( self.report_rps[-1][0], self.report_rps[0][0])>3000:
+            self.report_rps.pop(0) 
+
+        # Dump raw and filtered data to file for debugging. 
+        self._dump_tacho( raw, self.rpsec ) 
+
 
     def irq_report( self ):
         # Used by diag.html to show a graph of the rpsec values over time.
         if not self.is_installed():
             return {}
         times = [] # used as X axis in graph
-        if len(self.report_times)>0:
-            t0 = self.report_times[0] # 0.0 to 1.0
-            times = [ round(ticks_diff(x,t0)/1000,1) for x in self.report_times ]
+        if len(self.report_rps)>0:
+            t0 = self.report_rps[0][0] # 0.0 to 1.0
+            times = [ round(ticks_diff(x,t0)/1000,1) for x,_,_ in self.report_rps ]
         return {
             "dtList": [],
-            "rpsecList": self.report_rps,
+            "rpsecList": [x for _,_,x in self.report_rps],
+            "rawList": [x for _,x,_ in self.report_rps],
             "timesList": times,
             "now": ticks_ms(),
             "is_installed": self.is_installed(),
+            "stopped_rpsec": config.stopped_rpsec,
             "lower_threshold_rpsec": config.lower_threshold_rpsec,
             "higher_threshold_rpsec": config.higher_threshold_rpsec ,
             "normal_rpsec": config.normal_rpsec
@@ -201,6 +201,39 @@ class TachoDriver:
             self.count = 0
             self.last_value = val
         return val
+
+
+    def _dump_tacho( self, raw, filtered ):
+        # For debugging of raw and filtered crank data.
+        if not config.dump_tacho_data:
+            return
+        if not hasattr( self, "tacho_data"):
+            self.tacho_data = []
+            self.t0 = ticks_ms()
+            return
+
+        dt = ticks_diff(ticks_ms(), self.t0)
+        self.t0 = ticks_ms()
+        self.tacho_data.append( (dt,raw,filtered) )
+        # keep accumulating raw data if player is active.
+        # If player is not active and data is long, store
+        # If player is not active and no significant data,
+        # then keep about 2 seconds of tacho data to show the
+        # start.
+        if not is_player_active():
+            leadin_samples = 2000//config.crank_interval
+            if len(self.tacho_data) <= leadin_samples+3:
+                while len(self.tacho_data)>leadin_samples:
+                    self.tacho_data.pop(0)
+            else:
+                # Player not active and tacho_data has accumulated readings.
+                from drehorgel import timezone
+                from fileops import write_json
+                fn = "tacho_" + timezone.now_ymdhms().replace(" ","_") + ".json"
+                self.logger.debug(f"Dumping tacho data len={len(self.tacho_data)} to {fn}")
+                # >>> limit flash space!!
+                write_json( self.tacho_data, fn )
+                self.tacho_data = []
 
 # This is the high level processing for the crank rotation sensor
 # It uses TachoDriver.get_rps() to read the rotations per second,
@@ -324,7 +357,7 @@ class Crank:
 # This is a potentiometer type rotary encoder,
 # not the crank revolution sensor.
 # The effect of this sensor is added to the crank sensor and UI setting
-# >>> verify if still needed
+# Keep if needed in the future
 # class TempoEncoder:
 #     def __init__( self, crank, tempo_a, tempo_b, tempo_switch, rotary_tempo_mult ):
 #         self.logger = getLogger("TempoEncoder")
@@ -378,34 +411,60 @@ class Crank:
 #                 if v == 0:
 #                     self.crank.set_velocity(50)
 
-#This code will plug TachoDriver and generate random RPS
-# from random import random
-# class DebugCounter:
-#     def __init__(self):
-#         self.time_ant = ticks_ms()
-#         self.repetitions = 0
+# This code will plug TachoDriver and generate random RPS
 
-#     def value( self, newvalue=None ):
-#         self.repetitions -= 1
-#         if self.repetitions < 0:
-#             # 200 stripes = 400 pulses/sec at 1 RPS
-#             # 800 pulses*100ms = 80 pulses
-#             # should result in 2.4 RPS
-#             self.current_value = random()*80
-#             print(f"DebugCounter {self.current_val=}")
-#             self.repetitions = random()*40 + 10
+class DebugCounter:
+    def __init__(self):
+        self.value_list = []
+        # Normal rpsec in pulses per config.crank_interval
+        self.normal = config.pulses_per_revolution*config.normal_rpsec/(1000/config.crank_interval)
+        self.last_value = 0
+        self.t0 = ticks_ms()
 
-#         #newt = ticks_ms()
-#         #dt = ticks_diff(newt, self.time_ant)
-#         #self.time_ant = newt
-#         return self.current_value
+    def value( self, newvalue=None ):
+        from random import random
+        dt = ticks_diff(ticks_ms(), self.t0)
+        self.t0 = ticks_ms()
+        # calculate pulses equivalent to config.normal_rpsec for the time since last call to value()
+        normal = self.normal * dt/config.crank_interval
 
-# async def debug():
-#     print("TachoDriver Debug started")
-#     from drehorgel import crank
-#     if crank.td.counter_task:
-#         crank.td.counter_task.cancel() 
-#     newcounter = DebugCounter()
-#     crank.td.counter_task = asyncio.create_task( crank.td._sensor_process( newcounter ))
+        if not self.value_list:
+            # Value list is empty, refill
+            if random() < 0.1:
+                self.value_list = [ self.last_value*1.5, self.last_value*0.7, self.last_value*0.8 ]
+            elif random() < 0.1:
+                self.value_list = [normal/10]
+            elif random() < 0.1:
+                self.value_list = [normal*1.4]
+            elif random() < 0.1:
+                x = self.last_value
+                self.value_list = [ x*1.1, x*0.9, x*0.7, x*0.6, x*0.5, x*0.4, x*0.3, x*0.2]
+            elif random() < 0.1:
+                x = self.last_value
+                self.value_list = [ x*0.4, x*0.5, x*0.7, x*0.9, x*0.9, x*1.1, x*1.2, x*1.3]
+            elif random() < 0.1:
+                self.value_list = [0]*10
+            else:
+                repetitions = round(random()*20)+1
+                self.value_list = [normal*( 1+random()*0.05-0.025 ) for _ in range(repetitions)]
 
-#asyncio.create_task( debug() )
+        self.last_value = self.value_list.pop(0)
+        return self.last_value
+    
+    async def start_debug( self ):
+        while True:
+            await asyncio.sleep_ms(200)
+            try:
+                from drehorgel import crank
+                break
+            except:
+                pass
+        if crank.td.counter:
+            # Monkey patch function to read counter value. Rest of
+            # TachoDriver continues to be enabled.
+            crank.td.counter.value = self.value
+            crank.logger.info("Inject tacho debug data enabled")
+
+if config.debug_tacho:
+    debug_task = asyncio.create_task( DebugCounter().start_debug() )
+

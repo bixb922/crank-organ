@@ -23,8 +23,8 @@ let translationDict = {
 	["Performance", "Setlist"],
 "actualizando setlist": // tunelist.html 
 	["updating setlist", "Setlist wird aktualisiert"],
-"actualizar archivos":
-    ["Update files", "Dateien aktualisieren"],
+"archivos":
+    ["Files", "Dateien"],
 "afinación": // note.html notelist.html 
 	["Tuning", "Frequenz"],
 "afinación (cents)":

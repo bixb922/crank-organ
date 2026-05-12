@@ -14,10 +14,9 @@ try:
 except:
     pass
 
-# Startup about 4.5 sec when in flash, less if frozen.
 import scheduler
-import drehorgel
 from minilog import getLogger
+import drehorgel
 
 
 # To install aiorepl:
@@ -45,9 +44,9 @@ def _handle_exception(loop, context):
 # To install aioprof:
 # mpremote mip install https://gitlab.com/alelec/aioprof/-/raw/main/aioprof.py
 # aioprof will be activated automatically if present
-# Patched aioprof.py in def send():
-# process only: if t_name != "do_aioprof"
-# and cleanup: t_name = t_name.split("'")[1]
+# Patch aioprof.py in def send():
+# Filter this function: if t_name != "do_aioprof"
+# and cleanup web task names: t_name = t_name.split("'")[1]
 async def do_aioprof():
     if "aioprof" not in globals():
         return
@@ -172,22 +171,18 @@ async def start():
     asyncio.get_event_loop().set_exception_handler(_handle_exception)
 
     # Change led color
-    drehorgel.init_led()
-    _led = drehorgel.led
+    _led = drehorgel.init_led()
+    
     _led.starting(0)
 
     # Get the time/timezone/ntp process going in background.
     # The timezone object is needed for logger, and most modules
     # require logger
     drehorgel.init_timezone()
-    getLogger.set_timezone( drehorgel.timezone )
-    _logger = getLogger(__name__)
-    _led.set_logger( _logger ) # it's only for error count, use startup's logger instance
     
-    # Inject getLogger to timezone... it can't import minilog
-    # that would be circular imports.
-    drehorgel.timezone.setLogger(getLogger)
-    # Get configuration
+    # Allocate first logger, this will generate restart message
+    _logger = getLogger(__name__)
+    
     drehorgel.init_config()
 
     # Start wifimanager as early as possible, so the connections are
@@ -200,14 +195,14 @@ async def start():
     # Start asyncio profiler and asyncio repl if installed
     start_aiorepl()
 
-    scheduler.run_always()
-    drehorgel.init()
-    import webserver
-
+    drehorgel.init_pinout()
+    drehorgel.init_modules()
     start_mcserver()
 
     _led.starting(3)
 
+    scheduler.run_always()
+    import webserver
     await asyncio.gather(
         webserver.run_webserver(),
         scheduler.background_garbage_collector(),

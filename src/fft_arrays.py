@@ -19,12 +19,13 @@ if sys.implementation.name != "micropython": # type:ignore
 
 BUFFER_SIZE = const(1024) 
 
-# No complex arrays, use list
-exptable = [ math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) ]
-# Surprisingly, the list is a bit faster than the array...
+# No complex arrays, use tuple
+exptable = tuple( math.e**(-1j*math.pi*i/BUFFER_SIZE) for i in range(BUFFER_SIZE) )
+# Surprisingly, the tuple is a bit faster than the list,
+# which is a bit faster than the array...
 
 # This is the von Hann window for FFT
-hann_table = [sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE)]
+hann_table = tuple(sin(math.pi*i/BUFFER_SIZE)**2 for i in range(BUFFER_SIZE))
 
 # about 2 or 3 ms can be shaved off if n is not passed as parameter
 # and by using BUFFER_SIZE constant instead.

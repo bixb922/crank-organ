@@ -21,7 +21,7 @@ from midi import NoteDef
 from microphone import Microphone
     
 # Time spent for measuring frequency for each note
-_TARGET_DURATION = 0.8 # seconds
+_TARGET_DURATION = const(0.8) # seconds
 # But never less than this number of frequency measurements:
 _MINIMUM_MEASUREMENTS = const(3)
 

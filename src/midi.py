@@ -12,10 +12,10 @@
 from math import log
 
 # Some useful functions related to MIDI
-_NOTE_LIST = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+_NOTE_LIST = const(("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"))
 
 # Define the MIDI channel number for drums (set by GM standard)
-DRUM_CHANNEL = 9 # MIDI channel 10 (physical=9)
+DRUM_CHANNEL = const(9) # MIDI channel 10 (physical=9)
 
 # Definitions for NoteDef
 DRUM_PROGRAM = 129
@@ -108,16 +108,17 @@ class NoteDef:
     # controller.notedict uses NoteDef as key
     # Two NoteDef are equal if both program_number and midi_number are equal
     # Define __hash__ and __eq__ accordingly.
+    # No hash calculated if self.midi_number is None.
     def __hash__( self ):
         return self.program_number*256 + self.midi_number
     
     def __eq__( self, other ):
         return self.program_number == other.program_number and self.midi_number == other.midi_number
     
-    def wildcard( self  ):
+    def wildcard( self ):
         # Avoid allocating another NoteDef for each midi note
         # And the result of wildcard() is never stored, only used as argument of a dict.get()
-        wildcard_note.midi_number = self.midi_number # should use .set()
-        return wildcard_note
+        _WILDCARD_NOTE.midi_number = self.midi_number # should use .set()
+        return _WILDCARD_NOTE
     
-wildcard_note = NoteDef( WILDCARD_PROGRAM, 0 ) # allocate once
+_WILDCARD_NOTE = NoteDef( WILDCARD_PROGRAM, 0 ) # allocate once

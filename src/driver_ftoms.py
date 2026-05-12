@@ -30,7 +30,8 @@ class FauxTomDriver(BaseDriver):
     # Provide iterator for all defined drums
     # This is different from other drivers. Usually
     # the midi notes are defined in the pinout.json whereas
-    # here they are defined in drumdef.json
+    # here they are defined in drumdef.json. midicontroller iterates
+    # through the drumdef to define the pins.
     def __iter__( self ):
         self.iter_drums = iter(self.drum_def.keys())
         return self
