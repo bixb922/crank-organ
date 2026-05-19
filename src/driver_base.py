@@ -16,14 +16,16 @@ class BaseDriver:
     @classmethod
     def make_repr( cls, *args ):
         # make_repr allows solenoid.py to find a actuator based on characteristics
-        # This is used for the actuator tests provided by the pinout.html page.
+        # and allows pinout.py's driver factory to have only one object for
+        # a driver with the same args.
         # The format of the repr is for example:
-        # MCP23017(0,32)
-        # GPIOServo(5000,1000,1100)
+        # "GPIO"
+        # "MCP23017(0,0x20)""
+        # "GPIOServo(1000,1100)"
         # i.e. the servername without "Driver" plus the part of the
-        # constructor arguments that make the driver unique.
+        # constructor arguments that make the driver onject unique.
         return cls.__name__.replace("Driver", "") + str(args).replace(", ", ",").replace("()","")
-    
+
     def __init__(self, *args ):
         self._repr = self.__class__.make_repr( *args )
 
@@ -50,6 +52,8 @@ class BasePin:
     # Used by subclass SolePin to calculate polyphony and
     # by driver_ftoms to see which pins are already on.
     
+    # Memory usage 400 bytes per pin all included (dictionaries
+    # or lists conaining pins, keys, etc)
     # Integrates time solenoids are on or servos are moving
     # and consuming battery to make prediction of battery status.
     # Units: milliseconds of time solenoids/servos are consuming battery.
@@ -95,12 +99,8 @@ class BasePin:
         # nominal_midi_number: note number of nominal_midi_note
         self._driver = driver
         self._pin = pin
-        self._rank = rank # >>> Could be added by browser to save 100 bytes/pin of RAM
-        # nominal_midi_note and nominal_midi_number are used as (readonly) properties
-        # outside this class.  
+        self._rank = rank # >>> Could be added by browser to save 50bytes/pin of RAM
         self.nominal_midi_note = nominal_midi_note 
-        # nominal_midi_number is redundant but convenient
-        self.nominal_midi_number = nominal_midi_note.midi_number
         
         # self._count is the number of note_on received minus
         # the number of note_offs, but is never allowed to go negative.
@@ -109,7 +109,10 @@ class BasePin:
         # Current value, on or off.
         self._current_value = 0
 
-
+    @property
+    def nominal_midi_number( self ):
+        return self.nominal_midi_note.nominal_midi_number
+    
     def on( self ):
         # Use self._count to match note on-note off pairs.
         if self._count == 0:
@@ -161,7 +164,7 @@ class BasePin:
         return self._rank
     
     def __repr__( self ):
-        # Must be unique per pin!!!!
+        # Must be unique per pin within a driver!!!!
         return  f"{repr(self._driver)}.{self._pin}"
 
     @classmethod

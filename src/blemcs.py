@@ -3,8 +3,6 @@
 
 import bluetooth
 import struct
-import struct
-import bluetooth
 
 # Advertising packet constants
 #_ADV_TYPE_FLAGS = const(0x01)

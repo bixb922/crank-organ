@@ -11,6 +11,7 @@ import fileops
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
     "main.py": "/", # special case
+    "boot.py": "/", # special case
     "json": "/data/",
     "txt": "/data/",
     "py": "/software/mpy/",

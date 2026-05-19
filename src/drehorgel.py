@@ -26,7 +26,9 @@ def init_fileops():
             # install_data.py is a self extractable file on ROMFS
             # with initial data files. Importing it installs the files.
             # install_data.py may be present in romfs
-            import install_data # type: ignore
+            # Do not allocate variable, so memory is freed.
+            __import__("install_data") 
+
         except ImportError:
             fileops.make_folder( "/data")
 
@@ -35,6 +37,7 @@ def init_fileops():
     # uploading software (Python/HTML/Javascript)
 
 def init_timezone():
+
     from timezone import TimeZone
     global timezone
     timezone = TimeZone()
@@ -54,20 +57,21 @@ def init_config():
     getLogger.set_file_level( config.log_debug )
 
 async def init_wifimanager():
+
     from wifimanager import WiFiManager
     global wifimanager
     wifimanager = WiFiManager()
     await wifimanager.async_init()
 
 def init_pinout():
-    global plist, gpio, controller, actuator_bank
+
+    global gpio, controller, actuator_bank
     
     led.starting(1)
 
       # Get list of pinout.json files
-    from pinout import PinoutList, GPIODef, ActuatorDef
-    plist = PinoutList(config.PINOUT_TXT, config.PINOUT_FOLDER)
-    current_pinout_file = plist.get_current_pinout_filename()
+    from pinout import GPIODef, ActuatorDef, get_current_pinout
+    current_pinout_file = get_current_pinout( config.PINOUT_TXT )
     
     # Parse definitions for GPIO ports except GPIO MIDI ports
     # but including registers
@@ -77,6 +81,7 @@ def init_pinout():
     # all midi elements in the pinout.json
     from solenoid import ActuatorBank
     actuator_def = ActuatorDef( gpio.get_registers(), current_pinout_file, False )# It's not necessary to store actuator_def
+    
     actuator_bank = ActuatorBank( 
         actuator_def,
         config )
@@ -87,10 +92,11 @@ def init_pinout():
     
     # The controller has to be able to act on all actuators
     controller.define_complete( actuator_bank )
-    
+
     del actuator_def
-    
+
 def init_modules():
+
     global history, player, setlist, crank, tunemanager
     global battery, poweroff
 
@@ -99,7 +105,6 @@ def init_modules():
     # Player/setlist need to know if crank is turning.
     from tachometer import Crank
     crank = Crank(gpio.tachometer_pin1, gpio.tachometer_pin2 )
-    
     # The tempo encoder operates as a independent task,
     # tempo encoder not of interest?
     # tempo_encoder = None
@@ -125,7 +130,6 @@ def init_modules():
     from poweroff import PowerManager
     poweroff = PowerManager()
  
-
 
 
 

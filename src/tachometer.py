@@ -16,7 +16,11 @@ from scheduler import is_player_active
 # Factor to convert the milliseconds  to revolutions per second (rpsec)
 # and vice-versa. rpsec = _FACTOR/msec, msec = _FACTOR/rpsec
 _FACTOR = 1000/config.pulses_per_revolution
-    
+
+# Crank does not influence music playback
+# Crank starts tunes, tune stops if crank stops
+# Crank starts tunes, crank speed governs tempo
+
 def rpsec_filter(filter_window_len, stopped_rpsec, higher_threshold_rpsec):
     if filter_window_len == 0:
         # yield raw always,
@@ -93,16 +97,17 @@ class TachoDriver:
             return
         last_time = ticks_ms()
         self.counter.value(0) # Reset value counter to 0
+
         # step: Delay between 2 reads of the crank in millisec
         # If too small, precision decreases
         # If too large, response to changes is slower
-        step = config.crank_interval
+        step = min(config.crank_interval,50) # prevent division by 0.
 
-        filter = rpsec_filter( config.filter_window_len, 
+        filter = rpsec_filter( round( config.filter_window_msec/step ), 
                             config.stopped_rpsec,
                             config.higher_threshold_rpsec)
-        if config.filter_window_len:
-            self.logger.info(f"Crank filter enabled with filter_window_len={config.filter_window_len}, stopped_rpsec={config.stopped_rpsec}, lower_threshold_rpsec={config.lower_threshold_rpsec}, higher_threshold_rpsec={config.higher_threshold_rpsec}")
+        if config.filter_window_msec:
+            self.logger.info(f"Crank filter enabled with filter_window_msec={config.filter_window_msec}, stopped_rpsec={config.stopped_rpsec}, lower_threshold_rpsec={config.lower_threshold_rpsec}, higher_threshold_rpsec={config.higher_threshold_rpsec}")
         else:
             self.logger.info(f"Crank filter disabled")
 
@@ -413,58 +418,58 @@ class Crank:
 
 # This code will plug TachoDriver and generate random RPS
 
-class DebugCounter:
-    def __init__(self):
-        self.value_list = []
-        # Normal rpsec in pulses per config.crank_interval
-        self.normal = config.pulses_per_revolution*config.normal_rpsec/(1000/config.crank_interval)
-        self.last_value = 0
-        self.t0 = ticks_ms()
-
-    def value( self, newvalue=None ):
-        from random import random
-        dt = ticks_diff(ticks_ms(), self.t0)
-        self.t0 = ticks_ms()
-        # calculate pulses equivalent to config.normal_rpsec for the time since last call to value()
-        normal = self.normal * dt/config.crank_interval
-
-        if not self.value_list:
-            # Value list is empty, refill
-            if random() < 0.1:
-                self.value_list = [ self.last_value*1.5, self.last_value*0.7, self.last_value*0.8 ]
-            elif random() < 0.1:
-                self.value_list = [normal/10]
-            elif random() < 0.1:
-                self.value_list = [normal*1.4]
-            elif random() < 0.1:
-                x = self.last_value
-                self.value_list = [ x*1.1, x*0.9, x*0.7, x*0.6, x*0.5, x*0.4, x*0.3, x*0.2]
-            elif random() < 0.1:
-                x = self.last_value
-                self.value_list = [ x*0.4, x*0.5, x*0.7, x*0.9, x*0.9, x*1.1, x*1.2, x*1.3]
-            elif random() < 0.1:
-                self.value_list = [0]*10
-            else:
-                repetitions = round(random()*20)+1
-                self.value_list = [normal*( 1+random()*0.05-0.025 ) for _ in range(repetitions)]
-
-        self.last_value = self.value_list.pop(0)
-        return self.last_value
-    
-    async def start_debug( self ):
-        while True:
-            await asyncio.sleep_ms(200)
-            try:
-                from drehorgel import crank
-                break
-            except:
-                pass
-        if crank.td.counter:
-            # Monkey patch function to read counter value. Rest of
-            # TachoDriver continues to be enabled.
-            crank.td.counter.value = self.value
-            crank.logger.info("Inject tacho debug data enabled")
-
 if config.debug_tacho:
+    class DebugCounter:
+        def __init__(self):
+            self.value_list = []
+            # Normal rpsec in pulses per config.crank_interval
+            self.normal = config.pulses_per_revolution*config.normal_rpsec/(1000/config.crank_interval)
+            self.last_value = 0
+            self.t0 = ticks_ms()
+
+        def value( self, newvalue=None ):
+            from random import random
+            dt = ticks_diff(ticks_ms(), self.t0)
+            self.t0 = ticks_ms()
+            # calculate pulses equivalent to config.normal_rpsec for the time since last call to value()
+            normal = self.normal * dt/config.crank_interval
+
+            if not self.value_list:
+                # Value list is empty, refill
+                if random() < 0.1:
+                    self.value_list = [ self.last_value*1.5, self.last_value*0.7, self.last_value*0.8 ]
+                elif random() < 0.1:
+                    self.value_list = [normal/10]
+                elif random() < 0.1:
+                    self.value_list = [normal*1.4]
+                elif random() < 0.1:
+                    x = self.last_value
+                    self.value_list = [ x*1.1, x*0.9, x*0.7, x*0.6, x*0.5, x*0.4, x*0.3, x*0.2]
+                elif random() < 0.1:
+                    x = self.last_value
+                    self.value_list = [ x*0.4, x*0.5, x*0.7, x*0.9, x*0.9, x*1.1, x*1.2, x*1.3]
+                elif random() < 0.1:
+                    self.value_list = [0]*10
+                else:
+                    repetitions = round(random()*20)+1
+                    self.value_list = [normal*( 1+random()*0.05-0.025 ) for _ in range(repetitions)]
+
+            self.last_value = self.value_list.pop(0)
+            return self.last_value
+        
+        async def start_debug( self ):
+            while True:
+                await asyncio.sleep_ms(200)
+                try:
+                    from drehorgel import crank
+                    break
+                except:
+                    pass
+            if crank.td.counter:
+                # Monkey patch function to read counter value. Rest of
+                # TachoDriver continues to be enabled.
+                crank.td.counter.value = self.value
+                crank.logger.info("Inject tacho debug data enabled")
+
     debug_task = asyncio.create_task( DebugCounter().start_debug() )
 

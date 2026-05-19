@@ -17,8 +17,13 @@ _logger = getLogger(__name__)
 # Password mask for web form
 _PASSWORD_MASK = const("***************")
 #                       123456789.12345
+
 # Initial password when just installed
 _DEFAULT_PASSWORD = const("password") 
+
+# Prefix for encrypted password in config.json
+_PASSWORD_PREFIX = const("@encrypted_")
+
 
 
 class Config:
@@ -104,7 +109,7 @@ class Config:
         self.lower_threshold_rpsec = 0.4
         self.higher_threshold_rpsec = 0.7
         self.normal_rpsec = 1.2
-        self.filter_window_len =  6
+        self.filter_window_msec = 1000
         self.dump_tacho_data = False
         self.debug_tacho = False
         
@@ -112,8 +117,15 @@ class Config:
         self.multiple_setlists = False 
         self.wait_stop_turning = True
         self.automatic_delay = 0
-        # >>> put on performance page for current tune?
-        # >>> use a touchpad gesture?
+
+        # >>> Barrel mode: put on performance page for current tune?
+        # >>> Together with tempo follows crank.
+        # >>> save latest setting for each tune.
+        # >>> save in tunelib, edit with tunelibedit.
+        # >>> Reorder info on play page:
+        # 1 column: genre, author, info.
+        # 2 column: year, rating, date added, duration (time),
+        #           barrel mode check, tune follows crank check. 
         self.barrel_mode = False
         
         # RC Servos 
@@ -299,8 +311,6 @@ class Config:
 
 
 
-_PASSWORD_PREFIX = const("@encrypted_")
-
 class PasswordManager:
     # Password are stored encrypted in config instance
     # Although this doesn't make the ESP32-S3 secure....
@@ -348,7 +358,7 @@ class PasswordManager:
 
         c = aes(self._get_key(), 1).encrypt(pass_buffer)
 
-        return _ + binascii.hexlify(c).decode()
+        return _PASSWORD_PREFIX + binascii.hexlify(c).decode()
 
     def decrypt_password(self, c)->str:
         if not isinstance(c, str):

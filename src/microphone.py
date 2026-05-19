@@ -97,7 +97,7 @@ class Microphone:
         n = len(self.adc_signal)
         
         # Simulate a signal wave for testing
-        # >>> should this be 440 or the "adjusted" frequency?
+        # Doesn't matter if 440 or adjusted since this is testing only...
         nominal_freq = midi_note.frequency()
         r = random.random()
         # Randomly show some frequencies in red or out of range

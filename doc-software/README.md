@@ -281,6 +281,7 @@ The large buttons are:
 * Shuffle ⭐⭐⭐: Shuffle all tunes with a rating of three stars randomly.
 * History: Navigates to the History page. The purpose of this button is to be able to put a comment or rating on recently played tunes.
 
+
 The current setlist is kept even if the microcontroller is rebooted or turned off.
 
 If you want to have multiple stored setlists, see [here](#multiple-stored-setlists).
@@ -1046,31 +1047,39 @@ Sounding several pipes together very shortly makes a percussive sound, much like
 
 ## Crank rotation sensor and tempo
 The crank rotation sensor can start tunes, and can influence tempo of the music. See hardware section for discussion of sensors.
+ 
+Crank does not influence music playback:
+* For one tune only: Start the tune with the start button on the web page or the touchpad. 
+* For all tunes: do not configure a crank sensor (tachometer) on the Pinout page (leave pin numbers blank)
 
-The crank rotation sensor can be a simple rotation sensor or a quadrature rotation sensor, this second type of sensor can distinguish forward and backward motion. More advanced sensors are usually quadrature encoding rotation sensors. Quadrature encoders have 2 signal outputs, typically called A and B. They can also have a Z output that issues a pulse once per revolution and is not necessary here.
+Crank starts tunes. Tune stops if crank stops. Tempo is fixed by MIDI file: 
+* For one tune only, uncheck "Tempo follows crank" on the Perfomance page
+* For all tunes, uncheck "Tempo follows crank" in the General Configuration page.
 
-The crank sensor must be configured first in the pinout page. There is a line called "Tachometer" (meaning: rotation speed sensor) and either one or two GPIO pins can be configured for the sensor:
+Crank starts tunes and crank speed governs tempo: You need to configure the crank sensor in the Pinout page and:
+* For one tune only, check "Tempo follows crank" on the Perfomance page. 
+* For all tunes, check "Tempo follows crank" in the General Configuration page.
+
+
+The crank rotation sensor can be a simple rotation sensor or a quadrature rotation sensor. The quadrature rotation sensor can distinguish forward and backward motion, although for this purpose the direction of rotation is disregarded. More advanced sensors are usually quadrature encoding rotation sensors. Quadrature encoders have 2 signal outputs, typically called A and B. They can also have a Z output that issues a pulse once per revolution and is not necessary here.
+
+The crank sensor must be configured first in the Pinout page. There is a line called "Tachometer" (meaning: rotation speed sensor) and either one or two GPIO pins can be configured for the sensor:
 * One pin means this is a simple encoder
 * Two pins means this is a quadrature encoder. Quadrature encoder typically have outputs marked A and B. The order is not relevant for this application.
 
 Once configured there, go to the General Configuration page, "Crank and tune play parameters" section:
 * "Tempo follows crank": if checked, the music tempo (music playback speed) follows the crank speed. If you turn faster, music plays faster. If you turn slower, music plays slower. This setting can be temporarily overridden on the "Performance" page, since there is also a "Tempo follows crank" checkbox. 
-* Pulses per revolution: If the sensor has a toothed disk, the number of tooths. If the sensor is a industrial sensor: the number of pulses per revolution specified on the sensor. In both cases, the ESP32-S3 may count both rising and falling edges and then divide by the number of edges or phases.
+* Pulses per revolution: If the sensor has a toothed disk, the number of tooths. If the sensor is a industrial sensor: the number of pulses per revolution specified on the sensor. In both cases, the ESP32-S3 may count both rising and falling edges and then divide by the number of edges or phases. Use the ```Test``` button for the crank on the Pinout page to determine how many counts are generated with one revolution, and enter that value on the General Configuration page.
 
 There is also the "window size" for a filter to smooth out fast variations of speed that the crank sensor may detect. A good value when window size * sampling interval is about 1000 milliseconds. Here is an example of "filtering" in the crank graph of the System page:
 
 ![crank graph no filter](crank-graph-no-filter.jpg) ![crank graph filtered](crank-graph-filtered.jpg)
-
-If the crank starts to turn, music will start to play. The "tempo follows crank" setting does not influence this.
 
 To detect that the crank starts turning, the crank speed must exceed the "high threshold". Only when the crank speed drops below the "low threshold" the music stops. Crank start and stop detection is very fast (i.e. not affected by the filter).
 
 "Normal value of crank speed": I have found 1.2 revolutions/second a good value, but this depends on your bellows capacity and turning habit.
 
 There is a crank speed graph on the "System" page. 
-
-
-When you turn the crank for some seconds and there is no setlist, the microcontroller will shuffle all tunes with 3 stars and start playing.
 
 Here is more on the crank sensor: [A crank sensor journey](/doc-hardware/crank-sensor.md)
 
@@ -1501,6 +1510,8 @@ Please post in discussions if you are unhappy with some dropped feature.
 * If tune is started by crank, it can be stopped with the crank.
 If tune is not started by crank, it will not react to the crank.
 * Document "Select for backup" button.
+* Make MicroPython itself smaller, disabling unnecessary modules, to get more space for ROMFS.
+* Make memory footprint smaller delaying the loading of modules for web pages until needed (new module pinoutweb.py).
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

@@ -154,7 +154,6 @@ class MIDIPlayer:
                                 start_time,
                                 self.time_played_us + duration*1000*(self.repeats-1), 
                                 duration )
-            #>>>self.set_tempo_follows_crank( config.tempo_follows_crank )
 
             # scheduler.fdump() # for debug 
             
@@ -180,7 +179,6 @@ class MIDIPlayer:
     
 
     async def _play(self, midifile, delay_start=50_000 ):
-        print(f">>>player._play: {config.tempo_follows_crank=} {self.tempo_follows_crank=} {self.started_by_crank=}")
 
         self._reset_channelmap1()
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
@@ -263,7 +261,6 @@ class MIDIPlayer:
                     # Never seen early notes.
                     ActuatorStats.count( "early notes") 
                     ActuatorStats.max( "max note early",  wtdiff )
-                
             self._process_midi(status, midi_event)
 
         total = ticks_diff(ticks_ms(),msec_start) 
@@ -348,22 +345,13 @@ class MIDIPlayer:
     
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
         # Recompute delta time due to crank or UI velocity setting
-        if crank.is_turning():
-        #>>> formerly if not self.tempo_follows_crank or crank.is_turning():
-            # Change playback speed with UI settings 
-            # and with crank rpsec if crank sensor is enabled
-            normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank)
-            if normalized_vel < 0.1:
-                # Avoid division by zero.
-                # Also a very slow speed is meaningless here, 
-                # crank should have signaled that it has stopped...
-                normalized_vel = 1
-            return round(midi_event_delta_us / normalized_vel)
 
         # Wait for the crank to start turning again and return the waiting time
         # to be added to the MIDI time delaying the rest of the tune.
-        if self.started_by_crank and not crank.is_turning(): # >>> TEST!!!!
-        # >>>Formerly if self.tempo_follows_crank and not crank.is_turning():
+        if self.started_by_crank and not crank.is_turning(): 
+            # Music stops when crank stops. This does not depend on
+            # "tempo_follows_crank", but needs crank installed and
+            # tune started by crank.
             # Let async tasks run freely while waiting
             start_wait = ticks_us()
             scheduler.run_always()
@@ -378,8 +366,22 @@ class MIDIPlayer:
             await scheduler.wait_and_yield_usec(1)
     
             ActuatorStats.count("crank stop")
-        # Lengthen MIDI time by wait time
-        return ticks_diff(ticks_us(), start_wait)
+            # Lengthen MIDI time by wait time
+            return ticks_diff(ticks_us(), start_wait)
+        else:
+            # Change playback speed with UI settings.
+            # Change playback speed with crank rpsec if:
+            #   crank sensor is enabled
+            #   AND user selected "tempo follows crank"
+            #   AND started by crank. 
+            # Otherwise, only UI influences tempo.
+            normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank and self.started_by_crank)
+            if normalized_vel < 0.1:
+                # Avoid division by zero.
+                # Also a very slow speed is meaningless here, 
+                # crank should have signaled that it has stopped...
+                normalized_vel = 1
+            return round(midi_event_delta_us / normalized_vel)
     
 
     def set_tempo_follows_crank( self, v ):
@@ -391,7 +393,6 @@ class MIDIPlayer:
         #   If started by crank
         #   
         self.tempo_follows_crank = v and crank.is_installed()
-        print(f">>>player: set_tempo_follows crank: argument={v} {self.tempo_follows_crank=} {crank.is_installed()=}")
     
     def set_started_by_crank( self, v ):
         # False if crank not installed

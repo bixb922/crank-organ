@@ -5,8 +5,8 @@ import os.path # type:ignore
 py_folder = "crank-organ/src" 
 static_folder = "crank-organ/static"
 data_folder = "crank-organ/data"
-mpy_folder = "device/mpy"
-static_folder_gz = "device/static"
+mpy_folder = "compiled/mpy"
+static_folder_gz = "compiled/static"
 
 
 #py_folder = "github-clone/crank-organ/src" 
@@ -91,7 +91,7 @@ def count_size():
             countlines( filename, filelist )
             py_bytes += os.stat( filename ).st_size
             n += 1
-    filelist.sort( key=lambda x : -x[1] )
+    filelist.sort( key=lambda x : -x[2] )
     for fn, lines, comments in filelist:
         print(f"{fn:40s} {lines:4d} lines {comments/(lines+comments)*100:2.0f}% comments")
 
@@ -106,7 +106,7 @@ def count_size():
         if fn[-3:] == ".py" and isexcept(fn):
             countlines(  os.path.join( py_folder, fn ), filelist )
             n += 1
-    filelist.sort( key=lambda x : -x[1] )
+    filelist.sort( key=lambda x : -x[2] )
     for fn, lines, comments in filelist:
         print(f"{fn:40s} {lines:4d} lines {comments/(lines+comments)*100:2.0f}% comments")
 
@@ -122,7 +122,7 @@ def count_size():
         if fn[-5:] == ".html" or fn[-3:] == ".js":
             countlines_html(  os.path.join( static_folder, fn ), filelist )
             n += 1
-    filelist.sort( key=lambda x : -x[1] )
+    filelist.sort( key=lambda x : -x[2] )
     for fn, lines, comments in filelist:
         print(f"{fn:40s} {lines:4d} lines {comments/(lines+comments)*100:2.0f}% comments")
     total = sum ( x for _,x,_ in filelist )

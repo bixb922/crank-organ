@@ -117,7 +117,7 @@ class Setlist:
             # Assume tune will be started with crank (if installed)
             # If started by web button or touchpad, self.start_tune() 
             # will set "started by crank" to False.
-            # >>> needs testing
+   
             player.set_started_by_crank( crank.is_installed() )
             # Can ge changed by user on performance page during self.-_wait_for_start()
             player.set_tempo_follows_crank( config.tempo_follows_crank )

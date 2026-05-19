@@ -143,6 +143,8 @@ class getLogger:
         if level == "ERROR" or level == "EXCEPTION":
             cls._error_count += 1
    
+    # This method also provides an expedite way to report an exception
+    # without having to instance a getLogger
     @classmethod
     def log_exc(cls, module, exception, message ):
         # Count exceptions as errors

@@ -118,6 +118,7 @@ class MIDIController:
         # Midi note may have program_number equal to
         # WILDCARD_PROGRAM or DRUM_PROGRAM
         actions = self.notedict.setdefault( midi_note, [] )
+        # >>> why is midi_note needed in the tuple?
         actions.append( (actuator, reg, midi_note ) )
         # actions.append( actuator )
 

@@ -144,10 +144,10 @@
 		the recorded tempo in the MIDI file, in revolutions per second:</label>
 	<input id="normal_rpsec" type="text" size="4" oninput="markField('normal_rpsec')">
 	<br>
-	<label for="filter_window_len">
-		Window size for moving average of crank revolutions/sec filter. Values: 4 to 8, zero to disable filter:
+	<label for="filter_window_msec">
+		Window size for moving average of crank revolutions/sec filter. 300 to 1200 milliseconds. Zero to disable filter. Integer only, in milliseconds:
 	</label>
-	<input id="filter_window_len" type="text" size="2" oninput="markField('filter_window_len')">
+	<input id="filter_window_msec" type="text" size="2" oninput="markField('filter_window_msec')">
 	<br>
 
 	<label for="tuning_cents">When tuning a pipe, if the frequency is off more than this quantity of cents, show result in red.</label>

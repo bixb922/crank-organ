@@ -4,6 +4,7 @@ class ActuatorStats:
     # to avoid the dependency of low level drivers (driver_*.py)
     # from drehorgel.py
     #
+    stats = {}
     @classmethod
     def zero(cls):
         cls.stats = {}
@@ -24,4 +25,3 @@ class ActuatorStats:
         return cls.stats
 
     
-ActuatorStats.zero()

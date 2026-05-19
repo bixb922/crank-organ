@@ -143,7 +143,8 @@ class OrganTuner:
         # Play all pìns
 
         pin_indexes = [ x for x in range(actuator_bank.get_pin_count())]
-        pin_indexes.sort( key=lambda pi: actuator_bank.get_actuator_by_pin_index(pi).nominal_midi_note.midi_number or 9999)
+        # >>> check this sort key
+        pin_indexes.sort( key=lambda pi: actuator_bank.get_actuator_by_pin_index(pi).nominal_midi_number or 9999)
         for duration in (240, 120, 60, 30):  # In milliseconds
             for _ in range(2):
                 # Play twice: one up, one down

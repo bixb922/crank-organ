@@ -4,8 +4,8 @@
 
 # >>> check if multipart/form-data is better than shipping json.
 
-import os, sys, gc, asyncio, machine
-from time import ticks_ms, ticks_diff, ticks_us
+import os, sys, gc, asyncio
+from time import ticks_ms, ticks_diff
 from random import getrandbits
 
 from microdot import Microdot, send_file, redirect, Request, urldecode_bytes
@@ -22,9 +22,8 @@ from midi import NoteDef
 # Everything is needed here
 from drehorgel import battery, tunemanager, config, history, setlist, player, crank
 from drehorgel import gpio, actuator_bank, timezone
-from drehorgel import wifimanager, plist, gpio, poweroff
+from drehorgel import wifimanager, gpio, poweroff
 from solenoid import PinTest
-from pinout import GPIOstatistics, SaveNewPinout
 
 app = Microdot()
 _logger = getLogger(__name__)
@@ -581,13 +580,22 @@ async def change_config(request):
 #
 # Pinout functions
 #
+plist = None
+def get_pinout_list():
+    global plist
+    if not plist:
+        from pinoutweb import PinoutList
+        plist = PinoutList(  config.PINOUT_FOLDER, config.PINOUT_TXT )
+    return plist
 
 @app.route("/pinout_list")
 async def pinout_list(request):
+    plist = get_pinout_list()
     return plist.get_filenames_descriptions()
 
 @app.route("/get_pinout_filename")
 async def get_pinout_filename(request):
+    plist = get_pinout_list()
     return {
         "pinout_filename": plist.get_saved_pinout_filename(),
         "pinout_description": plist.get_description(),
@@ -595,6 +603,7 @@ async def get_pinout_filename(request):
 
 @app.route("/get_used_pins/<path>")
 async def get_used_pins( request, path ):
+    from pinoutweb import GPIOstatistics
     return GPIOstatistics(decodePath(path), False).get_used_pins()
 
 @app.route("/get_index_page_info")
@@ -613,6 +622,7 @@ async def save_pinout_filename(request):
     # Force reboot to make this take effect.
     setlist.stop_playback()
     data = request.json
+    plist = get_pinout_list()
     plist.set_current_pinout_filename(data["pinout_filename"])
 
     return respond_ok()
@@ -629,6 +639,7 @@ async def save_pinout_detail(request, path):
     try:
         # SaveNewPinout class will validate and do a init of pint
         # Raise error if pinout is not valid
+        from pinoutweb import SaveNewPinout
         SaveNewPinout(output_filename, request.json, True)
         _logger.debug("save_pinout_detail pinout.save complete")
         return respond_ok()

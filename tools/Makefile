@@ -53,6 +53,8 @@ microdot.mpy \
 organtuner.mpy \
 microphone.mpy \
 pinout.mpy \
+pinoutweb.mpy \
+pintest.mpy \
 player.mpy \
 scheduler.mpy \
 setlist.mpy \
@@ -89,8 +91,8 @@ translations.js.gz
 
 
 # Target "update": compile py to mpy, compress html/js to gz
-# and copy to device and device/update folder. 
-# device/update is used to test if file was copied to device.
+# and copy to device and compiled/update folder. 
+# compiled/update is used to test if file was copied to device.
 # Does NOT update: *.jpg, *.ico, *.png, /data/*
 update: compile $(addprefix compiled/update/, $(MPY_FILES)) $(addprefix compiled/update/,  $(STATIC_FILES))
 
@@ -190,6 +192,6 @@ romfs: compile
 
 copy_mp_bin:
 	#  cache results of MicroPython image compilation here
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin ../bin/
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/partition_table/partition-table.bin ../bin/
-	-cp $(HOME)/micropython/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/micropython.bin ../bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_MUSICAL_S3-SPIRAM_OCT/bootloader/bootloader.bin ../bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_MUSICAL_S3-SPIRAM_OCT/partition_table/partition-table.bin ../bin/
+	-cp $(HOME)/micropython/ports/esp32/build-ESP32_MUSICAL_S3-SPIRAM_OCT/micropython.bin ../bin/

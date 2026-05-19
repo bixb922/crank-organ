@@ -159,7 +159,6 @@ async def signal_ready( controller ):
     await controller.clap(5)
     _led.off()
 
-
 async def start():
     # Start the software, called with asyncio.run by main.py
     global _led, _logger

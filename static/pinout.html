@@ -278,6 +278,7 @@ async function getPinoutDetail( ) {
         }
         else if( pdtype == "tempo" ){
             // >>> deprecated. If file is saved, "tempo" will disappear.
+            // >>> for transition: ignore when microcontroller sends this.
             // insertFormRow( tbody,`row_${f}_tempo`, [
             //     "Tempo encoder knob pins A and B",
             //     makeInput( `tempo_a.${f}`, 3, pd[1] ),
@@ -587,7 +588,7 @@ async function savePinoutDetail(){
         else if( pdtype == "servopulse"){
             let pulse0 = document.getElementById( `servopulse.pulse0.${f}` ).value ;
             let pulse1diff = document.getElementById( `servopulse.pulse1diff.${f}` ).value ;
-            newpd.push( ["servopulse", valnum(pulse0), valnum(pulse0)+valnum(pulse1diff) ]);
+            newpd.push( ["servopulse", valnum(pulse0), valnum(pulse0)+valposneg(pulse1diff) ]);
         }
         else if ( pdtype == "pca9685"){
             let addr = document.getElementById( `pca9685.address.${f}` ).value ;           
@@ -624,8 +625,6 @@ function getRadioButtonValue( element_name ) {
 }
 
 function valnum( s ){
-    // >>> PULSE1DIFF can be negative!!!!
-    // >>> test all calls of valnum
     if( isNaN( s )) {
         alert("Value is not numeric: " + s );
         throw new Error("Value must be numeric") ;
@@ -641,15 +640,12 @@ function valnum( s ){
     return parseInt( s );
 }
 
-function valnum( s ){
+function valposneg( s ){
+    // Same as valnum but allows < 0
     if( isNaN( s )) {
         alert("Value is not numeric: " + s );
         throw new Error("Value must be numeric") ;
         return ;
-    }
-    if( s < 0 ){
-        alert("Value is <= 0: " + s ); 
-        throw new Error("Value must be positive") ;
     }
     if( s == ""){
         return "";
