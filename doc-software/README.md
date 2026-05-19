@@ -93,7 +93,7 @@
      * [Changes June 24 to July 5, 2025](#changes-june-24-to-july-5-2025)
      * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
      * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
-     * [More changes in May 2026 to](#more-changes-in-may-2026-to)
+     * [More changes in May 2026](#more-changes-in-may-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -1466,7 +1466,7 @@ Dropped features:
 
 Please post in discussions if you are unhappy with some dropped feature.
 
-## More changes in May 2026 to
+## More changes in May 2026
 * Use MicroPython 1.28.0 for the compiled ```.bin``` files.
 * Speed up boot: skip reading tunelib.json, lyrics.json.
 * Move check of minimum free flash from browser to server.
