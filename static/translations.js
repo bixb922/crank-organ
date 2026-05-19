@@ -195,7 +195,7 @@ let translationDict = {
 	["Enter current charge level of battery, 100=full, 0=empty, reset=delete calibration data. This is used to show battery level", "Gib den aktuellen Stand der Batterie an, 100=voll, 0=leer, reset=Eichungsdatei löschen (diese Information dient zur Eichung des Ladezustands der Batterie)"],
 "ip de clientes activos": // diag.html 
 	["IP of active clients", "IP aktiver Kunden"],
-"letra": // play.html 
+"letra ": // play.html 
 	["Lyrics", "Liedtext"],
 "lista de melodías": // tunelist.html 
 	["Tune list", "Melodieliste"],
