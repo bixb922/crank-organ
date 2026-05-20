@@ -74,7 +74,6 @@ class Setlist:
         # "Crank starts to turn" does not call start_tune.
         # Don't follow crank for this tune only. Gets reset
         # to configured value by player for the next tune.
-        player.set_tempo_follows_crank(False)
         player.set_started_by_crank(False)
         self.music_start_event.set()
         
@@ -119,8 +118,6 @@ class Setlist:
             # will set "started by crank" to False.
    
             player.set_started_by_crank( crank.is_installed() )
-            # Can ge changed by user on performance page during self.-_wait_for_start()
-            player.set_tempo_follows_crank( config.tempo_follows_crank )
 
             # Wait for music to start (crank turns, or touch pad
             # was touched or web button or automatic playback or whatever)

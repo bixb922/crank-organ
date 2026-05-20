@@ -59,6 +59,7 @@ class MIDIPlayer:
         # reset after each tune
         # Put some initial values here, will be replaced before waiting for a tune
         self.tempo_follows_crank = config.tempo_follows_crank
+        self.barrel_mode = config.barrel_mode
         self.started_by_crank = crank.is_installed()
         
         self.current_note = NoteDef( 0, 0 )
@@ -119,7 +120,7 @@ class MIDIPlayer:
             # From play_tune from tunemanager to _play = 150 msec
             # In "barrel organ mode", repeat until
             # user presses button to get to next tune.
-            for _ in range( 9999 if config.barrel_mode else 1):
+            for _ in range( 9999 if self.barrel_mode else 1):
                 self.repeats += 1
                 await self._play(midifile)
             self.progress.tune_ended()
@@ -154,6 +155,9 @@ class MIDIPlayer:
                                 start_time,
                                 self.time_played_us + duration*1000*(self.repeats-1), 
                                 duration )
+            
+            self.tempo_follows_crank = config.tempo_follows_crank
+            self.barrel_mode = config.barrel_mode
 
             # scheduler.fdump() # for debug 
             
@@ -337,11 +341,12 @@ class MIDIPlayer:
             controller.note_on( notedef )
 
     def get_progress(self):
-        p = self.progress.get()
-        p["playtime"] = self.time_played_us / 1000
-        p["tempo_follows_crank"] = self.tempo_follows_crank
-        p["repeats"] = self.repeats
-        return p
+        progress = self.progress.get()
+        progress["playtime"] = self.time_played_us / 1000
+        progress["tempo_follows_crank"] = self.tempo_follows_crank 
+        progress["barrel_mode"] = self.barrel_mode 
+        progress["repeats"] = self.repeats
+        return progress
     
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
         # Recompute delta time due to crank or UI velocity setting
@@ -385,17 +390,20 @@ class MIDIPlayer:
     
 
     def set_tempo_follows_crank( self, v ):
-        # Store setting
-        # If crank not installed, don't follow crank....
-        # Depends on:
-        #   Configuration option
-        #   Tempo follows crank check box on performance page
-        #   If started by crank
-        #   
-        self.tempo_follows_crank = v and crank.is_installed()
-    
+        # set by webserver
+        # Can override config but cannot override if not started by crank
+        self.tempo_follows_crank = v and crank.is_installed() and self.started_by_crank
+
+    def set_barrel_mode( self, v ):
+        # set by webserver
+        # Can override config but cannot override if not started by crank
+        self.barrel_mode = v and crank.is_installed() and self.started_by_crank
+      
     def set_started_by_crank( self, v ):
         # False if crank not installed
         # False if started by touchpad or web start button
         # True if crank installed and started by crank turning
-        self.started_by_crank = v  and crank.is_installed()
+        self.started_by_crank = v and crank.is_installed()
+        # Can't use barrel mode or tempo follows crank if not started by crank
+        self.barrel_mode = self.barrel_mode and v
+        self.tempo_follows_crank = self.tempo_follows_crank and v

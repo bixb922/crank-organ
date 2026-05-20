@@ -215,6 +215,8 @@ let translationDict = {
 	["Tunes played", "Gespielte Melodien"],
 "mm:ss": // diag.html meaning minutes:seconds
 	["mm:ss", "mm:ss"],
+"modo barril": // play.html
+	["Barrel mode", "Walzenorgelmodus"],
 "mostrar letra": // play.html 
 	["Show lyrics", "Liedtext anzeigen"],
 "mostrar setlist": // play.html 

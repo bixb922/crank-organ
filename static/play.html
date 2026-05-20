@@ -17,9 +17,9 @@
 <table id="main_info_table">
 	<tbody>
 		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
-		<tr><td colspan="2"><h2><span is="tune-title" id="title"></span></h2></td></tr>
+		<tr><td colspan="4"><h2><span is="tune-title" id="title"></span></h2></td></tr>
 		<tr id="controlButtons">
-			<td colspan="2">
+			<td colspan="4">
 			<button id="startButton">Partir</button>
 			<button id="daCapoButton">Da capo</button>
 			<button id="toggleSetlistLyricsButton">Mostrar letra</button>
@@ -31,8 +31,22 @@
 		<tr id="tlcol2"><td>&nbsp;</td><td></td></tr>
 		<tr id="tlcol3"><td>&nbsp;</td><td></td></tr>
 		<tr id="tlcol4"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol5"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol6"><td>&nbsp;</td><td></td></tr>
+		<tr id="tlcol5"><td>&nbsp;</td><td></td>
+			<td name ="crankInfo">
+				<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">
+				<label for="tempo_follows_crank">Tempo sigue manivela</label><br>
+			</td>
+		</tr>
+		<tr id="tlcol6"><td>&nbsp;</td><td></td>
+			<td name="crankInfo">
+				<input type="checkbox" id="barrel_mode" oninput="barrel_mode()"/>
+				<label for="barrel_mode">Modo barril</label>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<table>
+	<tbody>
 		<tr id="timebar_row"><td id="progress">&nbsp;</td><td><canvas id="timebar" is="bar-graph"></canvas></td></tr>
 	</tbody>
 </table>
@@ -80,11 +94,13 @@
 		<canvas id="velocityGraph" is="needle-bar"></canvas>
 		<a onclick="set_velocity(5)" style="cursor:pointer">&nbsp;&#9193;</a>
 		<br>
-		<span id="crankInfo">
+		<span name="crankInfo">
+			<!--- // >>> moved
 			<br>
 			<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">
 			<label for="tempo_follows_crank">Tempo sigue manivela</label><br>
 			<br>
+			-->
 			<span id="turning">Girando</span>
 			<span id="rpsecText">nnn</span>&nbsp;<span>rev/seg</span>&nbsp;
 			<canvas id="rpsecGraph" is="needle-bar"></span>
@@ -112,7 +128,7 @@ let CURRENT_TUNEID = "" ;
 
 // 
 let ROW_MAP = [TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_INFO, 
-TLCOL_TIME, TLCOL_YEAR, TLCOL_RATING, TLCOL_DATEADDED];
+TLCOL_YEAR, TLCOL_RATING, TLCOL_DATEADDED, TLCOL_TIME ];
 let ROW_NAMES = map_tlcol_names( ROW_MAP );
 
 function assignButtonHandlers(){
@@ -402,8 +418,11 @@ async function updateProgress( progress ) {
 
 	
 	if( progress["tacho_installed"] ){
+		for( let ele of document.getElementsByName("crankInfo")){
+			ele.style.display = "";
+		}
+
 		let rt = Math.round( progress["rpsec"]*10)/10 ;
-		document.getElementById("crankInfo").style.display = "" ;
 		if( progress["is_turning"] ) {
 			textById("turning", tlt("Girando"));
 		}
@@ -425,11 +444,16 @@ async function updateProgress( progress ) {
 		}
 
         document.getElementById("rpsecGraph").draw( rpsec );
-        f = document.getElementById("tempo_follows_crank");
+        let f = document.getElementById("tempo_follows_crank");
         f.checked = progress["tempo_follows_crank"] ;
+		f = document.getElementById("barrel_mode");
+		f.checked = progress["barrel_mode"];
+
 	}
 	else {
-		document.getElementById("crankInfo").style.display = "none" ;	
+		for( let ele of document.getElementsByName("crankInfo")){
+			ele.style.display = "none";
+		}
 	}
 	
 	if( progress["registers"] && progress["registers"].length > 0 ){
@@ -562,6 +586,12 @@ async function tempo_follows_crank(){
     await commonGetProgress.fetchProgress( "/tempo_follows_crank", data );
 }
 
+async function barrel_mode(){
+    let f = document.getElementById("barrel_mode");
+    let data = { "barrel_mode": f.checked };
+    await commonGetProgress.fetchProgress( "/barrel_mode", data );
+
+}
 function go_history(){
 	window.location.href = "/static/history.html" ;
 }

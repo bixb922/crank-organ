@@ -772,6 +772,13 @@ async def tempo_follows_crank( request ):
     player.set_tempo_follows_crank( data["tempo_follows_crank"] )
     return get_progress()
 
+@app.post( "/barrel_mode" )
+async def barrel_mode( request ):
+    data = request.json
+    player.set_barrel_mode( data["barrel_mode"] )
+    return get_progress()
+
+
 @app.post( "/toggle_register")
 async def toggle_register( request ):
     data = request.json
