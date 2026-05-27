@@ -59,11 +59,11 @@ class MIDIPlayer:
         # reset after each tune
         # Put some initial values here, will be replaced before waiting for a tune
         self.tempo_follows_crank = config.tempo_follows_crank
-        self.barrel_mode = config.barrel_mode
+        self.repeats_requested = 1
         self.started_by_crank = crank.is_installed()
         
         self.current_note = NoteDef( 0, 0 )
-        self.repeats = 0
+        self.repeats_count = 0
         
         self.process_map = {
             NOTE_ON:  lambda c, d, n: controller.note_on( n ),
@@ -95,7 +95,10 @@ class MIDIPlayer:
         midi_fn = None
         duration = 1 
         title = None
-        self.repeats = 0
+        self.repeats_count = 0
+        # don't reset repeats_requested here, could have been
+        # incremented while waiting for tune to startd. Reset repeats_requested
+        # after tune stops.
         midifile = None
         
         try:
@@ -120,9 +123,11 @@ class MIDIPlayer:
             # From play_tune from tunemanager to _play = 150 msec
             # In "barrel organ mode", repeat until
             # user presses button to get to next tune.
-            for _ in range( 9999 if self.barrel_mode else 1):
-                self.repeats += 1
+            
+            while self.repeats_count < self.repeats_requested:
+                self.repeats_count += 1
                 await self._play(midifile)
+
             self.progress.tune_ended()
 
             # Let last minute pending blinks wind down
@@ -153,11 +158,12 @@ class MIDIPlayer:
             battery.end_of_tune(self.time_played_us / 1_000_000)
             self._insert_history( tuneid, 
                                 start_time,
-                                self.time_played_us + duration*1000*(self.repeats-1), 
+                                self.time_played_us, # >>> could still add repeats...
                                 duration )
             
             self.tempo_follows_crank = config.tempo_follows_crank
-            self.barrel_mode = config.barrel_mode
+            self.repeats_requested = 1
+            self.repeats_count = 0
 
             # scheduler.fdump() # for debug 
             
@@ -344,12 +350,14 @@ class MIDIPlayer:
         progress = self.progress.get()
         progress["playtime"] = self.time_played_us / 1000
         progress["tempo_follows_crank"] = self.tempo_follows_crank 
-        progress["barrel_mode"] = self.barrel_mode 
-        progress["repeats"] = self.repeats
+        progress["repeats_requested"] = self.repeats_requested 
+        progress["repeats_count"] = self.repeats_count
         return progress
     
+
+
     async def _calculate_tachometer_dt(self, midi_event_delta_us):
-        # Recompute delta time due to crank or UI velocity setting
+        # Readjust delta time due to crank or UI velocity setting
 
         # Wait for the crank to start turning again and return the waiting time
         # to be added to the MIDI time delaying the rest of the tune.
@@ -394,16 +402,15 @@ class MIDIPlayer:
         # Can override config but cannot override if not started by crank
         self.tempo_follows_crank = v and crank.is_installed() and self.started_by_crank
 
-    def set_barrel_mode( self, v ):
-        # set by webserver
-        # Can override config but cannot override if not started by crank
-        self.barrel_mode = v and crank.is_installed() and self.started_by_crank
+    def change_repeats_requested( self, v ):
+        print(f"change_repeats_requested {v=} {self.repeats_requested=} new value={max( 1, self.repeats_requested + v )}")
+        # called by webserver,with v +1 or -1
+        self.repeats_requested = max( 1, self.repeats_requested + v )
       
     def set_started_by_crank( self, v ):
         # False if crank not installed
         # False if started by touchpad or web start button
         # True if crank installed and started by crank turning
         self.started_by_crank = v and crank.is_installed()
-        # Can't use barrel mode or tempo follows crank if not started by crank
-        self.barrel_mode = self.barrel_mode and v
-        self.tempo_follows_crank = self.tempo_follows_crank and v
+        # Can't use  "tempo follows crank" if tune not started by crank
+        self.tempo_follows_crank = self.tempo_follows_crank and self.started_by_crank

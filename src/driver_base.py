@@ -111,7 +111,7 @@ class BasePin:
 
     @property
     def nominal_midi_number( self ):
-        return self.nominal_midi_note.nominal_midi_number
+        return self.nominal_midi_note.midi_number
     
     def on( self ):
         # Use self._count to match note on-note off pairs.

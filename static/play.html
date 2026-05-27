@@ -26,21 +26,25 @@
 			<button id="stopTuneSetlist">Próximo</button>
 			</td>	
 		</tr>
-		<tr id="tlcol0"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol1"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol2"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol3"><td>&nbsp;</td><td></td></tr>
-		<tr id="tlcol4"><td>&nbsp;</td><td></td></tr>
+		<tr id="tlcol0"><td>&nbsp;</td><td colspan="2"></td></tr>
+		<tr id="tlcol1"><td>&nbsp;</td><td colspan="2"></td></tr>
+		<tr id="tlcol2"><td>&nbsp;</td><td colspan="2"></td></tr>
+		<tr id="tlcol3"><td>&nbsp;</td><td colspan="2"></td></tr>
+		<tr id="tlcol4"><td>&nbsp;</td><td colspan="2"></td></tr>
 		<tr id="tlcol5"><td>&nbsp;</td><td></td>
-			<td name ="crankInfo">
-				<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">
+			<td name ="crankInfo"
+			style="border-left: 1px solid #E1E1E1;">&nbsp;				<input type="checkbox" id="tempo_follows_crank" oninput="tempo_follows_crank()">
 				<label for="tempo_follows_crank">Tempo sigue manivela</label><br>
 			</td>
 		</tr>
 		<tr id="tlcol6"><td>&nbsp;</td><td></td>
-			<td name="crankInfo">
-				<input type="checkbox" id="barrel_mode" oninput="barrel_mode()"/>
-				<label for="barrel_mode">Modo barril</label>
+			<td name="crankInfo"
+			style="border-left: 1px solid #E1E1E1;">&nbsp;
+				<span id="repeats_count">0</span>
+				<span>repeticiones de</span>
+				<span id="repeats_requested">0</span>
+				<a onclick="repeats_requested(1)" style="cursor:pointer">🔼</a>
+				<a onclick="repeats_requested(-1)" style="cursor:pointer">🔽</a>
 			</td>
 		</tr>
 	</tbody>
@@ -359,12 +363,17 @@ async function updateProgress( progress ) {
 					data = formatRating(tune) ;
 				}
 				row.childNodes[1].innerText = data ;
-				row.style.display = (data!="" ? "" : "none");
+				if( i <= 4 ){
+					row.style.display = (data!="" ? "" : "none");
+				}
+				else{
+					row.style.display = "";
+				}
 			}
 
 			// Update progress bar every second, first call
 			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
-			status_text = make_status_text( progress["status"], percent, progress["repeats"] ) ;
+			status_text = make_status_text( progress["status"], percent, progress["repeats_count"] ) ;
 			textById("progress", status_text) ;
 			document.getElementById("timebar").draw( percent );
 			// >>> may be interesting to show air consumption graph
@@ -446,9 +455,8 @@ async function updateProgress( progress ) {
         document.getElementById("rpsecGraph").draw( rpsec );
         let f = document.getElementById("tempo_follows_crank");
         f.checked = progress["tempo_follows_crank"] ;
-		f = document.getElementById("barrel_mode");
-		f.checked = progress["barrel_mode"];
-
+		textById( "repeats_count", "" + progress["repeats_count"] );
+		textById( "repeats_requested", "" + progress["repeats_requested"] );
 	}
 	else {
 		for( let ele of document.getElementsByName("crankInfo")){
@@ -586,10 +594,9 @@ async function tempo_follows_crank(){
     await commonGetProgress.fetchProgress( "/tempo_follows_crank", data );
 }
 
-async function barrel_mode(){
-    let f = document.getElementById("barrel_mode");
-    let data = { "barrel_mode": f.checked };
-    await commonGetProgress.fetchProgress( "/barrel_mode", data );
+async function repeats_requested(increment){
+    let data = { "repeats_requested": increment };
+    await commonGetProgress.fetchProgress( "/repeats_requested", data );
 
 }
 function go_history(){

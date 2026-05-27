@@ -107,7 +107,7 @@ class TachoDriver:
                             config.stopped_rpsec,
                             config.higher_threshold_rpsec)
         if config.filter_window_msec:
-            self.logger.info(f"Crank filter enabled with filter_window_msec={config.filter_window_msec}, stopped_rpsec={config.stopped_rpsec}, lower_threshold_rpsec={config.lower_threshold_rpsec}, higher_threshold_rpsec={config.higher_threshold_rpsec}")
+            self.logger.info(f"Crank filter enabled")
         else:
             self.logger.info(f"Crank filter disabled")
 

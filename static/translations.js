@@ -273,6 +273,8 @@ let translationDict = {
 	["Repetition test", "Wiederholungstest"],
 "repetición largo nota/silencio [msec]": // note.html
 	["Repetition note length/silence [msec]", "Wiederholung Notenlänge/Pause [msec]"],
+"repeticiones de": // play.html
+	["repetitions of", "Wiederholungen von"],
 "rev/seg": // play.html 
 	["rev/sec", "Umdrehungen/Sekunde"],
 "se conecta a ssid": // diag.html 

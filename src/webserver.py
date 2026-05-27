@@ -772,10 +772,10 @@ async def tempo_follows_crank( request ):
     player.set_tempo_follows_crank( data["tempo_follows_crank"] )
     return get_progress()
 
-@app.post( "/barrel_mode" )
-async def barrel_mode( request ):
+@app.post( "/repeats_requested" )
+async def request_repeats( request ):
     data = request.json
-    player.set_barrel_mode( data["barrel_mode"] )
+    player.change_repeats_requested( int(data["repeats_requested"]) )
     return get_progress()
 
 

@@ -453,10 +453,11 @@ class TuneManager:
             # Here either:
             #   a) it's a new tune
             #   b) the tunelib entry corresponds to another filename,
-            #   i.e. it is a hash collision (probability of b) is near nil)
-            # Collision. Probability is near nil, of the 
-            # order of 2**(-48), repeating 3 times means
-            # probability near 2**(-144) after mangling the filename
+            #   i.e. it is a hash collision 
+            # Collision probability is low, of the 
+            # order of 2**(-24) (square root of 2**(-48)), 
+            # repeating hash 3 times in case of collision means
+            # probability of the order 2**(-72) of this algorithm.
             
             # Mangle filename to get another hash
             newfn = fn.replace(".", "_.", 1)

@@ -102,7 +102,6 @@ class VirtualDrumPin(BasePin):
         while len(virtual_pins) >= allowed:
             virtual_pins.pop()
         
-
         # Sound all notes in the cluster
         for virtual_pin in strong_virtual_pins:
             virtual_pin.low_level_on()

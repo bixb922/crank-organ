@@ -277,8 +277,7 @@ async function getPinoutDetail( ) {
             row.cells[3].colSpan = 3;
         }
         else if( pdtype == "tempo" ){
-            // >>> deprecated. If file is saved, "tempo" will disappear.
-            // >>> for transition: ignore when microcontroller sends this.
+            // >>> deprecated. If file is saved, "tempo" entries will disappear.
             // insertFormRow( tbody,`row_${f}_tempo`, [
             //     "Tempo encoder knob pins A and B",
             //     makeInput( `tempo_a.${f}`, 3, pd[1] ),

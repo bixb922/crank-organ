@@ -16,6 +16,8 @@ from datetime import datetime, timedelta
 import hashlib, binascii
 import sys
 
+DRUM_CHANNEL = 9 # MIDO channels from 0 to 15
+VIRTUAL_DRUM_PROGRAM = 129 # Made up program number for drums, not used in MIDI file, only in our internal processing.
 STORED_SETLIST_NUMBER = 9
 STORE_WEEKS = 4
 
@@ -26,15 +28,16 @@ this_file_json = this_file + ".json"
 DESC = """<this_file>.py
 Compresses each .MID or .mid file in the input folder, writing the compressed file to the output folder. 
 Strips all meta MIDI messages, and most channel messages leaving only note on, note off and program change. 
-Incorporates all set_tempo indications in the output. 
-Optimizes the MIDI file for the crank organ software, then compresses with gzip, adding a .gz to the file name.
+Incorporates all set_tempo indications in the output, so output does not have set temp messages.
+Reduces to the needed channels and instruments, using the --known-programs parameter.
+Pairs note on and note off (except for channel 10).
+Compresses with gzip, adding a .gz to the file name.
 Only compresses files newer than the compressed output file (can be overridden with -f)
-Shows some approximate statistics about the compression when finished.
+Shows some statistics and extrapolations when finished.
 Format is:
 python <this_file>.py <input folder> <output folder>
 Input and output folder need only be specified once. From then on, they
 are stored in <this_file>.json in the current folder.
-Can also compare with a tunelib.json copied from the microcontroller to the PC, to see difference between local and microcontroller's tunelib folder.
 All MIDI output files are generated with 96 ticks per beat, which was used in the past,
 and is a good compromise between file size and timing resolution.
 """
@@ -170,11 +173,14 @@ class Event:
 def sort_event_list( event_list ):
     translate = {
         "program_change":0,
-        "note_on":1,
-        "note_off":2,
+        "note_off":1,
+        "note_on":2,
     }
-    # Time being equal sort note on before note off
-    event_list.sort( key=lambda ev: f"{ev.time:09.3f}_{translate[ev.type]}" )
+    def sort_key( event ):
+        n = translate.get(event.type,3)
+        return f"{event.time:09.3f}_{n}"
+   
+    event_list.sort( key=sort_key )
     return event_list
 
 def statistics( s, event_list ):
@@ -204,14 +210,13 @@ def read_midi( filename ):
 
 def solve_program_changes( event_list, known_programs ):
     channelmap1 = [1]*16
-    channelmap1[9] = 129
-    programs = set( ev.program1 for ev in event_list )
-    if 129 in programs:
-        known_programs.append( 129 )
+    channelmap1[DRUM_CHANNEL] = VIRTUAL_DRUM_PROGRAM
+    if DRUM_CHANNEL in set( ev.channel for ev in event_list ):
+        known_programs.append( VIRTUAL_DRUM_PROGRAM )
     for ev in event_list:
         if ev.type == "note_on" or ev.type == "note_off":
             ev.set_program1(channelmap1[ev.channel] )
-        elif ev.type == "program_change":
+        elif ev.type == "program_change" and ev.channel != DRUM_CHANNEL:
             program1 = ev.program1
             if program1 not in known_programs:
                 program1 = known_programs[0]
@@ -228,7 +233,7 @@ def  apply_bass_correction( event_list, bass_correction ):
     for event in event_list:
         correction = max_correction
         if event.type == "note_on":
-            if event.channel != 9:
+            if event.channel != DRUM_CHANNEL:
                 correction -= bass_correction.get( str(event.note), 0 )
             else:
                 correction -= bass_correction.get( "drum" + str(event.note), 0 )
@@ -240,6 +245,8 @@ def  apply_bass_correction( event_list, bass_correction ):
     return sort_event_list( event_list )
 
 def pair_note_on_off( event_list ):
+    # Not in use. 
+    # Notes on channel 10 (percussion/drums) should not be paired
     currently_on = {}
     output_list = []
     for event in event_list:
@@ -259,14 +266,6 @@ def pair_note_on_off( event_list ):
                         output_list.append( note_off )
                     del currently_on[event.key]
 
-        #if event.time > 60 and event.note == 60:
-        #    s = ""
-        #    for k, cn in currently_on.items():
-        #        p = k//256 
-        #        n = k&255
-        #        s += f" {p}.{n}"
-        #    print(f"    pair {event.time:.3f} {event.type:8s} {event.program1=} {event.note=} {s}" )
-  
     for key, cn in currently_on.items():
         if cn["count"] > 0:
             note = key % 256
@@ -277,7 +276,7 @@ def pair_note_on_off( event_list ):
             output_list.append( note_on )
             output_list.append( note_off )
     if currently_on:
-        print("???Error stop processing, notes left on")
+        print("???Error, notes left on, stop processing")
         sys.exit()
 
     return sort_event_list( output_list )
@@ -298,17 +297,17 @@ def write_midi_file( event_list, output_filename, status_d0 ):
     eventcount = {} # statistics, output events per track
 
     available_channels = list(range(16))
-    available_channels.pop(9) # channel 10 is not available for non-drum program numbers
+    available_channels.pop(DRUM_CHANNEL) # channel 10 is not available for non-drum program numbers
    
-    drum_program = 129
     programs = set( ev.program1 for ev in event_list )
+    print(f"programs found {programs=}")
     # Create tracks and fill in data structures
     for program1 in programs:
         track = mido.MidiTrack()
         trackdict[program1] = track
-        if program1 == drum_program:
+        if program1 == VIRTUAL_DRUM_PROGRAM:
             # Drum program 129 goes to MIDI channel 10
-            channel = 9
+            channel = DRUM_CHANNEL
             trackchannel[program1] = channel
             # No program change for drum channel
         else:
@@ -327,7 +326,7 @@ def write_midi_file( event_list, output_filename, status_d0 ):
             track = trackdict[program1]
             channel = trackchannel[program1]
             last_time = tracktime[program1]
-
+            
             # Now calculate the MIDI file delta time.
             # Due to integer vs floating point precision, delta could be -1 or -2
             # sometimes, so do a max(delta,0)
@@ -373,8 +372,9 @@ def reformat_midi( input_filename, output_filename, bass_correction, known_progr
     event_list = apply_bass_correction( event_list, bass_correction )
     statistics("bass correction", event_list)
 
-    event_list = pair_note_on_off( event_list )
-    statistics("pair notes", event_list)
+    # >>> need to fix problem with overlapping drum notes
+    #event_list = pair_note_on_off( event_list )
+    #statistics("pair notes", event_list)
  
 
     write_midi_file( event_list, output_filename, status_d0 )
@@ -556,7 +556,7 @@ def main():
         input_capacity = round(blocks_free/avg_input)
         output_capacity = round(blocks_free/avg_output)
         model = f"N{flash_size}R8"
-        print(f"{model:5s}: raw capacity={input_capacity:4.0f}, compressed capacity={output_capacity:4.0f} midi files")
+        print(f"{model:5s}: uncompressed capacity={input_capacity:4.0f}, compressed capacity={output_capacity:4.0f} midi files")
 
         
 main()

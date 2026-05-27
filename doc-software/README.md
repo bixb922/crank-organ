@@ -93,7 +93,7 @@
      * [Changes June 24 to July 5, 2025](#changes-june-24-to-july-5-2025)
      * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
      * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
-     * [More changes in May 2026](#more-changes-in-may-2026)
+     * [More changes in May 2026 (not as as Announcement yet)](#more-changes-in-may-2026-not-as-as-announcement-yet)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -290,6 +290,15 @@ If you want to have multiple stored setlists, see [here](#multiple-stored-setlis
 ![tempo control](performance_tempo_control.jpg)
 
 These controls regulate playback speed. Even if there is no crank sensor, you can vary the tempo with the two buttons left and right to the indicator bar. If there is a crank sensor, and "Tempo follows crank", then the crank determines playback speed.
+
+
+Touching the Touchpad while the crank is stopped moves to the next tune.
+
+"Barrel organ mode" or "barrel mode" mimics a barrel organ: once the tune is over, it is restarted immediately until you move to the next tune using the Touchpad or the Next button on the Performance page.
+
+Crank info shows only if crank is defined in the Pinout page.
+
+The default settings for "tempo follows crank" and "barrel mode" are defined in the General Configuration page. After a tune has played, settings are reverted to the default.
 
 # 7. Multiple stored setlists
 
@@ -1029,7 +1038,7 @@ You can switch groups of pipes on and off with a register, either using the web 
 
 ## Percussion sounds made with pipes a.k.a. "fake drums"
 
-Sounding several pipes together very shortly makes a percussive sound, much like a tom. The software supports this. It will detect suitable MIDI messages on channel 10 and transform these into commands to turn on the necessary pipes for a very short time. Please see /data/drumdef.json for the MIDI notes that are defined on channel 10. The page at ```/static/drumdef.html``` allows to test the drum definitions. Make a MIDI file with the drum notes on channel 10 repeated over and over and play that MIDI file while changing the definitions on the drumdef.html page. This page is a bit experimental and not linked to the main menu.
+Sounding several pipes together very shortly makes a percussive sound, much like a tom. The software supports this. It will detect suitable MIDI messages on channel 10 and transform these into commands to turn on the necessary pipes for a very short time. Please see /data/drums.json for the MIDI notes that are defined on channel 10. The page at ```/static/drums.html``` allows to test the drum definitions. Make a MIDI file with the drum notes on channel 10 repeated over and over and play that MIDI file while changing the definitions on the drums.html page. This page is a bit experimental and not linked to the main menu.
 
 ## Crank rotation sensor and tempo
 The crank rotation sensor can start tunes, and can influence tempo of the music. See hardware section for discussion of sensors.
@@ -1230,7 +1239,7 @@ New features
 replaced file. The new file replaces the previous file, even if one
 of both is .gz or .mpy and the previous not.
 * Setlist on  performance page (```play.html```) now shows duration of each song and total.
-* "Fake drums". Playing several MIDI notes together can make a percussive sound. See /data/drumdef.json for a proposed definition. The defined drum notes are triggered with MIDI notes on channel 10. /static/drumdef.html can be used to test these notes, as the configuration is highly dependent on the pipes.
+* "Fake drums". Playing several MIDI notes together can make a percussive sound. See /data/drums.json for a proposed definition. The defined drum notes are triggered with MIDI notes on channel 10. /static/drums.html can be used to test these notes, as the configuration is highly dependent on the pipes.
 * Both Tune List and Performance buttons on home page.
 
 Optimizations, enhancements and corrections
@@ -1284,7 +1293,7 @@ Optimizations, enhancements and corrections
 * Negative registers might turn off note when not intended.
 * Tuning cents and tuning frequency is now a parameter
 * All notes off at startup
-* Allows comment keys in drumdef.json
+* Allows comment keys in drums.json
 * Saving signals when tuning also saves a high resolution signal
 * MIDI numbering on Pinout page now is 1-16 instead of 0-15 to avoid confusions
 * Corrected bugs when using SD card
@@ -1466,7 +1475,7 @@ Dropped features:
 
 Please post in discussions if you are unhappy with some dropped feature.
 
-## More changes in May 2026
+## More changes in May 2026 (not as as Announcement yet)
 * Use MicroPython 1.28.0 for the compiled ```.bin``` files.
 * Speed up boot: skip reading tunelib.json, lyrics.json.
 * Move check of minimum free flash from browser to server.
@@ -1498,6 +1507,7 @@ If tune is not started by crank, it will not react to the crank.
 * Make MicroPython itself smaller, disabling unnecessary modules, to get more space for ROMFS.
 * Make memory footprint smaller delaying the loading of modules for web pages until needed (new module pinoutweb.py).
 * Add show/hide control for setlist and lyrics on play page, good for very long setlists to avoid scrolling down.
+* Add "Barrel mode" to play page and move "tempo follows crank" up in the page. Allow changes to barrel mode during playback.
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

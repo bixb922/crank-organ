@@ -1874,7 +1874,6 @@ function translate_html(){
 		}
 		let innerHTML = d.innerHTML ;
 		if( innerHTML == undefined ||  innerHTML.includes("<") ){
-			// Don't try tro translate if no text or if there is a tag
 			continue ;
 		}
 		d.innerText = tlt(d.innerText) ;

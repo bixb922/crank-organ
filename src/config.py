@@ -103,6 +103,7 @@ class Config:
 
         # Crank
         self.tempo_follows_crank = False
+        self.wait_stop_turning = True
         self.pulses_per_revolution = 100.0
         self.crank_interval = 200
         self.stopped_rpsec = 0.1
@@ -115,18 +116,7 @@ class Config:
         
         # Playing and setlists
         self.multiple_setlists = False 
-        self.wait_stop_turning = True
         self.automatic_delay = 0
-
-        # >>> Barrel mode: put on performance page for current tune?
-        # >>> Together with tempo follows crank.
-        # >>> save latest setting for each tune.
-        # >>> save in tunelib, edit with tunelibedit.
-        # >>> Reorder info on play page:
-        # 1 column: genre, author, info.
-        # 2 column: year, rating, date added, duration (time),
-        #           barrel mode check, tune follows crank check. 
-        self.barrel_mode = False
         
         # RC Servos 
         self.rc_max_moving = 10

@@ -20,6 +20,14 @@ _MSEC_SETTLE = const(500)
 # DOUBLE_TOUCH_MAX = const(1000)
 # DOUBLE_TOUCH_MIN = const(300)
 
+# Barrel mode, start and next:
+# Touch down while waiting: start tune.
+# Touch down while crank stops: next tune.
+# Touch down while crank turns:+1 for repeat count
+# Button on web page: add/subtract 1 for repeat count (no barrel mode)
+
+
+
 class TouchButton:
     def __init__(self, gpio_pin):
         # The TouchButton allows to register an
@@ -33,7 +41,7 @@ class TouchButton:
         # self.down_event =  asyncio.Event()
 
         # Two down events in succesion (like a "double click"):
-        # self.double_event = self.down_event
+        # self.double_callbacks = []
         # Trap any error creating TouchPad. If an error is raised,
         # the TouchPad will be created as disabled and the software
         # will work (setlist needs the TouchButton object)
@@ -60,8 +68,7 @@ class TouchButton:
     # Not needed
     # def register_double_event(self,ev):
     #     # Event when twice down in a row (similar to double-click on PC but slower)
-    #     self.double_event = ev
-
+    #     self.double_callbacks.append(ev)
  
     async def _tp_process(self ):
         # At startup, wait a bit before reacting and for touchpad reading to settle
@@ -90,7 +97,9 @@ class TouchButton:
                 # See if this is a "double touch"
                 # dt = ticks_diff(last_up,previous_up)
                 # if DOUBLE_TOUCH_MIN<=dt<=DOUBLE_TOUCH_MAX:
-                    # self.double_event.set()
+                    # for cb in self.double_callbacks:
+                    #     cb()
+                    # make a method to call callbacks of a list.
                     # 3 touch down in a row will yield 2 double events...
                 # Wait for touchpad value to settle, and read again
                 await asyncio.sleep_ms(_MSEC_SETTLE)

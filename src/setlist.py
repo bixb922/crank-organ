@@ -13,9 +13,9 @@ import touchpad
 from minilog import getLogger
 import fileops
 
-def del_key(key, dictionary):
-    if key in dictionary:
-        del dictionary[key]
+# def del_key(key, dictionary):
+#    if key in dictionary:
+#         del dictionary[key]
 
 _CURRENT_SETLIST = const(0)
 _STORED_SETLIST = const(1) 
@@ -58,8 +58,8 @@ class Setlist:
 
         # blink_empty_task: blink if setlist is empty
         self.blink_empty_task = asyncio.create_task( self._blink_empty() )
-        # next_tune_task: if touchpad AND crank has stopped then move to next tune
-        self.next_tune_task = asyncio.create_task( self._next_tune_process(touch_button) )
+        # Handle touch button during music playback.
+        self.touch_button_task = asyncio.create_task( self._touch_button_process(touch_button) )
         # Handle of the player currently playing a tune.
         # If None, no tune is playing
         self.player_task = None
@@ -68,6 +68,10 @@ class Setlist:
 
     # Functions related to the different ways to start a tune
     def start_tune(self):
+        # Don't change "set_started_by_crank()" if
+        # this gets called after starting the tune...
+        if self.player_task:
+            return
         # Reset "tempo follows crank" if started by web button
         # or by touchpad
         # Perhaps the crank isn't working? This is safer!
@@ -79,10 +83,10 @@ class Setlist:
         
     
     async def _wait_for_start( self ):
-
         # Record that we are waiting for tune to start
         # for progress.
         self.waiting_for_start_tune_event = True
+        # music_start_event must be set from now on
         self.music_start_event.clear()
         await self.music_start_event.wait() # type:ignore
         self.waiting_for_start_tune_event = False
@@ -118,11 +122,10 @@ class Setlist:
             # will set "started by crank" to False.
    
             player.set_started_by_crank( crank.is_installed() )
-
+            
             # Wait for music to start (crank turns, or touch pad
             # was touched or web button or automatic playback or whatever)
             await self._wait_for_start()
-
             # Check if playback is still enabled.
             # Both pinout and organtuner can disable plabyack
             # to avoid interference with music playback.
@@ -154,7 +157,6 @@ class Setlist:
 
             # Record that this task has ended and isn't available anymore
             self.player_task = None
-
             # Clean up tune_requests, delete all
             # elements not in setlist. It may be sufficent
             # if only this tuneid is deleted.
@@ -192,7 +194,7 @@ class Setlist:
             if slot == 0:
                 i = slist.index(tuneid)
                 del slist[i]
-                #del_key(tuneid, self.tune_requests)
+                # del_key(tuneid, self.tune_requests)
                 changed = True
         else:
             # Not in current setlist
@@ -230,7 +232,7 @@ class Setlist:
             #tuneid = self.current_setlist[0]
             del self.current_setlist[0]
             self._save_current()
-            #del_key(tuneid, self.tune_requests)
+            # del_key(tuneid, self.tune_requests)
 
         # Stop current tune, if playing
         if self.player_task:
@@ -485,22 +487,27 @@ class Setlist:
             raise ValueError
         fileops.write_json( titles, config.SETLIST_TITLES_JSON, keep_backup=False )
     
-    async def _next_tune_process( self, touch_button ):
+    async def _touch_button_process( self, touch_button ):
         tpevent = asyncio.Event()
         # register_up_callback supports many registered callbacks.
-        touch_button.register_up_callback( lambda: tpevent.set() )
+        # Use callback to set asyncio.Event.
+        touch_button.register_up_callback( tpevent.set )
         while True:
             while not self.player_task:
                 await asyncio.sleep_ms(200)
-            # Touch while playing cancels tune
+            # Clear here because tpevent may have been 
+            # set very recently to start tune.
             tpevent.clear()
             while self.player_task:
                 if tpevent.is_set():
                     if crank.is_installed():
-                        if not crank.is_turning():
+                        if crank.is_turning():
+                            player.change_repeats_requested(1)
+                        else:
                             self.stop_tune()
                     else:
                         self.stop_tune()
+                    tpevent.clear()
                 await asyncio.sleep_ms(200)
 
     def get_top( self ):
