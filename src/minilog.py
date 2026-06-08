@@ -62,7 +62,10 @@ class getLogger:
         cls._timezone = timezone
 
     @classmethod
-    def _class_init(cls):
+    def init(cls):
+        # Called in startup to get a === restart === message in the log
+        # Called in cls._write just in case there is a call to
+        # log a message before startup initializes the class...
         if cls._current_log_num:
             # already initialized
             return
@@ -120,7 +123,7 @@ class getLogger:
         
     @classmethod
     def _write(cls, s):
-        cls._class_init() # initialize if not done already.
+        cls.init() # initialize if not done already.
         cls._file.write(s)
         cls._file.flush()
         if cls._file.tell() < _MAX_LOGFILE_SIZE:
@@ -165,11 +168,10 @@ class getLogger:
     def print_console( cls, message, level ):
         print(_LEVELS[level][1] + message + "\x1b[0m") # color to console
 
-    # ============================
     # Instance methods
     def __init__(self, module ):
         self.module = module
-
+    
     # For all methods here, call corresponding class method.
     def get_current_log_filename(self):
         return self._makefilename( self._current_log_num )

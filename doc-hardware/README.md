@@ -49,14 +49,16 @@
      * [MIDI over serial](#midi-over-serial)
 8.  [Microphone](#8-microphone)
 9.  [Crank rotation sensor](#9-crank-rotation-sensor)
+     * [Rotary sensor "potentiometer type" to change tempo](#rotary-sensor-potentiometer-type-to-change-tempo)
 10.  [Registers](#10-registers)
-11.  [Troubleshooting](#11-troubleshooting)
+11.  [Switch instead of a touchpad to start the music](#11-switch-instead-of-a-touchpad-to-start-the-music)
+12.  [Troubleshooting](#12-troubleshooting)
      * [The microcontroller unexpectedly restarts](#the-microcontroller-unexpectedly-restarts)
          * [Microcontroller power](#microcontroller-power)
          * [Loose contact](#loose-contact)
      * [I2C timeouts (MCP23017, PCA9685)](#i2c-timeouts-mcp23017-pca9685)
-12.  [Related documents](#12-related-documents)
-13.  [Copyright and license](#13-copyright-and-license)
+13.  [Related documents](#13-related-documents)
+14.  [Copyright and license](#14-copyright-and-license)
 # 1. Introduction
 
 This document describes a MIDI controller architecture for crank organs. I am updating this document several times a month, so please come back to see more details. If you need clarification, please post an issue or open a discussion item in this repository.
@@ -633,14 +635,20 @@ I am sure there are other models of sensors out there that will also work well. 
 
 When configuring in the software, configure the two pins for this sensor in the "tachometer" parameter of the pinout.json. The order doesn't matter.
 
+
+This is my history with crank sensors: [Crank sensor history](crank-sensor.md)
+
+## Rotary sensor "potentiometer type" to change tempo
+
 There is also the possiblity to connect a potentiometer type rotary encoder to change the playback speed:
 
 ![rotation sensor](rotation-sensor.png)
 
 This little device is NOT meant to be connected to the crank shaft but it should be used as a manual tempo adjustment knob. I think that the crank sensor is a better option than this little device. However, the software supports it.
 
-This is my history with crank sensors: [Crank sensor history](crank-sensor.md)
+The rotary contacts and the switch connect to one side to the GPIO port, the other side to ground. The software enables the internal pullup registers, no external resistor is needed.
 
+See [here](/doc-software/README.md#rotary-sensor-to-change-tempo) to define the sensor in the software.
 
 # 10. Registers
 You can connect any switch as a register, to enable/disable ranks of pipes just like a real organ.
@@ -649,11 +657,21 @@ I have used automotive headlight switches for this purpose:
 
 ![register switch](headlight-switch.jpg)
 
-The white light symbol is only printed on this switch, so it was easy to sand away with very fine paper.
+The white light symbol is only printed on this switch, so it was easy to sand away with very fine sanding paper.
 
 One side of the switch must be connected to ground and the other side to a GPIO port. The software configures the internal pull-up resistor of the GPIO port and provides debouncing.
 
-# 11. Troubleshooting
+# 11. Switch instead of a touchpad to start the music
+
+If you don't like the touchpad to start the tunes, you can also install a switch or pushbutton to instead.
+
+The contacts of the switch go between the GPIO pin and ground. No additional pull up resistor is necessary since the ESP32S3 provides one.
+
+The software does the debouncing.
+
+To enable using a switch in the software, select the option "Switch to GND" next to the "Start button" definition in the Pinout and MIDI Configuration page.
+
+# 12. Troubleshooting
 
 Before powering up, be sure that you have verified every contact with every other contact for continuity.
 
@@ -675,14 +693,14 @@ Check the 44 pin headers of the ESP32S3. If they are a bit loose in their socket
 
 If the error log of the software shows I2C bus timeouts with these devices, that is normally due to a loose or flaky contact.
 
-# 12. Related documents
+# 13. Related documents
 [Batteries](battery.md)
 
 [Crank sensor](crank-sensor.md)
 
 [Valves with RC servos instad of pallet valves](/doc-servo/servos.md)
 
-# 13. Copyright and license
+# 14. Copyright and license
 
 Hardware design files and descriptions: The files included in this repository are available under the Creative Commons License https://creativecommons.org/licenses/by-sa/4.0/deed.en
 

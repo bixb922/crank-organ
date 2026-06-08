@@ -9,7 +9,7 @@ import os
 
 from drehorgel import config, tunemanager, crank, gpio, led, player
 
-import touchpad
+from startbase import startButtonFactory
 from minilog import getLogger
 import fileops
 
@@ -40,10 +40,10 @@ class Setlist:
         crank.register_start_crank_event(self.music_start_event)
 
         # TouchButton acts correctly if gpio.touchpad_pin is not defined
-        touch_button = touchpad.TouchButton(gpio.touchpad_pin)
-        touch_button.register_up_callback( self.start_tune )
+        start_button = startButtonFactory( gpio.touchpad_pin, gpio.touchpad_technology )
+        
+        start_button.register_up_callback( self.start_tune )
 
-        # Touch while playing cancels tune
         # Dictionary of tune requests: key=tuneid, data=spectator name
         # Not in use.
         # self.tune_requests = {}
@@ -58,8 +58,10 @@ class Setlist:
 
         # blink_empty_task: blink if setlist is empty
         self.blink_empty_task = asyncio.create_task( self._blink_empty() )
-        # Handle touch button during music playback.
-        self.touch_button_task = asyncio.create_task( self._touch_button_process(touch_button) )
+        
+        # Handle touch/start button during music playback.
+        self.start_button_task = asyncio.create_task( self._start_button_process(start_button) )
+        
         # Handle of the player currently playing a tune.
         # If None, no tune is playing
         self.player_task = None
@@ -68,16 +70,9 @@ class Setlist:
 
     # Functions related to the different ways to start a tune
     def start_tune(self):
-        # Don't change "set_started_by_crank()" if
-        # this gets called after starting the tune...
         if self.player_task:
             return
-        # Reset "tempo follows crank" if started by web button
-        # or by touchpad
-        # Perhaps the crank isn't working? This is safer!
-        # "Crank starts to turn" does not call start_tune.
-        # Don't follow crank for this tune only. Gets reset
-        # to configured value by player for the next tune.
+        # Tell player that music was started by crank and trigger start
         player.set_started_by_crank(False)
         self.music_start_event.set()
         
@@ -120,10 +115,9 @@ class Setlist:
             # Assume tune will be started with crank (if installed)
             # If started by web button or touchpad, self.start_tune() 
             # will set "started by crank" to False.
-   
             player.set_started_by_crank( crank.is_installed() )
             
-            # Wait for music to start (crank turns, or touch pad
+            # Wait for music to start (crank turns, or touchpad/start button
             # was touched or web button or automatic playback or whatever)
             await self._wait_for_start()
             # Check if playback is still enabled.
@@ -487,11 +481,11 @@ class Setlist:
             raise ValueError
         fileops.write_json( titles, config.SETLIST_TITLES_JSON, keep_backup=False )
     
-    async def _touch_button_process( self, touch_button ):
+    async def _start_button_process( self, start_button ):
         tpevent = asyncio.Event()
         # register_up_callback supports many registered callbacks.
         # Use callback to set asyncio.Event.
-        touch_button.register_up_callback( tpevent.set )
+        start_button.register_up_callback( tpevent.set )
         while True:
             while not self.player_task:
                 await asyncio.sleep_ms(200)

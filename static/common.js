@@ -1199,6 +1199,8 @@ async function setTimezone(){
 }
 // Calling this in background does not interfere with page load
 // Since the call is cached, this means effectively one call per boot session
+// >>> doesn't get called always. Cache is not freed,
+// >>> and this call is not done!
 setTimezone();
 
 

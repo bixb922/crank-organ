@@ -66,21 +66,24 @@ class SaveNewPinout(PinoutParser):
         if gpio not in _ESP32_S3_ADC1_PINS:
             raise RuntimeError(f"Pin {gpio} must be ADC1 pin (3 to 10)")
 
-    def define_touchpad( self, gpio ):
+    # For "touchpad" entry
+    def define_touchpad( self, gpio, technology ):
         if not gpio:
+            # Not assigned, ignore
             return
+        from touchpad import validate_technology
+        validate_technology( technology )
         self._add_GPIO_to_list(gpio)
         if gpio not in _ESP32_S3_TOUCHPAD_PINS:
-            raise RuntimeError(f"Pin {gpio} must be TouchPad pin (1 to 14)")
+            raise RuntimeError(f"Pin {gpio} must be TouchPad pin 1 to 14")
 
     def define_register( self, gpio, name, initial_value ):
         self._add_GPIO_to_list(gpio)
 
     def define_tempo( self, gpio_a, gpio_b, gpio_switch ):
-        # Not implemented
-        #self._add_GPIO_to_list(gpio_a)
-        #self._add_GPIO_to_list(gpio_b)
-        #self._add_GPIO_to_list(gpio_switch)
+        self._add_GPIO_to_list(gpio_a)
+        self._add_GPIO_to_list(gpio_b)
+        self._add_GPIO_to_list(gpio_switch)
         return
     
     def define_midi(self, pin, midi_note, rank, register_name):
@@ -203,7 +206,8 @@ class GPIOstatistics(PinoutParser):
     def define_microphone(self, gpio):
         self._add_gpio( gpio )
 
-    def define_touchpad(self, gpio):
+    # for "touchpad" entry
+    def define_touchpad(self, gpio, technology):
         self._add_gpio( gpio )
     
     def define_register( self, gpio, *args ):
@@ -218,10 +222,9 @@ class GPIOstatistics(PinoutParser):
         self._add_gpio( scl )
  
     def define_tempo( self, gpio_a, gpio_b, gpio_switch ):
-        # Not implemented
-        # self._add_gpio( gpio_a )
-        # self._add_gpio( gpio_b )
-        # self._add_gpio( gpio_switch )
+        self._add_gpio( gpio_a )
+        self._add_gpio( gpio_b )
+        self._add_gpio( gpio_switch )
         return
 
     def define_serial_driver(self, uart, pin, channel, rxpin):

@@ -267,11 +267,19 @@ main()
 # Writing 236870 bytes to output file crank-organ/bin/romfs.bin
 # 25285 bytes still free.
 
+# May 2026, romfs, 20_note_Carl_Frei.json
+# Total startup time (without main, until asyncio ready) 1262 msec
+# Memory used at startup 126464 gc=19 msec
+# 
+# Number of note influences startup time and memory usage.
+# Per note or pin memory used at startup increases about 500 bytes
+# for all the datastructures kept to make note on/off fast.
+
 # May 2026 MicroPython sizes, no ROMFS, no define 0 added, small manifest.py
-#bootloader  @0x000000    19232  (   13536 remaining)
-#partitions  @0x008000     3072  (    1024 remaining)
-#application @0x010000  1682528  (  349088 remaining)
-#total                  1748064
+# bootloader  @0x000000    19232  (   13536 remaining)
+# partitions  @0x008000     3072  (    1024 remaining)
+# application @0x010000  1682528  (  349088 remaining)
+# total                  1748064
 
 # May 2026, ROMFS added, define 0 added, small manifest
 # micropython.bin binary size 0x194410 bytes. Smallest app partition is 0x1a8000 bytes. 0x13bf0 bytes (5%) free.
@@ -282,7 +290,7 @@ main()
 # romfs.bin =  243958 bytes/0x48000 = 82% = 51.000 bytes free 
 # MicroPython = 0x194410 bytes/0x1A8000 = 95.3% = 81.000 bytes free
 
-# No SD card, no FAT, no websocket, webrepl, onewire
+# MicroPython generated with no SD card, no FAT, no websocket, webrepl, onewire
 # micropython.bin binary size 0x186640 bytes. Smallest app partition is 0x1a8000 bytes. 0x219c0 bytes (8%) free.
 # bootloader  @0x000000    19232  (   13536 remaining)
 # partitions  @0x008000     3072  (    1024 remaining)

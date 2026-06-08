@@ -696,15 +696,17 @@ async def test_mic(request, pin):
     duration, signal = mic.sample_microphone( NoteDef(0,95) )
     return {"signal": list(signal), "duration": duration, "gpiotest": gpiotest }
 
-@app.route("/test_touchpad/<pin>")
-async def test_touchpad( request, pin ):
+@app.post("/test_touchpad")
+async def test_touchpad( request ):
+    # >>> needs testing
+    data = request.json
     setlist.stop_playback()
     try:
-        from touchpad import TouchButton
-        tb = TouchButton( int(pin) )
-    except:
-        return respond_error_alert( f"Invalid pin: {pin}")
-    return {"value": tb.read() }
+        from startbase import startButtonFactory
+        button = startButtonFactory( int(data["pin"]), int(data["technology"]) )
+    except Exception as e:
+        return respond_error_alert( f"Invalid touchpad {data}: {e}")
+    return {"value": button.read() }
 
 # Generic requests requests: some browsers request favicon
 def serve_favicon( fn ):
@@ -805,8 +807,8 @@ async def list_by_midi_note( request, path ):
     actuator_def = ActuatorDef( RegisterBank(), filename, False) 
     controller = actuator_def.get_controller()
     notedef = []
-    for action in controller.get_notedict().values():
-        for actuator, reg, midi_note in action:
+    for midi_note, action in controller.get_notedict().items():
+        for actuator, reg in action:
             notedef.append( {  
                              "program_number":midi_note.program_number, 
                              "midi_number":midi_note.midi_number, 

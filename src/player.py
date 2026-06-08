@@ -63,16 +63,16 @@ class MIDIPlayer:
         self.started_by_crank = crank.is_installed()
         
         self.current_note = NoteDef( 0, 0 )
-        self.repeats_count = 0
-        
+        self.repeat_count = 0
+        self.passthrough = None # >>> for future use
         self.process_map = {
-            NOTE_ON:  lambda c, d, n: controller.note_on( n ),
-            NOTE_OFF: lambda c, d, n: controller.note_off( n ),
+            NOTE_ON: controller.note_on,
+            NOTE_OFF: controller.note_off,
             PROGRAM_CHANGE: self._program_change,
             AFTERTOUCH: self.processd0,
             None: self._midi_file_start,
         }
-
+        self.passthrough = None
         self.logger.debug("init ok")
 
     async def play_tune(self, tuneid ):
@@ -95,7 +95,7 @@ class MIDIPlayer:
         midi_fn = None
         duration = 1 
         title = None
-        self.repeats_count = 0
+        self.repeat_count = 0
         # don't reset repeats_requested here, could have been
         # incremented while waiting for tune to startd. Reset repeats_requested
         # after tune stops.
@@ -124,8 +124,8 @@ class MIDIPlayer:
             # In "barrel organ mode", repeat until
             # user presses button to get to next tune.
             
-            while self.repeats_count < self.repeats_requested:
-                self.repeats_count += 1
+            while self.repeat_count < self.repeats_requested:
+                self.repeat_count += 1
                 await self._play(midifile)
 
             self.progress.tune_ended()
@@ -163,7 +163,7 @@ class MIDIPlayer:
             
             self.tempo_follows_crank = config.tempo_follows_crank
             self.repeats_requested = 1
-            self.repeats_count = 0
+            self.repeat_count = 0
 
             # scheduler.fdump() # for debug 
             
@@ -226,7 +226,7 @@ class MIDIPlayer:
                 status = NOTE_OFF
             # An optimization. Often there are for example many control changes
             # with 0 delta time. 
-            if midi_event.delta_us == 0 and status not in self.process_map:
+            if midi_event.delta_us == 0 and status not in self.process_map and not self.passthrough:
                 continue
             
             # midi_time is the calculated MIDI time since the start of the MIDI file
@@ -275,7 +275,7 @@ class MIDIPlayer:
 
         total = ticks_diff(ticks_ms(),msec_start) 
         busy = total - sum_real_waits/1000
-        self.logger.info(f"MIDI processing: {midi_events=}, msec/event={round(busy/midi_events, 1)}, busy={round(busy/total*100,1)}%, avg gc={scheduler.avg_gc_time} msec, late ratio={round((sum_real_waits/sum_scheduled_waits-1)*100,2)}%")
+        self.logger.info(f"MIDI processing: {midi_events=}, msec/event={round(busy/midi_events, 1)}, busy={round(busy/total*100,1)}%, avg gc={scheduler.avg_gc_time} msec, late ratio={round((sum_real_waits/sum_scheduled_waits-1)*100,2)}% {self.repeat_count=}")
         # Without compression -d0, without track reduction
         # Start tuneid=iLDf7aZg6 '~wg2' tracks=4
         # MIDI processing: midi_events=1271, msec/event=3.6, busy=8.2%, avg gc=26 msec, late ratio=0.18%
@@ -318,11 +318,16 @@ class MIDIPlayer:
         curr_note.program_number = self.channelmap1[channel]
         # Value is note number for note on and note off events
         # Value is program number for program change events. 
-        # Value is value of D0 event.
+        # Value is note for note on/off or value for D0 event.
         curr_note.midi_number = value
 
+        found = False
         if status in self.process_map:
-            self.process_map[status](channel, value, curr_note )
+            found = self.process_map[status](channel, value, curr_note )
+        
+        if self.passthrough and not found:
+            # >>> pending
+            pass
 
     def _midi_file_start( self, midifile ):
         if midifile.format_type in (0,1):
@@ -337,21 +342,21 @@ class MIDIPlayer:
             # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
             self.channelmap1[channel] = program+1
 
-    def processd0( self, _, value, notedef ):
-        # Undo what compres_midi.py -d0 did to the note number
+    def processd0( self, channel, value, notedef ):
+        # Undo what compress_midi.py -d0 did to the note number
         if 0 <= value <= 63:
             notedef.midi_number = value+40
-            controller.note_off( notedef )
+            controller.note_off( channel, value, notedef )
         else:
             notedef.midi_number = value-24 # value-64+40
-            controller.note_on( notedef )
+            controller.note_on( channel, value, notedef )
 
     def get_progress(self):
         progress = self.progress.get()
         progress["playtime"] = self.time_played_us / 1000
         progress["tempo_follows_crank"] = self.tempo_follows_crank 
         progress["repeats_requested"] = self.repeats_requested 
-        progress["repeats_count"] = self.repeats_count
+        progress["repeats_count"] = self.repeat_count
         return progress
     
 
@@ -403,7 +408,6 @@ class MIDIPlayer:
         self.tempo_follows_crank = v and crank.is_installed() and self.started_by_crank
 
     def change_repeats_requested( self, v ):
-        print(f"change_repeats_requested {v=} {self.repeats_requested=} new value={max( 1, self.repeats_requested + v )}")
         # called by webserver,with v +1 or -1
         self.repeats_requested = max( 1, self.repeats_requested + v )
       
@@ -414,3 +418,9 @@ class MIDIPlayer:
         self.started_by_crank = v and crank.is_installed()
         # Can't use  "tempo follows crank" if tune not started by crank
         self.tempo_follows_crank = self.tempo_follows_crank and self.started_by_crank
+
+    def activate_passthrough( self, callback ):
+        # >>> for future use
+        self.passthrough = callback
+        # No aftertouch processing in passthrough mode, so remove the handler for it.
+        del self.process_map[AFTERTOUCH]

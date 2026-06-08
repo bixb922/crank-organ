@@ -92,21 +92,21 @@
 		the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the
 		AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP
 		mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes
-		fail. No decimals, integer only:</label>
+		fail. Integer only:</label>
 	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')" />
 	<br>
 
-	<label>USB battery pack heartbeat period (leave 0 if battery is not a USB battery pack), in milliseconds</label>
+	<label>USB battery pack heartbeat period (leave 0 if battery is not a USB battery pack), in milliseconds:</label>
 	<input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4"
 		oninput="markField('battery_heartbeat_period')" />
 	<br>
 
-	<label>USB battery pack heartbeat duration (leave 0 if battery is not a USB battery pack), in milliseconds</label>
+	<label>USB battery pack heartbeat duration (leave 0 if battery is not a USB battery pack), in milliseconds:</label>
 	<input id="battery_heartbeat_duration" name="battery_heartbeat_duration" type="text" size="4"
 		oninput="markField('battery_heartbeat_duration')" />
 	<br>
 
-	<label>After this time the microcontroller stops and enters low power mode. 0=disabled. In minutes.</label>
+	<label>After this time the microcontroller stops and enters low power mode. 0=disabled. In minutes:</label>
 	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="4"
 		oninput="markField('idle_deepsleep_minutes')" />
 	<br>
@@ -122,7 +122,7 @@
 		varies with the crank speed. This is the setting at startup. Can be changed temporarily on the performance page.</label>
 	<br>
 	<label for="pulses_per_revolution">Pulses per revolution of crank revolution sensor. It's the
-		number of pulses the crank sensor gives for each revolution multiplied by 4 for a encoder or by 2 for a counter. Get the value with the test crank button of the pinout page</label>
+		number of pulses the crank sensor gives for each revolution multiplied by 4 for a encoder or by 2 for a counter. Get the value with the test crank button of the pinout page. Integer only:</label>
 	<input id="pulses_per_revolution" type="text" size="4" oninput="markField('pulses_per_revolution')">
 	<br>
 	<label for="crank_interval">Sampling interval for crank speed measurement, in milliseconds:</label>
@@ -150,10 +150,15 @@
 	<input id="filter_window_msec" type="text" size="2" oninput="markField('filter_window_msec')">
 	<br>
 
-	<label for="tuning_cents">When tuning a pipe, if the frequency is off more than this quantity of cents, show result in red.</label>
+	<label for="rotary_tempo_mult">Rotary encoder tempo setting multiplier, decimals allowed:</label>
+	<input id="rotary_tempo_mult" type="text" size="4" oninput="markField('rotary_tempo_mult')">
+	<br>
+
+	<label for="tuning_cents">When tuning a pipe, if the frequency is off more than this quantity of cents, show result in red:</label>
 	<input id="tuning_cents" type="text" size="4" oninput="markField('tuning_cents')">
 	<br>
-	<label for="tuning_frequency">Tuning frequency in Hz, normally 440. Decimal point allowed.</label>
+
+	<label for="tuning_frequency">Tuning frequency in Hz, normally 440. Decimals allowed:</label>
 	<input id="tuning_frequency" type="text" size="6" oninput="markField('tuning_frequency')">
 	<br>
 	<input type="checkbox" name="multiple_setlists" id="multiple_setlists" value="multiple_setlists"
@@ -181,19 +186,19 @@
 
 
 	<label for="touchpad_big_change">Touchpad sensitiviy (higher=less sensitive, lower=more sensitive). 
-		A reasonable value could be 10000. No decimals, integer only:</label>
+		A reasonable value could be 10000. Integer only:</label>
 	<input id="touchpad_big_change" name="touchpad_big_change" type="text" size="6"
 		oninput="markField('touchpad_big_change')" />
 	<br>
 
 
-	<label for="i2c_frequency_khz">I2C bus frequency in kHz. MicroPyton SoftI2C is used, so values between 10 and 800 kHz may work. No decimals, integer only:</label>
+	<label for="i2c_frequency_khz">I2C bus frequency in kHz. MicroPyton SoftI2C is used, so values between 10 and 800 kHz may work. Integer only, in kHz:</label>
 	<input id="i2c_frequency_khz" name="i2c_frequency_khz" type="text" size="6"
 		oninput="markField('i2c_frequency_khz')" />
 	<br>
 
 	<label for="mic_signal_low">Microphone level to consider the signal too low, relative to the maximum signal
-		received. Example: -18 db. Always negative, decimal point allowed:</label>
+		received. Example: -18 db. Always negative, decimals allowed:</label>
 	<input id="mic_signal_low" name="mic_signal_low" type="text" size="6" oninput="markField('mic_signal_low')" />dB
 	<br>
 	<input type="checkbox" name="mic_amplitude" id="mic_amplitude" value="mic_amplitude"
@@ -201,7 +206,7 @@
 	<label for="mic_amplitude">Measure amplitude of the microphone signal while tuning. Needs non-compressing microphone.</label>
 	<br>
 
-	<label for="auto_purge_history">Purge history automatically after this number of days. 0=only manual purge of history. No decimals, integer only:</label>
+	<label for="auto_purge_history">Purge history automatically after this number of days. 0=only manual purge of history. Integer only, in days:</label>
 	<input id="auto_purge_history" name="auto_purge_history" type="text" size="5"
 		oninput="markField('auto_purge_history')" />
 	<br>
@@ -212,13 +217,13 @@
 	<label for="rc_max_moving">Maximum of RC servos that can move simultaneously. 
 		This parameter limits the current needed to move many servos at the same time.
 		When this maximum is exceeded, the current movement will stall until the servo stopped moving.
-		No decimals, integer only:
+		Integer only:
 	</label>
 	<input id="rc_max_moving" name="rc_max_moving" type="text" size="4" oninput="markField('rc_max_moving')" />
 	<br>
 
 	<label for="rc_moving_time">Estimated time that the RC servo movement takes, in millseconds.
-			No decimals, integer only:
+			Integer only:
 	</label>
 	<input id="rc_moving_time" name="rc_moving_time" type="text" size="4" oninput="markField('rc_moving_time')" />
 	<br>
@@ -227,7 +232,7 @@
 		Pulse width for RC servo, in microseconds.
 		Typical values are 1000 and 2000, or 600 and 2400.
 		Check the specs of your RC servo.
-		No decimals, integer only. Minimum: 
+		Integer only. Minimum: 
 	</label>
 	<input id="rc_min_pulse" name="rc_min_pulse" type="text" size="4" oninput="markField('rc_min_pulse')" />
 	<label for="rc_max_pulse">Maximum:</label>
@@ -259,7 +264,7 @@
 
 
 	<label for="max_age">Maximum age in cache, in seconds. 0=no caching. Browsers limit the maximum age. 300 seconds
-		seems appropriate. No decimals, integer only:</label> 
+		seems appropriate. Integer only, in seconds:</label> 
 	<input id="max_age" name="max_age" type="text" size="6" oninput="markField('max_age')" />
 	<br>
 

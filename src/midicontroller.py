@@ -118,9 +118,7 @@ class MIDIController:
         # Midi note may have program_number equal to
         # WILDCARD_PROGRAM or DRUM_PROGRAM
         actions = self.notedict.setdefault( midi_note, [] )
-        # >>> why is midi_note needed in the tuple?
-        actions.append( (actuator, reg, midi_note ) )
-        # actions.append( actuator )
+        actions.append( (actuator, reg) )
 
     def get_actions( self, midi_note ):
         # Use the note's program number in the key (specific search). 
@@ -154,27 +152,29 @@ class MIDIController:
             self.add_action( virtual_pin, "", virtual_pin.nominal_midi_note )
         self.register_bank.set_midicontroller( self )
          
-    def note_on( self, midi_note ):
+    def note_on( self, channel, midi_number, midi_note ):
         actions = self.get_actions( midi_note )
-        for actuator, register, _ in actions:
+        for actuator, register in actions:
             if register.value():
                 # This calls the on() method of the appropriate driver
                 actuator.on()
+        # Without registers wthis would be:
         #for actuator in actions:
         #    actuator.on()
 
-        # Return truish to caller if a note was played. This is used by
+        # Return True to caller if a note was played. This is used by
         # the organtuner.py to determine if note played really exists in the pinout.
-        # No need to know the same in note_off()
-        return actions          
+        return bool(actions)          
 
-    def note_off( self, midi_note ):
+    def note_off( self, channel, midi_number, midi_note ):
         # assert 1<=program_number <=128 
         # assert 0<=midi_number<= 127
         # Get list of  pins to turn off for this midi note
-        for actuator, register, _ in self.get_actions( midi_note ):
+        actions = self.get_actions( midi_note )
+        for actuator, register in self.get_actions( midi_note ):
             if register.value():
                 actuator.off()
+        return bool(actions)
 
     def all_notes_off( self ):
         self.actuator_bank.all_notes_off( )
@@ -187,9 +187,9 @@ class MIDIController:
                 if midi_note.program_number != DRUM_PROGRAM ]
         try:
             midi_note = choice( self.all_midis )
-            self.note_on( midi_note )
+            self.note_on( 0, 0, midi_note )
             await asyncio.sleep_ms(duration_msec)
-            self.note_off( midi_note )
+            self.note_off( 0, 0, midi_note )
             await asyncio.sleep_ms(100)
         except IndexError:
             pass # list is empty
@@ -213,5 +213,3 @@ class MIDIController:
                 if register.name == register_name:
                     # Turn off even if there is pending note off count...
                     actuator.force_off()
-           # for actuator in actions:
-           #    actuator.force_off()

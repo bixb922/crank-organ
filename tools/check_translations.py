@@ -13,7 +13,8 @@ do_not_translate = ["", "\xa0", "\xa0\xa0","\xa0\xa0\xa0",
      "⏪ "," ⏩","nnn",",","Host name","(","Reset", "Deep sleep",
      "[bytes]","Host name, AP SSID, BLE name:",
      "IP", "Connection status","SSID","IP","WiFi scan",
-     "SSID","dBm","Cents","Pin","👑", "🎼🎵🎶", "...", "×", ".", "▼"]
+     "SSID","dBm","Cents","Pin","👑", "🎼🎵🎶", "...", "×", ".", "▼",
+     "0", "🔼", "🔽"]
 class MyHTMLParser(HTMLParser):
     def __init__(self, pagename, translations):
         self.pagename = pagename

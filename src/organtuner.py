@@ -158,7 +158,7 @@ class OrganTuner:
     async def scale_test(self, _):
         # Play all notes. Unknown notes will play in zero time,
         # so they are essentially skipped. This is because 
-        # controller.note_on() will return falsish if no
+        # controller.note_on() will return False if no
         # note was found, so play_midi_note skips waiting and
         # skips note off.
         
@@ -188,11 +188,11 @@ class OrganTuner:
         #  Make a midi note sound
         midi_note, duration, silence = arg
 
-        # controller.note_on will return falsish if 
+        # controller.note_on will return False if 
         # no note was found. If so, skip waiting and note_off.
-        if controller.note_on(  midi_note ):
+        if controller.note_on( 0, 0, midi_note ):
             await asyncio.sleep_ms(round(duration))
-            controller.note_off( midi_note )
+            controller.note_off( 0, 0, midi_note )
             await asyncio.sleep_ms(round(silence))
 
     def clear_tuning(self):

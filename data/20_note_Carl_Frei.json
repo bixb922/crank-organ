@@ -4,6 +4,7 @@
 ["microphone", ""],
 ["tachometer", "", ""],
 ["touchpad", 5],
+["tempo", "", "", ""],
 
 ["gpio"],
     ["midi",  6, "", 53, "bass"],

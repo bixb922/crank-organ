@@ -56,13 +56,16 @@ pinout.mpy \
 pinoutweb.mpy \
 pintest.mpy \
 player.mpy \
+rotary.mpy \
 scheduler.mpy \
 setlist.mpy \
 solenoid.mpy \
 startup.mpy \
+startbase.mpy \
+startswitch.mpy \
+starttouch.mpy \
 tachometer.mpy \
 timezone.mpy \
-touchpad.mpy \
 tunemanager.mpy \
 umidiparser.mpy \
 webserver.mpy \

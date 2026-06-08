@@ -4,6 +4,7 @@
 ["microphone", 4],
 ["tachometer", "", ""],
 ["touchpad", ""],
+["tempo", "", "", ""],
 
 ["i2c", 17, 18],
    [ "mcp23017", 32 ],

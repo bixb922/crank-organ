@@ -147,15 +147,14 @@ class PinoutParser:
             ),  # (gpio number for counter or first encoder, gpio for encoder)
             "microphone": lambda pin: self.define_microphone(
                 toi(pin)
-            ),  # (gpio number)
-            "touchpad": lambda pin: self.define_touchpad(
-                toi(pin)
-            ),  # (gpio number)
+            ),  # (gpio number, 0-2 for technology)
+            "touchpad": lambda pin, technology="": self.define_touchpad(
+                toi(pin), toi(technology)
+        ),  
             "register": lambda pin, name, initial_value=False: self.define_register(
                 toi(pin), name, initial_value
             ),
-            # not in use anymore
-            # "tempo": lambda pin_a, pin_b, switch: self.define_tempo( toi(pin_a), toi(pin_b), toi(switch) ),
+            "tempo": lambda pin_a, pin_b, switch: self.define_tempo( toi(pin_a), toi(pin_b), toi(switch) ),
 
             # MIDI driver definitions and "midi" pin definition
             "gpio": lambda : self.define_gpio_driver(),
@@ -185,12 +184,12 @@ class PinoutParser:
         self.define_start()
         for pd in json_data:
             # For transition from Oct24 version
-            s = pd[0]
-            if s.endswith(".midi"):
-                s = "midi"
+            pdtype = pd[0]
+            if pdtype.endswith(".midi"):
+                pdtype = "midi"
             # End of Oct24 transition
             try:
-                actions[s](*pd[1:])
+                actions[pdtype](*pd[1:])
             except Exception as e:
                 _logger.error(f"processing pinout file for line {pd} {e}, {'aborting' if self.raise_error else 'ignoring line'}")
                 if self.raise_error:
@@ -214,7 +213,7 @@ class PinoutParser:
     def define_microphone(self, gpio):
         return
 
-    def define_touchpad(self, gpio):
+    def define_touchpad(self, gpio, technology):
         return
     
     def define_register( self, gpio, name, initial_value ):
@@ -244,9 +243,8 @@ class PinoutParser:
     def define_midi(self, pin, midi_note, rank, register_name):
         pass
     
-    #def define_tempo( self, gpio_a, gpio_b, gpio_switch):
-        # Not implemented
-    #    return
+    def define_tempo( self, gpio_a, gpio_b, gpio_switch):
+        return
         
     def define_complete(self):
         return
@@ -285,6 +283,7 @@ class GPIODef(PinoutParser):
         self.tachometer_pin2 = None
         self.microphone_pin = None
         self.touchpad_pin = None
+        self.touchpad_technology = "" 
         self.tempo_a = None
         self.tempo_b = None
         self.tempo_switch = None
@@ -306,17 +305,16 @@ class GPIODef(PinoutParser):
         if x:
             self.microphone_pin = x
 
-    def define_touchpad(self, x):
+    def define_touchpad(self, x, technology):
         if x:
             self.touchpad_pin = x
+            self.touchpad_technology = technology
 
-    #def define_tempo( self, gpio_a, gpio_b, gpio_switch):
-    #    print(f"Not implemented: define tempo, ignored")
-    
-        # if gpio_a and gpio_b:
-        #     self.tempo_a = gpio_a
-        #     self.tempo_b = gpio_b
-        #     self.tempo_switch = gpio_switch
+    def define_tempo( self, gpio_a, gpio_b, gpio_switch):
+        # Load this driver late, so it will not use RAM when not referenced.
+        self.tempo_a = gpio_a
+        self.tempo_b = gpio_b
+        self.tempo_switch = gpio_switch
             
     def define_register( self, gpio, name, initial_value ):
         # No name means "disregard this register"

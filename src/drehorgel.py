@@ -98,19 +98,20 @@ def init_pinout():
 def init_modules():
 
     global history, player, setlist, crank, tunemanager
-    global battery, poweroff
+    global battery, poweroff, tempo_encoder
 
     led.starting(2)
  
     # Player/setlist need to know if crank is turning.
     from tachometer import Crank
     crank = Crank(gpio.tachometer_pin1, gpio.tachometer_pin2 )
-    # The tempo encoder operates as a independent task,
-    # tempo encoder not of interest?
-    # tempo_encoder = None
-    # if gpio.tempo_a and gpio.tempo_b:
-    #    tempo_encoder = TempoEncoder( crank, gpio.tempo_a, gpio.tempo_b, gpio.tempo_switch, config.rotary_tempo_mult )
-        
+    # The rotary tempo encoder operates as a independent task
+    tempo_encoder = None
+    if gpio.tempo_a and gpio.tempo_b:
+        from rotary import TempoEncoder # late import, so it will not use RAM if not referenced in pinout.json
+        tempo_encoder = TempoEncoder( crank, gpio.tempo_a, gpio.tempo_b, gpio.tempo_switch, config.rotary_tempo_mult )
+        # global variable tempo_encoder is currently not in use.
+
     from history import HistoryManager
     # Need to create empty history file if not there.
     history = HistoryManager()

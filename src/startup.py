@@ -146,12 +146,9 @@ async def signal_ready( controller ):
     # gc time also can be seen on diag.html
     print(f"Total startup time (without main, until asyncio ready) {start_dt} msec")
     print(f"Memory used at startup {alloc} gc={gc_t} msec")
-    # March 2026:
-    #   Total startup time (without main, until asyncio ready) 4085 msec
-    #   Memory used at startup 137840 gc=28 mse
-    # March 2026, freshly installed, no midi files, 20 note pinout.
-    #   Total startup time (without main, until asyncio ready) 994 msec
-    # Memory used at startup 131872 gc=19 msec
+    # May 2026 with 20_note_Carl_Frei.json
+    # Total startup time (without main, until asyncio ready) 1262 msec
+    # Memory used at startup 126464 gc=19 msec
 
     controller.all_notes_off()
     
@@ -181,7 +178,9 @@ async def start():
     
     # Allocate first logger, this will generate restart message
     _logger = getLogger(__name__)
-    
+    # Force initialization here
+    _logger.init()
+
     drehorgel.init_config()
 
     # Start wifimanager as early as possible, so the connections are

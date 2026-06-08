@@ -40,7 +40,7 @@
 <div class="middlediv">Pin to MIDI mapping</div>
     Modify or enter GPIO pin numbers for microphone (typically GPIO 4), crank sensor or touchpad (typically GPIO 5) and neopixel (typically GPIO 38 or 48, see schematic of your board).  Leave empty if nothing is connected.
     <br>
-    If there is no crank sensor, it may be useful to define a touchpad pin instead. Defining both is redundant.
+    If there is no crank sensor, it may be useful to define a start touchpad or start switch instead. Defining both is redundant.
     <br>
     Microphone pin and touchpad must be from ADC bank 1 (see ESP32-S3 specs).
     <br>
@@ -269,22 +269,22 @@ async function getPinoutDetail( ) {
             let touchResult = document.createElement("span");
             touchResult.id = `touchresult.${f}`;
             let row = insertFormRow( tbody,`row_${f}_touchpad`, [
-                "Touchpad pin",
-                makeInput( `touchpad.${f}`, 3, pd[1] ),
+                "Start touchpad or switch",
+                makeInput( `touchpin.${f}`, 3, pd[1] ),
+                makeTouchpadSelect( `touchselect.${f}`, pd[2]),
                 makeButton( `touchtest.${f}`, "Test", ()=>test_touchpad(f)),
                 touchResult
             ] );
             row.cells[3].colSpan = 3;
         }
         else if( pdtype == "tempo" ){
-            // >>> deprecated. If file is saved, "tempo" entries will disappear.
-            // insertFormRow( tbody,`row_${f}_tempo`, [
-            //     "Tempo encoder knob pins A and B",
-            //     makeInput( `tempo_a.${f}`, 3, pd[1] ),
-            //     makeInput( `tempo_b.${f}`, 3, pd[2] ),
-            //     "Switch",
-            //     makeInput( `tempo_s.${f}`, 3, pd[3] ),
-            // ] );
+            insertFormRow( tbody,`row_${f}_tempo`, [
+                 "Tempo encoder knob pins A and B",
+                 makeInput( `tempo_a.${f}`, 3, pd[1] ),
+                 makeInput( `tempo_b.${f}`, 3, pd[2] ),
+                 "Switch",
+                 makeInput( `tempo_s.${f}`, 3, pd[3] ),
+             ] );
         }
         else if( pdtype == "register"){  
             insertFormRow( tbody,`row_${f}_register`, [
@@ -499,7 +499,8 @@ async function savePinoutFilename(){
     await get_available_pins();
     showHideElement( "table_list_pinout_by_midi_note", false );
 }
-    
+  
+// >>> pressing save when page hasnt loadded may leave pinout []
 async function savePinoutDetail(){
     let newpd = [] ;
     let rows = document.getElementsByTagName( "tr" );
@@ -520,10 +521,14 @@ async function savePinoutDetail(){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
             newpd.push( [pdtype, v] );
         }
-        else if( [ "microphone",
-             "neopixel", "touchpad"].includes( pdtype )  ){
+        else if( [ "microphone", "neopixel"].includes( pdtype )  ){
             let v = document.getElementById( `${pdtype}.${f}`).value ;
             newpd.push( [pdtype, valnum( v )  ] );
+        }
+        else if( pdtype == "touchpad" ){
+            let pin = document.getElementById( `touchpin.${f}`).value ;
+            let technology = getSelectedOption( `touchselect.${f}` ) ;
+            newpd.push( [pdtype, valnum(pin), valnum( technology) ] );
         }
         else if( pdtype == "tachometer"){
             let v1 = document.getElementById( `tachometer_counter.${f}`).value ;
@@ -531,11 +536,10 @@ async function savePinoutDetail(){
             newpd.push( [pdtype, valnum(v1), valnum(v2)] );
         }
         else if( pdtype == "tempo"){
-            // >>> deprecated.
-            //let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
-            //let tempo_b = document.getElementById( `tempo_b.${f}`).value ;
-            //let tempo_s  = document.getElementById( `tempo_s.${f}`).value ;
-            //newpd.push( [pdtype, valnum(tempo_a), valnum(tempo_b), valnum(tempo_s) ]);
+            let tempo_a = document.getElementById( `tempo_a.${f}`).value ;
+            let tempo_b = document.getElementById( `tempo_b.${f}`).value ;
+            let tempo_s  = document.getElementById( `tempo_s.${f}`).value ;
+            newpd.push( [pdtype, valnum(tempo_a), valnum(tempo_b), valnum(tempo_s) ]);
         }
         else if( pdtype == "register" ){
             let pin = document.getElementById( `${pdtype}.${f}`).value ;
@@ -1120,21 +1124,59 @@ function zeroCrossings( signal ){
 }
 
 async function test_touchpad(f){
-    let pin = document.getElementById( `touchpad.${f}`).value;
+    let pin = document.getElementById( `touchpin.${f}`).value;
+    if( !pin ){
+        return;
+    }
+    let technology = getSelectedOption( `touchselect.${f}` );
     let touchResult = document.getElementById( `touchresult.${f}` );
     if( touchResult.innerHTML != "" ){
         // Avoid recursion
         return ;
     }
     for( let n=20; n>=0; n--){
-        let resp = await fetch_json( `/test_touchpad/${pin}` );
+        let resp = await fetch_json( "/test_touchpad",
+                                    { "pin": pin,
+                                    "technology": technology
+                                    }
+         );
         // Get TouchPad.read() value
         let value = parseInt(resp["value"]);
-        // Make a simple horizontal bar graph of the value read.
-        let graph = "￭".repeat(Math.min(value/20_000, 25));
+        // Horizontal bar graph for switch. Must never be blank!!
+        let graph = "￭".repeat( value?10:1 );
+        if( technology == _TECHNOLOGY_TOUCHPAD ){
+            // Bar graph for touch pad
+            graph = "￭".repeat(Math.min(value/20_000, 25));
+        }
         touchResult.innerHTML = `count=${n} pin=${pin} value=${value.toLocaleString()}<br>${graph}`;
     }
     touchResult.innerHTML = "";
+}
+
+// Must mirror touchpad.py
+const _TECHNOLOGY_TOUCHPAD = 1;
+const _TECHNOLOGY_SWITCH_TO_GND = 2;
+const _TECHNOLOGY_NAMES = ["touch", "switch to GND"];
+function makeTouchpadSelect( id, technology ){
+    let select = document.createElement("select");
+    select.id = id;
+    // Must be in same order as touchpad.py _TECHNOLOGY constants
+    for( let opt of _TECHNOLOGY_NAMES ){
+        let option = document.createElement( "option" );
+        option.value = opt;
+        option.textContent = opt;
+        select.appendChild( option );
+    }   
+    if ( !technology || isNaN(technology) || technology < 1 || technology > _TECHNOLOGY_NAMES.length ){
+        technology = 1 ;
+    }
+    select.selectedIndex = technology-1 ;
+    document.body.appendChild( select );
+    return select ;
+}
+function getSelectedOption( id ){
+    let select = document.getElementById(id);
+    return select.selectedIndex+1;
 }
 
 getPinoutList();

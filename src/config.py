@@ -76,6 +76,9 @@ class Config:
         self.ap_max_idle = 180 
         self.advertise_bt = False # >>> make client translatable
 
+        # Rotary sensor 
+        self.rotary_tempo_mult = 1.0
+        
         # Power management
         self.battery_heartbeat_duration = 0
         self.battery_heartbeat_period = 0

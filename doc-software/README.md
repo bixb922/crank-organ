@@ -72,6 +72,8 @@
      * [Registers](#registers)
      * [Percussion sounds made with pipes a.k.a. "fake drums"](#percussion-sounds-made-with-pipes-aka-fake-drums)
      * [Crank rotation sensor and tempo](#crank-rotation-sensor-and-tempo)
+     * [Rotary sensor to change tempo](#rotary-sensor-to-change-tempo)
+     * [Define a switch or pushbutton instead of the touchpad](#define-a-switch-or-pushbutton-instead-of-the-touchpad)
      * [Automatic shutdown when idle](#automatic-shutdown-when-idle)
      * [The onboard RGB LED](#the-onboard-rgb-led)
      * [ROMFS](#romfs)
@@ -93,7 +95,8 @@
      * [Changes June 24 to July 5, 2025](#changes-june-24-to-july-5-2025)
      * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
      * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
-     * [More changes in May 2026 (not as as Announcement yet)](#more-changes-in-may-2026-not-as-as-announcement-yet)
+     * [More changes in May 2026](#more-changes-in-may-2026)
+     * [Changes in from June 1 to June 7, 2026](#changes-in-from-june-1-to-june-7-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -125,7 +128,7 @@ Please post a Github issue in this repository for any question you might have. P
 * Standard type 0 and 1 MIDI files are supported. Program numbers to identify different instruments and the percussion channel (channel 10) can be defined for use.
 * Allows add lyrics
 * Unattended operation is possible too. After a definable number of seconds, the next tune starts automatically.
-* Barrel organ mode: when enabled, the MIDI file is repeated until the next tune is selected, just like a barrel organ.
+* Barrel organ repeats: allows to the current MIDI file just like a barrel organ, repeating the current tune when ended.
 * Software or hardware registers (as in "register stop of a organ")
 * Crank turning speed sets MIDI playback speed (optional)
 * Crank turning starts MIDI playback (optional)
@@ -253,7 +256,7 @@ Played tunes are removed from the setlist.
 
 Option 1: Press the start button on the performance page (on this page).
 
-Option 2: If the touchpad is installed, start cranking, then touch and release the touchpad. The tune starts when the touchpad is released. See hardware section for touchpad. The touchpad is really any metallic button such as a drawer button, connected with a single wire to the microcontroller.
+Option 2: If the touchpad is installed, start cranking, then touch and release the touchpad. The tune starts when the touchpad is released. See hardware section for touchpad. The touchpad is really any metallic button such as a drawer button, connected with a single wire to the microcontroller. The software also supports a regular pushbutton switch, if you don't like the touchpad.
 
 Option 3: If a crank rotation sensor is installed, start turning the crank. This will start the tune.
 
@@ -294,11 +297,9 @@ These controls regulate playback speed. Even if there is no crank sensor, you ca
 
 Touching the Touchpad while the crank is stopped moves to the next tune.
 
-"Barrel organ mode" or "barrel mode" mimics a barrel organ: once the tune is over, it is restarted immediately until you move to the next tune using the Touchpad or the Next button on the Performance page.
-
 Crank info shows only if crank is defined in the Pinout page.
 
-The default settings for "tempo follows crank" and "barrel mode" are defined in the General Configuration page. After a tune has played, settings are reverted to the default.
+The default settings for "tempo follows crank" is defined in the General Configuration page. After a tune has played, settings are reverted to the default.
 
 # 7. Multiple stored setlists
 
@@ -602,7 +603,7 @@ If you need another scale or hardware configuration, post an issue in this Githu
 You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander, and yet others that turn on RC servos.
 
 You also specify additional hardware you connect to the microcontroller:
-* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller)
+* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller) or a switch
 * A microphone for tuning
 * Electronic register switches
 * A rotary sensor for the crank (to detect movement, and/or to sense velocity)
@@ -625,6 +626,7 @@ There is a ```Test``` button next to these devices on the pinout configuration p
 
 * For the microphone it will refresh a graph of the sound detected. Make some sounds and see the signal wiggle. If the microphone is not connected, this entry will probably show some noise, since the ADC inputs of the ESP32-S3 pick up electrical ambient noise.
 * For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used and the air or skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be clearly lower than that difference. 
+* If you are using a switch instead of the touchpad, it will show the state of the switch, 1 for open and 0 for closed.
 * For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because the test detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
 * For the crank sensor: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
 
@@ -1080,6 +1082,32 @@ There is a crank speed graph on the "System" page.
 
 Here is more on the crank sensor: [A crank sensor journey](/doc-hardware/crank-sensor.md)
 
+## Rotary sensor to change tempo
+
+It is possible to connect a rotary sensor to set tempo, see [here](/doc-hardware/README.md#rotary-sensor-potentiometer-type-to-change-tempo).
+
+To define the sensor in your pinout data file, please use a text editor on the PC to edit the file and add a "tempo" entry just after the entry that starts with ```["touchpad"```:
+```
+["touchpad", 5, 1],
+["tempo", "", "", ""],
+```
+(You also can see the definition in the file ```crank-organ/data/48_note_custom.json```).
+
+Upload the modified file to the data folder of the microcontroller. Make sure this is the selected pinout file.
+Now you can use the Pinout page to define the two phases of the rotary encoder and (optionally) the switch that is normally included in the knob.
+
+Rotating the knob will do the same as changing tempo on the Performance page. Pressing the switch will reset tempo to the normal tempo defined in the MIDI file. The settings are kept until the current MIDI file ends.
+
+The order of the phase pins in the definition are important for the rotation direction.
+
+The General Configuration page allows to define a multiplier that sets the sensibility of the encoder. 
+
+## Define a switch or pushbutton instead of the touchpad
+
+On the Pinout and MIDI Configuration page, next to the "Start button" entry, select "Switch to GND" instead of "Touch" if you want to use a pushbutton to start the music.
+
+See also here: [Switch-instead-of-a-touchpad-to-start-the-music](/doc-hardware/README.md#11-switch-instead-of-a-touchpad-to-start-the-music) in the hardware description.
+
 
 ## Automatic shutdown when idle
 After 15 minutes without activity, the microprocessor will shut itself down to save energy. You will need to turn it off and then on again.
@@ -1431,7 +1459,7 @@ New features and enhancements:
 * New button to delete one day of history.
 * Touchpad will go to next tune when pressed while crank is stopped.
 * Using new romfs capability of MicroPython. Binaries are provided for installation. Put ESP32-S3 in bootloader mode, cd to bin folder and run the esptool.py command (see installation)
-* Barrel organ mode: repeats current tune until "next tune" is pressed. 
+* Barrel organ mode: repeats current tune until "next tune" is pressed. (In a later version, this was superceded by requesting repeats)
 * Allow purge history of a certain date, additional to date range.
 * Added parameter to allow autmatic purge of old history, to limit file size.
 * New button on Note list (tuning) page to set current frequency average as reference for tuning. Restart microcontroller to switch back to configured frequency.
@@ -1475,7 +1503,7 @@ Dropped features:
 
 Please post in discussions if you are unhappy with some dropped feature.
 
-## More changes in May 2026 (not as as Announcement yet)
+## More changes in May 2026
 * Use MicroPython 1.28.0 for the compiled ```.bin``` files.
 * Speed up boot: skip reading tunelib.json, lyrics.json.
 * Move check of minimum free flash from browser to server.
@@ -1507,7 +1535,14 @@ If tune is not started by crank, it will not react to the crank.
 * Make MicroPython itself smaller, disabling unnecessary modules, to get more space for ROMFS.
 * Make memory footprint smaller delaying the loading of modules for web pages until needed (new module pinoutweb.py).
 * Add show/hide control for setlist and lyrics on play page, good for very long setlists to avoid scrolling down.
-* Add "Barrel mode" to play page and move "tempo follows crank" up in the page. Allow changes to barrel mode during playback.
+* Add "Repeats requested" to play page and move "tempo follows crank" up in the page. Replace "barrel mode" configuration option with "repeat requested" option on Performance page. Make touchpad increment "repeat requested" when crank is stopped. (I.E. "barrel mode" is now per tune, not global).
+* Drop pairing notes in compress_midi.py utility. The crank organ software already does this, it's redundant.
+
+## Changes in from June 1 to June 7, 2026
+* Enable rotary encoder driver to set tempo again
+* Allow to use either a pushbutton switch or a touch pad to start a tune. New option to select technology in Pinout page.
+* Fix initialization of log to make restart message appear just after reboot as it should.
+
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

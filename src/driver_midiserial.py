@@ -66,7 +66,7 @@ class MIDISerialDriver(BaseDriver):
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )
    
-# >>> should also send program number?
+# >>> should also send program number? Pass through mode?
 # >>> currently repr is based on MIDI note number only, if pin
 # >>> differ by program number...??? what is the use case?
 class VirtualMIDIPin(SolePin):
