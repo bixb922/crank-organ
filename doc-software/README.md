@@ -100,7 +100,7 @@
      * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
      * [More changes in May 2026](#more-changes-in-may-2026)
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
-     * [Changes from June 8, 2026 to July 15, 2026](#changes-from-june-8-2026-to-july-15-2026)
+     * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -1592,7 +1592,7 @@ If tune is not started by crank, it will not react to the crank.
 * compress_midi now generates setlist 11 with tunes marked as WIP and setlist 12 with new tunes. Increase setlist number from 9 to 12.
 
 
-## Changes from June 8, 2026 to July 15, 2026
+## Changes from June 8, 2026 to July 7, 2026
 * Allow to set repetition rate with a dialog box on the Note page. 
 * Passthrough mode for MIDI. All MIDI messages that have not triggered a note are output to the MIDI out serial port.
 * Optimize minilog, keep file closed to free memory, performance is similar as before.
