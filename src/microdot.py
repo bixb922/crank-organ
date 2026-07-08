@@ -12,7 +12,11 @@ import asyncio
 import io
 import json
 import time
+
+# >>> using await while playing
+from scheduler import play_yield
 print("Microdot: using await for Request._safe_readline()")
+
 try:
     from inspect import iscoroutinefunction, iscoroutine
     from functools import partial
@@ -411,7 +415,8 @@ class Request:
             # >>> if not, get_progress() interferes with 
             # >>> MIDI player.
             # >>> Following line added to improve asyncio response
-            await asyncio.sleep_ms(20)
+            # >>> Version 1.29: impact seems to be nil.
+            await play_yield()
             # >>> end of change
             line = (await Request._safe_readline(
                     client_reader)).strip().decode()

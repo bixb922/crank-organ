@@ -28,8 +28,9 @@
         <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
         <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
         <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
-        <button onclick="purgeTunelib()">Purge tunelib</button>
+        <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()">Select if not in PC tunelib</button>
         <button id="downloadFilesButton" onclick="downloadSelectedFiles()">Download</button>
+        <button id="downloadAsTarButton" onclick="downloadAsTar()">Download as tar</button>
         <button id="deleteFilesButton" onclick="deleteFiles()" >Delete</button>
         <button id="selectForBackup"  onclick="selectForBackup()" style="display:none">Select for backup</button>
     </div>
@@ -139,12 +140,21 @@
         return data.total_flash - data.used_flash;
     }
 
+    async function getPermission() {
+        // Get permission to upload files, if not already authorized.
+        // If client does not do this, the functions needing authorization will fail with 403 error.
+        logNotification("Getting authorization, wait...");
+        let resp = await fetch_json("/get_permission");
+        if (resp["error"]) {
+            return false;
+        }
+        return true;
+    }
     async function processPickedFiles(event) {
         // Called by "change" event of file dialog (id="filePicker").
-        resp = await fetch_json("/get_permission");
-        if (resp["error"]) {
+        if( !await getPermission() ){
             return;
-        }
+        }   
 
         let body = document.getElementById("fileListBody");
         let sizeTitle = document.getElementById("thisFolderSize");
@@ -262,7 +272,7 @@
         let checkbox = document.getElementById(checkbox_id);
         let d = document.getElementById("selectedFilesSpan");
         let count = getSelectedFileCount();
-        if( getSelectedFileCount() > 0 ){
+        if( count > 0 ){
             d.innerText = "" + count + " files selected";
         }
         else {
@@ -276,13 +286,16 @@
         if (getSelectedFileCount() > 0) {
             document.getElementById("downloadFilesButton").classList.remove("inactive");
             document.getElementById("deleteFilesButton").classList.remove("inactive");
+            document.getElementById("downloadAsTarButton").classList.remove("inactive");
         }
         else {
             document.getElementById("downloadFilesButton").classList.add("inactive");
             document.getElementById("deleteFilesButton").classList.add("inactive");
+            document.getElementById("downloadAsTarButton").classList.add("inactive");
 
         }
         showHideElement("selectForBackup", CURRENT_PATH == "/data");
+        showHideElement("selectIfNotInPCButton", CURRENT_PATH == "/tunelib");
     }
 
 
@@ -430,7 +443,9 @@
 
     async function downloadSelectedFiles() {
         // Will not work if not authorized.
-        await fetch_json("/get_permission");
+        if( !await getPermission() ){
+            return;
+        }   
         closeLogWindow();
         for (let file of getSelectedFiles()) {
             logNotification(`Starting to download ${file}`);
@@ -474,10 +489,45 @@
         }
         clearSelection();
         document.getElementById("thisFolderSize").innerText = ""; // Refresh needed
-        logNotification("Delete complete, now refreshing file list")
+        logNotification("Delete complete, now refreshing file list");
         await refreshAll();
     }
 
+    async function downloadAsTar(){
+        // Will not work if not authorized.
+        if( !await getPermission() ){
+            return;
+        }   
+        closeLogWindow();
+        let filelist = getSelectedFiles();
+        if( filelist.length == 0 ){
+            return;
+        }
+        let config = await configCache.get();
+        let hostname = config["name"];
+        const now = new Date();
+        const pad = (num) => String(num).padStart(2, '0');
+        const datetime = 
+            now.getFullYear() +
+            pad(now.getMonth() + 1) + 
+            pad(now.getDate()) + "_" +
+            pad(now.getHours()) +
+            pad(now.getMinutes()) +
+            pad(now.getSeconds());
+        let filename = "/data/" + hostname + "_" + datetime + ".tar";
+        logNotification(`Creating tarball with ${filelist.length} files, wait...`);
+        // Last name = name of output tar archive.
+        filelist.push( filename );
+        await fetch_json("/make_tarball", filelist);
+        logNotification(filename +" created, starting download");
+        downloadFile( filename );
+        // no way to know when download is complete, so wait a bit before deleting the tarball
+        // Only need to wait until download started. If a file is deleted
+        // after opening, the open file handle will still work in MicroPython/LittleFS2.
+        await sleep_ms(3000); 
+        await fetch_json("/delete_file", {"delete_filename": filename });
+        logNotification(filename +" deleted");
+    }
 
     function sortTable() {
         // https://stackoverflow.com/questions/14267781/sorting-html-table-with-javascript
@@ -515,27 +565,29 @@
         }
     }
 
-    function purgeTunelib(){
+
+    function selectIfNotInPC(){ 
         closeLogWindow();
         // Calls processPickedFiles() when user pushes OK
         document.getElementById("folderDialogButton").click();
-
+        // If user presses "Open", processFolderDialog() is called next.
     }
 
     async function processFolderDialog(){
-        // >>> Could be interesting to add button only visible
-        // >>> when in tunelib_purged to move selected files back
-        // >>> to tunelib? Or a general "move" button?
         function fn_to_key( fn ){
             // Leave only ascii chars to make an approximate
             // comparison to avoid problems with NFC/NFD comparison
             // As a result, may be not all files candidates for purge
             // will be purged.
             // Normalize to NFD and then replace dieresis, accents, etc
-            // so only the base character remains.
+            // so only the base character remains. This solves a problem
+            // on MAC, where non-normalized filenames appear.
             // Example ä -> a+¨ -> a
             let k = fn.normalize("NFD");
             k = k.replace(/[\u0300-\u036f]/g, "");
+            // Get rid of the folder, if any
+            let components = k.split("/");
+            k = components[components.length-1];
             // .gz suffix is irrelevant for file name comparison
             if( k.endsWith(".gz") ){
                 return k.substring(0,k.length-3);
@@ -543,12 +595,7 @@
             return k;
         }
 
-
-        // Compression here will not be optimal since we
-        // would have to optimize the MIDI too.
-        // Sync could be done using the date (in local time),
-        // but upload is easy that the only missing thing is
-        // to delete surplus files.
+        // Folder dialog.files returns a list of pcfile objects
         // Example of pcfile object:
         // pcfile.lastModified: time stamp integer
         // pcfile.lastModifiedDate: Date() object
@@ -556,60 +603,59 @@
         // pcfile.size: 17460 (bytes)
         // pcfile.type: "audio/midi"
         // pcfile.webkitRelativePath: "tunelib/a.mid"
+
         // Folder dialog is now complete, get list of files on the PC
         let pcList = document.getElementById("folderDialogButton").files;
         if( pcList.length == 0 ){
-            logError("No files selected or folder empty.");
+            logError("PC tunelib folder empty.");
             return;
         }
-        // Sanity check: if comparing with a random folder, most files will be moved.
+        // Sanity check: user should compare to tunelib or
+        // tunelib_compressed folder.
         if( !pcList[0].webkitRelativePath.startsWith("tunelib")){
             logError("You must compare with a folder with name starting with 'tunelib'.");
             return;
         }
-        let pcMap = new Map();
+        // For fast access, create map with all files on PC.
+        let pcFileSet = new Set();
         for( let pcFile of pcList) {
             // Only .mid files compared
-            let pcl = pcFile.name.toLowerCase();
-            if( pcl.endsWith(".mid") || pcl.endsWith(".mid.gz")){
-                pcMap.set( fn_to_key(pcFile.name),  pcFile);
+            let pclower = pcFile.name.toLowerCase();
+            let k = fn_to_key(pcFile.name);
+            if( k.endsWith(".mid") ){
+                pcFileSet.add( k );
             }  
         }
-        if( pcMap.size == 0 ){
-            logNotification("No midi files found on PC.");
+        if( pcFileSet.size == 0 ){
+            logNotification("No MIDI files found in PC folder.");
             return;
         }
-        
-        // espfile.name
-        // espfile.isDirectory (1=directory, 0=file, should all be files)
-        // espfile.size in bytes (0 for folders)
-        // espfile.path full path, e.g. software/static/index.html
-        // espfile.date in yyyy/mm/dd hh:mm format for files ("" for folders
-
-        logNotification(`Waiting for microcontroller to list files on tunelib folder...`);
-        // New webservice is necessary because brower doesn't know where tunelib is (might be on sd)
-        // Unlike /listdir, this sevice does not return the file createion date
-        let espList = await fetch_json( "/listdir_tunelib");
-        logNotification("Microcontroller listing complete.")
-
-
-        // Check files on the ESP32 but deleted on the PC.
-        let n = 0;
-        for( let espFile of espList ){
-            let k = fn_to_key( espFile.name );
-            let pcFile = pcMap.get( k );
-            if( pcFile == undefined ){
-                // File is on microcontroller but not on PC, purge file.
-                // Use post, don't encodePath() file names to ensure they are
-                // the names the microcontroller is using
-                // let resp = await fetch_json( "/purge_tunelib_file",  {"filename":espFile.name} );
-                let resp = await fetch_json( "/purge_tunelib_file", {"purge_filename": espFile.name });
-                logNotification(`File "${espFile.name}" moved to "tunelib_purged" folder`);
-                n += 1;
-            }   
-        }
-        logNotification(`${n} files moved, purge complete.`);
+         clearSelection(); // Don't add to previous selection. that can be confusing.
+        let body = document.getElementById("fileListBody");
+        for( let i = 1; i < body.rows.length; i++){
+            let row = body.rows[i];
+            let checkbox = row.cells[0]?.children[0];
+            let filename = checkbox?.getAttribute("myfilepath");
+            if( !checkbox || !filename ){
+                continue;
+            }
+            let k = fn_to_key( filename);
+            if( !k.endsWith(".mid") ){
+                continue;
+            }
+            if( pcFileSet.has(k) ){
+                // File exists on PC, so do not select it for deletion.
+                continue;
+            }
+            // pcFile undefined means: this file on the microcontroller
+            // could not be found on the PC, so select it for possible deletion.
+            checkbox.checked = true ;
+            selectFile( checkbox.id, filename );
+            logNotification(`File "${filename}" selected`);
+        } 
+        logNotification(`${getSelectedFileCount()} files selected.`);
     }
+
 
     function createFilePicker(){
          // Reload after each use, if not click() hangs sometimes.

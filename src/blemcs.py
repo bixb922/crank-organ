@@ -4,6 +4,8 @@
 import bluetooth
 import struct
 
+from minilog import getLogger
+
 # Advertising packet constants
 #_ADV_TYPE_FLAGS = const(0x01)
 #_ADV_TYPE_NAME = const(0x09)
@@ -92,7 +94,7 @@ class BLEMCS:
             nonlocal payload
             payload += struct.pack("BB", len(value) + 1, adv_type) + value
 
-        print(f"BLEMCS Advertise {name=}")
+        getLogger(__name__).debug(f"BLEMCS Advertise {name=}")
         payload = bytearray()
         _append(0x01, struct.pack("B", 0x06)) # Flags: General Discoverable, LE only
         _append(0x09, name[0:15].encode()) # limit length

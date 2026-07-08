@@ -119,6 +119,17 @@ async def do_aioprof():
 # Feb 2026. Comparable player.play_tune() statistics:
 # midi_events=5010, msec/event=1.2, busy=5.7%, avg gc=40 msec, late ratio=4.12%
 
+# from time import ticks_us
+# async def test_async():
+#     while True:
+#         maxdt = 0
+#         for _ in range(2000):
+#             t0 = ticks_us()            
+#             await asyncio.sleep_ms(0)
+#             t1 = ticks_us()
+#             dt = ticks_diff( t1, t0)//1000
+#             maxdt = max( dt, maxdt)
+#         print(f">>>{maxdt=} msec")
 
 def start_mcserver():
     # Start communication task with server on internet
@@ -144,11 +155,11 @@ async def signal_ready( controller ):
     alloc = gc.mem_alloc()
     # This allow to check startup time and memory allocation.
     # gc time also can be seen on diag.html
-    print(f"Total startup time (without main, until asyncio ready) {start_dt} msec")
-    print(f"Memory used at startup {alloc} gc={gc_t} msec")
+    _logger.debug(f"Total startup time (without main, until asyncio ready) {start_dt} msec")
+    _logger.debug(f"Memory used at startup {alloc} gc={gc_t} msec")
     # May 2026 with 20_note_Carl_Frei.json
-    # Total startup time (without main, until asyncio ready) 1262 msec
-    # Memory used at startup 126464 gc=19 msec
+    # Total startup time (without main, until asyncio ready) 1952 msec
+    # Memory used at startup 130688 gc=20 msec    
 
     controller.all_notes_off()
     
@@ -205,5 +216,6 @@ async def start():
         webserver.run_webserver(),
         scheduler.background_garbage_collector(),
         signal_ready(drehorgel.controller),
+        # test_async(),
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore

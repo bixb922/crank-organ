@@ -20,7 +20,8 @@ import fileops
 _CURRENT_SETLIST = const(0)
 _STORED_SETLIST = const(1) 
 
-_MAX_SETLIST_SLOTS = const(10)
+# This constant must be equal to the same name defined in common.js
+_MAX_SETLIST_SLOTS = const(12)
 
 class Setlist:
     def __init__(self):
@@ -351,24 +352,24 @@ class Setlist:
         # Fisher-Yates shuffle https://en.wikipedia.org/wiki/Random_permutation
         permutation = self.current_setlist
         n = len(permutation)
-        for i in range(n-1):
-            j = randrange(i,n) # A random integer such that i ≤ j < n
+        for i in range(n-1, 0, -1):
+            j = randrange(0,i) 
             # Swap the randomly picked element with permutation[i]
-            t = permutation[i]
-            permutation[i] = permutation[j]
-            permutation[j] = t
+            permutation[j], permutation[i] = permutation[i], permutation[j]
         self._save_current()
 
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
         # Must get a deep copy of tunelib to self.current_setlist
         # if not tunemanager._tuneids will be emptied while playing....
+        # >>> ??? RequestSlice 2 seconds
         self.current_setlist = tunemanager.get_autoplay()
         self.shuffle()
         led.shuffle_all_flash()
 
     def shuffle_3stars(self):
         # See shuffle_all_tunes for comments
+        # >>> ??? RequestSlice of 2 seconds
         self.current_setlist = tunemanager.get_autoplay_3stars()
         self.shuffle()
         led.shuffle_all_flash()
@@ -466,7 +467,10 @@ class Setlist:
             # returns slot 1-(_MAX_SETLIST_SLOTS-1), title, number of tunes
             # The "titles file" has _MAX_SETLIST_SLOTS elements. 
             # Element 0 is the "current setlist" and is skipped here.
-            titles =  fileops.read_json( config.SETLIST_TITLES_JSON, default=["current", "","", "","","","","","",""])
+            titles =  fileops.read_json( config.SETLIST_TITLES_JSON, default=["current"])
+            # Fill if setlist titles don't exist or if version changed
+            while len(titles) < _MAX_SETLIST_SLOTS:
+                titles.append("")
             # [slot_number, title, number of tunes in setlist]
             return [ [slot,title, len(self.load(slot,False))]
                     for slot, title in enumerate(titles)

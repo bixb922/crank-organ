@@ -424,6 +424,7 @@ async function getPinoutDetail( ) {
             pininfo.txpin = pd[2];
             pininfo.channel = pd[3];
             pininfo.rxpin = pd[4];
+            pininfo.passthrough = pd[5];
             let row = insertFormRow( tbody, `row_${f}_serial`, [
                 "MIDI over serial",
                 "UART (1-2)",
@@ -431,10 +432,11 @@ async function getPinoutDetail( ) {
                 "GPIO txpin",
                 makeInput( `serial.txpin.${f}`, 3, parseInt(pininfo.txpin)),
                 "Output MIDI channel (1-16)",
-                // Change channel from internal/physical number (0-15) to MIDI numbering (1-16)
                 makeInput( `serial.channel.${f}`, 3, pininfo.channel+1 ),
                 "UART RX (unused)",
-                makeInput( `serial.rxpin.${f}`, 3, pininfo.rxpin )
+                makeInput( `serial.rxpin.${f}`, 3, pininfo.rxpin ),
+                makeCheckbox( `serial.passthrough.${f}`, pininfo.passthrough ),
+                "Passthrough"
             ]);
             titlerow( row );
             rownum += 1;
@@ -581,8 +583,9 @@ async function savePinoutDetail(){
             let pin = document.getElementById( `serial.txpin.${f}` ).value ; 
             let channel = document.getElementById( `serial.channel.${f}` ).value ;
             let rxpin = document.getElementById( `serial.rxpin.${f}` ).value ; 
+            let passthrough = document.getElementById( `serial.passthrough.${f}` ).checked ;
             // Show MIDI numbering but store physical chanel number
-            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel )-1, valnum( rxpin )] ) ;   
+            newpd.push( ["serial", valnum( uart ), valnum( pin ), valnum( channel )-1, valnum( rxpin ), passthrough] ) ;   
         }
         else if( pdtype == "gpioservo" ){
             let period = document.getElementById( `gpioservo.period.${f}` ).value ;

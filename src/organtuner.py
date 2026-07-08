@@ -48,22 +48,19 @@ class OrganTuner:
         self.start_tuner_event = asyncio.Event()
         self.organtuner_task = asyncio.create_task(self._organtuner_process())
         self.microphone = Microphone( microphone_pin, config.mic_test_mode )
-        # Each pair is (note_duration, silence) in milliseconds
-        # note durataions get halved every two repeats
-                # Organ roll specifications have a hole size of 2 to 3 mm
+        # Organ roll specifications have a hole size of 2 to 3 mm
         # and advance at a speed of 4 to 6 cm per second.
         # This means that a hole takes about 45 milliseconds end-to-end
         # although the hole opens gradually...
-        # I'll use that as the shortest slence too
         # Analyzing organ MIDI files gives these approximate values:
         #    40-50 ms note length approximate minimum
         #    50-60 ms silence approximate minimum
-        # On piano, the fastest single note repeat is 14 notes/minute
+        # On piano, the fastest single note repeat is 14 notes/second
         # = one note every 70 msec
-        # On trumpet, a fast single note repeat is sixteemnth notes at
-        # 160 bpm = 90 msec per note. Double tonguing is faster but not double...
-        self.repeat_times = [(850,150),(601,106), (425,75), (301,53), (213,50), (150,50), (106,50), (75,50), (53,50), (40,50), (30,50), (30,40), (30, 30)]
-
+        # On trumpet, a fast single tonguing note repeat is sixteenth notes at
+        # 160 bpm = 90 msec per note. Double tonguing is faster but not double as fast.
+        # Each pair is (note_duration, silence) in milliseconds
+        # Speed is divided by 2 every two rates, except the extremely fast 30 msec tests.
         self.logger.debug("init ok")
 
     def get_stats( self ):
@@ -113,27 +110,30 @@ class OrganTuner:
         for _ in range(8):
             self.queue_tuning( self.play_pin, ( pin_index, 1000, 100) )
 
-    async def repeat_note(self, pin_index ):
-        for note_duration, silence in self.repeat_times:
-            # Queue repeat, don't queue play_pin(), thus repeat is not interruptible but more precise
-            self.queue_tuning( self.repeat_pin, ( pin_index, note_duration, silence) )
-
-    def get_repeat_times(self):
-        return " ".join( f"{note_duration}/{silence}" for note_duration, silence in self.repeat_times )
-
-    async def repeat_pin( self, arg ):
-        pin_index, duration, silence = arg
-        # Repeat notes for 4 seconds
+    async def repeat_note(self, request_data):
+        pin_index = int(request_data["pinIndex"])
+        play_during = int(request_data["playDuring"])*1000
+        if request_data["auto"]:
+            repeat_times = [ x.split("/") for x in request_data["autoNoteDuration"].split(" ")]
+            for note_duration, silence_duration in repeat_times:
+                # Queue a repeat, don't queue play_pin(), to 
+                # implement a repeat that is not interruptible and precise
+                self.queue_tuning( self.repeat_pin, ( pin_index, int(note_duration), int(silence_duration), int(play_during) ))
+        else:
+            note_duration = int(request_data["fixedNoteDuration"])
+            self.queue_tuning( self.repeat_pin, ( pin_index, note_duration, note_duration, play_during ) ) 
+        
+    async def repeat_pin( self, args ):
+        pin_index, note_duration, silence_duration, play_during = args
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
-        play_during = 4000 # milliseconds
-        self.logger.debug(f"repeat note {duration=} {silence=}")
+        self.logger.debug(f"Repeat {actuator} note/silence={note_duration}/{silence_duration} msec, during {play_during} sec")
         t0 = time.ticks_ms()
         while time.ticks_diff(time.ticks_ms(), t0) < play_during:
             actuator.on()
             # time.sleep_us() is precise (but blocks asyncio loop)
-            time.sleep_us( duration * 1000  )
+            time.sleep_us( note_duration * 1000  )
             actuator.off()
-            time.sleep_us( silence * 1000 ) 
+            time.sleep_us( silence_duration * 1000 ) 
         # Let queued async task do their job now, and leave a bit of
         # silence before the next note
         await asyncio.sleep_ms(500)
@@ -158,7 +158,7 @@ class OrganTuner:
     async def scale_test(self, _):
         # Play all notes. Unknown notes will play in zero time,
         # so they are essentially skipped. This is because 
-        # controller.note_on() will return False if no
+        # controller.notedef_on() will return False if no
         # note was found, so play_midi_note skips waiting and
         # skips note off.
         
@@ -188,11 +188,11 @@ class OrganTuner:
         #  Make a midi note sound
         midi_note, duration, silence = arg
 
-        # controller.note_on will return False if 
+        # controller.notedef_on will return False if 
         # no note was found. If so, skip waiting and note_off.
-        if controller.note_on( 0, 0, midi_note ):
+        if controller.notedef_on( midi_note ):
             await asyncio.sleep_ms(round(duration))
-            controller.note_off( 0, 0, midi_note )
+            controller.notedef_off( midi_note )
             await asyncio.sleep_ms(round(silence))
 
     def clear_tuning(self):
@@ -226,6 +226,8 @@ class OrganTuner:
 
                     # Queue empty, wait to be woken up
                     await self.start_tuner_event.wait() # type:ignore
+                    # Let the webserver finish responding
+                    await asyncio.sleep_ms(50)
             except Exception as e:
                 self.logger.exc(e, "exception in _organtuner_process")
             finally:

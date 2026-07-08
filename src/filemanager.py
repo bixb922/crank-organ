@@ -286,22 +286,34 @@ def delete(path):
     os.remove(path)
     _check_midi_file( path )
 
-
-def purge_tunelib_file( fn ):
-    def append( fn, n ):
-        if n:
-            fn += f"_({n})"
-        return fn
+# # >>> perhaps better select files to purge instead of moving?
+# def purge_tunelib_file( fn ):
+#     def append( fn, n ):
+#         if n:
+#             fn += f"_({n})"
+#         return fn
    
-    fileops.make_folder( config.PURGED_FOLDER )
-    n = 0
-    from_fn = config.TUNELIB_FOLDER + fn
-    to_fn = config.PURGED_FOLDER + fn
-    # Don't overwrite existing files in "purged" folder
-    while fileops.file_exists( append(to_fn, n) ):
-        n += 1
-        if n > 10:
-            raise RuntimeError(f"Too many purged file versions {fn=} {n=}")
-    _check_midi_file( from_fn )
-    os.rename( from_fn, append(to_fn, n) )
+#     fileops.make_folder( config.PURGED_FOLDER )
+#     n = 0
+#     from_fn = config.TUNELIB_FOLDER + fn
+#     to_fn = config.PURGED_FOLDER + fn
+#     # Don't overwrite existing files in "purged" folder
+#     while fileops.file_exists( append(to_fn, n) ):
+#         n += 1
+#         if n > 10:
+#             raise RuntimeError(f"Too many purged file versions {fn=} {n=}")
+#     _check_midi_file( from_fn )
+#     os.rename( from_fn, append(to_fn, n) )
    
+def make_tarball( tar_file, filelist ):
+    from tarfile import TarFile
+    # Should never overwrite existing files (except tar)
+    # Javascript client ensures .tar extension
+    assert tar_file.endswith(".tar")
+    try:
+        os.remove(tar_file)
+    except OSError:
+        pass
+    with TarFile(tar_file, "w") as tar:
+        for filename in filelist:
+            tar.add( filename )

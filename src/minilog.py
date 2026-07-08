@@ -73,11 +73,9 @@ class getLogger:
         # Compute new filename for error.log
         # Find error<nnn>.log file with highest nnn
         cls._current_log_num = max((n for n in cls._filenumbers()),default=1)
-        cls._file = open(cls._makefilename(cls._current_log_num), "a")
         # logging an entry can take 150 msec, rest of __init__ is <15msec
         # But it is important to log the RESTART to flash.
         cls.log(__name__, "INFO", f"=== RESTART version {compiledate} ===")
-
 
         # Delete oldest log file
         for n in cls._filenumbers():
@@ -124,15 +122,13 @@ class getLogger:
     @classmethod
     def _write(cls, s):
         cls.init() # initialize if not done already.
-        cls._file.write(s)
-        cls._file.flush()
-        if cls._file.tell() < _MAX_LOGFILE_SIZE:
-            return
+        with open( cls._makefilename(cls._current_log_num), "a") as f:
+            f.write(s)
+            if f.tell() < _MAX_LOGFILE_SIZE:
+                return
         # If maximum filesize exceeded with this write, switch to new file
-        cls._file.close()
         cls._current_log_num += 1
         filename = cls._makefilename(cls._current_log_num)
-        cls._file = open(filename, "w")
         cls.log( __name__, "DEBUG", f"now logging to log file {filename}" )
 
 

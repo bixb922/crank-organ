@@ -134,6 +134,7 @@ def fix_mpconfigboard():
         "MICROPY_PY_FRAMEBUF": 0,
         "MICROPY_HW_ENABLE_SDCARD":0,
         "MICROPY_VFS_FAT":0,
+        # "MICROPY_PY_DEFLATE_COMPRESS": 1,
         }
      
     mpconfig_filename = custom_board_path / "mpconfigboard.h"
@@ -180,7 +181,6 @@ def patch_mpconfigport():
     replace( mpconfigport_filename, 
             r"#define MICROPY_PY_WEBREPL\s+(.+)",
             "#define MICROPY_PY_WEBREPL (0)")
-
     
 # >>> for webrepl also modify these:
 # https://github.com/orgs/micropython/discussions/12303
@@ -201,7 +201,7 @@ def patch_mpconfigport():
  
 def update_romfs_start_addr():
     print("Update ROMFS start address in docs and shell files")
-    partition = read_file( PARTITION_FILENAME )
+    partition = read_file( crank_organ_tools_path / PARTITION_FILENAME )
     # romfs,    data, 0x8f,    0x1B0000,   0x50000
     match = re.search( f"romfs.*0x(1[a-fA-F0-9]+),", partition, re.MULTILINE )
     if match:
@@ -298,3 +298,9 @@ main()
 # total                  1664576
 # MicroPython = 0x186640/0x1A8000= 92% = 137664 free
 # ROMFS = 243770 = 0x3b83a/0x50000 = 74% = 84190 free
+
+# July 2026, after adding tarfile and tarfile-write modules
+#   1602656 Jun 30 23:51 micropython.bin
+#    246694 Jul  1 00:09 romfs.bin
+# MicroPython = 1602656/0x1A8000= 92% = 101280 free
+# ROMFS = 247402 = 247402/0x50000 = 76% = 80278 free

@@ -254,6 +254,7 @@ customElements.define("needle-bar", NeedleBar, { extends: "canvas" });
 // Function to fetch a json from server.
 // Retries communication until successful.
 // fetch_json.isConnected() shows if the connection is active
+let test_avg=[];
 async function fetch_json( url, post_data ){
     let t0 ;
     let t ;
@@ -315,7 +316,12 @@ async function fetch_json( url, post_data ){
 	json_result = await response.json() ; 
    
     t = Date.now() - t0;
-	console.info("fetch_json ", url, "response time", t, "msec");
+	test_avg.push( t );
+	while( test_avg.length > 10 ){
+		test_avg.shift();
+	}
+	let avg = Math.round(test_avg.reduce((sum, current) => sum + current, 0) / test_avg.length);
+	console.info("fetch_json ", url, "response time", t, "msec", "avg=", avg);
 	// If there is an alert, show to user and reraise exception
 	if( json_result["alert"]) {
 		let alert_message = json_result["alert"];
@@ -1200,7 +1206,7 @@ async function setTimezone(){
 // Calling this in background does not interfere with page load
 // Since the call is cached, this means effectively one call per boot session
 // >>> doesn't get called always. Cache is not freed,
-// >>> and this call is not done!
+// >>> and this call is not done!??
 setTimezone();
 
 
@@ -1559,6 +1565,11 @@ class TuneTitle extends HTMLSpanElement{
 }
 customElements.define("tune-title", TuneTitle, { extends: "span" });
 
+// Slot 0 is current setlist, not shown in the menu.
+// So loops with _MAX_SETLIST_SLOTS start with 1.
+const _SETLIST_PREFIXES = ["","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣", "🐣", "👀"];
+const _MAX_SETLIST_SLOTS = _SETLIST_PREFIXES.length;
+
 class SetlistMenu extends HTMLButtonElement{
 	// implements the popup menu with all setlists.
 	// Used in the following contexts:
@@ -1629,26 +1640,63 @@ class SetlistMenu extends HTMLButtonElement{
 			SetlistMenu.dialog = document.createElement("div");
 			SetlistMenu.dialog.id = "setlistMenu";
 			SetlistMenu.dialog.classList.add("modal");
-			SetlistMenu.dialog.innerHTML = `
- <div class="modal-content">  
-	<h3><span id="menuTitle" class="tune-only"></span></h3>
-	<ul style="list-style-type:none;">
-	<li><span id="menuCaption"></span></li>
-	<li><a id="menuSlot1" class="anohref"></a></li>
-	<li><a id="menuSlot2" class="anohref"></a></li>
-	<li><a id="menuSlot3" class="anohref"></a></li>
-	<li><a id="menuSlot4" class="anohref"></a></li>
-	<li><a id="menuSlot5" class="anohref"></a></li>
-	<li><a id="menuSlot6" class="anohref"></a></li>
-	<li><a id="menuSlot7" class="anohref"></a></li>
-	<li><a id="menuSlot8" class="anohref"></a></li>
-	<li><a id="menuSlot9" class="anohref"></a></li>
-	<li>─────────</li>
-	<li><a id="menuInfo"  class="tune-only anohref"></a></li>
-	<li><a id="menuRating"  class="tune-only anohref"></a></li>
-	<li><a id="menuSetlistTitles" class="anohref"></a></li>
-	</ul>
-</div>`;
+
+			SetlistMenu.dialog.replaceChildren();
+
+			const modalContent = document.createElement("div");
+			modalContent.className = "modal-content";
+
+			// <h3 id="menuTitle" class="tune-only"></h3>
+			const menuTitle = document.createElement("h3");
+			menuTitle.id = "menuTitle";
+			menuTitle.className = "tune-only";
+			modalContent.appendChild(menuTitle);
+
+			// <ul style="list-style-type:none;">
+			const ul = document.createElement("ul");
+			ul.style.listStyleType = "none";
+
+			// <li id="menuCaption"></li>
+			const menuCaption = document.createElement("li");
+			menuCaption.id = "menuCaption";
+			ul.appendChild(menuCaption);
+
+			// <li><a id="menuSlot1"...></a></li> ... <li><a id="menuSlot11"...></a></li>
+			for (let i = 1; i <= 11; i++) {
+				const li = document.createElement("li");
+
+				const a = document.createElement("a");
+				a.id = `menuSlot${i}`;
+				a.className = "anohref";
+
+				li.appendChild(a);
+				ul.appendChild(li);
+			}
+
+			// Separator
+			const separator = document.createElement("li");
+			separator.textContent = "─────────";
+			ul.appendChild(separator);
+
+			// Helper to add the remaining links
+			function addMenuLink(id, className) {
+				const li = document.createElement("li");
+
+				const a = document.createElement("a");
+				a.id = id;
+				a.className = className;
+
+				li.appendChild(a);
+				ul.appendChild(li);
+			}
+
+			addMenuLink("menuInfo", "tune-only anohref");
+			addMenuLink("menuRating", "tune-only anohref");
+			addMenuLink("menuSetlistTitles", "anohref");
+
+			modalContent.appendChild(ul);
+			SetlistMenu.dialog.appendChild(modalContent);
+
 			document.body.append( SetlistMenu.dialog );
 		}
 	}
@@ -1664,7 +1712,7 @@ class SetlistMenu extends HTMLButtonElement{
 		if( SetlistMenu.assignMenuHandlers ){
 			// do this once only for the only only dialog shared by all instances
 			SetlistMenu.assignMenuHandlers = false;
-			for( let slot=1; slot<=9; slot++ ){
+			for( let slot=1; slot<_MAX_SETLIST_SLOTS; slot++ ){
 				assignMenuCallback( "menuSlot"+slot, ()=>SetlistMenu.#slotClick(slot) );
 			}
 			assignMenuCallback( "menuInfo", ()=>SetlistMenu.#openTunelibChangeDialog(TLCOL_INFO)) ;
@@ -1677,7 +1725,7 @@ class SetlistMenu extends HTMLButtonElement{
 		
 			// translate text only once
 			let tlcol_names = map_tlcol_names([TLCOL_INFO, TLCOL_RATING]);
-			htmlById( "menuInfo", "ℹ️ " + tlcol_names[0] + "...<br>");
+			htmlById( "menuInfo", "🍔 " + tlcol_names[0] + "...<br>");
 			htmlById( "menuRating", "⭐ " + tlcol_names[1] + "...<br>");
 			htmlById( "menuSetlistTitles", "🎩" + tlt("Cambiar titulos de setlists...") + "<br>");
 		}
@@ -1712,11 +1760,9 @@ class SetlistMenu extends HTMLButtonElement{
 			// this.style.marginLeft = "0px";
 		}
 		else if( op == "loadSetlist" ){
-			// this is the button text
 			this.innerText = tlt("Cargar setlist");
 		}
 		else if( op == "saveSetlist"){
-			// thisis the button text
 			this.innerText = tlt("Guardar setlist");
 		}
 	}
@@ -1734,13 +1780,27 @@ class SetlistMenu extends HTMLButtonElement{
 			await SetlistMenu.#slotClick(1);
 			return;
 		}
-		const keycaps = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+
 		let titles =  await fetch_json( "/get_setlist_titles" );
 		for( let [slot,title,tunes] of titles ){
-			// info: [slot_number 1-9, title, number of tunes in setlist]
+			// info: [slot_number 1 to _MAX_SETLIST_SLOTS-1, title, number of tunes in setlist]
 			// If no title use caption (no title)
+			let no_title = tlt("(sin título)");
+			// Defining a setlist title will override these defaults here:
+			if( slot == 11 ){
+				if( tunes == 0 ){
+					continue;
+				}
+				no_title = tlt("WIP");
+			}
+			else if( slot == 10 ) {
+				if( tunes == 0) {
+					continue;
+				}
+				no_title = tlt("Nuevos");
+			}
 			textById("menuSlot"+slot,
-			`${keycaps[slot]} ${title||tlt("(sin título)")} (${tunes})`);
+				`${_SETLIST_PREFIXES[slot]} ${title||no_title} (${tunes})`);
 		}
 		let caption = "???";
 		let showTuneOnly = false ;
@@ -1786,22 +1846,48 @@ class SetlistTitleDialog extends HTMLDivElement{
 
 	constructor(){
 		super();
+
+		// Append modal setlist title dialog to body.
 		this.classList.add("modal");
-		this.innerHTML =  `
-    <div class="modal-content">   
-		<span id="setlistCloseX" class="close">&times;</span>
-	  	1️⃣ <input id="setlistTitle1" type="text" size="20"><br>
-		2️⃣ <input id="setlistTitle2" type="text" size="20"><br>
-		3️⃣ <input id="setlistTitle3" type="text" size="20"><br>
-		4️⃣ <input id="setlistTitle4" type="text" size="20"><br>
-		5️⃣ <input id="setlistTitle5" type="text" size="20"><br>
-		6️⃣ <input id="setlistTitle6" type="text" size="20"><br>
-		7️⃣ <input id="setlistTitle7" type="text" size="20"><br>
-		8️⃣ <input id="setlistTitle8" type="text" size="20"><br>
-		9️⃣ <input id="setlistTitle9" type="text" size="20"><br>
-		<button id="setlistSave"></button>
-		<button id="setlistCloseButton"></button>
-    </div>`;
+		// Remove previous content
+		this.replaceChildren();
+
+		// <div class="modal-content">
+		const modalContent = document.createElement("div");
+		modalContent.className = "modal-content";
+
+		// <span id="setlistCloseX" class="close">&times;</span>
+		const closeX = document.createElement("span");
+		closeX.id = "setlistCloseX";
+		closeX.className = "close";
+		closeX.textContent = "×";
+		modalContent.appendChild(closeX);
+
+		// 1️⃣ <input id="setlistTitle1" type="text" size="20"><br>
+		for (let i=1; i < _MAX_SETLIST_SLOTS; i++) {
+			modalContent.append(_SETLIST_PREFIXES[i] + " ");
+			const input = document.createElement("input");
+			input.id = "setlistTitle"+i;
+			input.type = "text";
+			input.size = 20;
+			modalContent.appendChild(input);
+			modalContent.appendChild(document.createElement("br"));
+		}
+
+		// Save button
+		// 	<button id="setlistSave"></button>
+		const saveButton = document.createElement("button");
+		saveButton.id = "setlistSave";
+		modalContent.appendChild(saveButton);
+
+		// Close button
+		// 	<button id="setlistCloseButton"></button>
+		const closeButton = document.createElement("button");
+		closeButton.id = "setlistCloseButton";
+		modalContent.appendChild(closeButton);
+
+		// Add everything to this
+		this.appendChild(modalContent);
 
 	}
 	connectedCallback(){
@@ -1818,18 +1904,18 @@ class SetlistTitleDialog extends HTMLDivElement{
 	}
 	async open(){
 		let titles = await fetch_json( "/get_setlist_titles" );
+		// Contains titles from setlist 1 to _MAX_SETLIST_SLOTS-1, 
 		for( let info of titles ){
 			let slot = info[0];
-			// Slot is 1-9
 			document.getElementById( "setlistTitle"+slot ).value = info[1] ;
 		}
 		this.style.display = "block";
 	}
 	async #save(){
-		// titles must have 10 elements, element 0 is current setlist but
-		// never shown anywhere
+		// titles must have _MAX_SETLIST_SLOTS elements, element 0 is current setlist,
+		// so it is never shown anywhere
 		let titles = ["current"];
-		for( let slot = 1; slot <= 9; slot++  ){
+		for( let slot = 1; slot < _MAX_SETLIST_SLOTS; slot++  ){
 			titles.push( document.getElementById(`setlistTitle${slot}`).value );
 		}
 		await fetch_json( "/save_setlist_titles", titles );

@@ -180,6 +180,11 @@ async def wait_for_player_inactive():
 def is_player_active():
     return not _run_always_flag
 
+async def play_yield():
+    # await a bit while player active to yield CPU to player
+    if _run_always_flag:
+        return
+    await asyncio.sleep_ms(20)
 
 # Class to measure time of a group of statements, use:
 # with MeasureTime("description") as m:
@@ -226,7 +231,6 @@ def collect_garbage(reset=False, report=False):
     if report:
         print(f"GC timeout garbage collection took {t} msec, max {max_gc_time} msec, average {avg_gc_time} msec, {is_player_active()=}") 
 
-# >>> check gc timeout
 # 2026-04-09 12:34:05GMT-4 - player - INFO - Actuator stats: max polyphony=12
 # 2026-04-09 12:34:06GMT-4 - history - DEBUG - 802 elements in history
 # 2026-04-09 12:34:23GMT-4 - player - INFO - Start tuneid=ik6rF-7NL '~LM068 A029 O du lieber Augustin rvb 1' tracks=5

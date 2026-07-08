@@ -71,7 +71,7 @@ class SaveNewPinout(PinoutParser):
         if not gpio:
             # Not assigned, ignore
             return
-        from touchpad import validate_technology
+        from startbase import validate_technology
         validate_technology( technology )
         self._add_GPIO_to_list(gpio)
         if gpio not in _ESP32_S3_TOUCHPAD_PINS:
@@ -157,7 +157,7 @@ class SaveNewPinout(PinoutParser):
         # Defining more than the PWM channels of the ESP32S3 (it has 8)
         # will raise "ValueError: out of PWM channels:8" 
 
-    def define_serial_driver( self, uart, txpin, channel, rxpin ):
+    def define_serial_driver( self, uart, txpin, channel, rxpin, passthrough ):
         if not( 1<=uart<=2 ):
             raise RuntimeError("UART must be 1 or 2")
         if uart in self.uart_list:
@@ -227,10 +227,10 @@ class GPIOstatistics(PinoutParser):
         self._add_gpio( gpio_switch )
         return
 
-    def define_serial_driver(self, uart, pin, channel, rxpin):
+    def define_serial_driver(self, uart, pin, channel, rxpin, passthrough):
         self._add_gpio( pin )
         self._add_gpio( rxpin )
-        return super().define_serial_driver(uart, pin, channel, rxpin)
+        return super().define_serial_driver(uart, pin, channel, rxpin, passthrough)
 
     def get_used_pins( self ):
         # Sort GPIO pins

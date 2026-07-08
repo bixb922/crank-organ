@@ -5,8 +5,11 @@
 from machine import UART
 
 from driver_base import SolePin, BaseDriver
+from umidiparser import SYSEX, ESCAPE
 
 # >>> Add support for MIDI over USB?
+
+BYTEBUFFER = bytearray(1)
 
 # Not a singleton, there could be different serial
 # drivers, each for a uart/pin/channel combination
@@ -37,13 +40,18 @@ class MIDISerialDriver(BaseDriver):
         # To fill that, more 1000 messages must be sent in 1 second.
         # So there is little need to handle that case.
         self._note_on[1] = midi_number
-        self._uart.write( self._note_on )
+        self.write( self._note_on )
 
     def _note_off_message( self, midi_number ):
         self._note_off[1] = midi_number
-        self._uart.write( self._note_off )
+        self.write( self._note_off )
 
-   
+    def write( self, message ):
+        self._uart.write( message )
+
+    def writebyte( self, one_byte ):
+        BYTEBUFFER[0] = one_byte
+        self.write( BYTEBUFFER )
 
     def all_notes_off( self ):
         # Turn all notes off by sending a control message.
@@ -65,13 +73,23 @@ class MIDISerialDriver(BaseDriver):
 
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )
-   
-# >>> should also send program number? Pass through mode?
-# >>> currently repr is based on MIDI note number only, if pin
-# >>> differ by program number...??? what is the use case?
+
+    def passthrough( self, midi_event ):
+        # Pass through does not do polyphony nor battery tally
+        status = midi_event.status
+        if midi_event.is_channel(): 
+            # Channel events: note on, note off, control change, program change etc
+            self.writebyte(status + midi_event.channel)
+            self.write( midi_event.data )
+        elif status == SYSEX:
+            self.writebyte( SYSEX )
+            self.write( midi_event.data )
+            self.writebyte( ESCAPE )
+        # Meta events are ignored.
+
 class VirtualMIDIPin(SolePin):
     # This code supposes the MIDI drives solenoids and not RC Servos
-    
+    # (for the sake of energy control)
     def low_level_on( self ):
         self._driver._note_on_message( self.nominal_midi_number )
 

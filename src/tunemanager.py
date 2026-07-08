@@ -174,7 +174,9 @@ class TuneManager:
             # cache_midi could not find/decompress file
             # return filename=None, duration=0 and title=None.
             return None, 0, None
-        return self.cached_midifile, int(self.cached_tune[ _TLCOL_TIME]), self.cached_tune[ _TLCOL_TITLE]
+        return self.cached_midifile, \
+            int(self.cached_tune[ _TLCOL_TIME]), \
+                self.cached_tune[ _TLCOL_TITLE], 
         
     def get_tune_count(self):
         return len(self._read_tunelib())

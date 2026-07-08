@@ -11,6 +11,8 @@ require("ssl")
 
 require("neopixel")
 require("aiohttp")
+require("tarfile")
+require("tarfile-write")
 
 module("boot.py")
 module("main.py")

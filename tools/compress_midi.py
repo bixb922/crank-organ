@@ -18,7 +18,6 @@ import sys
 
 DRUM_CHANNEL = 9 # MIDO channels from 0 to 15
 VIRTUAL_DRUM_PROGRAM = 129 # Made up program number for drums, not used in MIDI file, only in our internal processing.
-STORED_SETLIST_NUMBER = 9
 STORE_WEEKS = 4
 
 this_file_py = Path(__file__).name
@@ -290,7 +289,6 @@ def write_midi_file( event_list, output_filename, status_d0 ):
  
     midifile = mido.MidiFile()
     midifile.ticks_per_beat = ticks_per_beat
-    
     trackdict = {} # translates program number (1-128, 129) to MIDO track
     trackchannel = {} # translates program number to channel number
     tracktime = {} # keeps MIDI time for each track
@@ -350,6 +348,11 @@ def write_midi_file( event_list, output_filename, status_d0 ):
             # No need to output further "set tempo" meta events since event.time
             # already reflects the tempo changes
             eventcount[program1]+=1
+            
+    if status_d0:
+        # Mark file as "has D0 compression"
+        midifile.type = 0xd0
+
     midifile.save( output_filename )
 
 def reformat_midi( input_filename, output_filename, bass_correction, known_programs, status_d0 ):
@@ -463,18 +466,29 @@ def make_setlist_newest( output_folder, input_filelist ):
     input_filelist.sort( key=lambda x:x[2], reverse=True )
     weeks = datetime.now() - timedelta(weeks=STORE_WEEKS)
     i = 0
-    setlist = []
+    setlist_new = []
+    setlist_wip = []
     for i, (filename, file_size, mtime ) in enumerate(input_filelist):
         modified = datetime.fromtimestamp(mtime)
-        if modified >= weeks:
-            setlist.append( "i" + _compute_hash(filename) )
+        if "wip" in filename.replace("."," ").lower().split(" "):
+            setlist_wip.append( "i" + _compute_hash(filename) )
+        elif modified >= weeks:
+            setlist_new.append( "i" + _compute_hash(filename) )
         i += 1
-    setlist_name = f"setlist_stored_{STORED_SETLIST_NUMBER}.json"
-    print(f'{len(setlist)} files now in "recent additions" setlist file {setlist_name} on PC')
-    with open(output_folder + "/" + setlist_name,"w") as file:
-        json.dump( setlist, file )
-    print(f"Setlist for modified in last {STORE_WEEKS} weeks written to", setlist_name, " folder=", output_folder)
-
+    for n, setlist, descr in ((10,setlist_new, "recent additions"),(11,setlist_wip, "WIP")):
+        fn = f"setlist_stored_{n}.json"
+        output_fn = output_folder + "/" + fn
+        if setlist:
+            print(f'{len(setlist)} files in "{descr}" setlist {n} on PC, file {fn}')
+            with open(output_fn,"w") as file:
+                json.dump( setlist, file )
+        else:
+            # Make sure no file there if empty. So if WIP mark is not used,
+            # the setlist at slot 8 is not rewritten.
+            try:
+                os.remove( output_fn )
+            except OSError:
+                pass
 
 def main():
     input_folder, output_folder, bass_correction, known_programs, status_d0 = parse_arguments()
@@ -515,7 +529,7 @@ def main():
         # No files, no statistics
         return
     
-    # Store setlist with newest files
+    # Store setlist with newest files and WIP files
     # global input_filelist was already populated by compress_midi_file
     make_setlist_newest( output_folder, input_filelist )
 

@@ -8,7 +8,7 @@ from time import ticks_us, ticks_diff, ticks_ms
 import asyncio
 from random import getrandbits
 
-from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE, AFTERTOUCH
+from umidiparser import NOTE_OFF, NOTE_ON
 from minilog import getLogger
 from drehorgel import tunemanager, controller, battery, history, crank, config, timezone
 
@@ -48,31 +48,13 @@ class MIDIPlayer:
         self.logger = getLogger(__name__)
         self.time_played_us = 0
         self.progress = MIDIPlayerProgress()
-        # Channel map has the current program number for each
-        # channel. MIDI program numbers are 1 to 128. 
-        # 0 means WILDCARD_PROGRAM (i.e. whatever matches) and
-        # DRUM_PROGRAM is for drum instruments on MIDI channel 10
-        self.channelmap1 = bytearray(16)
-
-        # Default startup value for tempo follows crank, can ge changed
-        # from play.html page. Can be changed with UI. Will
-        # reset after each tune
+        
         # Put some initial values here, will be replaced before waiting for a tune
         self.tempo_follows_crank = config.tempo_follows_crank
         self.repeats_requested = 1
         self.started_by_crank = crank.is_installed()
-        
-        self.current_note = NoteDef( 0, 0 )
         self.repeat_count = 0
-        self.passthrough = None # >>> for future use
-        self.process_map = {
-            NOTE_ON: controller.note_on,
-            NOTE_OFF: controller.note_off,
-            PROGRAM_CHANGE: self._program_change,
-            AFTERTOUCH: self.processd0,
-            None: self._midi_file_start,
-        }
-        self.passthrough = None
+
         self.logger.debug("init ok")
 
     async def play_tune(self, tuneid ):
@@ -109,14 +91,10 @@ class MIDIPlayer:
             if not midi_fn:
                 # tuneid not in tunelib. Could be reported better in history
                 # or shown in play page?
-                self.logger.info(f"{tuneid} not found in tunelib or file not found")
-                self.progress.report_exception("tune not found")
-                # Note that finally will run anyhow
-                return
+                raise ValueError(f"{tuneid} not found in tunelib or file not found")
             # Get MidiFile object
             midifile = open_midi( midi_fn ) # fileops.open_midi
-            if not self.process_map[None]( midifile ):
-                return
+
             self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)}" )
             controller.all_notes_off()
             ActuatorStats.zero()
@@ -126,6 +104,7 @@ class MIDIPlayer:
             
             while self.repeat_count < self.repeats_requested:
                 self.repeat_count += 1
+                controller.file_start( midifile ) # may raise exception
                 await self._play(midifile)
 
             self.progress.tune_ended()
@@ -178,19 +157,8 @@ class MIDIPlayer:
         #if percentage_played > 95:
         #    tunemanager.add_one_to_history( tuneid )
 
-    def _reset_channelmap1(self):
-        for i in range(len(self.channelmap1)):
-            self.channelmap1[i] = 1 # 1=piano as default program number
-        # Channel 10 always are drum notes, assign the virtual DRUM PROGRAM
-        # to all the notes that are played on ths channel. Program change
-        # events are ignored on channel 10, see self._process_midi()
-        # Use the (virtual) DRUM_PROGRAM number for this channel
-        self.channelmap1[DRUM_CHANNEL] = DRUM_PROGRAM
-    
-
     async def _play(self, midifile, delay_start=50_000 ):
 
-        self._reset_channelmap1()
         self.time_played_us = 0  # Sum of delta_us prior to tachometer adjust
         # Leave some time to process possible events previous
         # to start of music. This can be important if there are
@@ -214,19 +182,10 @@ class MIDIPlayer:
             # % of tune played.
             self.time_played_us += midi_event.delta_us # type:ignore
 
-            # Optimization: skip events that don't matter
-            # in _process_midi(), only NOTE_ON, NOTE_OFF and PROGRAM_CHANGE
-            # events are processed here.
-            # But if delta_us != 0, the event has to be processed
-            # to update time.
-            # (No gain for MIDI files compressed with compress_midi.py)
-            status = midi_event.status
-            if status == NOTE_ON and midi_event.velocity == 0:
-                # Note on with velocity 0 is equivalent to note off
-                status = NOTE_OFF
-            # An optimization. Often there are for example many control changes
-            # with 0 delta time. 
-            if midi_event.delta_us == 0 and status not in self.process_map and not self.passthrough:
+            # An optimization. For example, often there are many control changes
+            # (up to 100)
+            # with 0 delta time. Skip these to avoid delays.
+            if midi_event.delta_us == 0 and not controller.must_process(midi_event):
                 continue
             
             # midi_time is the calculated MIDI time since the start of the MIDI file
@@ -251,8 +210,6 @@ class MIDIPlayer:
                 await scheduler.wait_and_yield_usec( wait_time )
                 sum_real_waits += ticks_diff( ticks_us(), t1 )
                 sum_scheduled_waits += wait_time
-                # could also add all wait_time, but that is different from ticks_diff.
-
 
                 # Check jitter, wait_and_yield_usec tends to be longer than defined...
                 # When wait times are small (<2msec), processing already takes that
@@ -271,12 +228,14 @@ class MIDIPlayer:
                     # Never seen early notes.
                     ActuatorStats.count( "early notes") 
                     ActuatorStats.max( "max note early",  wtdiff )
-            self._process_midi(status, midi_event)
+
+            controller.process_midi( midi_event )
 
         total = ticks_diff(ticks_ms(),msec_start) 
         busy = total - sum_real_waits/1000
         self.logger.info(f"MIDI processing: {midi_events=}, msec/event={round(busy/midi_events, 1)}, busy={round(busy/total*100,1)}%, avg gc={scheduler.avg_gc_time} msec, late ratio={round((sum_real_waits/sum_scheduled_waits-1)*100,2)}% {self.repeat_count=}")
-        # Without compression -d0, without track reduction
+        
+        # Without compression, without -d0, without track reduction
         # Start tuneid=iLDf7aZg6 '~wg2' tracks=4
         # MIDI processing: midi_events=1271, msec/event=3.6, busy=8.2%, avg gc=26 msec, late ratio=0.18%
         # Start tuneid=i9tN0C3Dt '~zorba polka rvb 1' tracks=7
@@ -294,7 +253,7 @@ class MIDIPlayer:
         # Start tuneid=iCnBp3Dcw '~Carmela polka Juventino Rosas' tracks=1
         # MIDI processing: midi_events=3785, msec/event=1.0, busy=2.7%, avg gc=48 msec, late ratio=0.06%
         
-        # Latest version March 2026, with track reduction and -d0 compression, ROMFS
+        # March 2026, with track reduction and -d0 compression, ROMFS
         # Start tuneid=i9tN0C3Dt '~zorba polka rvb 1' tracks=7
         # MIDI processing: midi_events=12761, msec/event=1.1, busy=6.0%, avg gc=30 msec, late ratio=1.72%
         # Start tuneid=iSWeZDp89 '~QRS 60496 AlohaOe(1878) eRollMIDIWexp rvb 2' tracks=1
@@ -302,59 +261,34 @@ class MIDIPlayer:
         # Start tuneid=iM3PgolP5 '~DC072 A022' tracks=4
         # MIDI processing: midi_events=4926, msec/event=1.2, busy=4.2%, avg gc=30 msec, late ratio=1.73%
 
-
-    def _process_midi( self, status, midi_event ):
-        try:
-            # Prepare the parameters for the process_map call:
-            # Channel, first data byte (value) and a notedef.
-            channel = midi_event.channel
-            value = midi_event.data[0]
-        except:
-            # Ignore if not a channel event.
-            return
-
-        # This will be useful for 99% of the cases, so let's do it here.
-        curr_note = self.current_note
-        curr_note.program_number = self.channelmap1[channel]
-        # Value is note number for note on and note off events
-        # Value is program number for program change events. 
-        # Value is note for note on/off or value for D0 event.
-        curr_note.midi_number = value
-
-        found = False
-        if status in self.process_map:
-            found = self.process_map[status](channel, value, curr_note )
-        
-        if self.passthrough and not found:
-            # >>> pending
-            pass
-
-    def _midi_file_start( self, midifile ):
-        if midifile.format_type in (0,1):
-            return True
-        # Should not happen, only type 0 and 1 files are supported.
-        self.logger.info(f"Invalid MIDI file format {midifile.format_type} for {midifile.filename}")
-
-    def _program_change( self, channel, program, _ ):
-        if channel != DRUM_CHANNEL:
-            # Allow program change only for non-percussion channels
-            # Internally program_number will be 1-128 for MIDI
-            # to leave 0 for WILDCARD_PROGRAM and 129 for DRUM_PROGRAM
-            self.channelmap1[channel] = program+1
-
-    def processd0( self, channel, value, notedef ):
-        # Undo what compress_midi.py -d0 did to the note number
-        if 0 <= value <= 63:
-            notedef.midi_number = value+40
-            controller.note_off( channel, value, notedef )
-        else:
-            notedef.midi_number = value-24 # value-64+40
-            controller.note_on( channel, value, notedef )
+        # June 2026, after refactoring midicontroller/player, better track reduction in compress_midi
+        # track reduction, -d0 compression, 20 note scale
+        # Start tuneid=iM3PgolP5 '~DC072 A022' tracks=1
+        # MIDI processing: midi_events=4702, msec/event=0.3, busy=1.1%, avg gc=20 msec, late ratio=1.66% self.repeat_count=1
+        # track reduction, -d0 compression, 40 note RC/PWM with PCAs connected
+        # Start tuneid=iM3PgolP5 '~DC072 A022' tracks=1
+        # MIDI processing: midi_events=4702, msec/event=0.3, busy=1.1%, avg gc=24 msec, late ratio=1.8% self.repeat_count=1
+        # Start tuneid=i9tN0C3Dt '~zorba polka rvb 1' tracks=2
+        # MIDI processing: midi_events=7926, msec/event=0.5, busy=1.6%, avg gc=24 msec, late ratio=1.51% self.repeat_count=1
+        # Start tuneid=i_idof11- '~wheels r1' tracks=1
+        # MIDI processing: midi_events=4798, msec/event=0.3, busy=1.3%, avg gc=28 msec, late ratio=2.4% self.repeat_count=1
+        # Uncompressed file:
+        # Start tuneid=iLDf7aZg6 '~wg2' tracks=4
+        # MIDI processing: midi_events=1271, msec/event=3.7, busy=8.6%, avg gc=28 msec, late ratio=0.74% self.repeat_count=1
+        # 64 note midi serial
+        # Start tuneid=iM3PgolP5 '~DC072 A022' tracks=1
+        # serial, 64 notes defined, no passthrough
+        # MIDI processing: midi_events=4702, msec/event=0.3, busy=1.2%, avg gc=22 msec, late ratio=1.68% self.repeat_count=1
+        # serial, 64 notes defined, passthrough
+        # MIDI processing: midi_events=4702, msec/event=0.3, busy=1.2%, avg gc=22 msec, late ratio=1.48% self.repeat_count=1
+        # serial, 0 notes defined, passthrough
+        # MIDI processing: midi_events=4702, msec/event=0.6, busy=2.0%, avg gc=20 msec, late ratio=1.69% self.repeat_count=1
 
     def get_progress(self):
         progress = self.progress.get()
         progress["playtime"] = self.time_played_us / 1000
         progress["tempo_follows_crank"] = self.tempo_follows_crank 
+        # >>> should repeats be stored in flash?
         progress["repeats_requested"] = self.repeats_requested 
         progress["repeats_count"] = self.repeat_count
         return progress
@@ -375,7 +309,7 @@ class MIDIPlayer:
             scheduler.run_always()
             self.logger.debug("waiting for crank to turn")
             # Don't let a note on during wait, it may
-            # be realistical but it's not nice
+            # be realistic but it's not nice
             controller.all_notes_off()
             # Wait for the crank to start turning
             await crank.wait_start_turning()
@@ -386,20 +320,20 @@ class MIDIPlayer:
             ActuatorStats.count("crank stop")
             # Lengthen MIDI time by wait time
             return ticks_diff(ticks_us(), start_wait)
-        else:
-            # Change playback speed with UI settings.
-            # Change playback speed with crank rpsec if:
-            #   crank sensor is enabled
-            #   AND user selected "tempo follows crank"
-            #   AND started by crank. 
-            # Otherwise, only UI influences tempo.
-            normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank and self.started_by_crank)
-            if normalized_vel < 0.1:
-                # Avoid division by zero.
-                # Also a very slow speed is meaningless here, 
-                # crank should have signaled that it has stopped...
-                normalized_vel = 1
-            return round(midi_event_delta_us / normalized_vel)
+
+        # Change playback speed with UI settings.
+        # Change playback speed with crank rpsec if:
+        #   crank sensor is enabled
+        #   AND user selected "tempo follows crank"
+        #   AND started by crank. 
+        # Otherwise, only UI influences tempo.
+        normalized_vel = crank.get_normalized_rpsec(self.tempo_follows_crank and self.started_by_crank)
+        if normalized_vel < 0.1:
+            # Avoid division by zero.
+            # Also a very slow speed is meaningless here, 
+            # crank should have signaled that it has stopped...
+            normalized_vel = 1
+        return round(midi_event_delta_us / normalized_vel)
     
 
     def set_tempo_follows_crank( self, v ):
@@ -416,11 +350,6 @@ class MIDIPlayer:
         # False if started by touchpad or web start button
         # True if crank installed and started by crank turning
         self.started_by_crank = v and crank.is_installed()
+        
         # Can't use  "tempo follows crank" if tune not started by crank
         self.tempo_follows_crank = self.tempo_follows_crank and self.started_by_crank
-
-    def activate_passthrough( self, callback ):
-        # >>> for future use
-        self.passthrough = callback
-        # No aftertouch processing in passthrough mode, so remove the handler for it.
-        del self.process_map[AFTERTOUCH]

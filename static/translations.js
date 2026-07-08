@@ -93,6 +93,8 @@ let translationDict = {
 	["cancelled", "abgebrochen"],
 "calibrar indicación batería": // index.html 
 	["Calibrate battery indicators", "Batterieanzeige eichen"],
+"cambiar": // note.html
+	["Change", "Ändern"],
 "cargar setlist": // common.js
 	["Load setlist", "Setlist laden"],
 "cargar setlist actual desde:": // common.js
@@ -123,10 +125,6 @@ let translationDict = {
 	["not in tune", "verstimmt"],
 "descripción": // diag.html 
 	["Description", "Beschreibung"],
-"en espera": // play.html
-	["waiting","wartet"],
-"tocar música deshabilitado por afinador, pinout. debe reiniciar para reestablecer.": // tunelist.html play.html 
-	["Playback disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
 "desordenar setlist": // play.html 
 	["Shuffle setlist", "Setlist mischen"],
 "desordenar todos": // play.html 
@@ -135,10 +133,16 @@ let translationDict = {
 	["Shuffle ⭐⭐⭐", " ⭐⭐⭐ mischen"],
 "duración": // play.html 
 	["Duration", "Länge"],
+"duración de la nota/silencio [mseg]:": // note.html
+	["Note/silence duration [msec]:", "Notenlänge/Pause [msec]:"],
+"duración de la nota (y del silencio) [mseg]:": // note.html
+	["Note and silence duration [msec]:", "Notenlänge und Pausenlänge [msec]:"],
 "días": // history.html 
 	["days", "Tage"],
 "editar tunelib": // index.html 
 	["Edit tunelib", "Tunelib bearbeiten"],
+"en espera": // play.html
+	["waiting","wartet"],
 "errores)": // diag.html 
 	["errors)", "Fehler)"],
 "escala de prueba": // notelist.html 
@@ -197,6 +201,8 @@ let translationDict = {
 	["IP of active clients", "IP aktiver Kunden"],
 "letra ": // play.html 
 	["Lyrics", "Liedtext"],
+"letra": // common.js
+	["Lyrics", "Liedtext"],
 "lista de melodías": // tunelist.html 
 	["Tune list", "Melodieliste"],
 "los cambios se guardan automáticamente cada par de segundos.": // tunelibedit.html
@@ -215,8 +221,6 @@ let translationDict = {
 	["Tunes played", "Gespielte Melodien"],
 "mm:ss": // diag.html meaning minutes:seconds
 	["mm:ss", "mm:ss"],
-"modo barril": // play.html
-	["Barrel mode", "Walzenorgelmodus"],
 "mostrar letra": // play.html 
 	["Show lyrics", "Liedtext anzeigen"],
 "mostrar setlist": // play.html 
@@ -237,6 +241,8 @@ let translationDict = {
 	["untested", "nicht getestet"],
 "nombre archivo": // tunelibedit.html
 	["Filename", "Dateiname"],
+"nuevos": // common.js
+	["New", "Neu"],
 "partida automática activada": // common.js
 	["Autoplay enabled", "Automatisches abspielen aktiviert"],
 "partir": // play.html 
@@ -269,12 +275,16 @@ let translationDict = {
 	["Remaining", "Verbleibend"],
 "registros": // play.html 
 	["Registers", "Register"],
-"repetición": // note.html 
+"test repetición": // note.html
 	["Repetition test", "Wiederholungstest"],
-"repetición largo nota/silencio [msec]": // note.html
-	["Repetition note length/silence [msec]", "Wiederholung Notenlänge/Pause [msec]"],
+"repetición progresiva": // note.html 
+	["Progressive repetition", "Wiederholungstest, steigende Rate"],
+"repetición fija": // note.html
+	["Fixed rate repetition", "Wiederholungstest, feste Rate "],
 "repeticiones de": // play.html
 	["repetitions of", "Wiederholungen von"],
+"repetición largo nota/silencio [mseg]": // note.html
+	["Repetition, note length/silence length [msec]", "Wiederholungstest Notendauer/Pausendauer [msec]"],
 "rev/seg": // play.html 
 	["rev/sec", "Umdrehungen/Sekunde"],
 "se conecta a ssid": // diag.html 
@@ -313,10 +323,14 @@ let translationDict = {
 	["Time playing", "Zeit Musikwiedergabe"],
 "título": // tunelist.html play.html 
 	["Title", "Titel"],
+"tocar música deshabilitado por afinador, pinout. debe reiniciar para reestablecer.": // tunelist.html play.html 
+	["Playback disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
 "usar frecuencia media": // notelist.html
 	[ "Use average frequency", "Frequenzmittelwert verwenden"],
 "ver log": // diag.html 
 	["Show log", "Log anzeigen"],
+"wip": // common.js Work In Progress
+	["WIP", "WIP"],
 "versión micropython": // diag.html 
 	["MicroPython version", "MicroPython version"],
 "zona horaria": // diag.html

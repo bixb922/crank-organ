@@ -22,6 +22,7 @@
 8.  [Tuner](#8-tuner)
      * [The note list page](#the-note-list-page)
      * [The note page](#the-note-page)
+         * [Repetition test on the note page](#repetition-test-on-the-note-page)
      * [Configuration of tuning frequency](#configuration-of-tuning-frequency)
 9.  [History](#9-history)
 10.  [Edit Tunelib](#10-edit-tunelib)
@@ -52,6 +53,8 @@
      * [Error log](#error-log)
 14.  [File manager](#14-file-manager)
      * [Update MIDI files](#update-midi-files)
+     * [Select files for backup](#select-files-for-backup)
+     * [Select if not in PC tunelib](#select-if-not-in-pc-tunelib)
      * [View files](#view-files)
      * [Download files](#download-files)
 15.  [Turning the system on](#15-turning-the-system-on)
@@ -73,7 +76,7 @@
      * [Percussion sounds made with pipes a.k.a. "fake drums"](#percussion-sounds-made-with-pipes-aka-fake-drums)
      * [Crank rotation sensor and tempo](#crank-rotation-sensor-and-tempo)
      * [Rotary sensor to change tempo](#rotary-sensor-to-change-tempo)
-     * [Define a switch or pushbutton instead of the touchpad](#define-a-switch-or-pushbutton-instead-of-the-touchpad)
+     * [Define a pushbutton instead of the touchpad](#define-a-pushbutton-instead-of-the-touchpad)
      * [Automatic shutdown when idle](#automatic-shutdown-when-idle)
      * [The onboard RGB LED](#the-onboard-rgb-led)
      * [ROMFS](#romfs)
@@ -96,7 +99,8 @@
      * [Changes July 6, 2025 to October 28, 2025](#changes-july-6-2025-to-october-28-2025)
      * [Changes from Nov 2025 to April 2026](#changes-from-nov-2025-to-april-2026)
      * [More changes in May 2026](#more-changes-in-may-2026)
-     * [Changes in from June 1 to June 7, 2026](#changes-in-from-june-1-to-june-7-2026)
+     * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
+     * [Changes from June 8, 2026 to July 15, 2026](#changes-from-june-8-2026-to-july-15-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -242,9 +246,9 @@ This section shows current tune, title, author, year, genre, duration and other 
 
 ![Performance page, top](performance_waiting.jpg)
 
-"Waiting" means that the tune is waiting for the crank to turn or for the TouchPad or for the start button. 
+"Waiting" means that the tune is waiting for the crank to turn or for the touchpad or for the start button. 
 
-* Start: starts playing the tune. If touchpad installed, this is equivalent to pressing the touch pad or (if a crank sensor is installed) starting to turn the crank.
+* Start: starts playing the tune. If touchpad or a start button installed, this is equivalent to those. If a crank sensor is installed, this is equivalent to starting to turn the crank.
 * Da capo: returns the tune to the beginning, waiting for a start.
 * Show lyrics/Show setlist: toggles between lyrics and setlist.
 * Next: Skips the rest of the tune
@@ -256,16 +260,17 @@ Played tunes are removed from the setlist.
 
 Option 1: Press the start button on the performance page (on this page).
 
-Option 2: If the touchpad is installed, start cranking, then touch and release the touchpad. The tune starts when the touchpad is released. See hardware section for touchpad. The touchpad is really any metallic button such as a drawer button, connected with a single wire to the microcontroller. The software also supports a regular pushbutton switch, if you don't like the touchpad.
+Option 2: If the touchpad is installed, start cranking, then touch and release the touchpad. The tune starts when the touchpad is released. See hardware section for touchpad. The touchpad is really any metallic button such as a drawer button, connected with a single wire to the microcontroller. 
 
-Option 3: If a crank rotation sensor is installed, start turning the crank. This will start the tune.
+Option 3: If a physical start button installed, this behaves just like option 2.
 
-Option 4: If you configure "Automatic mode" in the General Configuration, the tune will start after the specified pause. This mode is for unattended operation, like when you are towing the crank organ in a procession.
+Option 4: If a crank rotation sensor is installed, start turning the crank. This will start the tune. Also, if configured in General Configuration, music tempo can follow crank rotation speed
+
+Option 5: If you configure "Automatic mode" in the General Configuration, the tune will start after the specified pause. This mode is for unattended operation, like when you are towing the crank organ in a procession.
 
 ### Setlist control
 
 ![setlist control](performance_setlist.jpg)
-
 
 This section show the current setlist. The buttons next to each title allow to:
  * 🔼 move up or 🔽 move down one position
@@ -295,7 +300,7 @@ If you want to have multiple stored setlists, see [here](#multiple-stored-setlis
 These controls regulate playback speed. Even if there is no crank sensor, you can vary the tempo with the two buttons left and right to the indicator bar. If there is a crank sensor, and "Tempo follows crank", then the crank determines playback speed.
 
 
-Touching the Touchpad while the crank is stopped moves to the next tune.
+Touching the Touchpad or start button while the crank is stopped moves to the next tune. This is equivalent to the "Next" button on the Performance page.
 
 Crank info shows only if crank is defined in the Pinout page.
 
@@ -379,11 +384,28 @@ The "Tune" button will sound that note. You can use your own tuner, or if a micr
 
 The "Note test" button will sound that note.
 
-The "Repetition test" button will make a repetition test increasing speed until reaching a 30ms on/30ms off cycle. The repetition rates are shown on the page.
-
 "Stop" will stop whatever tuning is in progress.
 
 "Next note" will go to the next note in the tuner list.
+
+The "Note test" and "Repetition test" will queue that test. You can push the button multiple times to queue multiple tests.
+
+### Repetition test on the note page
+
+![note page](note2.jpg)
+
+The "Repetition test" button will make a repetition test. There are two modalities that can be selected with the "Change" button next to the "Repetition, note length/silence length [msec]" entry:
+
+* Fixed rate. You enter the length of the note in milliseconds, for example 50 means 50 milliseconds. Then the "Repetition test" will sound the note with 50 milliseconds on followed by 50 milliseconds off during 4 seconds. 
+* Progressive rate. If you select this option, the repetition test will increase the rate gradually starting with 850 milliseconds on/150 milliseconds off reaching finally 30 milliseconds on/30 milliseconds off.
+
+50 milliseconds on/50 milliseconds off is a limit that should still work in order to play fast music.
+
+This is what you will see if you press the "Change" button:
+
+![note page](repeat_change.jpg)
+
+
 
 ## Configuration of tuning frequency
 The standard tuning frequency is 440 Hz. You can enter another frequency on the General Configuration page.
@@ -603,7 +625,7 @@ If you need another scale or hardware configuration, post an issue in this Githu
 You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander, and yet others that turn on RC servos.
 
 You also specify additional hardware you connect to the microcontroller:
-* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller) or a switch
+* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller) or a push button
 * A microphone for tuning
 * Electronic register switches
 * A rotary sensor for the crank (to detect movement, and/or to sense velocity)
@@ -626,7 +648,7 @@ There is a ```Test``` button next to these devices on the pinout configuration p
 
 * For the microphone it will refresh a graph of the sound detected. Make some sounds and see the signal wiggle. If the microphone is not connected, this entry will probably show some noise, since the ADC inputs of the ESP32-S3 pick up electrical ambient noise.
 * For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used and the air or skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be clearly lower than that difference. 
-* If you are using a switch instead of the touchpad, it will show the state of the switch, 1 for open and 0 for closed.
+* If you are using a push button instead of the touchpad, it will show the state of the push button, 1 for open and 0 for closed.
 * For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because the test detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
 * For the crank sensor: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
 
@@ -659,7 +681,7 @@ There are three ways to define a MIDI note here:
 
 These configurations are necessary to review depending on what sensors you install in your microcontroller hardware.
 
-You select if you will have a microphone, crank sensor, neopixel led or touchpad button installed, and which GPIO ports will be assigned to them. 
+You select if you will have a microphone, crank sensor, neopixel led, touchpad button or push button installed, and which GPIO ports will be assigned to them. 
 
 Available GPIO ports for each function are shown on the Pinout page, see [here](#available-gpio-pins).
 
@@ -734,7 +756,7 @@ Available GPIO ADC1 pins	|1-3,6-10	(8 )|
 Available GPIO Touchpad pins|	1-3,6-14	(12 )|
 
 
-* Used GPIO pins: ESP32-S3 pins used as input or output pins on the "Pinout and MIDI configuration page" such as microphone, touchpad, I2C bus and GPIO output
+* Used GPIO pins: ESP32-S3 pins used as input or output pins on the "Pinout and MIDI configuration page" such as microphone, touchpad, push button, I2C bus and GPIO output
 * Available GPIO pins: ESP32-S3 pins that can be assigned. They can be used as input or output pins. Not all can used for microphone and touchpad, see below. But all can be used as output pins for MIDI.
 * Reserved GPIO pins: some pins of the ESP32-S3 cannot be used or interfere with the inner working of the chip. For example, some of these are used for WiFi or for the flash. These cannot be used for crank organ functions. On some ESP32-S3, GPIO 3 and/or 4 can have certain restrictions too.
 * Available GPIO ADC1 pins: ESP32-S3 Analog-Digital-Converter bank 1. Select the microphone pin from this list. (Bank 2 cannot be used, this bank is reserved for WiFi)
@@ -789,6 +811,18 @@ Use the "Update to auto folder" button to upload MIDI files. After some time, th
 
 Use the "Edit Tunelib" option to add title, genre, author, rating, etc.
 
+## Select files for backup
+
+After navigating to the ```data``` folder, the button "Select files for backup" will show. Click this button to select all files that should have backup and then use one of these:
+* Use the "Download" button to download the files individually
+* Use the "Download as tar" to download the files as one uncompressed ```.tar``` archive.
+
+## Select if not in PC tunelib
+
+After navigating to the ```tunelib``` folder, the   "Select if not in PC tunelib" button will show. This button will compare filenames between tunelib folder of the PC and tunelib folder of the microcontroller. It will then select all files that are present on the microcontroller but not on the PC. The purpose is to show files to be purged on the microcontroller if they have been deleted on the PC. 
+
+In spite of the messages on the dialogs, no files will be transferred. 
+
 
 ## View files
 Files that are "underlined" in the File Manager can be clicked to view their content.
@@ -796,13 +830,17 @@ Files that are "underlined" in the File Manager can be clicked to view their con
 ## Download files
 Some files can be downloaded. Compressed MIDI files cannot be read back.
 
+If multiple files are selected:
+* "Download as files" will download each file separately
+* "Download as tar" will make one tarball ```.tar``` file and download that file.
+
 # 15. Turning the system on
 
 TLDR: turn on, wait some seconds and turn the crank or touch the touchpad and music starts.
 
 It takes about about 3 seconds from power on until the system is ready. Some valves will move when ready as a signal that the microcontroller has completed initialization.
 
-If a RGB (neopixel) LED is on the board and configured, it will show changing blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, or if it turns a solid red, an error has occurred. Please see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
+If a RGB (neopixel) LED is on the board and configured, it will show changing blue and green during startup. It will flash white several times when WiFi has connected. If it flashes red or magenta, or if it turns a solid red, an error has occurred. Please see the error log under the System button. If you suspect a problem with the software, please report errors as an issue, pasting the part of the error log and description of situation.  The led will flash white when touching and releasing the touchpad or push button. If there is a RGB led and it does not turn on, then change neopixel LED pin according to [Configure neopixel LED](#microphone-crank-sensor-touchpad-and-neopixel-sensor-important)
 
 The software will automatically load the current setlist. If you turn the crank (with crank sensor installed) or release the touchpad or press the "Start" button on the Performance page, MIDI playback will start. 
 
@@ -1021,6 +1059,15 @@ No program change messages are sent. In fact, only note on and note off messages
 
 MIDI output over serial can be combined with valves or actuators connected via GPIO outputs, MCP23017 outputs or RC servo outputs.
 
+You can also select the option "Passthrough" on the Pinout page for a MIDI over serial connection. If selected, all MIDI messages that do not trigger a note pgo to the MIDI over serial.
+
+This means:
+* If a instrument/note pair or wildcard program/note or drum channel/note pair is defined in the Pinout page, the actuator gets the note on/note off messages. These note on/note off messages are not sent to the MIDI out serial port.
+* Notes that did not trigger an actuator,  go to the MIDI over serial.
+* All other MIDI messages such as control change, program change, aftertouch, polyphonic aftertouch, pitch bend and sysex are always sent to the MIDI over serial output.
+
+If passthrough is selected, the value of the channel field is disregarded.
+
 ## RC servo motors as actuators
 
 See [here](/doc-servo/servos.md)
@@ -1048,7 +1095,7 @@ The crank rotation sensor can start tunes, and can influence tempo of the music.
 Select one of the operating modes of the crank wrt music playback:
 
 Crank does not influence music playback:
-* For one tune only: Start the tune with the start button on the web page or the touchpad. 
+* For one tune only: Start the tune with the start button on the web page or the touchpad or the start push button.
 * For all tunes: do not configure a crank sensor (tachometer) on the Pinout page (leave pin numbers blank)
 
 Crank starts tunes. Tune stops if crank stops. Tempo is fixed by MIDI file and does not change with crank:
@@ -1102,7 +1149,7 @@ The order of the phase pins in the definition are important for the rotation dir
 
 The General Configuration page allows to define a multiplier that sets the sensibility of the encoder. 
 
-## Define a switch or pushbutton instead of the touchpad
+## Define a pushbutton instead of the touchpad
 
 On the Pinout and MIDI Configuration page, next to the "Start button" entry, select "Switch to GND" instead of "Touch" if you want to use a pushbutton to start the music.
 
@@ -1538,10 +1585,21 @@ If tune is not started by crank, it will not react to the crank.
 * Add "Repeats requested" to play page and move "tempo follows crank" up in the page. Replace "barrel mode" configuration option with "repeat requested" option on Performance page. Make touchpad increment "repeat requested" when crank is stopped. (I.E. "barrel mode" is now per tune, not global).
 * Drop pairing notes in compress_midi.py utility. The crank organ software already does this, it's redundant.
 
-## Changes in from June 1 to June 7, 2026
-* Enable rotary encoder driver to set tempo again
-* Allow to use either a pushbutton switch or a touch pad to start a tune. New option to select technology in Pinout page.
+## Changes from June 1 to June 7, 2026
+* Enable rotary encoder driver to set tempo again (was removed in prior version, now again available).
+* Allow to use either a pushbutton switch or a touch pad to start a tune. New option to select switch technology in Pinout page.
 * Fix initialization of log to make restart message appear just after reboot as it should.
+* compress_midi now generates setlist 11 with tunes marked as WIP and setlist 12 with new tunes. Increase setlist number from 9 to 12.
+
+
+## Changes from June 8, 2026 to July 15, 2026
+* Allow to set repetition rate with a dialog box on the Note page. 
+* Passthrough mode for MIDI. All MIDI messages that have not triggered a note are output to the MIDI out serial port.
+* Optimize minilog, keep file closed to free memory, performance is similar as before.
+* The web server (Microdot) only adds additional wait while playing music. This speeds up Microdot while not playing, and keeps Microdot from interfering with player.
+* Introduce D0 MIDI format type for --d0 switch of compress_midi
+* Allow download of multiple files in uncompressed tar format.
+* Replace "Purge tunelib" button of File manager/tunelib page with  "Select if not in PC tunelib" button. 
 
 
 # 20. Programming language

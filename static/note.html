@@ -23,9 +23,9 @@
 
 <button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
 <button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
-<button type="button" onclick="soundRepetition()" id="soundRepetitionButton">Repetición</button>
+<button type="button" onclick="repeat()" id="repeatButton">Test repetición</button>
 <button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
-<button type="button" onclick="nextNote()" id="nextNote">Próxima nota</button>
+<button type="button" onclick="nextNote()" id="nextNoteButton">Próxima nota</button>
 
 <div class="middlediv"></div>
 <table>
@@ -36,7 +36,12 @@
 		<tr><td>Cents</td><td id="cents"></td></tr>
 		<tr><td>Amplitud</td><td id="amplitude"></td></tr>
 		<tr><td>Pin</td><td id="pin_name"></td></tr>
-		<tr id="repeat_times_row" style="display:none"><td>Repetición largo nota/silencio [msec]</td><td id="repeat_times"></td></tr>
+		<tr>
+			<td><span>Repetición largo nota/silencio [mseg]</span>
+				<button type="button" onclick="openRepetitionModal()" id="setFixedRepeatButton">Cambiar</button>
+		    </td>
+			<td id="repeat_times"></td>
+		</tr>
 	</tbody>
 </table>
 
@@ -56,6 +61,28 @@
 <div class="footerdiv"></div>
 
 <br id="last">
+
+<div id="modalRepetition" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeRepetitionModal()">&times;</span>
+	  <br>
+	  <input type="radio" id="fixedRadio" name="fixedAuto" value="fixed" checked>
+	  <label for="fixedRadio">Repetición fija</label>
+	  <br>
+      <label for="fixedNoteDuration">Duración de la nota (y del silencio) [mseg]:</label>
+	  <input type="number" id="fixedNoteDuration" size="4"/>
+	  <p>
+	  <input type="radio" id="autoRadio" name="fixedAuto" value="auto">
+	  <label for="autoRadio">Repetición progresiva</label>
+	  <br>
+	  <span>Duración de la nota/silencio [mseg]:</span>
+	  <input type=""text" id="autoNoteDuration" size="30" oninput="validateAutoNoteDuration()"/>
+	  <p></p> 
+	  <button onclick="saveRepetitionData()">Guardar</button>
+	  <button onclick="closeRepetitionModal()">Cancelar</button>
+    </div>
+  
+</div>
 </body>
 
 <script>
@@ -180,10 +207,87 @@ async function soundNote() {
 	 await fetch_json( "/sound_note/" + getResourceNumberFromURL() ) ;
 }
 
-async function soundRepetition() {
-	let resp = await fetch_json( "/sound_repetition/" + getResourceNumberFromURL() ) ;
-	setAllTextById( resp ); // repeat_times
-	showHideElement( "repeat_times_row", true );
+async function repeat() {
+	let data = getRepeatData();
+	data["pinIndex"] =  getResourceNumberFromURL();
+	await fetch_json( "/repeat_note", getRepeatData() ) ;
+}
+
+// Store and retrieve repetition rate in tab storage
+function getRepeatData( ){
+	let data = sessionStorage.getItem( "noteRepetition" );
+	if( !data || typeof data != "string" || data.substring(0,1) != "{" 	)	{
+		// Set repetition default values here
+		data = {
+			"fixedNoteDuration": 100, 
+			"autoNoteDuration": "850/150 601/106 425/75 301/53 213/50 150/50 106/50 75/50 53/50 40/50 30/50 30/40 30/30",
+			"playDuring": 4, 
+			"auto": false } ;
+	}
+	else{
+		data = JSON.parse( data );
+	}
+	data["pinIndex"] =  getResourceNumberFromURL();
+	return data;
+}
+function storeRepeatData(data){
+	sessionStorage.setItem( "noteRepetition", JSON.stringify( data ) );
+	showRepeat(data);
+}
+function showRepeat(data){
+	if( data["auto"]){
+		textById( "repeat_times", data["autoNoteDuration"]);
+	}
+	else{
+		textById( "repeat_times", ""+data["fixedNoteDuration"] + "/" + data["fixedNoteDuration"] );
+	}
+}
+
+async function openRepetitionModal(){
+	let data = getRepeatData();
+	document.getElementById("autoRadio").checked = data["auto"];
+	document.getElementById("fixedRadio").checked = !data["auto"];
+	document.getElementById("autoNoteDuration").value =  data["autoNoteDuration"];
+	document.getElementById("fixedNoteDuration").value = data["fixedNoteDuration"];
+
+	let modal = document.getElementById("modalRepetition");
+	modal.style.display = "block";
+
+}
+
+async function saveRepetitionData() {
+	if(!validateAutoNoteDuration()){
+		return;
+	}
+	// Save button on modal dialog to get note time has been pressed.
+	// Store values in tab storage.
+	let data = getRepeatData();
+	data["auto"] = document.getElementById("autoRadio").checked;
+	data["autoNoteDuration"] = document.getElementById("autoNoteDuration").value;
+	data["fixedNoteDuration"] = document.getElementById("fixedNoteDuration").value;
+	storeRepeatData( data );
+	closeRepetitionModal();
+}	
+
+async function closeRepetitionModal(){
+    let modal = document.getElementById( "modalRepetition" );
+    modal.style.display = "none";
+}
+function validateAutoNoteDuration(){
+	let inputField = document.getElementById("autoNoteDuration");
+	let s = inputField.value ;
+	inputField.style.backgroundColor = "white";
+	let i = -1;
+	let elementList = s.split(" ");
+	for( let element of elementList){
+		i +=1;
+		const [note, silence] = element.split("/");
+		if( isNaN(note) || isNaN(silence)){
+			inputField.style.backgroundColor = "#FFD0C0";
+			return false;
+		}
+	}
+	return true;
 }
 
 async function stopTuning() {
@@ -202,6 +306,7 @@ async function nextNote(){
 }
 translate_html();
 getNoteInfo() ;
+showRepeat( getRepeatData() );
 commonGetProgress.setSleep( 5_000 );
 commonGetProgress.startBackground();
 

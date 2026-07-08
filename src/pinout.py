@@ -164,8 +164,8 @@ class PinoutParser:
             ),  # (sda, scl)
             "mcp23017": lambda addr: 
                 self.define_mcp23017_driver( toi(addr) ),  # (address)
-            "serial": lambda uart, pin, channel, rxpin: 
-                        self.define_serial_driver( toi(uart), toi(pin), toi(channel), toi(rxpin)
+            "serial": lambda uart, pin, channel, rxpin, passthrough=False: 
+                        self.define_serial_driver( toi(uart), toi(pin), toi(channel), toi(rxpin), passthrough
             ),
             "gpioservo": lambda period_us: 
                           self.define_gpioservo_driver( toi(period_us) ),
@@ -231,7 +231,7 @@ class PinoutParser:
     def define_pca9685_driver(self, address, period_us):
         self.current_driver = "PCA9685Driver"
 
-    def define_serial_driver( self, uart, pin, channel, rxpin ):
+    def define_serial_driver( self, uart, pin, channel, rxpin, passthrough ):
         self.current_driver = "MIDISerialDriver"
 
     def define_gpioservo_driver( self, period_us ):
@@ -468,7 +468,7 @@ class ActuatorDef(PinoutParser):
         if p: # don't wildcard to known programs
             self.known_programs.add( p )
         
-    def define_serial_driver( self, uart, pin, channel, rxpin ):
+    def define_serial_driver( self, uart, pin, channel, rxpin, passthrough ):
         from driver_midiserial import MIDISerialDriver
         if not rxpin or not pin:
             from driver_null import NullDriver
@@ -476,7 +476,9 @@ class ActuatorDef(PinoutParser):
             self.current_driver = self.driver_factory( NullDriver() )
             return
         self.current_driver = self.driver_factory( MIDISerialDriver( uart, pin, channel, rxpin ) )
-
+        if passthrough:
+            self.controller.define_passthrough( self.current_driver.passthrough )
+        
     def define_servopulse( self, pulse0_us, pulse1_us ):
         # Save this for all following pins
         self.pulse0_us = pulse0_us

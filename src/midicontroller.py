@@ -6,8 +6,12 @@ import asyncio
 from collections import OrderedDict
 from random import choice
 
-from midi import  DRUM_PROGRAM
+from midi import  DRUM_CHANNEL, DRUM_PROGRAM, NoteDef
+from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE
+from actuatorstats import ActuatorStats
 
+# Allocate a NoteDef once (instead of creating a new one for each note on and off event) to avoid
+CURRENT_NOTE = NoteDef(0,0)
 
 class Register:
     def __init__( self, name ):
@@ -65,7 +69,7 @@ class Register:
     def set_value( self, new_value ):
         self.current_value = new_value
         if new_value == 0 and self.name:
-            self.controller.all_register_notes_off( self.name )
+            self.controller._all_off_for_register( self.name )
         
 # Class for all registers
 class RegisterBank:
@@ -112,34 +116,35 @@ class MIDIController:
         #
         self.notedict = {}
 
-    def add_action( self, actuator, register_name, midi_note ):
+        # Passthrough driver callback (ex: for a synthesizer)
+        # There can be only one (i.e. not a list)
+        self.passthrough = None
+
+        # Program number per channel
+        # 1 to 128. Channel 10 always has DRUM_PROGRAM (129)
+        self.channelmap1 = bytearray(16)
+
+    # Methods called by pinout to define what actuators to command for
+    # each note
+    def define_start( self ):
+        self.notedict = {}
+
+    def define_note( self, midi_note, actuator, register_name="" ):  
         reg = self.register_bank.factory( register_name )
         # Add an action to midi_note
         # Midi note may have program_number equal to
         # WILDCARD_PROGRAM or DRUM_PROGRAM
         actions = self.notedict.setdefault( midi_note, [] )
-        actions.append( (actuator, reg) )
 
-    def get_actions( self, midi_note ):
-        # Use the note's program number in the key (specific search). 
-        # If this does not work,
-        # use WILDCARD_PROGRAM in the key to match
-        # midi note definitions in pinout with wildcard program number.
-        # If that doesn't work either, return a empty list (no note will sound) 
-        return self.notedict.get( midi_note, 
-               self.notedict.get( midi_note.wildcard(), []))
+        actions.append( (actuator.off, actuator.on, reg ))
 
-    def define_start( self ):
-        self.notedict = {}
-
-    def define_note( self, midi_note, actuator, register_name="" ):  
-        self.add_action( actuator, register_name, midi_note )
-
-
+    def define_passthrough( self, callback ):
+        self.passthrough = callback
+    
     def define_complete( self, actuator_bank ):
         self.actuator_bank = actuator_bank
 
-        # Physical valve pin definitions have now been just parsed.
+        # Solenoid/RC MIDI definitions (pinout.json) have now been just parsed.
 
         # Add simulated drum notes if no drums defined via the pinout.html page
         # There is a recursion of one level here: the simulated drum notes
@@ -149,32 +154,118 @@ class MIDIController:
         # FauxTomDriver is called twice.
         for virtual_pin in FauxTomDriver( actuator_bank ):
             # Faux Toms are not controlled by a register, use "always on" register.
-            self.add_action( virtual_pin, "", virtual_pin.nominal_midi_note )
+            self.define_note( virtual_pin.nominal_midi_note, virtual_pin, "" )
         self.register_bank.set_midicontroller( self )
          
-    def note_on( self, channel, midi_number, midi_note ):
-        actions = self.get_actions( midi_note )
-        for actuator, register in actions:
-            if register.value():
-                # This calls the on() method of the appropriate driver
-                actuator.on()
-        # Without registers wthis would be:
-        #for actuator in actions:
-        #    actuator.on()
+    def _get_actions( self, midi_note ):
+        # Use the note's program number in the key (specific search). 
+        # If this does not work,
+        # use WILDCARD_PROGRAM in the key to match
+        # midi note definitions in pinout with wildcard program number.
+        # If that doesn't work either, return a empty list (no note will sound) 
+        return self.notedict.get( midi_note, 
+               self.notedict.get( midi_note.wildcard(), []))
 
-        # Return True to caller if a note was played. This is used by
-        # the organtuner.py to determine if note played really exists in the pinout.
+
+    def file_start( self, midifile ):
+        # player.py calls this at start of a MIDI file
+        # midifile is a umidiparser.MidiFile object.
+        for i in range(16):
+                self.channelmap1[i] = 1 # Default: piano
+        self.channelmap1[DRUM_CHANNEL] = DRUM_PROGRAM   
+
+        self.process_map = {
+            NOTE_ON: self._note_event_on,
+            NOTE_OFF: self._note_event_off,
+            PROGRAM_CHANGE: self._program_change,
+        }
+
+        f = midifile.format_type
+        if f in (0,1,0xd0):
+            if f == 0xd0:
+                self.process_map[0xd0] = self.processd0
+            return
+        
+        raise ValueError(f"Unknown MIDI file format {midifile.format_type}")
+
+    def process_midi( self, midi_event ):
+        # Process all MIDI events as passed by player.
+        # Called with channel, meta and sysex events 
+        # Meta events are ignored
+        status = midi_event.status
+        if status == NOTE_ON and midi_event.velocity == 0:
+            status = NOTE_OFF
+        try:
+            if self.process_map[status]( midi_event ):
+                # Note has been found.
+                return
+        except KeyError:
+            # No process for this type of event.
+            pass
+        # Do not pass through note on/note off events that triggered a note.
+        if self.passthrough:
+            self.passthrough(midi_event)
+        elif status == NOTE_ON:
+            ActuatorStats.count("note not found")
+
+    def notedef_on( self, midi_note ):
+        self._notedef_onoff( midi_note, 1 )
+
+    def notedef_off( self, midi_note ):
+        self._notedef_onoff( midi_note, 0 )
+
+    def _notedef_onoff( self, midi_note, onoff ): 
+        # onoff: 0 for note off, 1 for note on, see order in self.define_note()
+        actions = self._get_actions( midi_note )
+        for act in actions:
+            # act[0] is actuator.off()
+            # act[1] is actuator.on()
+            # act[2] is register
+            if act[2].value():
+                # This calls the on() or off() method of the appropriate driver/actuator
+                act[onoff]()
+        # Return True to caller if a note was played. 
+        # This is used here for passthrough and in organtuner.py
+        # to skip notes that are not present while playing scales.
         return bool(actions)          
 
-    def note_off( self, channel, midi_number, midi_note ):
-        # assert 1<=program_number <=128 
-        # assert 0<=midi_number<= 127
-        # Get list of  pins to turn off for this midi note
-        actions = self.get_actions( midi_note )
-        for actuator, register in self.get_actions( midi_note ):
-            if register.value():
-                actuator.off()
-        return bool(actions)
+    def _note_event_on( self, midi_event ):
+        return self._note_event( midi_event, 1 )
+
+    def _note_event_off( self, midi_event ):
+        return self._note_event( midi_event, 0 )
+
+    def _note_event( self, midi_event, onoff ):
+        CURRENT_NOTE.program_number = self.channelmap1[midi_event.channel]
+        CURRENT_NOTE.midi_number = midi_event.note
+        return self._notedef_onoff( CURRENT_NOTE, onoff )
+
+    def _program_change( self, midi_event ):
+        if midi_event.channel != DRUM_CHANNEL:
+            self.channelmap1[midi_event.channel] = midi_event.program
+        
+        # Pass through all program change events, even if processed.
+        # (i.e. surplus program changes won't hurt on passthrough)
+        return False
+ 
+    def processd0( self, midi_event ):
+        # Process compress_midi.py -d0 events.
+        CURRENT_NOTE.program_number = self.channelmap1[midi_event.channel]
+        value = midi_event.value
+        if value <= 63: # 0 <= value <= 63
+            CURRENT_NOTE.midi_number = value+40
+            self._notedef_onoff( CURRENT_NOTE, 0 )
+        else:
+            CURRENT_NOTE.midi_number = value-24 # value-64+40
+            self._notedef_onoff( CURRENT_NOTE, 1 )
+        # Never use this type of 0xd0 events in passthrough.
+        return True
+     
+    def must_process( self, midi_event ):
+        return (
+            midi_event.status in self.process_map or
+            (self.passthrough and midi_event.is_channel()) 
+            )
 
     def all_notes_off( self ):
         self.actuator_bank.all_notes_off( )
@@ -187,9 +278,9 @@ class MIDIController:
                 if midi_note.program_number != DRUM_PROGRAM ]
         try:
             midi_note = choice( self.all_midis )
-            self.note_on( 0, 0, midi_note )
+            self.notedef_on( midi_note )
             await asyncio.sleep_ms(duration_msec)
-            self.note_off( 0, 0, midi_note )
+            self.notedef_off( midi_note )
             await asyncio.sleep_ms(100)
         except IndexError:
             pass # list is empty
@@ -203,11 +294,12 @@ class MIDIController:
         # Used by webserver to list pinout
         return self.notedict
 
-    def all_register_notes_off( self, register_name ):
+    def _all_off_for_register( self, register_name ):
         # Turn off all notes for a given register. 
         # This is used when a register is turned off, to turn off
         # all actuators related to this register.
-        # This takes about 1 or 2 msec, so no much gain if optimized
+        # This takes about 1 or 2 msec, plus time to force_off,
+        # so no much gain if optimized
         for actions in self.notedict.values():
            for actuator, register, _ in actions:
                 if register.name == register_name:

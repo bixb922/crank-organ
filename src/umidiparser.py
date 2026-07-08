@@ -878,7 +878,7 @@ class MidiEvent:
     @property
     def data(self):
         """
-        Returns the raw data for the underlying message, with no transofrmations,
+        Returns the raw data for the underlying message, with no transformations,
         as a memoryview, without the event status byte or meta prefix.
         """
 

@@ -125,7 +125,8 @@ def authorize(func):
         return respond_error_alert("Password required"), 401
     return wrapper
 
-# Late import organtuner, it saves lots of RAM when not needed.
+# Late-import organtuner, it saves lots of RAM if not needed.
+# And when loaded, reboot is needed anyhow, so the impact is not relevant.
 _organtuner_instance = None
 def get_organtuner():
     # Load organ tuner late, only uses resources when needed
@@ -351,10 +352,10 @@ async def sound_note(request, pin_index):
     return respond_ok()
 
 
-@app.route("/sound_repetition/<int:pin_index>")
-async def sound_repetition(request, pin_index):
-    get_organtuner().queue_tuning(get_organtuner().repeat_note, pin_index)
-    return { "repeat_times": get_organtuner().get_repeat_times() }
+@app.post("/repeat_note")
+async def repeat_note(request):
+    get_organtuner().queue_tuning(get_organtuner().repeat_note, request.json )
+    return respond_ok()
 
 
 @app.route("/scale_test")
@@ -372,7 +373,6 @@ async def all_pin_test(request):
 async def clear_tuning(request):
     get_organtuner().clear_tuning()
     return respond_ok()
-
 
 @app.route("/stop_tuning")
 async def stop_tuning(request):
@@ -692,13 +692,11 @@ async def test_mic(request, pin):
         # pin number out of range
         return  respond_error_alert( f"Invalid pin: {pin}")
     gpiotest = PinTest.testGPIO( int(pin) )
-    # >>> test gpiotest with microphone.
     duration, signal = mic.sample_microphone( NoteDef(0,95) )
     return {"signal": list(signal), "duration": duration, "gpiotest": gpiotest }
 
 @app.post("/test_touchpad")
 async def test_touchpad( request ):
-    # >>> needs testing
     data = request.json
     setlist.stop_playback()
     try:
@@ -922,15 +920,29 @@ async def filemanager_delete(request):
 # >>> allow delete_file for midi files without authorize
 # >>> allow upload for midi files without authorize.
 
-@app.post("/purge_tunelib_file")
+# @app.post("/purge_tunelib_file")
+# @authorize
+# async def purge_tunelib_file(request ):
+#     # This filename was issued by this microcontroller.
+#     # No decoding necessary.
+#     import filemanager
+#     filename = request.json["purge_filename"]
+#     filemanager.purge_tunelib_file(  filename )
+#     return respond_ok()
+
+@app.post("/make_tarball")
 @authorize
-async def purge_tunelib_file(request ):
-    # This filename was issued by this microcontroller.
-    # No decoding necessary.
+async def make_tarball(request):
     import filemanager
-    filename = request.json["purge_filename"]
-    filemanager.purge_tunelib_file(  filename )
+    filelist = request.json
+    # Archive is the last in the filelist, the rest are files to be archived
+    tar_fn = filelist.pop()
+    filemanager.make_tarball( tar_fn, filelist )
     return respond_ok()
+
+# Test: tarball with 608 files, 3_021_365 bytes net, 4_292_608 bytes on flash
+# took 133.8 sec (2 minutes and 14 seconds) 
+# and output file was 3_491_840 bytes on flash.
 
 @app.route("/filemanager")
 @app.route("/filemanager/")
@@ -938,7 +950,6 @@ async def purge_tunelib_file(request ):
 async def handle_filemanager( request, path=""):
     # Load page, javascript will retrieve the path an call back
     return await static_files( request, "filemanager.html" )
-
 
 # A very simple call just to ask for password and get authorized
 @app.route("/get_permission")

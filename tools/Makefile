@@ -54,8 +54,8 @@ organtuner.mpy \
 microphone.mpy \
 pinout.mpy \
 pinoutweb.mpy \
-pintest.mpy \
 player.mpy \
+poweroff.mpy \
 rotary.mpy \
 scheduler.mpy \
 setlist.mpy \
