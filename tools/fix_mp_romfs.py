@@ -304,3 +304,7 @@ main()
 #    246694 Jul  1 00:09 romfs.bin
 # MicroPython = 1602656/0x1A8000= 92% = 101280 free
 # ROMFS = 247402 = 247402/0x50000 = 76% = 80278 free
+#
+# July 2026, 20 note Carl Frei pinout.json
+# Total startup time (without main, until asyncio ready) 1995 msec
+#   Memory used at startup 127008 gc=21 msec

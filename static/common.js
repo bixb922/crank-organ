@@ -428,7 +428,7 @@ class GetProgress{
 		}
 
 		await this.#filterProgress( progress );
-		this.#checkCaches(progress);
+		await this.#checkCaches(progress);
 		return progress;
 	}
 
@@ -457,26 +457,29 @@ class GetProgress{
 			await sleep_ms(this.sleep_ms);
 		}
 	}
-	#checkCaches(progress){
+	async #checkCaches(progress){
 		// Check if caches have to be dropped or page reloaded
 		// to reload caches with fresh information.
 		// this info is kept per page (not in tab storage)
 		// to ensure pages are reloaded when they need it
-		if( !this.stored_boot_session || !this.stored_tunelib_signature ){
-			// First time only, if undefined, get current value, no other action required.
+		// console.log(">>>#checkCaches this.stored_boot_session=", this.stored_boot_session, "this.stored_tunelib_signature", this.stored_tunelib_signature);
+		if( this.stored_boot_session == undefined || this.stored_tunelib_signature == undefined ){
+			// The page was just reloaded. Get these session values to check if they change.
 			this.stored_boot_session = progress.boot_session ;
 			this.stored_tunelib_signature =  progress.tunelib_signature ;
+			// console.log(">>>#checkCaches return, first time this.stored_boot_session getting values", this.stored_boot_session, this.stored_tunelib_signature);
 			return ;
 		}
 
 		// Cache is refreshed on boot and when tunelib changes significantly.
 		let tunelib_change = progress.tunelib_signature != this.stored_tunelib_signature ;
 		let reboot = progress.boot_session != this.stored_boot_session;
-		// console.log("#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
+		// console.log(">>>#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
 		if( tunelib_change || reboot ){
 			// Force refresh of all the (registered) JsonCache objects
 			// by calling their drop method
 			this.dropCaches();
+			// console.log(">>>dropCaches done");
 		}
 		if( tunelib_change ){
 			this.stored_tunelib_signature =  progress.tunelib_signature ;
@@ -484,6 +487,7 @@ class GetProgress{
 		if( reboot ){
 			this.stored_boot_session = progress.boot_session ;
 		}
+		// >>> await sleep_ms(10000); // see result before reload >>>
 		if( reboot || (tunelib_change && this.reloadIfTunelibChanged) ){
 			// Reload page if reboot or tunelib changed EXCEPT
 			// when the page asks not to do so (like tunelist.html)
@@ -871,7 +875,7 @@ class JsonCache{
 		return this.theData;
 	}
 	drop(){
-		console.log("cache drop", this.url );
+		// console.log(">>>cache drop", this.url );
 		sessionStorage.removeItem( this.url  );
 		this.theData = null;
 	}
@@ -1045,7 +1049,7 @@ let programNameList = [
 
 // Translate MIDI program number to program name
 function programName( program_number ){
-		if( program_number == "" ){
+		if( program_number == "" || program_number === undefined ){
 			return programNameList[0];
 		}
 		try{
@@ -1205,8 +1209,6 @@ async function setTimezone(){
 }
 // Calling this in background does not interfere with page load
 // Since the call is cached, this means effectively one call per boot session
-// >>> doesn't get called always. Cache is not freed,
-// >>> and this call is not done!??
 setTimezone();
 
 

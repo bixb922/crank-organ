@@ -104,7 +104,10 @@ async function getNoteInfo() {
 async function updateNoteInfo( notelist ) {
 	let note_number = getResourceNumberFromURL() ;
 	let note = notelist[note_number] ;
-	let program_number = note["program_number"];
+	let program_number = 0; // default:  wildcard
+	if( Object.hasOwn( note, "program_number" )){
+		program_number = note["program_number"] ;
+	}
 	let detail = "";
 	if( program_number ){
 		detail += programNameList[program_number] ;
