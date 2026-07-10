@@ -101,6 +101,7 @@
      * [More changes in May 2026](#more-changes-in-may-2026)
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
+     * [Changes from July 8 to July 10](#changes-from-july-8-to-july-10)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -1600,6 +1601,10 @@ If tune is not started by crank, it will not react to the crank.
 * Introduce D0 MIDI format type for --d0 switch of compress_midi
 * Allow download of multiple files in uncompressed tar format.
 * Replace "Purge tunelib" button of File manager/tunelib page with  "Select if not in PC tunelib" button. 
+
+## Changes from July 8 to July 10
+* Fix missing program_number bug in note.html page
+* Fix "List by MIDI note" logic
 
 
 # 20. Programming language

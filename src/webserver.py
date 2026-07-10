@@ -806,7 +806,7 @@ async def list_by_midi_note( request, path ):
     controller = actuator_def.get_controller()
     notedef = []
     for midi_note, action in controller.get_notedict().items():
-        for actuator, reg in action:
+        for _, _, reg, actuator in action:
             notedef.append( {  
                              "program_number":midi_note.program_number, 
                              "midi_number":midi_note.midi_number, 
@@ -850,12 +850,13 @@ async def filemanager_listdir(request, path=""):
     import filemanager
     return filemanager.listdir( listpath )
 
-@app.route("/listdir_tunelib")
-async def listdir_tunelib(request):
-    import filemanager
-    return filemanager.fast_listdir( config.TUNELIB_FOLDER )
+# >>> ?? not used
+#@app.route("/listdir_tunelib")
+#async def listdir_tunelib(request):
+#    import filemanager
+#    return filemanager.fast_listdir( config.TUNELIB_FOLDER )
 
-@app.post('/upload/<path_filename>')
+@app.post("/upload/<path_filename>")
 @authorize # >>> allow upload midi without password?
 async def filemanager_upload(request, path_filename ):
     path, filename = path_filename.split("+")

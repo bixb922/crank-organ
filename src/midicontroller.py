@@ -135,8 +135,10 @@ class MIDIController:
         # Midi note may have program_number equal to
         # WILDCARD_PROGRAM or DRUM_PROGRAM
         actions = self.notedict.setdefault( midi_note, [] )
-
-        actions.append( (actuator.off, actuator.on, reg ))
+        # Append on/off methods to be fast. 
+        # Append register because it's needed to govern notes
+        # Append actuator only for webserver.list_by_midi_note()
+        actions.append( (actuator.off, actuator.on, reg, actuator ))
 
     def define_passthrough( self, callback ):
         self.passthrough = callback
@@ -221,6 +223,7 @@ class MIDIController:
             # act[0] is actuator.off()
             # act[1] is actuator.on()
             # act[2] is register
+            # act[3] is the actuator (not used here, since the on/off methods are available)
             if act[2].value():
                 # This calls the on() or off() method of the appropriate driver/actuator
                 act[onoff]()

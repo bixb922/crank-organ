@@ -481,13 +481,14 @@ class GetProgress{
 			this.dropCaches();
 			// console.log(">>>dropCaches done");
 		}
+	
 		if( tunelib_change ){
 			this.stored_tunelib_signature =  progress.tunelib_signature ;
 		}
 		if( reboot ){
 			this.stored_boot_session = progress.boot_session ;
 		}
-		// >>> await sleep_ms(10000); // see result before reload >>>
+		// >>> await sleep_ms(10000); // see result before reload takes place
 		if( reboot || (tunelib_change && this.reloadIfTunelibChanged) ){
 			// Reload page if reboot or tunelib changed EXCEPT
 			// when the page asks not to do so (like tunelist.html)

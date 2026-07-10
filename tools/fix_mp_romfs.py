@@ -307,4 +307,4 @@ main()
 #
 # July 2026, 20 note Carl Frei pinout.json
 # Total startup time (without main, until asyncio ready) 1995 msec
-#   Memory used at startup 127008 gc=21 msec
+#   Memory used at startup 126736 gc=21 msec
