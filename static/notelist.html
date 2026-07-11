@@ -202,6 +202,7 @@ async function updateTuningStats(){
 }
 
 async function set_avg_frequency(){
+	// Ask server to start using average frequency
 	await fetch_json( "/set_avg_frequency");
 	await updateTuningStats();
 }

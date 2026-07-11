@@ -47,6 +47,7 @@ class NoteDef:
     @classmethod
     def set_tuning_frequency( cls, new_freq ):
         if new_freq:
+            # Override config.json until next reboot.
             NoteDef.tuning_frequency = new_freq    
         else:
             from drehorgel import config

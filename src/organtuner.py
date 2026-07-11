@@ -165,7 +165,7 @@ class OrganTuner:
         
         notelist = [ p.nominal_midi_note for p in actuator_bank.get_all_pins() ]
         notelist.sort( key=lambda x: x.program_number*256 + x.midi_number )
-        for duration in (700, 240, 120, 60, 30):  # In milliseconds
+        for duration in (500, 240, 120, 60, 30):  # In milliseconds
             # Play twice: one up, one down
             for _ in range(2):
                 for midi_note in notelist:
@@ -416,5 +416,6 @@ class OrganTuner:
         return tuning
     
     def set_avg_frequency( self ):
+        # Set average frequency. Reset by next reboot.
         stats = self.get_stats()
         NoteDef.set_tuning_frequency( stats["avg_frequency"] )

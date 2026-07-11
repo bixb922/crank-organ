@@ -211,10 +211,10 @@ class MIDIController:
             ActuatorStats.count("note not found")
 
     def notedef_on( self, midi_note ):
-        self._notedef_onoff( midi_note, 1 )
+        return self._notedef_onoff( midi_note, 1 )
 
     def notedef_off( self, midi_note ):
-        self._notedef_onoff( midi_note, 0 )
+        return self._notedef_onoff( midi_note, 0 )
 
     def _notedef_onoff( self, midi_note, onoff ): 
         # onoff: 0 for note off, 1 for note on, see order in self.define_note()

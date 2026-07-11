@@ -1605,6 +1605,7 @@ If tune is not started by crank, it will not react to the crank.
 ## Changes from July 8 to July 10
 * Fix missing program_number bug in note.html page
 * Fix "List by MIDI note" logic
+* Fix error in "Scale test" button, note.html
 
 
 # 20. Programming language
