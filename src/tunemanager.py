@@ -228,13 +228,13 @@ class TuneManager:
         # For webserver
         return self.tunelib_progress
 
-    async def _wait_a_bit(self):
-        # If sync is taking too long, yield CPU to other tasks
-        # but sometimes only... not too frequently
-        if random()>0.8:
-            # On ESP32, minimum time to wait is 10 or 20 msec
-            # anyhow...
-            await asyncio.sleep_ms(10)
+    # async def _wait_a_bit(self):
+    #     # If sync is taking too long, yield CPU to other tasks
+    #     # but sometimes only... not too frequently
+    #     if random()>0.8:
+    #         # On ESP32, minimum time to wait is 10 or 20 msec
+    #         # anyhow...
+    #         await asyncio.sleep_ms(10)
 
     def _dedup_midi_files( self, filedict ):
         # If file is .gz, then check for .mid
@@ -402,6 +402,9 @@ class TuneManager:
                     self.logger.debug(f"queued change applied ok, tuneid={p1} tcol={p2} new data={p3}]")
                     changed = True
                 except KeyError:
+                    # May legally happen if a field is changed in tunelibedit and then
+                    # the file is deleted after the change is queued but
+                    # before it is applied.
                     self.logger.info(f"queued change not applied, tuneid={p1} not found")
             # Ignore other types, they may be
             # _TLOP_SYNCALL that already has been processed

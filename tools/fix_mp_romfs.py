@@ -305,6 +305,6 @@ main()
 # MicroPython = 1602656/0x1A8000= 92% = 101280 free
 # ROMFS = 247402 = 247402/0x50000 = 76% = 80278 free
 #
-# July 2026, 20 note Carl Frei pinout.json
+# July 2026, 20 note Carl Frei pinout.json, 600 midi files
 # Total startup time (without main, until asyncio ready) 1995 msec
-#   Memory used at startup 126736 gc=21 msec
+#   Memory used at startup 126656 gc=21 msec

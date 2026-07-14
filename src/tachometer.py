@@ -309,6 +309,7 @@ class Crank:
     def is_turning(self):
         return self.crank_turning.is_set()
 
+    # >>> Not used
     async def wait_stop_turning(self):
         await self.crank_stopped.wait() # type:ignore
 

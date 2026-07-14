@@ -107,8 +107,6 @@ def parse_arguments():
     if args.status_d0 is not None:
         j["status_d0"] = args.status_d0
         json_changed = True
-    if j["status_d0"]:
-        print("D0 MIDI compression")
 
     if json_changed:
         with open(this_file_json, "w") as file:
@@ -225,9 +223,6 @@ def solve_program_changes( event_list, known_programs ):
 def  apply_bass_correction( event_list, bass_correction ):
     # Calculate running time and apply bass correction
 
-    if bass_correction:
-        print("    Applying bass correction", bass_correction )
-    
     max_correction = max( bass_correction.values(), default=0 )
     for event in event_list:
         correction = max_correction
@@ -494,6 +489,11 @@ def main():
     input_folder, output_folder, bass_correction, known_programs, status_d0 = parse_arguments()
     print(f"Input folder", input_folder)
     print(f"Output folder", output_folder)
+    if bass_correction:
+        print("Applying bass correction", bass_correction )
+    if status_d0:
+        print("Status d0 processing enabled")
+    print("")
     #if tunelib_file:
     #    print(f"Tunelib file", tunelib_file )
     #    compare_folder_with_tunelib( output_folder, tunelib_file )

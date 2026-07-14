@@ -128,12 +128,12 @@ def copy_file( source, destination ):
         with open(destination, "wb") as dst: # type:ignore
             dst.write(src.read())
 
-def copy_folder( src_folder, dst_folder, overwrite=False ):
-        for fn in  os.listdir(src_folder):
-            src_file = src_folder + "/" + fn
-            dst_file = dst_folder + "/" + fn
-            if overwrite or not file_exists(dst_file):
-                copy_file(src_file, dst_file)
+# def copy_folder( src_folder, dst_folder, overwrite=False ):
+#         for fn in  os.listdir(src_folder):
+#             src_file = src_folder + "/" + fn
+#             dst_file = dst_folder + "/" + fn
+#             if overwrite or not file_exists(dst_file):
+#                 copy_file(src_file, dst_file)
 
 
 def is_folder( folder_name ):

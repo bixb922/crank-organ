@@ -288,7 +288,7 @@ class MIDIPlayer:
         progress = self.progress.get()
         progress["playtime"] = self.time_played_us / 1000
         progress["tempo_follows_crank"] = self.tempo_follows_crank 
-        # >>> should repeats be stored in flash?
+        # Repeats requested are transient, don't survive power down.
         progress["repeats_requested"] = self.repeats_requested 
         progress["repeats_count"] = self.repeat_count
         return progress

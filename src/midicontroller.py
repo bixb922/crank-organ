@@ -177,9 +177,9 @@ class MIDIController:
         self.channelmap1[DRUM_CHANNEL] = DRUM_PROGRAM   
 
         self.process_map = {
-            NOTE_ON: self._note_event_on,
-            NOTE_OFF: self._note_event_off,
-            PROGRAM_CHANGE: self._program_change,
+            NOTE_ON: self._note_event_on, # call _note_event_on(
+            NOTE_OFF: self._note_event_off, # call _note_event_off(
+            PROGRAM_CHANGE: self._program_change, # call _program_change(
         }
 
         f = midifile.format_type

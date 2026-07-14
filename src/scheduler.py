@@ -182,6 +182,7 @@ def is_player_active():
 
 async def play_yield():
     # await a bit while player active to yield CPU to player
+    # Called from microdot.py
     if _run_always_flag:
         return
     await asyncio.sleep_ms(20)
