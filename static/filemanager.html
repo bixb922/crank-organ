@@ -181,8 +181,11 @@
             destFolder = "__auto__";
         }
         // encodePath() will also normalize("NFC")
-        let url = "/upload/" + encodePath(destFolder) + "+" + encodePath(file.name);
-
+        let url = "/upload/" + encodePath(destFolder) 
+                            + "+" + encodePath(file.name)
+                            // convert time to Unix style seconds since 1/1/1970
+                            + "+" + Math.round(file.lastModified/1000)
+                            + "+" + file.size;
 
         try {
             let response = await fetch(url,
@@ -630,6 +633,7 @@
             logNotification("No MIDI files found in PC folder.");
             return;
         }
+
          clearSelection(); // Don't add to previous selection. that can be confusing.
         let body = document.getElementById("fileListBody");
         for( let i = 1; i < body.rows.length; i++){
@@ -643,6 +647,7 @@
             if( !k.endsWith(".mid") ){
                 continue;
             }
+
             if( pcFileSet.has(k) ){
                 // File exists on PC, so do not select it for deletion.
                 continue;

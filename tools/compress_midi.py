@@ -148,10 +148,13 @@ def read_file( filename ):
     with open(filename, "rb") as file:
         return file.read()
     
-def write_file( filename, data ):
+def compress_and_write_file( filename, data, modified_date ):
+    compressed = zlib_compress( data )
     with open(filename, "wb") as file: # type:ignore
-        file.write(data)
-
+        file.write(compressed)
+    # Set "file modification date" of the input file
+    os.utime( filename, ( modified_date, modified_date)) # type:ignore
+    return len(compressed)
 class Event:
     # Container for simplified note on/off events.
     def __init__( self, time, event_type, channel, program1, note ):
@@ -388,7 +391,7 @@ def compress_midi_file( input_folder, filename, output_folder, bass_correction, 
     input_size, input_date = file_info(input_filename)
     output_size, output_date = file_info(output_filename)
     input_filelist.append( (filename, input_size, input_date) )
-    if input_date >= output_date:
+    if input_date > output_date:
         print("Input file", filename, "processing...")
         print("    input", input_size, "bytes")
         reformat_midi( input_filename, "temp.mid", bass_correction, known_programs, status_d0 )
@@ -397,9 +400,8 @@ def compress_midi_file( input_folder, filename, output_folder, bass_correction, 
         decompressed_size = len(data)
         print("    intermediate midi file", decompressed_size, "bytes")
         
-        compressed = zlib_compress( data )
-        write_file( output_filename, compressed )
-        output_size = len(compressed)
+        input_mtime = os.stat(input_filename).st_mtime
+        output_size = compress_and_write_file( output_filename, data, input_mtime )
         print("    output .gz written", output_size, "bytes")
 
     else:

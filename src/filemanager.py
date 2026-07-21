@@ -3,7 +3,7 @@
 import os
 from microdot import send_file
 
-from drehorgel import tunemanager, config
+from drehorgel import tunemanager, config, timezone
 import fileops
 
 # Compress midi, html, css and js files in the browser: NO, bad idea.
@@ -88,8 +88,11 @@ def fast_listdir(path):
               "date":""
               } for dir_entry in os.ilistdir(path)]
         
-def upload( request, path, filename  ):
+def upload( filedata, path, filename, mtime, size  ):
     # Upload a file from the PC to the microcontroller
+    #   mtime: file modification date of origin file on PC in
+    #          Unix fashion, i.e. seconds since 1/1/1970.
+    #   size: file size of origin file on PC. >>> should check?
     # Check flash full, send message to javascript client.
     if is_flash_full():
         raise RuntimeError("Flash full, can't upload")
@@ -142,10 +145,12 @@ def upload( request, path, filename  ):
         old_file_size = os.stat(path)[6]
     except OSError:
         old_file_size = None
-    with open(path, "wb") as file:  # type:ignore
-        data = request.body
-        new_file_size = len(data)
-        file.write( data )
+    
+    # Create file with time set to the mtime of the input file
+    with timezone.set_time( mtime ):
+        with open(path, "wb") as file:  # type:ignore
+            new_file_size = len(filedata)
+            file.write( filedata )
 
     _check_midi_file( path, new_file_size )
 
@@ -286,7 +291,6 @@ def delete(path):
     os.remove(path)
     _check_midi_file( path )
 
-# # >>> perhaps better select files to purge instead of moving?
 # def purge_tunelib_file( fn ):
 #     def append( fn, n ):
 #         if n:
@@ -306,8 +310,9 @@ def delete(path):
 #     os.rename( from_fn, append(to_fn, n) )
    
 def make_tarball( tar_file, filelist ):
+    # Make tar_file as tarball of all files in filelist. 
     from tarfile import TarFile
-    # Should never overwrite existing files (except tar)
+    # Should never overwrite existing files (except another tar file)
     # Javascript client ensures .tar extension
     assert tar_file.endswith(".tar")
     try:

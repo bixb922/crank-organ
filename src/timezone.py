@@ -16,6 +16,9 @@ _NTP_RETRIES = const(3)
 # Time zone longName if no time zone info is available
 _NO_TZ_INFO = const("no tz info")
 
+_RTC = machine.RTC()
+
+
 class TimeZone:
     def __init__(self):
         self.ntp_task = None
@@ -65,7 +68,7 @@ class TimeZone:
         # Set this as the local time, to be returned
         # by time.localtime() and time.time()
         # year, month, day, weekday, hour, minute, second, subsecond
-        machine.RTC().datetime( (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
+        _RTC.datetime( (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
 
     async def _get_ntp_time(self):
         # Retry a few times.
@@ -158,5 +161,28 @@ class TimeZone:
     def unix_to_esp32( self, timestamp ):
         # ESP32 time is zero on 1/1/2000
         # Unix time is zero on 1/1/1970
-        # 30 years in seconds = 946_684_800
+        # 30 years in seconds = 946_684_800 (difference of epoch)
         return timestamp - 946_684_800
+    
+    # Implement a context manager to set time for a short time
+    # Use:
+    # with timezone.set_time( temporary_javascript_timestamp ):
+    #        do some stuff, for example create a file that has
+    #        to have temporary_unix_timestamp as file creation date.
+    # Upon exit of the with statement, time will return to normal.
+
+    def set_time( self, temporary_unix_timestamp ):
+        # Unix timestamps are in seconds since 1/1/1970
+        self.new_timestamp = self.unix_to_esp32( temporary_unix_timestamp )
+        return self
+    
+    def __enter__( self ):
+        # Save stamp in UTC to be able to return to this time on __exit__()
+        self.saved_stamp = time.time()+self.tzinfo["offset"] 
+        self.set_rtc( self.new_timestamp )
+        return self
+
+    def __exit__( self, _unused_exc_type, _unused_exc_val, _unused_exc_traceback ):
+        self.set_rtc( self.saved_stamp )
+
+

@@ -859,15 +859,17 @@ async def filemanager_listdir(request, path=""):
 @app.post("/upload/<path_filename>")
 @authorize # >>> allow upload midi without password?
 async def filemanager_upload(request, path_filename ):
-    path, filename = path_filename.split("+")
+    path, filename, mtime, size = path_filename.split("+")
     path = decodePath( path )
     filename = decodePath( filename )
     _logger.info(f"Uploading {filename} to {path}")
     import filemanager
     try:
-        return filemanager.upload( request, path, filename  )
+        return filemanager.upload( request.body, path, filename, int(mtime), int(size)  )
     except Exception as e:
+        print(f"Error in /upload: {repr(e)}")
         return respond_error_alert(f"Error uploading {repr(e)}")
+    
 @app.route("/download/<path>")
 @authorize
 async def filemanager_download(request, path):
@@ -909,9 +911,10 @@ async def filemanager_status(request):
 async def filemanager_delete(request):
     # Delete a file
     path = request.json["delete_filename"]
+    # No need to urldecode this, filename was posted in json.
     import filemanager
     try:
-        filemanager.delete( decodePath( path )  )
+        filemanager.delete( path  )
     except Exception as e:
         # Can happen if there are 2 browser windows
         _logger.error(f"Error deleting file {path}: {e}")

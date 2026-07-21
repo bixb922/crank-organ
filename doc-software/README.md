@@ -101,7 +101,8 @@
      * [More changes in May 2026](#more-changes-in-may-2026)
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
-     * [Changes from July 8 to July 10](#changes-from-july-8-to-july-10)
+     * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
+     * [Changes from July 10 to July 20, 2026](#changes-from-july-10-to-july-20-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -1602,11 +1603,16 @@ If tune is not started by crank, it will not react to the crank.
 * Allow download of multiple files in uncompressed tar format.
 * Replace "Purge tunelib" button of File manager/tunelib page with  "Select if not in PC tunelib" button. 
 
-## Changes from July 8 to July 10
+## Changes from July 8 to July 10, 2026
 * Fix missing program_number bug in note.html page
 * Fix "List by MIDI note" logic
 * Fix error in "Scale test" button, note.html
 
+## Changes from July 10 to July 20, 2026
+* Compressed output files of compress_midi.py now will have the same file modification date as input files. 
+* Uploaded files on microcontroller now will have the same date/time as the "last modified datetime" of the originating file on the PC.
+* Prevent power off during a very long tune manager sync.
+* Now File Manager can delete files containing a plus sign.
 
 # 20. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

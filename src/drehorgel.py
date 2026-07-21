@@ -120,7 +120,7 @@ def init_modules():
     battery = Battery()
     
     from tunemanager import TuneManager
-    tunemanager = TuneManager(config.TUNELIB_FOLDER, config.TUNELIB_JSON, config.LYRICS_JSON, config.SYNC_TUNELIB )
+    tunemanager = TuneManager()
     
     from player import MIDIPlayer
     player = MIDIPlayer()

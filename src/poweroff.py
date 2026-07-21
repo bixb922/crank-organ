@@ -6,7 +6,7 @@
 import machine
 import asyncio
 
-from drehorgel import config, led, setlist, controller, player
+from drehorgel import config, led, setlist, controller, player, tunemanager
 from minilog import getLogger
 
 class PowerManager:
@@ -18,6 +18,7 @@ class PowerManager:
     async def _power_process(self):
         last_tune = None
         last_playtime = None
+        last_sync_count = 0
         idle_minutes = 0
         idle_deepsleep_minutes = config.idle_deepsleep_minutes
         if idle_deepsleep_minutes <= 0:
@@ -28,15 +29,20 @@ class PowerManager:
             await asyncio.sleep(60)  # Sleep for 1 minute and check.
             progress = player.get_progress()
             playtime = progress["playtime"]
+            sync_count = tunemanager.get_sync_count()
             # no player, no progress, no change of playtime
 
             tune = progress["tune"]
             # Any activity in the last minute?
-            # >>> add check for tunelib sync
+            # activity: 
+            #       playing some music
+            #       web client active sending some requests
+            #       tunemanager sync has some progress
             if (
                 playtime != last_playtime
                 or tune != last_tune
                 or is_active()
+                or last_sync_count != sync_count
             ):
                 # Yes, reset time
                 idle_minutes = 0
@@ -46,6 +52,7 @@ class PowerManager:
 
             last_tune = tune
             last_playtime = playtime
+            last_sync_count = sync_count
 
             if idle_minutes > idle_deepsleep_minutes:
                 self.logger.info(
