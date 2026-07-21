@@ -271,13 +271,16 @@ class TuneManager:
             return "Deleting entry"
         
         # Get file date
-        t = time.localtime(os.stat( config.TUNELIB_FOLDER + filename)[8])
-        # Use shorter date than usual in filemanager. The hour/minute
-        # isn't very relevant to know date added, and this way the tunelib
-        # is a bit smaller, and the tunelist.html listing needs less 
-        # screen space.
-        file_mtime = f"{t[0]}-{t[1]:02d}-{t[2]:02d}"
-
+        try:
+            t = time.localtime(os.stat( config.TUNELIB_FOLDER + filename)[8])
+            # Use shorter date than usual in filemanager. The hour/minute
+            # isn't very relevant to know date added, and this way the tunelib
+            # is a bit smaller, and the tunelist.html listing needs less 
+            # screen space.
+            file_mtime = f"{t[0]}-{t[1]:02d}-{t[2]:02d}"
+        except OSError:
+            file_mtime = "2000/01/01"
+            
         # Is it a new tune or a tune update?
         tune:list = newtunelib.get(tuneid)
         if tune is None:
@@ -386,8 +389,8 @@ class TuneManager:
         for op, p1,p2,p3 in change_queue:
             self.sync_count += 1
             if op == _TLOP_FILE_UPDATE or op == _TLOP_FILE_DELETE:
-                # [_TLOP_FILEUPDATE, p1:filename, p2:filesize, 0 ]
-                # [_TLOP_FILEDELETE, p1:filename, 0, 0 ]
+                # [_TLOP_FILE_UPDATE, p1:filename, p2:filesize, 0 ]
+                # [_TLOP_FILE_DELETE, p1:filename, 0, 0 ]
                 # _sync_one_file() handles all cases: add, update and delete
                 operation = self._sync_one_file( newtunelib, op, p1, p2  )
                 if operation:

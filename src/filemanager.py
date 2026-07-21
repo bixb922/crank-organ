@@ -44,13 +44,14 @@ def listdir(path):
     if not path.endswith("/"):
         path += "/"
     listing = fast_listdir(path)
+    tunelibfd = dict() # tunelibfd only available for files in /tunelib folder
     if path == "/tunelib/":
         # Speed up /tunelib folder, dates are already in tunelib.json.
         tunelibfd = tunemanager.file_date_dict()
-    else:
-        tunelibfd = dict() # tunelibfd only available for files in /tunelib folder
+
     getdate = 0
     for fileinfo in listing:
+        # Add date from tunelib.json if available.
         date = tunelibfd.get(fileinfo["name"], "") 
         # Show date for up to 100 files, if not, response
         # time becomes slow.
@@ -64,8 +65,6 @@ def listdir(path):
     return listing
 
 def fast_listdir(path):
-    # This function could be used in a webservice to get a faster
-    # listing of file information. 
     if not fileops.is_folder( path ):
         return []
     # 16384 means "folder" or "directory"
@@ -85,7 +84,7 @@ def fast_listdir(path):
               "isDirectory":1 if dir_entry[1]==16384 else 0, 
               "size": get_size( dir_entry), 
               "path":path+dir_entry[0],
-              "date":""
+              "date":"" # date has to be added later
               } for dir_entry in os.ilistdir(path)]
         
 def upload( filedata, path, filename, mtime, size  ):
