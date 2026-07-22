@@ -246,6 +246,10 @@ class Config:
             raise ValueError( f"Error: [{k}]={v} is not {datatype}" )
     
     def save(self, newconfig):
+        if "ap_password" in newconfig and newconfig["ap_password"] == "":
+            # This can happen if the form was not filled out completely
+            raise ValueError("AP password must not be blank")
+        
         # Called from "Save changes" button of config.html page.
         # newconfig is a dictionary with the changed values.
         self._validate_config( newconfig, on_error="raise")

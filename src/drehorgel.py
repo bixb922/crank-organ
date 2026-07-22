@@ -34,7 +34,7 @@ def init_fileops():
 
     fileops.make_folder( "/tunelib")
     # /software/mpy and /software/static only get created when
-    # uploading software (Python/HTML/Javascript)
+    # uploading software 
 
 def init_timezone():
 
@@ -77,11 +77,12 @@ def init_pinout():
     # but including registers
     gpio = GPIODef( current_pinout_file, False )
     
-    # Parse actuator definitions: GPIO/MCP23017/MIDI Serial and
+    # Parse actuator definitions: GPIO/MCP23017/MIDI Serial/RC servos, i.e.
     # all midi elements in the pinout.json
     from solenoid import ActuatorBank
     actuator_def = ActuatorDef( gpio.get_registers(), current_pinout_file, False )# It's not necessary to store actuator_def
     
+    # Final destination for the parsed actuator_def is in ActuatorBank.
     actuator_bank = ActuatorBank( 
         actuator_def,
         config )

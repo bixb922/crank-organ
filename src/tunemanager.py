@@ -21,10 +21,7 @@ from drehorgel import config, timezone
 # >>> print setlist with lyrics
 # >>> print simple setlist (order, title, time)
 # >>> print complete setlist (author, genre, year, info, rating)
-# >>> document use case: copy midi file with mpremote.
-# >>> document how to restore tunelib from a backup
 # >>> save intermediate result if large sync?
-# >>> or else: stop poweroff durinc sync.
 
 import sys
 
@@ -78,20 +75,20 @@ def _fold_digest( digest:ptr8, digest_len:int)->object: # type:ignore
 # Define Tunelib Column names
 # Must be equal to common.js
 # tunelib.json entries are lists to get a smaller tunelib.json file
-
+# Except if otherwise noted, values are of type string.
 _TLCOL_ID = const(0) 
 _TLCOL_TITLE = const(1)
 _TLCOL_GENRE = const(2)
 _TLCOL_AUTHOR = const(3)
 _TLCOL_YEAR = const(4)
-_TLCOL_TIME = const(5)
+_TLCOL_TIME = const(5) # in milliseconds, integer
 _TLCOL_FILENAME = const(6)
-_TLCOL_AUTOPLAY = const(7) 
+_TLCOL_AUTOPLAY = const(7) # bool.
 _TLCOL_INFO = const(8)
-_TLCOL_DATEADDED = const(9) 
+_TLCOL_DATEADDED = const(9) # string,  format: "yyyy-mm-dd"
 _TLCOL_RATING = const(10)
-_TLCOL_SIZE = const(11) 
-_TLCOL_HISTORY = const(12) # Is now calculated in the browser and filled in here
+_TLCOL_SIZE = const(11)  # in bytes, integer.
+_TLCOL_HISTORY = const(12) # Is now calculated in the browser and filled in this position. i.e.: reserved for browser.
 _TLCOL_LYRICS = const(13) # 1=there are lyrics, 0 or ""=no lyrics
 _TLCOL_COLUMNS = const(14)
 
@@ -103,12 +100,11 @@ _TLOP_REPLACE_FIELD = const(3) # see common.js SetlistMenu class
 _TLOP_SYNCALL = const(4)
 
 class TuneManager:
-    # >>> use config?
     def __init__(self):
-        # tunelib_folder: /tunelib, also could be /sd/tunelib
-        # tunelib_filename: data/tunelib.json
-        # lyrics_json: data/lyrics.json 
-        # sync_filename: If not there: no sync pending.
+        # config.TUNELIB_FOLDER: /tunelib, also could be /sd/tunelib
+        # config.TUNELIB_JSON: data/tunelib.json
+        # config.LYRICS_JSON: data/lyrics.json 
+        # config.SYNC_TUNELIB: If not there: no sync pending.
         #             If it contains [], sync checks all files
         #             If it contains a non-empty list, sync check all queued files.
         # This file is set when the filemanager detects upload of a MIDI file to the tunelib folder.
@@ -137,7 +133,7 @@ class TuneManager:
         # Disregard  _TLCOL_HISTORY for hash because it does not mean a significant change.
         # Add 1 to allow browser distinguish between "empty tunelib" and
         # "no information about tunelib"=0
-        self.tunelib_signature = sum( sum(hash(x) for i,x in enumerate(tune) if i!= _TLCOL_HISTORY)  
+        self.tunelib_signature = sum( sum(hash(x) for i,x in enumerate(tune) if i!=_TLCOL_HISTORY)  
                                 for tune in tunelib.values() ) + 1
         
     def _read_tunelib(self):
@@ -282,7 +278,7 @@ class TuneManager:
             file_mtime = "2000/01/01"
             
         # Is it a new tune or a tune update?
-        tune:list = newtunelib.get(tuneid)
+        tune:(list|None) = newtunelib.get(tuneid)
         if tune is None:
             # New tune
             operation = "Adding"
@@ -533,18 +529,7 @@ class TuneManager:
         # Caller must write tunelib.json back to flash if changed
         return bool(tunelib_changes)
     
-    # def add_one_to_history( self, tuneid ):
-        # This is done now by the browser and  _TLCOL_HISTORY
-        # is not updated on the server. This makes end
-        # of tune processing much faster, and tunelib
-        # is not rewritten each time a tune is played.
     
-        # tunelib = self._read_tunelib()
-        # tune = tunelib.get(tuneid)
-        # if tune:
-        #     tune[ _TLCOL_HISTORY] = tune[ _TLCOL_HISTORY] + 1 if tune[ _TLCOL_HISTORY] else 1 
-        #     self._write_tunelib_json( tunelib )
-
     def _queue_change( self, tlop ):
         change_queue = self._read_sync_file()
         change_queue.append( tlop )

@@ -75,7 +75,7 @@ class MIDISerialDriver(BaseDriver):
         return VirtualMIDIPin( self, *args )
 
     def passthrough( self, midi_event ):
-        # Pass through does not do polyphony nor battery tally
+        # Pass through does not do polyphony checking nor battery tally
         status = midi_event.status
         if midi_event.is_channel(): 
             # Channel events: note on, note off, control change, program change etc
@@ -85,7 +85,7 @@ class MIDISerialDriver(BaseDriver):
             self.writebyte( SYSEX )
             self.write( midi_event.data )
             self.writebyte( ESCAPE )
-        # Meta events are ignored.
+        # Meta events are ignored. They are for MIDI files only.
 
 class VirtualMIDIPin(SolePin):
     # This code supposes the MIDI drives solenoids and not RC Servos
