@@ -50,7 +50,6 @@ class WiFiManager:
         # Configure hostname before setting .active(True)
         # Works for both AP and STA_IF mode
         network.hostname(config.name)
-        self.sta_if_cancel_event = asyncio.Event()
 
         # Pass info to Bluetooth advertiser.
         if config.advertise_bt:
@@ -80,7 +79,10 @@ class WiFiManager:
             )
             await asyncio.sleep_ms(100)
             # In parallel start the access point interface
-            await self._start_ap_interface()
+            if config.ap_max_idle:
+                await self._start_ap_interface()
+            else:
+                self.logger.debug("AP mode not started, disabled by configuration")
         except Exception as e:
             self.logger.exc(e, "in _start_interfaces")
 
@@ -101,31 +103,37 @@ class WiFiManager:
         except Exception as e:
             self.logger.exc(e, "in _start_ap_interface")
 
-        # The timeout is some minutes for a client to connect to the AP WiFi
-        # Once connected, there is no limit on time to use the AP WiFi connection
+        if not config.wifi_configured(1) or config.ap_max_idle >= 1000:
+            # Don't stop AP if wifi not configured or if config parameter says so.
+            self.logger.debug(f"AP mode stays on forever")
+            return
+
+        # The timeout is some seconds for a client to connect to the AP WiFi
         await asyncio.sleep(config.ap_max_idle)
-        if not self.ap_if.isconnected():
-            self.ap_if.active(False)
-            self.logger.debug("AP mode idle, disconnected")
-            self.blemcs.set_status( "ap", "i" )
-            # This will probably also disconnect sta_if
-            # if not in use.
-            # Reinit the station interface just in case
-            self.sta_if.active(True)
-        else:
-            # Now connected as AP, cancel station interface to save energy
-            self.sta_if_cancel_event.set()
-            self.logger.debug("AP mode in use, station mode cancelled")
+        if self.ap_if.isconnected():
+            self.logger.debug("AP mode in use, will stay on forever")
+            # Never turn off AP WiFi, someone is connected
+            return
+
+        # config.ap_max_idle is over, no one is connected, stop AP mode
+        # to save a bit of battery power.
+        self.ap_if.active(False)
+        self.logger.debug("AP mode idle, disconnected")
+        self.blemcs.set_status( "ap", "i" )
+        # This will probably also disconnect sta_if
+        # if not in use.
+        # Reinit the station interface
+        self.sta_if.active(True)
 
     async def _start_station_interface(self):
         try:
             while True:
                 # Try with each AP defined, reconnect if it gets disconnected.
                 for ap in ("1", "2"):
-                    await asyncio.sleep_ms(500) # avoid tight loop
-                    # Will fail if not configured, but AP should start anyhow.
                     ssid = getattr( config, "access_point" + ap )
-                    if not ssid:
+                    if not config.wifi_configured(int(ap)) or not ssid:
+                        # Don't connect if not configured
+                        await asyncio.sleep(1)
                         continue
                     self.sta_if_ssid = ssid
                     password = config.get_password("password" + ap)
@@ -155,15 +163,6 @@ class WiFiManager:
                     # self.sta_if.disconnect()
                     self.sta_if.active(False)
                     await asyncio.sleep(1)
-                if self.sta_if_cancel_event.is_set():
-
-                    # If cancelled, then
-                    # don't restart anymore
-                    await self.loginfo(
-                        "Station interface cancelled by AP interface"
-                    )
-                    return
-                # else try to connect again to next AP in config.json
 
         except Exception as e:
             self.logger.exc(e, "in _start_station_interface")

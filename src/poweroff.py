@@ -16,6 +16,10 @@ class PowerManager:
         self.logger.debug("init ok")
 
     async def _power_process(self):
+        if not config.wifi_configured(1):
+            # No automatic power off if no WiFi was configured.
+            return
+        
         last_tune = None
         last_playtime = None
         last_sync_count = 0

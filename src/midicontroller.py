@@ -245,7 +245,7 @@ class MIDIController:
 
     def _program_change( self, midi_event ):
         if midi_event.channel != DRUM_CHANNEL:
-            self.channelmap1[midi_event.channel] = midi_event.program
+            self.channelmap1[midi_event.channel] = midi_event.program+1
         
         # Pass through all program change events, even if processed.
         # (i.e. surplus program changes won't hurt on passthrough)

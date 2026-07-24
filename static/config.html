@@ -20,7 +20,7 @@
 	<input id="password_required" name="password_required" type="checkbox" oninput="markField('password_required')" />
 	<label for="password_required">Password is required to make configuration changes</label>
 	<br>
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 	<br>&nbsp;
 	<br>
 
@@ -36,7 +36,7 @@
 	<input id="repeat_ap_password" name="repeat_ap_password" type="password" size="15"
 		oninput="validateNewPasswords()" />
 	<br>
-	<button type="button" onclick="changePassword()" id="changePasswords"></button>
+	<button type="button" onclick="changePassword()" id="changePasswords" name="saveButtons" style="display:none"></button>
 	<br>
 
 
@@ -52,7 +52,7 @@
 		oninput='markField("description")' />
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	<div class="middlediv">WiFi Router or hotspot (station mode)</div>
 	The microcontroller will try to connect to the primary and then the secondary access point/router/hotspot until one
@@ -79,7 +79,7 @@
 	<label for="advertise_bt">Advertise WiFi names on Bluetooth</label>
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	<div class="middlediv">Power management</div>
 
@@ -88,11 +88,15 @@
 	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')" />
 	<br>
 
-	<label for="ap_max_idle">Time the AP WiFi radio will be active without no one connecting. After this time, if idle,
-		the WiFi radio of the AP will be turned off save energy. However, if no station mode connection is active, the
-		AP mode is left active to have a fallback connection available and the station mode is disabled. This makes AP
-		mode the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes
-		fail. Integer only:</label>
+	<label for="ap_max_idle">
+		Time the AP WiFi radio will be active without no one connecting. 
+		AP mode is the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes
+		fail. 
+		After this time, if no one is connected, turn off AP radio.
+		The only advantage of turning off AP mode is to save about 100mW of power consumption.
+		1000 seconds or more means: "Never turn off AP mode".
+		Zero means: "Never start AP mode".
+		Integer only, in seconds:</label>
 	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')" />
 	<br>
 
@@ -110,7 +114,7 @@
 	<input id="idle_deepsleep_minutes" name="idle_deepsleep_minutes" type="text" size="4"
 		oninput="markField('idle_deepsleep_minutes')" />
 	<br>
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	<div class="middlediv">Crank and tune play parameters</div>
 	<label>If zero: no automatic playback. Greater than zero: after this time the next tune is started automatically
@@ -170,7 +174,7 @@
 	<label for="wait_stop_turning">If a crank is active, wait for the crank to reach a complete stop at the end of each tune, before starting the next tune.</label>
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	<div class="middlediv">Other parameters</div>
 
@@ -211,7 +215,7 @@
 		oninput="markField('auto_purge_history')" />
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 	<div class="middlediv">RC Servo</div>
 
 	<label for="rc_max_moving">Maximum of RC servos that can move simultaneously. 
@@ -243,7 +247,7 @@
 	<label for="rc_pwm_auto_off">Turn PWM pulse train off to conserve energy when the RC servo movement has stopped and the note is off.</label>
 	<br>
 	
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	
 	<div class="middlediv">Server (optional)</div>
@@ -258,7 +262,7 @@
 		type="password" size="12" oninput="markField('serverpassword')" />
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 	<div class="middlediv">Debug/test settings</div>
 
@@ -293,162 +297,170 @@
 	<label for="debug_tacho">Debug mode for crank sensor. Generates some signals to test crank graph and filter.</label>
 	<br>
 
-	<button type="button" onclick="save()">Save changes</button>
+	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 
 
 	<div class="footerdiv"></div>
 	<script type="text/javascript" src="/static/common.js"></script>
 	<script type="text/javascript" src="/static/translations.js"></script>
 
-	<script>
+<script>
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
 
-		//[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input id=​"ap_password" name=​"ap_password" type=​"password" size=​"15" oninput=​"validateNewPasswords()​" style=​"background-color:​ rgb(255, 255, 255)​;​">​
+//[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input id=​"ap_password" name=​"ap_password" type=​"password" size=​"15" oninput=​"validateNewPasswords()​" style=​"background-color:​ rgb(255, 255, 255)​;​">​
 
-		// PageHeader.setTitle(headerTitle, upAction)
-		let pageHeader = new PageHeader().setTitle( "Configuration", "index" );
-		// Used by mark fields
-		let CHANGED_FIELDS = [];
+// PageHeader.setTitle(headerTitle, upAction)
+let pageHeader = new PageHeader().setTitle( "Configuration", "index" );
+// Used by mark fields
+let CHANGED_FIELDS = [];
 
-		async function getCurrentConfig() {
-			let json_result = await fetch_json("/get_stored_config");
-			for (let [key, value] of Object.entries(json_result)) {
-				let d = document.getElementById(key);
-				if (d != null) {
-					if (d.type == "checkbox" || d.type == "radio") {
-						d.checked = value;
-					}
-					else {
-						d.value = value;
-					}
-				}
-			}
-			clearMarks();
-			hostnameChanged();
-		}
-		getCurrentConfig();
-
-		function validateNewPasswords() {
-			markField("ap_password");
-			markField("repeat_ap_password");
-
-			// Check if passwords are equal and minimum length
-			// necessary for WiFi.
-			p1 = document.getElementById("ap_password").value;
-			p2 = document.getElementById("repeat_ap_password").value;
-			ok = false;
-			button = document.getElementById("changePasswords");
-			// For better response check password length here
-			if (p1 != p2) {
-				button.innerText = "(passwords are different, cannot save!)";
-				button.disabled = true;
-				ok = false;
-			}
-			else if (p1.length < 9) {
-				button.innerText = "(password shorter than 9 characters, cannot save!)";
-				button.disabled = true;
-				ok = false;
+async function getCurrentConfig() {
+	for( let button of document.getElementsByName("saveButtons")){
+		button.style.display = "none";
+	}
+	let json_result = await fetch_json("/get_stored_config");
+	for (let [key, value] of Object.entries(json_result)) {
+		let d = document.getElementById(key);
+		if (d != null) {
+			if (d.type == "checkbox" || d.type == "radio") {
+				d.checked = value;
 			}
 			else {
-				button.innerText = "Save password"
-				button.disabled = false;
-				ok = true;
-			}
-			return ok;
-		}
-		validateNewPasswords();
-
-
-		async function changePassword() {
-			if (validateNewPasswords()) {
-				save("ap_password");
-				textById("ap_password","");
-				textById("repeat_ap_password","");
+				d.value = value;
 			}
 		}
+	}
+	clearMarks();
+	hostnameChanged();
+	for( let button of document.getElementsByName("saveButtons")){
+		button.style.display = "";
+	}
+}
 
-		async function save( ) {
-			// Save  configuration data according to CHANGED_FIELDS.
-			let post_data = {};
+function validateNewPasswords() {
+	markField("ap_password");
+	markField("repeat_ap_password");
 
-			// Add al arguments of save to list
-			let value = "";
-			for ( let id of CHANGED_FIELDS )  {
-				value = getValue(id)
-				if (id.includes("password") && value == "***************") {
-					// Don't store unchanged passwords
-					continue;
-				}
-				post_data[id] = value;
-			}
-			const resp = await fetch_json("/save_config", post_data);
-			showPopup("", "Configuration saved to flash. Reboot needed!");
-			clearMarks();
-		}
-		function getValue(element_id) {
-			let a = document.getElementById(element_id);
-			let value = null;
-			if (a.type == "checkbox") {
-				value = a.checked;
-			}
-			else {
-				value = a.value.trim();
-			}
-			return value;
-		}
+	// Check if passwords are equal and minimum length
+	// necessary for WiFi.
+	p1 = document.getElementById("ap_password").value;
+	p2 = document.getElementById("repeat_ap_password").value;
+	ok = false;
+	button = document.getElementById("changePasswords");
+	// For better response check password length here
+	if (p1 != p2) {
+		button.innerText = "(passwords are different, cannot save!)";
+		button.disabled = true;
+		ok = false;
+	}
+	else if (p1.length < 9) {
+		button.innerText = "(password shorter than 9 characters, cannot save!)";
+		button.disabled = true;
+		ok = false;
+	}
+	else {
+		button.innerText = "Save password"
+		button.disabled = false;
+		ok = true;
+	}
+	return ok;
+}
+validateNewPasswords();
 
-		function getRadioButtonValue(element_name) {
-			// radio button:
-			let checked = "";
-			let values = document.getElementsByName(element_name);
-			for (let radio of values) {
-				if (radio.checked) {
-					checked = radio.value;
-				}
-			}
-			return checked;
-		}
 
-		function hostnameChanged() {
-			let hostname = document.getElementById("name").value;
-			textById("copy_hostname1", hostname);
-			textById("copy_hostname3", hostname);
-			textById("copy_hostname4", hostname);
-		}
+async function changePassword() {
+	if (validateNewPasswords()) {
+		save("ap_password");
+		textById("ap_password","");
+		textById("repeat_ap_password","");
+	}
+}
 
-		function markField(id) {
-			// Change background color of changed fields
-			if (id == "name") {
-				hostnameChanged();
-			}
-			if (!CHANGED_FIELDS.includes(id)) {
-				CHANGED_FIELDS.push(id);
-			}
-			const d = document.getElementById(id);
-			d.style.backgroundColor = cream;
-		}
-		function clearMark(id) {
-			let d = document.getElementById(id);
-			if( d.type == "checkbox" ){
-				// checkbox items can't change color that easily
-				return;
-			}
-			d.style.backgroundColor = "#ffffff";
-		}
+async function save( ) {
+	// Save  configuration data according to CHANGED_FIELDS.
+	let post_data = {};
 
-		function clearMarks() {
-			// Reset background color of changed fields
-			for (let id of CHANGED_FIELDS) {
-				clearMark(id);
-			}
-			CHANGED_FIELDS = [];
+	// Add al arguments of save to list
+	let value = "";
+	for ( let id of CHANGED_FIELDS )  {
+		value = getValue(id)
+		if (id.includes("password") && value == "***************") {
+			// Don't store unchanged passwords
+			continue;
 		}
-		// Refresh with progress to show communication active
-		commonGetProgress.setSleep( 5_000 );
-		commonGetProgress.startBackground();
+		post_data[id] = value;
+	}
+	const resp = await fetch_json("/save_config", post_data);
+	showPopup("", "Configuration saved to flash. Reboot needed!");
+	clearMarks();
+}
+function getValue(element_id) {
+	let a = document.getElementById(element_id);
+	let value = null;
+	if (a.type == "checkbox") {
+		value = a.checked;
+	}
+	else {
+		value = a.value.trim();
+	}
+	return value;
+}
 
-	</script>
+function getRadioButtonValue(element_name) {
+	// radio button:
+	let checked = "";
+	let values = document.getElementsByName(element_name);
+	for (let radio of values) {
+		if (radio.checked) {
+			checked = radio.value;
+		}
+	}
+	return checked;
+}
+
+function hostnameChanged() {
+	let hostname = document.getElementById("name").value;
+	textById("copy_hostname1", hostname);
+	textById("copy_hostname3", hostname);
+	textById("copy_hostname4", hostname);
+}
+
+function markField(id) {
+	// Change background color of changed fields
+	if (id == "name") {
+		hostnameChanged();
+	}
+	if (!CHANGED_FIELDS.includes(id)) {
+		CHANGED_FIELDS.push(id);
+	}
+	const d = document.getElementById(id);
+	d.style.backgroundColor = cream;
+}
+function clearMark(id) {
+	let d = document.getElementById(id);
+	if( d.type == "checkbox" ){
+		// checkbox items can't change color that easily
+		return;
+	}
+	d.style.backgroundColor = "#ffffff";
+}
+
+function clearMarks() {
+	// Reset background color of changed fields
+	for (let id of CHANGED_FIELDS) {
+		clearMark(id);
+	}
+	CHANGED_FIELDS = [];
+}
+
+getCurrentConfig();
+
+// Refresh with progress to show communication active
+commonGetProgress.setSleep( 5_000 );
+commonGetProgress.startBackground();
+
+</script>
 </body>
 
 </html>

@@ -73,7 +73,7 @@ class Config:
         self.ap_password = _DEFAULT_PASSWORD
         self.password_required = False
         self.ap_ip = "192.168.144.1"
-        self.ap_max_idle = 180 
+        self.ap_max_idle = 1000 # In seconds. Default: never turn off AP mode
         self.advertise_bt = False # >>> make client translatable
 
         # Rotary sensor 
@@ -152,12 +152,6 @@ class Config:
             # Variables not in config.json are left with default value
             for k, v in cfg.items():
                 setattr( self, k, v )
-
-            # Give AP more time while WiFi station mode is not fully configured
-            if "access_point1" not in cfg:
-                # WiFi not configured yet, give AP mode plenty
-                # of time. Alter AP max idle temporarily.
-                self.ap_max_idle = 3600
 
             if show_log:
                 # Get WiFi MAC address (only to show in diag.html)
@@ -306,12 +300,18 @@ class Config:
                 del cfg[k]
                 _logger.exc( e, f"Unhandled exception validating configuration item [{k}]={v}, item deleted ")
 
+    def wifi_configured( self, ssid_number ):
+        if ssid_number == 1:
+            return (self.access_point1 != "wifi_SSID_1" and 
+                self.password1 != _DEFAULT_PASSWORD)
+        return (self.access_point2 != "wifi_SSID_2" and 
+                self.password2 != _DEFAULT_PASSWORD)
 
 
 class PasswordManager:
     # Password are stored encrypted in config instance
     # Although this doesn't make the ESP32-S3 secure....
-    def _get_key(self)->bytes:
+    def _get_key(self):
         from esp32 import NVS
         # Give NVS some protection, but if someone
         # can have access to USB and/or insert some code,

@@ -64,6 +64,7 @@
      * [Installing crank organ software](#installing-crank-organ-software)
      * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
+         * [WiFi AP mode and PC with Windows](#wifi-ap-mode-and-pc-with-windows)
 17.  [Other stuff](#17-other-stuff)
      * [Increase MIDI file capacity (compression)](#increase-midi-file-capacity-compression)
      * [SD card](#sd-card)
@@ -102,7 +103,7 @@
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
-     * [Changes from July 10 to July 22, 2026](#changes-from-july-10-to-july-22-2026)
+     * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -930,7 +931,7 @@ If there is an entry that says ERROR or EXCEPTION, there is some problem to be s
 
 After installation, there should be some folders in the microcontroller: ```rom``` is where the software is. This is a read-only folder. ```data``` is the folder for configuration files and error logs. ```tunelib``` is the folder for MIDI files. ```mprmote ls``` will show the files on the microcontroller.
 
-Now connect with WiFi. WiFi starts to be active about 10 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 seconds after power on, and will stay on until you configure WiFi and reboot. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on older Android phones. 
+Now connect with WiFi. WiFi starts to be active about 10 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 to 20 seconds after power on. Wait for that name to appear, some PCs or phones take some time to recognize a new access point. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on some Android phones. 
 
 Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
 
@@ -988,12 +989,25 @@ flowchart LR
 
 The microcontroller will try option 1 and option 2 one after the other until connected. It will try during 15 seconds with option 1, then 15 seconds with option 2 and so on, until one of the two options is available.
 
-* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. For power saving reasons, this option is made available during 3 minutes after power on (except when the microcontroller is not configured for WiFi, in that case option 3 is active until configured), or until one of the first two options have made a successful connection. This option is useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. If you connect, option 3 access stays active until you stop using it.
+* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. This option is also useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone because your phone went dead while on an outing). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. 
 
 ```mermaid
 flowchart LR
    S[cell phone]-->|WiFi| AP[Microcontroller as access point]
 ```
+### WiFi AP mode and PC with Windows
+
+If you are using this "option 3" (AP on the microcontroller) on Windows you may see a message like saying that the WiFi access point is "using older security standards". MicroPython is configures the AP for "WPA2 Personal", which as of 2026 is in general considered safe for home networks. 
+
+Also, since "option 3" does bar access to internet on the PC, Windows tends to switch away from this network to one that does have access. You can change that following these steps:
+
+Turn Off Background Network Searching on Windows
+
+* Press the Windows Key + R, type ncpa.cpl, and press Enter to open Network Connections.
+* Right-click your active Wi-Fi adapter and select Status.
+* Click on Wireless Properties (or look under the Connection tab).
+* Uncheck the box that says Look for other wireless networks while connected to this network.
+* Click OK to save.
 
 See [General Configuration](#general-configuration) to configure WiFi.
 
@@ -1608,12 +1622,18 @@ If tune is not started by crank, it will not react to the crank.
 * Fix "List by MIDI note" logic
 * Fix error in "Scale test" button, note.html
 
-## Changes from July 10 to July 22, 2026
+## Changes from July 10 to July 30, 2026
 * Compressed output files of compress_midi.py now will have the same file modification date as input files. 
 * Uploaded files on microcontroller now will have the same date/time as the "last modified datetime" of the originating file on the PC.
 * Prevent power off during a very long tune manager sync.
 * Now File Manager can delete files containing a plus sign.
-* Handle case if config.html was filled incompletely. This can happen when no access point is available at some point during configuration. It will now show error "AP password must not be blank".
+* Handle case if config.html was filled incompletely. This can happen when no access point is available at some point during configuration and form is left blank due to microcontroller not accessible. It will now show error "AP password must not be blank".
+* Fix MIDI program number in playback.
+* If WiFi not configured yet (i.e. station id is still wifi_SSID_1) then don't start WiFi on these SSIDs. This might prevent station mode to interfere with AP mode.
+* By default, never stop AP mode. If the power savings of AP mode is needed, it must be configured in General Configuration. No hurry to connect to the AP mode SSID  for  initial configuration (default name ESP32S3) or for fallback.
+* Don't stop station mode search if a user is connected in AP mode is active. This allows both interfaces to be active at the same time. Also: it can be sometimes difficult to know if a device is still connected to the AP mode, since WiFi connections are automatic.
+* Hide the "Save changes" buttons on the General Configuration page until data is properly loaded. 
+* Update this document.
 
 
 # 20. Programming language
