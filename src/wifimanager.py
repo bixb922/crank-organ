@@ -229,8 +229,10 @@ class WiFiManager:
         return self.sta_if.isconnected()
 
     def sta_if_scan(self):
-        return self.sta_if.scan()
-
+        if self.sta_if.active():
+            return self.sta_if.scan()
+        return []
+    
     async def loginfo(self, message):
         try:
             async with scheduler.RequestSlice( "wifimanager log.info", 100, 10_000):  

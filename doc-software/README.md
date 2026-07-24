@@ -1001,7 +1001,7 @@ If you are using this "option 3" (AP on the microcontroller) on Windows you may 
 
 Also, since "option 3" does bar access to internet on the PC, Windows tends to switch away from this network to one that does have access. You can change that following these steps:
 
-Turn Off Background Network Searching on Windows
+Turn Off Background Network Searching on Windows for one WiFi network
 
 * Press the Windows Key + R, type ncpa.cpl, and press Enter to open Network Connections.
 * Right-click your active Wi-Fi adapter and select Status.
@@ -1634,6 +1634,7 @@ If tune is not started by crank, it will not react to the crank.
 * Don't stop station mode search if a user is connected in AP mode is active. This allows both interfaces to be active at the same time. Also: it can be sometimes difficult to know if a device is still connected to the AP mode, since WiFi connections are automatic.
 * Hide the "Save changes" buttons on the General Configuration page until data is properly loaded. 
 * Update this document.
+* Prevent a WiFi scan to raise a "OSError: STA must be active" if Station mode is not active. This happens when entering the System page (diag.html) when doing the initial configuration.
 
 
 # 20. Programming language
