@@ -105,7 +105,7 @@
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
-     * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
+     * [Changes from July 10 to July 24, 2026](#changes-from-july-10-to-july-24-2026)
 20.  [Programming language](#20-programming-language)
 21.  [Credits](#21-credits)
 22.  [Testing](#22-testing)
@@ -1653,7 +1653,7 @@ If tune is not started by crank, it will not react to the crank.
 * Fix "List by MIDI note" logic
 * Fix error in "Scale test" button, note.html
 
-## Changes from July 10 to July 30, 2026
+## Changes from July 10 to July 24, 2026
 * Compressed output files of compress_midi.py now will have the same file modification date as input files. 
 * Uploaded files on microcontroller now will have the same date/time as the "last modified datetime" of the originating file on the PC.
 * Prevent power off during a very long tune manager sync.
