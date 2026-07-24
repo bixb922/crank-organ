@@ -231,6 +231,7 @@ class WiFiManager:
     def sta_if_scan(self):
         if self.sta_if.active():
             return self.sta_if.scan()
+        # Only AP mode is active, no WiFi scan.
         return []
     
     async def loginfo(self, message):

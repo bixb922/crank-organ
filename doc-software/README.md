@@ -66,6 +66,7 @@
      * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
          * [WiFi AP mode and PC with Windows](#wifi-ap-mode-and-pc-with-windows)
+         * [WiFi AP mode and Android](#wifi-ap-mode-and-android)
 17.  [Other stuff](#17-other-stuff)
      * [Increase MIDI file capacity (compression)](#increase-midi-file-capacity-compression)
      * [SD card](#sd-card)
@@ -954,7 +955,7 @@ If you can't do that, here is a fallback. On your PC or Mac create a text file c
 ```
 {"access_point1": "my_wifi_router", "password1": "my_password"}
 ```
-Replace ```my_wifi_router``` with the name of your home router. Replace ```my_password``` with its password (or the router/access point you want to connect).
+Replace ```my_wifi_router``` with the name of your home router (or the router/access point you want the microcontroller to connect to). Replace ```my_password``` with its password .
 
 Copy that file to the freshly installed microcontroller with the following command:
 ````
@@ -1012,6 +1013,9 @@ The microcontroller will try option 1 and option 2 one after the other until con
 flowchart LR
    S[cell phone]-->|WiFi| AP[Microcontroller as access point]
 ```
+
+See [General Configuration](#general-configuration) for more details to configure WiFi.
+
 ### WiFi AP mode and PC with Windows
 
 If you are using this "option 3" (AP on the microcontroller) on Windows you may see a message like saying that the WiFi access point is "using older security standards". MicroPython is configures the AP for "WPA2 Personal", which as of 2026 is in general considered safe for home networks. 
@@ -1026,7 +1030,17 @@ Turn Off Background Network Searching on Windows for one WiFi network
 * Uncheck the box that says Look for other wireless networks while connected to this network.
 * Click OK to save.
 
-See [General Configuration](#general-configuration) to configure WiFi.
+
+### WiFi AP mode and Android
+
+Since "option 3" does bar access to internet, Android may want to switch away from this network to one that does have access. I haven't experienced this. However, you can change Android behaviour by following these steps:
+
+Disabling Smart Network Switch
+* Open Settings on your phone.
+* Tap Connections or Network & internet.
+* Select Wi-Fi.Tap the three dots menu (⋮) or Intelligent Wi-Fi / Advanced settings.
+* Turn off Switch to mobile data or Auto network switch
+
 
 # 17. Other stuff
 
