@@ -62,6 +62,7 @@
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
      * [Installing prerrequisite software](#installing-prerrequisite-software)
      * [Installing crank organ software](#installing-crank-organ-software)
+     * [If you can't configure the microcontroller via WiFi](#if-you-can-t-configure-the-microcontroller-via-wifi)
      * [Software update](#software-update)
      * [WiFi capabilities](#wifi-capabilities)
          * [WiFi AP mode and PC with Windows](#wifi-ap-mode-and-pc-with-windows)
@@ -946,6 +947,22 @@ If you can't configure WiFi, see (here)(##another-way-to-configure)
 If you are updating from a previous version, see [Update software](#update-software)
 
 On the "System" page you can verify the RAM and flash size. About 2Mb of the flash are used by MicroPython and this software. The software detects the size of the flash automatically.
+
+## If you can't configure the microcontroller via WiFi
+
+If you can't do that, here is a fallback. On your PC or Mac create a text file called ```config.json```(for example with Notepad on Windows or TextEdit on Mac) with this format:
+```
+{"access_point1": "my_wifi_router", "password1": "my_password"}
+```
+Replace ```my_wifi_router``` with the name of your home router. Replace ```my_password``` with its password (or the router/access point you want to connect).
+
+Copy that file to the freshly installed microcontroller with the following command:
+````
+mpremote cp config.json :/data/config.json
+```
+
+Now reboot, and the microcontroller should connect to the indicated router. Monitor the detailed log with ```mpremote```. 
+
 
 ## Software update
 
