@@ -16,18 +16,11 @@
 
 # Default mode is: debug messages to console, info messages to flash.
 from micropython import const
-import sys, io, os, re
+import sys, io, os, re, asyncio
 
 from compiledate import compiledate 
+from scheduler import RequestSlice
 
-# DEBUG: only to console, fast
-# INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is always persistent 
-# First element True=write to flash, False=only print to console. 
-# Second element is color code for console output.
-_LEVELS = { "DEBUG":(False, "\x1b[32m"), 
-            "INFO": (True, "\x1b[0m"), 
-            "ERROR": (True, "\x1b[31m"), 
-            "EXCEPTION": (True, "\x1b[35m")}
 
 _FOLDER = const("data/")  # Do not use config, minilog should be autonomous.
 
@@ -43,7 +36,17 @@ _MAX_LOGFILE_SIZE = const(20_000)
 
     
 class getLogger:
-    _file_level = "INFO"
+    # DEBUG: only to console, fast
+    # INFO, ERROR, EXCEPTION: to flash. Can be rather slow but is always persistent 
+    # First element True=write to flash, False=only print to console. 
+    # Second element is color code for console output.
+    _levels = dict((
+                ("DEBUG",     (False, "\x1b[32m")), 
+                ("INFO",      (True,  "\x1b[0m")), 
+                ("ERROR",     (True,  "\x1b[31m")), 
+                ("EXCEPTION", (True,  "\x1b[35m")),
+                ))
+
     _error_count = 0 # Count of event logs since reboot
     _current_log_num = 0 # from 1 up. 0 means "class not initialized"
     # Other class variables:
@@ -52,8 +55,10 @@ class getLogger:
 
     @classmethod
     def set_file_level( cls, log_debug ):
-        # Can only set DEBUG or INFO levels.
-        cls._file_level = "DEBUG" if log_debug else "INFO"
+        # log_debug False: means write DEBUG level to console only.
+        # log_debug True: means write DEBUG level to flash and console.
+        # Change True/False indicating where to write. Don't change color.
+        cls._levels["DEBUG"] = (log_debug, cls._levels["DEBUG"][1])
 
     @classmethod
     def set_timezone( cls, timezone ):
@@ -136,7 +141,7 @@ class getLogger:
     def log(cls, module, level, message):
         s = cls._formatRecord(module, level, message)
         cls.print_console( s, level )
-        if _LEVELS[level][0]:
+        if cls._levels[level][0]:
             cls._write(f"{s}\n")
 
         if level == "ERROR" or level == "EXCEPTION":
@@ -153,7 +158,7 @@ class getLogger:
         # Format exception to a string
         with io.BytesIO() as bytefile:
             sys.print_exception(exception, bytefile)
-            exception_text = bytefile.getvalue().decode() # type: ignore
+            exception_text = bytefile.getvalue().decode() # type: ignore
             exception_text = "       " + exception_text.replace("\n", "\n       ")
         # Output exception to console and file
         cls.print_console(s, "EXCEPTION") 
@@ -162,7 +167,8 @@ class getLogger:
 
     @classmethod
     def print_console( cls, message, level ):
-        print(_LEVELS[level][1] + message + "\x1b[0m") # color to console
+        print(cls._levels[level][1] + message + "\x1b[0m") # color to console
+   
 
     # Instance methods
     def __init__(self, module ):
@@ -187,3 +193,13 @@ class getLogger:
 
     def exc(self, exception, message):
         self.log_exc(self.module, exception, message )
+
+    async def async_info( self, message ):
+        # Version of logger.info() that can be called
+        # safely while playing a tune. error() and exc()
+        # don't have this version, since writing these
+        # has absolute priority.
+        s = self._formatRecord(self.module, "INFO", message)
+        self.print_console( s, "INFO" )
+        async with RequestSlice( "minilog", 200 ):
+            self._write( s+"\n" )

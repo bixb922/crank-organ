@@ -9,6 +9,7 @@ from startbase import StartBase
 class StartSwitch(StartBase):
     def init(self, gpio_pin ):
         # return function to read pin value
+        self.type = "switch"
         return Pin(gpio_pin, Pin.IN, Pin.PULL_UP).value
         
     @staticmethod

@@ -3,6 +3,9 @@
 # Webserver module, serves all http requests.
 
 # >>> check if multipart/form-data is better than shipping json.
+# >>> some day, update Microdot to last version
+# >>> evaluate Microdot native authorization
+
 
 import os, sys, gc, asyncio
 from time import ticks_ms, ticks_diff
@@ -72,6 +75,7 @@ def func_after_req( request, response ):
         # it is NOT kept in flash. This means a user is logged out
         # on reboot.
         sessions[session_id] = this_session
+        # _logger.debug(f"New session from IP {request.client_addr[0]}")
     this_session["last_activity"] = ticks_ms()
     this_session["ip"] = request.client_addr[0]
     dt = ticks_diff( ticks_ms(), request.g.t0 )
@@ -79,12 +83,16 @@ def func_after_req( request, response ):
     return response
 
 
-def is_active(since_msec=60_000):
+def is_active(since_msec=60_000, ip_prefix=""):
     # Return true if recent web activity
+    # iprange="": test for activity on all client IP addresses
+    # ip_prefix="192.168.144": test for activity on all address
+    # starting with that prefix
     now = ticks_ms()
     return any( 
             s for s in sessions.values()
             if ticks_diff(now, s["last_activity"]) <= since_msec
+            and s["ip"].startswith(ip_prefix)
             )
 
 def respond_ok():
@@ -106,7 +114,7 @@ def respond_not_found( ):
     # file is fetch_json(), for example for json files in data folder.
     return error_page, 404, {'Content-Type': 'text/html'}
 
-# Define own (async) decorator to check authorization
+# Define own (async capable) decorator to check authorization
 # Wrapped function MUST be a async function 
 def authorize(func):
     async def wrapper(*args, **kwargs):
@@ -521,7 +529,7 @@ async def get_wifi_status(request):
 
 @app.post("/set_time_zone")
 async def set_time_zone(request):
-    timezone.set_time_zone( request.json )
+    await timezone.set_time_zone( request.json )
     return respond_ok()
         
 

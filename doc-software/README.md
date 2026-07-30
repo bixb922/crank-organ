@@ -62,12 +62,12 @@
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
      * [Installing prerrequisite software](#installing-prerrequisite-software)
      * [Installing crank organ software](#installing-crank-organ-software)
-     * [If you can't configure the microcontroller via WiFi](#if-you-can-t-configure-the-microcontroller-via-wifi)
-     * [Software update](#software-update)
+     * [Another way to configure WiFi](#another-way-to-configure-wifi)
+17.  [Software update](#17-software-update)
+18.  [Interesting stuff](#18-interesting-stuff)
      * [WiFi capabilities](#wifi-capabilities)
          * [WiFi AP mode and PC with Windows](#wifi-ap-mode-and-pc-with-windows)
-         * [WiFi AP mode and Android](#wifi-ap-mode-and-android)
-17.  [Other stuff](#17-other-stuff)
+         * [WiFi AP mode and Android or Mac](#wifi-ap-mode-and-android-or-mac)
      * [Increase MIDI file capacity (compression)](#increase-midi-file-capacity-compression)
      * [SD card](#sd-card)
      * [Time zone](#time-zone)
@@ -84,8 +84,9 @@
      * [The onboard RGB LED](#the-onboard-rgb-led)
      * [ROMFS](#romfs)
      * [Development](#development)
-18.  [Backup](#18-backup)
-19.  [Recent changes](#19-recent-changes)
+19.  [Backup](#19-backup)
+20.  [Troubleshooting](#20-troubleshooting)
+21.  [Recent changes](#21-recent-changes)
      * [Changes from Nov 2023 to March 2024:](#changes-from-nov-2023-to-march-2024)
      * [Changes from March 2024 to June 2024.](#changes-from-march-2024-to-june-2024)
      * [Changes from June 2024 to October 2024](#changes-from-june-2024-to-october-2024)
@@ -105,14 +106,13 @@
      * [Changes from June 1 to June 7, 2026](#changes-from-june-1-to-june-7-2026)
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
-     * [Changes from July 10 to July 24, 2026](#changes-from-july-10-to-july-24-2026)
-20.  [Programming language](#20-programming-language)
-21.  [Credits](#21-credits)
-22.  [Testing](#22-testing)
-23.  [Troubleshooting](#23-troubleshooting)
-24.  [Restrictions](#24-restrictions)
-25.  [Licensing](#25-licensing)
-26.  [Affiliation](#26-affiliation)
+     * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
+22.  [Programming language](#22-programming-language)
+23.  [Credits](#23-credits)
+24.  [Testing](#24-testing)
+25.  [Restrictions](#25-restrictions)
+26.  [Licensing](#26-licensing)
+27.  [Affiliation](#27-affiliation)
 # 1. Feedback
 
 Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
@@ -473,7 +473,7 @@ Columns:
 
 The following columns are computed and cannot be changed:
 * Duration in minutes:seconds
-* Date added
+* Date (this is the date of the file on the PC)
 * File name
 * File size in bytes
 
@@ -485,7 +485,7 @@ Changes are saved automatically after a few seconds. Changes are stored and appl
 
 # 11. General configuration
 
-The configuration parameters explained in detail on the configuration page. After changing and saving a new configuration, please reboot the microcontroller.
+The configuration parameters explained in detail on the configuration page. 
 
 ![Configuration](general_configuration.jpg)
 
@@ -505,11 +505,13 @@ Sometimes, the browser changes the ```http://``` prefix ```to https://```, verif
 This is what you should modify:
 
 * The network name and host name as noted above.
-* The configuration password. The configuration password is also the password for connecting to the microcontroller in AP mode. 
-* The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone.
+* The configuration password. The configuration password is also the password for connecting to the microcontroller in AP mode (Access Point mode, like a router). I would encourage you to change the password, since the default is the most obvious one: _password_. 
+* The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone and PC. These are then stored in encrypted form in the flash of the microcontroller.
 * The description, which is used as page title.
 
-You should mark the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. The password will aid to prevent unauthorized or accidental changes. Also, if checked, using the File Manager will require password.
+You should mark the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. The password will aid to prevent unauthorized or accidental changes. Also, if checked, some functions of the File Manager will require password.
+
+The WiFi in "AP Mode" will always require the password.
 
 If this option is checked, a dialog like the following one will appear when you save General Configuration, MIDI configuration and Tunelib Editor:
 
@@ -520,7 +522,7 @@ Enter the microcontroller's password and press accept.
 
 See [WiFi Capabilities](#wifi-capabilities)
 
-You also can change the passwords editing config.json on your PC and then uploading the file with mpremote.
+You also can change any passwords editing config.json on your PC and then uploading the file with mpremote. After the next reboot, passwords will appear encrypted.
 
 ## Power management settings
 
@@ -895,77 +897,69 @@ esptool.py --chip esp32s3 write_flash --flash_mode dio --flash_size 4MB --flash_
 Push the reset button again. Use ```mpremote``` to connect to the ESP32S3. Press Control-C. You should see a startup log similar to this:
 ```
 boot.py mount readsize=4096, progsize=128, lookahead=512
-timezone - Could not read timezone.json: [Errno 2] ENOENT
-00:00:06 - minilog - INFO - === RESTART ===
-00:00:06 - config - INFO - Generating new key
-00:00:06 - config - INFO - Passwords encrypted
-00:00:06 - config - DEBUG - Config Your ESP32-S3 device wifi_mac=7cdfa1e8c240 hostname and AP SSID=esp32s3
-00:00:06 - led - DEBUG - init done
-00:00:07 - wifimanager - DEBUG - AP mode started ssid esp32s3 IP ('192.168.144.1', '255.255.255.0')
-00:00:07 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
-00:00:07 - wifimanager - DEBUG - init ok
-00:00:08 - pinout - INFO - Current pinout data/20_note_Carl_Frei.json
-00:00:08 - solenoid - DEBUG - init complete GPIO 20 pins
-00:00:08 - tachometer - DEBUG - Crank sensor not enabled
-00:00:08 - tachometer - DEBUG - crank init ok
-00:00:08 - history - DEBUG - init ok
-00:00:08 - battery - DEBUG - init ok
-00:00:09 - tunemanager - DEBUG - init ok, 690 tunes in data/tunelib.json, 0 lyrics in data/lyrics.json
-00:00:09 - player - DEBUG - init ok
-00:00:09 - setlist - DEBUG - init ok
-00:00:09 - poweroff - DEBUG - init ok
+sys.path=['.frozen', '/rom', '/rom/lib', '/lib']
+00:01:01 - minilog - INFO - === RESTART version 2026-07-24 21:35:45 ===
+00:01:01 - config - DEBUG - Config Your ESP32-S3 device, WiFi mac=64-e8-33-58-8d-84, hostname and AP SSID=esp32s3
+00:01:01 - wifimanager - DEBUG - AP mode started ssid=esp32s3 IP=('192.168.144.1', '255.255.255.0') (forever)
+00:01:01 - wifimanager - DEBUG - init ok
+00:01:02 - pinout - DEBUG - Parsing pinout file 'data/20_note_Carl_Frei.json'
+00:01:02 - solenoid - DEBUG - init done GPIO=20 pins
+00:01:02 - tachometer - DEBUG - Configuration does not enable crank sensor
+00:01:02 - tachometer - DEBUG - crank init ok
+00:01:02 - history - DEBUG - init ok
+00:01:02 - battery - DEBUG - init ok
+00:01:02 - tunemanager - DEBUG - init ok
+00:01:02 - player - DEBUG - init ok
+00:01:02 - startbase - DEBUG - Start button of type 'touchpad' on pin 5 initialized
+00:01:02 - setlist - DEBUG - init ok
+00:01:02 - poweroff - DEBUG - init ok
 Microdot: using await for Request._safe_readline()
-00:00:03 - setlist - DEBUG - init ok
-00:00:03 - poweroff - DEBUG - init ok
-Microdot: using await for Request._safe_readline()
-00:00:03 - wifimanager - DEBUG - AP mode started ssid esp32s3 config ('192.168.144.1', '255.255.255.0')
-00:00:03 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_1
-00:00:03 - webserver - DEBUG - MAX_AGE=1,800 sec STATIC_FOLDERS=['/software/static/', '/rom/static/']
-Total startup time (without main, until asyncio ready) 3036 msec
-Memory used at startup 130496 gc=26 msec
-00:00:03 - setlist - DEBUG - Setlist 0 loaded 0 tunes
-00:00:04 - battery - DEBUG - Calibration disabled, no calibration data
-00:00:18 - wifimanager - INFO - Status for wifi_SSID_1 201 STAT_NO_AP_FOUND, could not connect to wifi_SSID_1
-00:00:20 - wifimanager - DEBUG - _start_station_interface for ssid=self.sta_if_ssid=wifi_SSID_2
+00:01:02 - webserver - DEBUG - MAX_AGE=1,800 sec STATIC_FOLDERS=['/software/static/', '/rom/static/']
+00:01:02 - startup - DEBUG - Total startup time (without main, until asyncio ready) 903 msec
+00:01:02 - startup - DEBUG - Memory used at startup 123712 gc=18 msec
+00:01:02 - setlist - DEBUG - Setlist 0 loaded 0 tunes
+00:01:03 - battery - DEBUG - Calibration disabled, no calibration data
 ```
 
 If there is an entry that says ERROR or EXCEPTION, there is some problem to be solved. Please report as issue if it's not clear what the problem is, I'll try to help.
 
 After installation, there should be some folders in the microcontroller: ```rom``` is where the software is. This is a read-only folder. ```data``` is the folder for configuration files and error logs. ```tunelib``` is the folder for MIDI files. ```mprmote ls``` will show the files on the microcontroller.
 
-Now connect with WiFi. WiFi starts to be active about 10 seconds after power on. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. This AP will be visible starting at around 10 to 20 seconds after power on. Wait for that name to appear, some PCs or phones take some time to recognize a new access point. If prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on some Android phones. 
+Now connect with WiFi. WiFi starts to be active about 10 seconds after power on, but can take up to 1 minute, so be patient. Look at the the WiFi access points (WiFi networks) available on your PC or cell phone and connect to the ```esp32s3``` access point. When prompted for a password, enter the word _password_. Enter ```http://esp32s3.local``` in your browser (Chrome or Firefox) and wait for the main menu page to appear. Typing ```http://192.168.144.1``` in the address bar instead of ```http://esp32s3.local``` should also work. You may need to use  ```http://192.168.144.1```on some Android phones. 
 
-Then configure the WiFi parameters using the General Configuration button on the index page. This is the start of the configuration page:
+Then press General Configuration button on the index page. On the General Configuration page configure the WiFi parameters. 
+
+The start of the configuration page looks like this:
 
 ![general_configuration](general_configuration.jpg)
 
-Configuration is best done on a PC. That also allows to use the browser to translate the configuration instructions.
+Configuration is best done on a PC or Mac. Automatic browser translation can also help here!
 
-Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, upload MIDI files or with the different configuration pages provided by the microcontroller.
+Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, uploading MIDI files. Further configuration parameters can be done with the different configuration pages provided by the microcontroller.
 
-If you can't configure WiFi, see (here)(##another-way-to-configure)
+If you can't configure WiFi, see [here](#another-way-to-configure-wifi).
 
-If you are updating from a previous version, see [Update software](#update-software)
+If you are updating from a previous version, see [Update software](#software-update).
 
 On the "System" page you can verify the RAM and flash size. About 2Mb of the flash are used by MicroPython and this software. The software detects the size of the flash automatically.
 
-## If you can't configure the microcontroller via WiFi
+## Another way to configure WiFi
 
-If you can't do that, here is a fallback. On your PC or Mac create a text file called ```config.json```(for example with Notepad on Windows or TextEdit on Mac) with this format:
+If you can't access the microcontroller with a browser over WiFi, here is a fallback. On your PC or Mac create a text file called ```config.json``` (for example with Notepad on Windows or TextEdit on Mac) with this format:
 ```
 {"access_point1": "my_wifi_router", "password1": "my_password"}
 ```
 Replace ```my_wifi_router``` with the name of your home router (or the router/access point you want the microcontroller to connect to). Replace ```my_password``` with its password .
 
 Copy that file to the freshly installed microcontroller with the following command:
-````
+```
 mpremote cp config.json :/data/config.json
 ```
 
 Now reboot, and the microcontroller should connect to the indicated router. Monitor the detailed log with ```mpremote```. 
 
 
-## Software update
+# 17. Software update
 
 If you want to update from a crank organ software version prior to November 2025, then execute these commands on your PC prior to installing the new version:
 ```
@@ -978,9 +972,13 @@ All these files now reside as compiled and compressed files in the ```bin``` fil
 
 If you don't know the date of your version, you can see it on the "System" page.
 
-Update to a newer version with the procedure explained in the previous section: [Installation instructions](#installation-instructions). You need to do the ```esptool.py``` command explained there.
+Update to a newer version with the procedure explained in the previous section: [Installation instructions](#installation). You need to do the ```esptool.py``` command explained there.
 
 This update procedure does *not* affect MIDI files nor the configuration.
+
+
+
+# 18. Interesting stuff
 
 ## WiFi capabilities
 
@@ -988,7 +986,7 @@ The microcontroller can connect to a WiFi Access Point, for example your home Wi
 
 These options are available for WiFi connection:
 
-* Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing away from home. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
+* WiFi Option 1: Have the microcontroller connect to a Access Point (also called Hotspot or WiFi zone) on you cell phone or tablet. This way of connecting is useful if you are performing away from home. You setup the Access Point on your cell phone and the microcontroller will connect to it. The microcontroller is in "station mode".
 
 ```mermaid
 flowchart LR
@@ -996,7 +994,7 @@ flowchart LR
    
 ```
 
-* Option 2: Have the microcontroller connect to your home router. This way of connecting is useful at home, to configure the software, upload files or to perform. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs. The microcontroller is in "station mode".
+* WiFi Option 2: Have the microcontroller connect to your home router. This way of connecting is useful at home, to configure the software, upload files or to perform. You can connect to the microcontroller with any device connected to the home router, such as tablets or PCs. The microcontroller is in "station mode".
 
 ```mermaid
 flowchart LR
@@ -1007,12 +1005,14 @@ flowchart LR
 
 The microcontroller will try option 1 and option 2 one after the other until connected. It will try during 15 seconds with option 1, then 15 seconds with option 2 and so on, until one of the two options is available.
 
-* Option 3: This is the fallback option and the option used the first time to configure the microcontroller and can be used in case of problems. The microcontroller publishes a Access Point where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. This option is also useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone because your phone went dead while on an outing). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. 
+* WiFi Option 3 or "AP mode": This is the fallback option and it is also used the first time to configure the microcontroller. It can be used in case of problems with options 1 or 2. The microcontroller publishes a Access Point (AP) where you can connect, initially with the name esp32s3, and if configured, with the name you provide. You connect to that Access Point just like you connect to your home router, but there will be no internet available through the microcontroller. This option is also useful if you want to connect from a cell phone where you haven't set up an access point (such as a borrowed cell phone because your phone went dead while on an outing). Be aware that while connected, you won't have internet access available on the phone, unlike options 1 and 2. This diagram shows the connection:
 
 ```mermaid
 flowchart LR
-   S[cell phone]-->|WiFi| AP[Microcontroller as access point]
+   S[cell phone]-->|WiFi| AP[Microcontroller publishing access point]
 ```
+
+For option 3: It may take 1 to 2 minutes for the AP name (i.e. ```esp32s3``` or whatever you define) to appear in the list of available networks on your PC or cell phone. Also, you may have to retry if the first try is rejected. Use the name of your device (i.e. ```esp32s3.local``` or the name your define), and if that doesn't work use the fixed address ```192.168.144.1``` in the browser.
 
 See [General Configuration](#general-configuration) for more details to configure WiFi.
 
@@ -1031,9 +1031,12 @@ Turn Off Background Network Searching on Windows for one WiFi network
 * Click OK to save.
 
 
-### WiFi AP mode and Android
+### WiFi AP mode and Android or Mac
 
-Since "option 3" does bar access to internet, Android may want to switch away from this network to one that does have access. I haven't experienced this. However, you can change Android behaviour by following these steps:
+I haven't experienced problems with using AP mode on Android or Mac.
+
+
+Since "option 3" bars access to internet, Android may want to switch away from this network to one that does have access. I haven't experienced this. However, you can change Android behaviour by following these steps:
 
 Disabling Smart Network Switch
 * Open Settings on your phone.
@@ -1041,8 +1044,6 @@ Disabling Smart Network Switch
 * Select Wi-Fi.Tap the three dots menu (⋮) or Intelligent Wi-Fi / Advanced settings.
 * Turn off Switch to mobile data or Auto network switch
 
-
-# 17. Other stuff
 
 ## Increase MIDI file capacity (compression)
 
@@ -1229,7 +1230,7 @@ Problems:
 
 Since 2025 MicroPython has the ROMFS feature. It allows the application software to reside within the 2Mb reserved for MicroPython. The compiled software in the ```crank-organ/bin``` folder uses this feature.
 
-The complete executable code, i.e. both MicroPython and this application are compiled and linked into executable files called  ```bin``` images. These are copied to flash memory with the ``esptool.py``` utility. The software appears in a readonly folder at ```/rom```. The File Manager (or ```mpremote ls /rom```) can show the contents of the ```/rom``` folder, which is located inside the area reserved for the MicroPython image.
+The complete executable code, i.e. both MicroPython and this application are compiled and linked into executable files called  ```bin``` images. These are copied to flash memory with the ``esptool.py``` utility. The software appears in a read-only folder at ```/rom```. 
 
 This frees about 500 kilobytes of flash (i.e. the former ```/software``` and the ```/lib``` folders can now be deleted), making room for more MIDI files. Since the files are memory mapped, the execution of the MicroPython code is directly from flash. The software is not loaded in RAM. This frees about 150 kb of RAM making garbage collection times much lower (25 to 40 milliseconds). This in turn makes a possible impact of the garbage collector on music playback highly unlikely. Software start up times are also faster, many times around 2 to 3 seconds.
 
@@ -1241,7 +1242,7 @@ If you want to change the software, you can upload single .py or .html files usi
 ```.py``` and ```.mpy``` files will be uploaded to ```/software/mpy```. The search order is:
 * ```.py```  files in ```/software/mpy```
 * ```.mpy```  files in ```/software/mpy```
-* ```.mpy```  files in ```/rom```` (all files here are precompiled to ```.mpy```)
+* ```.mpy```  files in ```/rom``` (all files here are precompiled to ```.mpy```)
 * However, ```main.py``` and ```boot.py``` must reside in the root folder ```/```.
 
 ```.html```, ```.css```, ```.js``` ```.png``` and ```.jpg``` files are uploaded to ```/software/static```. The search order is:
@@ -1255,20 +1256,39 @@ The MicroPython version included in the ```/crank-organ/bin``` folder is a pared
 
 In case you want to rebuild the ```bin``` files in ```crank-organ/bin```: The changes for the pared down MicroPython version are done automatically running ```/crank-organ/tools/fix_mp_romfs.py``` on the PC. First, MicroPython and ESP-IDF must be installed for development, see README at https://github.com/micropython/micropython/tree/master/ports/esp32.
 
-# 18. Backup
+# 19. Backup
 The microcontroller flash storage with the LittleFS2 file system is fairly robust. It is very unlikely to end up with corrupt files.
 
 However, 
 once you configure your microcontroller and enter data in your Tunelib, you should backup relevant files. 
 
-Go to the File Manager, navigate to the ```data``` folder and press the button labeled "Select for backup". (This button only appears when the data folder has been selected.) The files that need backup will now be checked. Press the "Download" button and they will be downloaded to your PC.
+Go to the File Manager, navigate to the ```data``` folder and press the button labeled "Select for backup". (This button only appears when the data folder has been selected.) The files that need backup will now be checked. Press the "Download" button and they will be downloaded to your PC. There is also a "Download as tar" button to make a tarball (i.e. single file) for easier backup.
 
 Also you will need backup of the /tunelib/*.mid and /tunelib/*.mid.gz files. Instead of doing backup, it's best to have a staging folders /tunelib and a /tunelib_compressed folder somewhere on the PC and then upload the latest MIDI files from there with the [File Manager](#file-manager) to the microcontroller.
 
-To restore a backup: If you start with an empty ESP32S3, install the software as per installation instructions. Copy the MIDI files to the /tunelib folder. Then copy the backed up  files tunelib.json, lyrics.json and config.json to the /data folder. Reboot.
+To restore a backup: If you start with an empty ESP32S3, install the software as per installation instructions. Copy the MIDI files to the /tunelib folder using the File manager. Then copy the backed up  configuration files (tunelib.json, lyrics.json and config.json) to the /data folder. Reboot.
 
 
-# 19. Recent changes
+# 20. Troubleshooting
+
+If there are delays during music playback such as extraneous silences or lengthened notes, check that you only have either the "Tune list" or the "Performance" page open. Only these two pages (and perhaps the Home Page) are well adjusted for music playback.
+
+If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized. 
+
+If you the microcontroller's browser does not respond:
+* Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
+* Some cell phones that are older than about 2021 do not recognize node names such as mycrankorgan.local. You'll have to use the IP address.
+* Make sure you have WiFi active in your cell phone.
+* Make sure the access points defined in the configuration of the microcontroller are accessible.
+* Make sure both microcontroller and cell phone are in WiFi range of the router.
+
+If browser response is slow, check the WiFi signal. Move the crank organ nearer to the router, or use the hotspot that your cell phone provides. The WiFi scan on the "System" page provides the signal strength as seen by the microcontroller. dBm in the range of  -70dB to -90dB are good (-90dB is best). Around -60dB leads to delays.
+
+If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. 
+
+
+
+# 21. Recent changes
 
 ## Changes from Nov 2023 to March 2024:
 * Page with history of tunes played, button to purge old records.
@@ -1606,7 +1626,7 @@ Please post in discussions if you are unhappy with some dropped feature.
 * Updated message "pinout, tuner needs reboot".
 * Remove "tempo" entries from pinout json files. Tempo encoder is not supported anymore, but a crank rotation sensor certainly is supported. 
 * Freeze both boot.py and main.py. Make MicroPython smaller by deleting unused features.
-* Allow any ```.py``` or ````.mpy``` in ```software/mpy``` to override modules in the binary image, and do not make that dependent on the compile date.
+* Allow any ```.py``` or ```.mpy``` in ```software/mpy``` to override modules in the binary image, and do not make that dependent on the compile date.
 * Provide scan button for I2C on pinout page. This allows to find all devices on an I2C bus. PinTest uses class methods.
 * Fix phases keyword in Counter() call.
 * Provide mic test button on pinout page. Shows a graph of mic signal.
@@ -1653,22 +1673,28 @@ If tune is not started by crank, it will not react to the crank.
 * Fix "List by MIDI note" logic
 * Fix error in "Scale test" button, note.html
 
-## Changes from July 10 to July 24, 2026
+## Changes from July 10 to July 30, 2026
 * Compressed output files of compress_midi.py now will have the same file modification date as input files. 
 * Uploaded files on microcontroller now will have the same date/time as the "last modified datetime" of the originating file on the PC.
 * Prevent power off during a very long tune manager sync.
 * Now File Manager can delete files containing a plus sign.
-* Handle case if config.html was filled incompletely. This can happen when no access point is available at some point during configuration and form is left blank due to microcontroller not accessible. It will now show error "AP password must not be blank".
 * Fix MIDI program number in playback.
-* If WiFi not configured yet (i.e. station id is still wifi_SSID_1) then don't start WiFi on these SSIDs. This might prevent station mode to interfere with AP mode.
-* By default, never stop AP mode. If the power savings of AP mode is needed, it must be configured in General Configuration. No hurry to connect to the AP mode SSID  for  initial configuration (default name ESP32S3) or for fallback.
-* Don't stop station mode search if a user is connected in AP mode is active. This allows both interfaces to be active at the same time. Also: it can be sometimes difficult to know if a device is still connected to the AP mode, since WiFi connections are automatic.
-* Hide the "Save changes" buttons on the General Configuration page until data is properly loaded. 
 * Update this document.
+* Redesigned the WiFi manager (thanks to oatybiscuit for reporting). Many changes to prevent doing a station search if there is activity on the AP mode (fallback). 
+* Never stop AP mode. If the power savings of AP mode are needed, it must be configured in General Configuration. No timeout anymore, so there is no rush to connect to WiFi AP mode.
 * Prevent a WiFi scan to raise a "OSError: STA must be active" if Station mode is not active. This happens when entering the System page (diag.html) when doing the initial configuration.
+* Don't try to connect/reconnect to station SSIDs when a user is actively using AP mode. The reconnects interfere with AP mode. Retry station SSID connects only if there is no user traffic in AP mode.
+* Replace "maximum idle of AP mode" with "AP mode for fallback only" configuration option.
+* Always start AP mode if both station SSIDs fail to connect or are not configured yet.
+* Start AP mode only after a connection to SSID is successful. The AP mode starts on the same channel than the station mode, and no channel change is forced.
+* More events about WiFi on error log, without intefering with music playback (use RequestSlice).
+* Handle case if config.html was filled incompletely. This can happen when no access point is available at some point during configuration and form is left blank due to microcontroller not accessible. It will now hide the "Save changes" buttons on the General Configuration page until data is properly loaded. 
+* Fix configuration parameter to enable writing debug log to flash.
+* Fix all notes off of a register when turning off that register.
+* Fix bad formatting of this document (thanks to oatybiscuit for reporting)
 
 
-# 20. Programming language
+# 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, and has very little overhead. The MIDI timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in available time slots between notes.
@@ -1686,7 +1712,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser. No installation required.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 21. Credits
+# 23. Credits
 
 Credits to the MicroPython team for MicroPython (https://www.micropython.org) and it's libraries. This is an amazing product! 
 
@@ -1704,30 +1730,12 @@ To ease the installation process, I have included some libraries in the reposito
 
 Also, Microdot has some very minor modifications for the purpose of this software.
 
-# 22. Testing
+# 24. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If you find a glitch or bug, I'd like to correct those as soon as possible. Please report problems as Github issue or discussion on this repository.
 
 
-# 23. Troubleshooting
-
-If there are delays during music playback such as extraneous silences or lengthened notes, check that you only have either the "Tune list" or the "Performance" page open. Only these two pages (and perhaps the Home Page) are well adjusted for music playback.
-
-If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized. 
-
-If you the microcontroller's browser does not respond:
-* Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
-* Some cell phones that are older than about 2021 do not recognize node names such as mycrankorgan.local. You'll have to use the IP address.
-* Make sure you have WiFi active in your cell phone.
-* Make sure the access points defined in the configuration of the microcontroller are accessible.
-* Make sure both microcontroller and cell phone are in WiFi range of the router.
-
-If browser response is slow, check the WiFi signal. Move the crank organ nearer to the router, or use the hotspot that your cell phone provides. The WiFi scan on the "System" page provides the signal strength as seen by the microcontroller. dBm in the range of  -70dB to -90dB are good (-90dB is best). Around -60dB leads to delays.
-
-If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. 
-
-
-# 24. Restrictions
+# 25. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1750,7 +1758,19 @@ If you have a very, very large setlist, for example 500 or more tunes, then chan
 
 All servos of a certain PCA9685 board must have the same frequency. This is a hardware restriction of the PCA99685. On GPIO servos (ESP32S3 onboard PWM outputs), only one frequency is supported, equal for all PWM outputs. This is a software restriction.
 
-# 25. Licensing
+
+WiFi AP mode and Station mode have some restrictions on the ESP32-S3. These are hardware restrictions of the microcontroller. There is only one radio for WiFi on the ESP32-S3 and is shared for AP mode and Station mode. A consequence is that if the microcontroller needs to connect to a station SSID, the AP mode is temporarily disconnected and may appear on another channel. Windows, Mac and Android react differently to that, but in general the AP mode may appear unstable when trying to connect to station SSID. To avoid these problems, the software does the following:
+* AP mode is started only after a station SSID connection has been made.
+* If neither SSID 1 nor SSID 2 can be connected, AP mode is started as a fallback alternative to enable another way to connect to the microcontroller. This happens about 30 seconds after starting the microcontroller.
+* If neither SSID 1 nor SSID 2 are configured (for example, just after installation), then AP mode is started immediately.
+* If AP mode is in active usage (i.e. with a browser page open on the microcontroller) and no station SSID is connected, then station SSID searching is stopped. The reason for this is that AP mode is deemed to be a fallback mode, and it is not nice for a fallback mode to be interrupted or appear unstable. To resume station SSID connections, you need to stop use AP mode or reset the microcontroller.
+
+If AP mode not in active usage (no browser page open) and no station SSID could be connected so far, then the microcontroller will try to connect to SSID 1, then to SSID 2, etc until one of these happens:
+* One of the SSIDs can be connected.
+* A browser starts using AP mode.
+
+
+# 26. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023-2025 Hermann Paul von Borries
@@ -1777,7 +1797,7 @@ SOFTWARE.
 
 You are not allowed to delete nor hide the copyright notice on the index.html page.
 
-# 26. Affiliation
+# 27. Affiliation
 I have no affiliation nor relationship with any vendor of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get any benefits by promoting them.
 
 In any case, I believe that software products mentioned on this repository are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources. 

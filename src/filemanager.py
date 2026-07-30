@@ -204,7 +204,7 @@ def _formatLogGenerator(filename):
         with open(filename) as file:
             yield "<!DOCTYPE html><head>"
             yield "<style>"
-            yield ".logdeb { color: gray; }"
+            yield ".logdeb { color: darkgreen; }"
             yield ".logerr { color: red; }"
             yield ".logexc { color: magenta; }"
             yield ".loginfo { color: black; }"

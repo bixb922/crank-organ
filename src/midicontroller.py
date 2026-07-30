@@ -177,8 +177,10 @@ class MIDIController:
         self.channelmap1[DRUM_CHANNEL] = DRUM_PROGRAM   
 
         self.process_map = {
-            NOTE_ON: self._note_event_on, # call _note_event_on(
-            NOTE_OFF: self._note_event_off, # call _note_event_off(
+            #NOTE_ON: self._note_event_on, # call _note_event_on(
+            #NOTE_OFF: self._note_event_off, # call _note_event_off(
+            NOTE_ON: self._note_event, # call _note_event(
+            NOTE_OFF: self._note_event, # call _note_event(
             PROGRAM_CHANGE: self._program_change, # call _program_change(
         }
 
@@ -194,22 +196,21 @@ class MIDIController:
         # Process all MIDI events as passed by player.
         # Called with channel, meta and sysex events 
         # Meta events are ignored
-        status = midi_event.status
-        if status == NOTE_ON and midi_event.velocity == 0:
-            status = NOTE_OFF
+        #status = midi_event.status
+        #if status == NOTE_ON and midi_event.velocity == 0:
+        #    status = NOTE_OFF
         try:
-            if self.process_map[status]( midi_event ):
-                # Note has been found.
+            if self.process_map[midi_event.status]( midi_event ):
+                # Note was processed, do not pass through
                 return
         except KeyError:
             # No process for this type of event.
             pass
-        # Do not pass through note on/note off events that triggered a note.
+        # Did not process this event, pass through if passthrough enabled.
         if self.passthrough:
             self.passthrough(midi_event)
-        elif status == NOTE_ON:
-            ActuatorStats.count("note not found")
 
+    # Lower level note on/off operate with MidiNote objects
     def notedef_on( self, midi_note ):
         return self._notedef_onoff( midi_note, 1 )
 
@@ -227,21 +228,29 @@ class MIDIController:
             if act[2].value():
                 # This calls the on() or off() method of the appropriate driver/actuator
                 act[onoff]()
+        if onoff:
+            if actions:
+                ActuatorStats.count("note on")
+            else:
+                ActuatorStats.count("note not found")
         # Return True to caller if a note was played. 
         # This is used here for passthrough and in organtuner.py
         # to skip notes that are not present while playing scales.
-        return bool(actions)          
+        return bool(actions)
 
-    def _note_event_on( self, midi_event ):
-        return self._note_event( midi_event, 1 )
+    # def _note_event_on( self, midi_event ):
+    #    return self._note_event( midi_event, 1 )
 
-    def _note_event_off( self, midi_event ):
-        return self._note_event( midi_event, 0 )
+    # def _note_event_off( self, midi_event ):
+    #     return self._note_event( midi_event, 0 )
 
-    def _note_event( self, midi_event, onoff ):
+    # def _note_event( self, midi_event, onoff ):
+    # Higher level note on/off operates with umidiparser.MidiEvent objects
+    def _note_event( self, midi_event ):
         CURRENT_NOTE.program_number = self.channelmap1[midi_event.channel]
         CURRENT_NOTE.midi_number = midi_event.note
-        return self._notedef_onoff( CURRENT_NOTE, onoff )
+        return self._notedef_onoff( CURRENT_NOTE, 
+                                    1 if midi_event.status == NOTE_ON and midi_event.velocity != 0 else 0 )
 
     def _program_change( self, midi_event ):
         if midi_event.channel != DRUM_CHANNEL:
@@ -273,25 +282,18 @@ class MIDIController:
     def all_notes_off( self ):
         self.actuator_bank.all_notes_off( )
 
-    async def play_random_note(self, duration_msec):
-        if not hasattr( self, "all_midis" ):
-            # Cache a list of all MIDI notes for future use in self.play_random_note()
-            self.all_midis = [ 
+    async def play_random_note(self, duration_msec, repeat=1):
+        all_midis = [ 
                 midi_note for midi_note in self.notedict.keys() 
                 if midi_note.program_number != DRUM_PROGRAM ]
-        try:
-            midi_note = choice( self.all_midis )
+        if not all_midis:
+            return
+        for _ in range(repeat):
+            midi_note = choice( all_midis )
             self.notedef_on( midi_note )
             await asyncio.sleep_ms(duration_msec)
             self.notedef_off( midi_note )
             await asyncio.sleep_ms(100)
-        except IndexError:
-            pass # list is empty
-
-    async def clap(self, n):
-        # Used at start up to make some noise to say that system is up.
-        for _ in range(n):
-            await self.play_random_note(50)
 
     def get_notedict(self):
         # Used by webserver to list pinout
@@ -304,7 +306,11 @@ class MIDIController:
         # This takes about 1 or 2 msec, plus time to force_off,
         # so no much gain if optimized
         for actions in self.notedict.values():
-           for actuator, register, _ in actions:
-                if register.name == register_name:
+            # act[0] is actuator.off() not used here
+            # act[1] is actuator.on() not used here
+            # act[2] is register
+            # act[3] is the actuator
+           for act in actions:
+                if act[2].name == register_name:
                     # Turn off even if there is pending note off count...
-                    actuator.force_off()
+                    act[3].force_off()

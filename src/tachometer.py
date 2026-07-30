@@ -275,7 +275,7 @@ class Crank:
         # A task to monitor the crank and set/reset the events
         if self.is_installed():
             self.crank_monitor_task = asyncio.create_task( self._start_stop_monitor() )
-        self.logger.debug("crank init ok")
+        self.logger.debug("Crank init ok")
     
     def register_start_crank_event( self, ev ):
         # Injected by setlist.

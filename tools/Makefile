@@ -1,4 +1,3 @@
-# >>> add Microdot and umidiparser as submodules.
 # >>> update Microdot to latest version. Use native authentication.
 
 # This makefile is used during software development.

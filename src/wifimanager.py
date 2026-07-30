@@ -9,25 +9,21 @@
 #       with cell phone router
 #       If home router is not accessible, then it will cycle through both
 #  AP_IF mode
-#       Fallback if station mode does not work. Is active for 2 minutes
-#       only after power on, then it will turn off if inactive.
+#       Fallback if station mode does not work. 
 import asyncio
 import network
-from time import ticks_ms, ticks_diff
 
 from drehorgel import config, timezone, led
 from minilog import getLogger
-import scheduler
 import blemcs
 
 # 15 seconds waiting for this device in station mode to connect to an AP
 # After this time, the device will try with the other AP
-_STATION_WAIT_FOR_CONNECT = const(15_000)
+# Normally it takes 4 or 5 seconds to connect
+_STATION_WAIT_FOR_CONNECT = const(15)
+# Time to sleep between WiFi status checks
+_SLEEP_INTERVAL = const(10) 
 
-# WiFi error status codes. This allows to show the error
-# name for WiFi errors (such as "STAT_WRONG_PASSWORD") instead
-# of error codes (such as 202).
-_STATUS_CODE_DICT = { getattr(network, errcode): errcode for errcode in dir(network) if errcode.startswith("STAT_")}
 
 
 
@@ -38,11 +34,11 @@ class WiFiManager:
         # Connect in background to both interfaces
         self.ap_if = network.WLAN(network.AP_IF)
         self.sta_if = network.WLAN(network.STA_IF)
-        network.hostname(config.name)
 
         self.sta_if_ssid = ""
 
         # If there was a soft reset, get rid of previous connect
+        # and of info stored inside the ESP32S3 about WiFi connections.
         # disconnect() before active(False) may raise Wifi error
         self.sta_if.active(False)
         self.ap_if.active(False)
@@ -64,149 +60,142 @@ class WiFiManager:
         self.blemcs.set_characteristic( "apip", config.ap_ip )
 
         self.blemcs.start_advertising()
+        # Rest of __init__ is in self.async_init().
 
     async def async_init(self):
+
         # Start background task to connect STA_IF and AP_IF
-        self.start_task = asyncio.create_task(self._start_interfaces())
-        # Yield to give time for start_task to start
+        self.station_task = asyncio.create_task(self._station_process())
+        self.ap_task = asyncio.create_task(self._ap_process())
+        # Yield to give time for task to start
+        # (could also loop while self.sta_if_ssid == ""
         await asyncio.sleep_ms(100)
-        self.logger.debug("init ok")
 
-    async def _start_interfaces(self):
-        try:
-            self.start_station_task = asyncio.create_task(
-                self._start_station_interface()
-            )
-            await asyncio.sleep_ms(100)
-            # In parallel start the access point interface
-            if config.ap_max_idle:
-                await self._start_ap_interface()
-            else:
-                self.logger.debug("AP mode not started, disabled by configuration")
-        except Exception as e:
-            self.logger.exc(e, "in _start_interfaces")
+    def _start_ap_interface(self):
 
-    async def _start_ap_interface(self):
-        try:
-            self.ap_if.active(True)
-            self.ap_if.config(
-                ssid=config.name,
-                key=config.get_password("ap_password"),
-                security=4,
-            )
-            apip = config.ap_ip
-            self.ap_if.ifconfig((apip, "255.255.255.0", apip, apip))
-            self.logger.debug(
-                f"AP mode started ssid {config.name} IP {self.ap_if.ipconfig('addr4')}"
-            )
-            self.blemcs.set_status( "ap", "a" )
-        except Exception as e:
-            self.logger.exc(e, "in _start_ap_interface")
-
-        if not config.wifi_configured(1) or config.ap_max_idle >= 1000:
-            # Don't stop AP if wifi not configured or if config parameter says so.
-            self.logger.debug(f"AP mode stays on forever")
+        # Don't start AP mode again if already active.
+        if self.ap_if.active():
             return
+       
+        self.ap_if.active(True)
+        # It is not possible to set ap_if.config(pm=PM_xxx) 
+        # for AP mode: OSError: Wifi Invalid Mode
 
-        # The timeout is some seconds for a client to connect to the AP WiFi
-        await asyncio.sleep(config.ap_max_idle)
-        if self.ap_if.isconnected():
-            self.logger.debug("AP mode in use, will stay on forever")
-            # Never turn off AP WiFi, someone is connected
-            return
+        self.ap_if.config(
+            ssid=config.name,
+            key=config.get_password("ap_password"),
+            security=4,
+        )
+        apip = config.ap_ip
+        self.ap_if.ifconfig((apip, "255.255.255.0", apip, apip))
+        self.logger.debug(
+            f"AP mode started ssid={config.name} IP={self.ap_if.ipconfig('addr4')}"
+        )
+        self.blemcs.set_status( "ap", "a" )
 
-        # config.ap_max_idle is over, no one is connected, stop AP mode
-        # to save a bit of battery power.
-        self.ap_if.active(False)
-        self.logger.debug("AP mode idle, disconnected")
-        self.blemcs.set_status( "ap", "i" )
-        # This will probably also disconnect sta_if
-        # if not in use.
-        # Reinit the station interface
-        self.sta_if.active(True)
+    async def _ap_process(self):
+        # for report only
+        while True:
+            while not self.ap_if.isconnected():
+                await asyncio.sleep(_SLEEP_INTERVAL)
+            await self.logger.async_info("AP mode connected")
+            while self.ap_if.isconnected():
+                await asyncio.sleep(_SLEEP_INTERVAL)
+            await self.logger.async_info("AP mode disconnected")
 
-    async def _start_station_interface(self):
+    async def _station_process(self):
         try:
             while True:
                 # Try with each AP defined, reconnect if it gets disconnected.
-                for ap in ("1", "2"):
-                    ssid = getattr( config, "access_point" + ap )
-                    if not config.wifi_configured(int(ap)) or not ssid:
-                        # Don't connect if not configured
-                        await asyncio.sleep(1)
-                        continue
-                    self.sta_if_ssid = ssid
-                    password = config.get_password("password" + ap)
-                    self.logger.debug(
-                        f"_start_station_interface for ssid={self.sta_if_ssid=}"
-                    )
-                    self.blemcs.set_status( "sta"+ap, "b" )
-                    await self._station_connect_to_ap(
-                        self.sta_if_ssid, password
-                    )
-                    if self.sta_if.isconnected():
-                        led.connected()
-                        await self.loginfo(
-                            f"Connected to {self.sta_if.config('ssid')} IP {self.sta_if.ipconfig('addr4')} hostname {network.hostname()}"
-                        )
-                        timezone.network_up()
-                        self.blemcs.set_status( "sta"+ap, "c" )
-                        self.blemcs.set_characteristic( "staip"+ap, self.sta_if.ipconfig('addr4')[0] )
-                        
-                    # isconnected does not need to RequestSlice
-                    while self.sta_if.isconnected():
-                        # Test every 10 seconds if still connected
-                        await asyncio.sleep(10)
-                    self.blemcs.set_status( "sta"+ap, "n" )
-                    self.blemcs.set_characteristic( "staip"+ap, "" )
-                    # Reset sta_if before trying again
-                    # self.sta_if.disconnect()
-                    self.sta_if.active(False)
-                    await asyncio.sleep(1)
+                for n in ("1", "2"):
+                    await self._station_session(n)
+
+                # None of the 2 STA SSIDs could be connected. Or STA SSID
+                # was connected and then connected.
+                # Or AP mode has active client.
+                # It is time to activate AP mode for fallback (i.e. forever)
+                self._start_ap_interface()
+
+                # Retry STA SSID some time later
+                await asyncio.sleep(_SLEEP_INTERVAL)
 
         except Exception as e:
-            self.logger.exc(e, "in _start_station_interface")
+            self.logger.exc(e, "in _station_process")
+            # Make sure AP mode kicks in
+            self._start_ap_interface()
 
-    async def _station_connect_to_ap(self, access_point, password ):
+    async def _station_session(self, n):
+        ssid = getattr( config, "access_point" + n )
+        if self.ap_has_traffic() or not config.wifi_configured(int(n)) or not ssid:
+            # If AP mode has a traffic, don't search for a STA SSID
+            # AP mode is fallback, don't disturb AP mode searching for a SSID!
+            # If user wants to search for SSID, reboot is needed. Or stop
+            # using AP mode.
+            # Also: just skip if not configured
+            return
+        self.sta_if_ssid = ssid
+        self.logger.debug( f"WiFi starting connection to ssid={self.sta_if_ssid=}")
+        self.blemcs.set_status( "sta"+n, "b" )
+        if await self._station_connect(
+            ssid, config.get_password("password" + n)
+            ):
+            led.connected()
+            await self.logger.async_info( f"Connected to {self.sta_if.config('ssid')} IP {self.sta_if.ipconfig('addr4')} hostname {network.hostname()}")
+            timezone.network_up()
+            self.blemcs.set_status( "sta"+n, "c" )
+            self.blemcs.set_characteristic( "staip"+n, self.sta_if.ipconfig('addr4')[0] )
+            # Also start AP for fun, not because fallback is sorely needed.
+            if not config.ap_fallback_only:
+                self._start_ap_interface()
+
+        # Loop until connection stops
+        while self.sta_if.isconnected():
+            await asyncio.sleep(_SLEEP_INTERVAL)
+        
+        # Lost connection, try again la
+        self.blemcs.set_status( "sta"+n, "n" )
+        self.blemcs.set_characteristic( "staip"+n, "" )
+        # Reset sta_if before trying again.
+        # If active is not set to False, the WLAN does not
+        # recognize new SSIDs or parameters.
+        # self.sta_if.disconnect()
+        self.sta_if.active(False)
+        await asyncio.sleep(1)  
+        
+    async def _station_connect(self, ssid, password ):
         # Connect station interface to a router or wifi hotspot
-
         try:
-
             self.sta_if.active(True)
             # Power modes for WiFi
             # Hard reset default is network.WLAN.PM_PERFORMANCE=1
             # No clear difference beteen PM_NONE and PM_PERFORMANCE...
             # self.sta_if.config(pm=network.WLAN.PM_NONE)
-            try:
-                self.sta_if.connect(access_point, password)
 
-                start_time = ticks_ms()
-                while (not self.sta_if.isconnected() and 
-                       ticks_diff(ticks_ms(), start_time) < _STATION_WAIT_FOR_CONNECT):
-                    await asyncio.sleep_ms(100)
+            # Now connect to the SSID
+            self.sta_if.connect(ssid, password)
 
-            except Exception as e:
-                # OSError: Wifi Internal Error (recoverable) happens
-                # if connecting on a sta_if without disconnectig.
-                self.logger.exc(
-                    e,
-                    f"Station interface: Error during connection {access_point=}",
-                )
-                self.sta_if_status = access_point + str(e)
-                return
+            for _ in range(_STATION_WAIT_FOR_CONNECT):
+                if self.sta_if.isconnected():
+                    self.sta_if_status = ssid + " connected"
+                    return True
+                if self.ap_has_traffic():
+                    self.sta_if_status = "AP mode active"
+                    await self.logger.async_info(
+                                    f"Stopped connecting to {ssid}, {self.sta_if_status}"
+                                )
+                    return False
+                await asyncio.sleep(1)
 
-            if self.sta_if.isconnected():
-                self.sta_if_status = access_point + " connected"
-                return
+            
             # Problems? Get the status and log it
             status = self.sta_if.status()
-            self.sta_if_status = access_point + " " + str(status) + " " + _STATUS_CODE_DICT.get( status, "" )
-            await self.loginfo(
-                f"Status for {self.sta_if_status}, could not connect to {access_point}"
+            self.sta_if_status = ssid + " " + str(status) + " " + self.translate_status( status )
+            await self.logger.async_info(
+                f"Status for {self.sta_if_status}, could not connect to {ssid}"
             )
         except Exception as e:
-            self.logger.exc(e, "in _station_connect_to_ap")
-            self.sta_if_status = access_point + " " + str(e)
+            self.logger.exc(e, "in _station_connect")
+            self.sta_if_status = ssid + " " + str(e)
             
     def get_status(self):
         # Detailed wifi status for diag.html
@@ -224,23 +213,31 @@ class WiFiManager:
             "description": config.description,
         }
 
+    def translate_status(self, status):
+        # WiFi error status codes. This allows to show the error
+        # name for WiFi errors (such as "STAT_WRONG_PASSWORD") instead
+        # of error codes (such as 202).
+        status_code_dict = { getattr(network, errcode): errcode for errcode in dir(network) if errcode.startswith("STAT_")}
+        return status_code_dict.get( status, "" )
+    
     def sta_isconnected(self):
         # See mcserver
         return self.sta_if.isconnected()
 
     def sta_if_scan(self):
-        if self.sta_if.active():
-            return self.sta_if.scan()
-        # Only AP mode is active, no WiFi scan.
-        return []
-    
-    async def loginfo(self, message):
         try:
-            async with scheduler.RequestSlice( "wifimanager log.info", 100, 10_000):  
-                # logging can take about 100 msec
-                self.logger.info(message)
-        except Exception:
-            # Don't log info messages if playing
-            # does not allow it
-            pass
-
+            return self.sta_if.scan()
+        except OSError:
+            # Probably only AP mode is active, no WiFi scan.
+            return []
+    
+    def ap_has_traffic(self):
+        if self.ap_if.active():
+            from webserver import is_active
+            # Calculate prefix, i.e. if config.ap_ip is "192.168.144.1"
+            # then the prefix for all assigned addresses
+            # on that subnet is "192.168.144"
+            # Since /get_progress URL is checked every 2 to 5 seconds
+            # asking for 20 seconds of inactivity is on the safe side.
+            return is_active(20_000, ".".join(config.ap_ip.split(".")[0:3]))
+        # if ap_if is not active, it cannot have traffic...

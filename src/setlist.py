@@ -84,7 +84,7 @@ class Setlist:
         self.waiting_for_start_tune_event = True
         # music_start_event must be set from now on
         self.music_start_event.clear()
-        await self.music_start_event.wait() # type:ignore
+        await self.music_start_event.wait() # type:ignore
         self.waiting_for_start_tune_event = False
         return
     
@@ -129,11 +129,11 @@ class Setlist:
                 # is to reboot.
                 self.logger.debug("Not in playback mode, setlist process exit")
                 return
-
+            
             # User signalled start of tune
             # Get a current setlist by shuffling if no setlist
             if self.shuffle_if_empty():
-                self.logger.info("Tunelib empty, setlist terminated")
+                self.logger.debug("Tunelib empty, setlist terminated")
                 return
 
             # Get top tune and play

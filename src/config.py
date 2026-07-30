@@ -73,7 +73,7 @@ class Config:
         self.ap_password = _DEFAULT_PASSWORD
         self.password_required = False
         self.ap_ip = "192.168.144.1"
-        self.ap_max_idle = 1000 # In seconds. Default: never turn off AP mode
+        self.ap_fallback_only = False 
         self.advertise_bt = False # >>> make client translatable
 
         # Rotary sensor 

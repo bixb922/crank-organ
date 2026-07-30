@@ -38,8 +38,8 @@ b64encoding = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
 # Preallocated bytearrays for the _fold routine
 base64_buffer = bytearray(9)
 folded_buffer = bytearray(8) # Only first 6 used
-@micropython.viper # type:ignore
-def _fold_digest( digest:ptr8, digest_len:int)->object: # type:ignore
+@micropython.viper # type:ignore
+def _fold_digest( digest:ptr8, digest_len:int)->object: # type:ignore
     # Fold digest into 6 bytes
     folded = ptr8(folded_buffer) # type:ignore
     fz = ptr32(folded_buffer) # type:ignore
@@ -270,7 +270,7 @@ class TuneManager:
         try:
             t = time.localtime(os.stat( config.TUNELIB_FOLDER + filename)[8])
             # Use shorter date than usual in filemanager. The hour/minute
-            # isn't very relevant to know date added, and this way the tunelib
+            # isn't very relevant to know file date, and this way the tunelib
             # is a bit smaller, and the tunelist.html listing needs less 
             # screen space.
             file_mtime = f"{t[0]}-{t[1]:02d}-{t[2]:02d}"
@@ -582,7 +582,7 @@ class TuneManager:
         fileops.write_json( change_queue,  config.SYNC_TUNELIB, keep_backup=False )
 
     def file_date_dict( self ):
-        # Return dictionary filename:date added for the benefit of filemanager.py
+        # Return dictionary filename: file date for the benefit of filemanager.py
         return {tune[ _TLCOL_FILENAME]: tune[ _TLCOL_DATEADDED]
                 for tune in self._read_tunelib().values()}
     

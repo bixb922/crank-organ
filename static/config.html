@@ -87,18 +87,14 @@
 		the oldest note is turned off to protect batteries. Does not apply to RC servos. Integer only:</label>
 	<input id="max_polyphony" name="max_polyphony" type="text" size="4" oninput="markField('max_polyphony')" />
 	<br>
-
-	<label for="ap_max_idle">
-		Time the AP WiFi radio will be active without no one connecting. 
-		AP mode is the fallback mode, i.e. the last resort mode to connect to the microcontroller, should other WiFi modes
-		fail. 
-		After this time, if no one is connected, turn off AP radio.
-		The only advantage of turning off AP mode is to save about 100mW of power consumption.
-		1000 seconds or more means: "Never turn off AP mode".
-		Zero means: "Never start AP mode".
-		Integer only, in seconds:</label>
-	<input id="ap_max_idle" name="ap_max_idle" type="text" size="4" oninput="markField('ap_max_idle')" />
-	<br>
+	<input id="ap_fallback_only" type="checkbox"/>
+	<label for="ap_fallback_only">If checked, the AP mode is activated only
+		for fallback, i.e. when none of the two station SSID responds.
+		There is an battery energy savings of about 0.1W if checked. 
+		If not checked, then the AP mode is activated even when the microcontroller
+		is connected to
+		one of the two station SSIDs.
+	</label>
 
 	<label>USB battery pack heartbeat period (leave 0 if battery is not a USB battery pack), in milliseconds:</label>
 	<input id="battery_heartbeat_period" name="battery_heartbeat_period" type="text" size="4"

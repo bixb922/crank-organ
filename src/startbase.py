@@ -25,13 +25,14 @@ class StartBase:
         # The button allows to register a callback for button/touchpad up
         self.up_callbacks = []
         self.read = lambda : 0 # default in case of an exception below
+        self.type = "-"
         if gpio_pin:
             # Call init() of subclass to do the specific initialization
             # init() returns the function to read the value of the button.
             try:
                 self.read = self.init( gpio_pin ) # type:ignore
                 self.task = asyncio.create_task(self._button_process( ) )
-                logger.debug(f"Start button type {self.__class__.__name__} on pin {gpio_pin} initialized")
+                logger.debug(f"Start button of type '{self.type}' on pin {gpio_pin} initialized")
             except Exception as e:
                 logger.exc( e, "Could not initialize button/touchpad pin {gpio_pin} type {self.__class__.__name__}" )
                 

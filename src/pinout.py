@@ -257,6 +257,7 @@ class PinoutParser:
 # means "no GPIO defined for neopixel"
 class GPIODef(PinoutParser):
     def __init__(self, *args):
+        _logger.debug(f"Parsing pinout file '{args[0]}'")
         self.register_bank = RegisterBank()
         global ESP32_S3_AVAILABLE_GPIO_PINS
         valid_pins = []

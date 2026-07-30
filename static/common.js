@@ -406,7 +406,7 @@ class GetProgress{
 	startBackground(){
 		this.#backgroundProcess();
 	}
-	async getProgress( ){
+	async getProgress(){
 		let progress = await this.fetchProgress( "/get_progress");
 		console.debug("progress=", progress);
 		return progress;
@@ -454,6 +454,8 @@ class GetProgress{
 			catch(e){
 				console.error("GetProcess.#background process fetch failed", e);
 			}
+			// >>> should sleep dependon time since last progress?
+			// >>> i.e. time between call initial vs. sleep
 			await sleep_ms(this.sleep_ms);
 		}
 	}
@@ -488,7 +490,6 @@ class GetProgress{
 		if( reboot ){
 			this.stored_boot_session = progress.boot_session ;
 		}
-		// >>> await sleep_ms(10000); // see result before reload takes place
 		if( reboot || (tunelib_change && this.reloadIfTunelibChanged) ){
 			// Reload page if reboot or tunelib changed EXCEPT
 			// when the page asks not to do so (like tunelist.html)

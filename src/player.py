@@ -95,7 +95,7 @@ class MIDIPlayer:
             # Get MidiFile object
             midifile = open_midi( midi_fn ) # fileops.open_midi
 
-            self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)}" )
+            self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)} type={midifile.format_type}" )
             controller.all_notes_off()
             ActuatorStats.zero()
             # From play_tune from tunemanager to _play = 150 msec

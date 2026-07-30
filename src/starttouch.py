@@ -10,6 +10,7 @@ from startbase import StartBase
 class StartTouch(StartBase):
     def init(self, gpio_pin ):
         # return function to read touchpad value
+        self.type = "touchpad"
         return TouchPad( Pin(gpio_pin) ).read
         
     @staticmethod

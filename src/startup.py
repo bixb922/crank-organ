@@ -164,7 +164,7 @@ async def signal_ready( controller ):
     controller.all_notes_off()
     
     # Tell user system ready by moving some actuators
-    await controller.clap(5)
+    await controller.play_random_note(50,5)
     _led.off()
 
 async def start():
