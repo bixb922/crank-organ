@@ -530,7 +530,9 @@ async def get_wifi_status(request):
 @app.post("/set_time_zone")
 async def set_time_zone(request):
     await timezone.set_time_zone( request.json )
-    return respond_ok()
+    # set_time_zone gets hijacked for more info.
+    # Respond with progress to let client know boot_session and tunelib signature
+    return get_progress()
         
 
 # Play page web requests

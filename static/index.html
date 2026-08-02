@@ -204,9 +204,6 @@ async function getPageData(){
     getBatteryInfo();
     commonGetProgress.setSleep( 5_000 );
 	commonGetProgress.startBackground();
-	// Since there is not much else to do, fill the caches for
-	// great things to come.
-	await commonGetProgress.fillCaches();
 
 }    
    

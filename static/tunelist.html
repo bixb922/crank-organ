@@ -98,7 +98,7 @@ async function pageRefreshProcess( ) {
     // Refresh progress periodically
     commonGetProgress.setSleep( 2_000 );
     commonGetProgress.registerCallback( updateProgress );
-    commonGetProgress.setReloadIfTunelibChanged( true );
+    JsonCache.setReloadIfTunelibChanged( true );
     await sleep_ms(100); // to avoid forcing reflow
     // Start background will trigger a updateProgress very soon.
     commonGetProgress.startBackground();

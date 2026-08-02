@@ -1,0 +1,8 @@
+exclude:
+    - bin/
+    - data/
+    - kicad/
+    - src/
+    - static/
+    - tools/
+    .gitignore

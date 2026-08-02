@@ -23,6 +23,10 @@ import blemcs
 _STATION_WAIT_FOR_CONNECT = const(15)
 # Time to sleep between WiFi status checks
 _SLEEP_INTERVAL = const(10) 
+# Time to sleep after both station SSIDs fail until attempting to
+# connect again. This leaves time to connect on the station AP.
+# If this time is too long, a reboot will speed up things anyhow
+_STATION_WAIT_FOR_RETRY = const(60)
 
 
 
@@ -104,29 +108,31 @@ class WiFiManager:
             await self.logger.async_info("AP mode disconnected")
 
     async def _station_process(self):
-        try:
-            while True:
-                # Try with each AP defined, reconnect if it gets disconnected.
-                for n in ("1", "2"):
+        while True:
+            # Try with each AP defined, reconnect if it gets disconnected.
+            for n in ("1", "2"):
+                try:
                     await self._station_session(n)
+                except Exception as e:
+                    self.logger.exc(e, "in _station_process")
+                    self.sta_if_status = "Exception "+str(e)
+                self.sta_if.active(False)
+                await asyncio.sleep(1)
 
-                # None of the 2 STA SSIDs could be connected. Or STA SSID
-                # was connected and then connected.
-                # Or AP mode has active client.
-                # It is time to activate AP mode for fallback (i.e. forever)
-                self._start_ap_interface()
-
-                # Retry STA SSID some time later
-                await asyncio.sleep(_SLEEP_INTERVAL)
-
-        except Exception as e:
-            self.logger.exc(e, "in _station_process")
-            # Make sure AP mode kicks in
+            # None of the 2 STA SSIDs could be connected. Or STA SSID
+            # was connected and then connected.
+            # Or AP mode has active client.
+            # It is time to activate AP mode for fallback (i.e. forever)
             self._start_ap_interface()
+
+            # Retry STA SSID some nice time later
+            # Enough time to try a AP mode connect
+            await asyncio.sleep(_STATION_WAIT_FOR_RETRY)
+
 
     async def _station_session(self, n):
         ssid = getattr( config, "access_point" + n )
-        if self.ap_has_traffic() or not config.wifi_configured(int(n)) or not ssid:
+        if self._ap_has_traffic() or not config.wifi_configured(int(n)) or not ssid:
             # If AP mode has a traffic, don't search for a STA SSID
             # AP mode is fallback, don't disturb AP mode searching for a SSID!
             # If user wants to search for SSID, reboot is needed. Or stop
@@ -155,47 +161,37 @@ class WiFiManager:
         # Lost connection, try again la
         self.blemcs.set_status( "sta"+n, "n" )
         self.blemcs.set_characteristic( "staip"+n, "" )
-        # Reset sta_if before trying again.
-        # If active is not set to False, the WLAN does not
-        # recognize new SSIDs or parameters.
-        # self.sta_if.disconnect()
-        self.sta_if.active(False)
-        await asyncio.sleep(1)  
         
     async def _station_connect(self, ssid, password ):
         # Connect station interface to a router or wifi hotspot
-        try:
-            self.sta_if.active(True)
-            # Power modes for WiFi
-            # Hard reset default is network.WLAN.PM_PERFORMANCE=1
-            # No clear difference beteen PM_NONE and PM_PERFORMANCE...
-            # self.sta_if.config(pm=network.WLAN.PM_NONE)
+        self.sta_if.active(True)
+        # Power modes for WiFi
+        # Hard reset default is network.WLAN.PM_PERFORMANCE=1
+        # No clear difference beteen PM_NONE and PM_PERFORMANCE...
+        # self.sta_if.config(pm=network.WLAN.PM_NONE)
 
-            # Now connect to the SSID
-            self.sta_if.connect(ssid, password)
+        # Now connect to the SSID
+        self.sta_if.connect(ssid, password)
 
-            for _ in range(_STATION_WAIT_FOR_CONNECT):
-                if self.sta_if.isconnected():
-                    self.sta_if_status = ssid + " connected"
-                    return True
-                if self.ap_has_traffic():
-                    self.sta_if_status = "AP mode active"
-                    await self.logger.async_info(
-                                    f"Stopped connecting to {ssid}, {self.sta_if_status}"
-                                )
-                    return False
-                await asyncio.sleep(1)
+        for _ in range(_STATION_WAIT_FOR_CONNECT):
+            if self.sta_if.isconnected():
+                self.sta_if_status = ssid + " connected"
+                return True
+            if self._ap_has_traffic():
+                self.sta_if_status = "AP mode active"
+                await self.logger.async_info(
+                                f"Stopped connecting to {ssid}, {self.sta_if_status}"
+                            )
+                return False
+            await asyncio.sleep(1)
 
-            
-            # Problems? Get the status and log it
-            status = self.sta_if.status()
-            self.sta_if_status = ssid + " " + str(status) + " " + self.translate_status( status )
-            await self.logger.async_info(
-                f"Status for {self.sta_if_status}, could not connect to {ssid}"
-            )
-        except Exception as e:
-            self.logger.exc(e, "in _station_connect")
-            self.sta_if_status = ssid + " " + str(e)
+        
+        # Problems? Get the status and log it
+        status = self.sta_if.status()
+        self.sta_if_status = ssid + " " + str(status) + " " + self.translate_status( status )
+        await self.logger.async_info(
+            f"Status for {self.sta_if_status}, could not connect to {ssid}"
+        )
             
     def get_status(self):
         # Detailed wifi status for diag.html
@@ -231,8 +227,8 @@ class WiFiManager:
             # Probably only AP mode is active, no WiFi scan.
             return []
     
-    def ap_has_traffic(self):
-        if self.ap_if.active():
+    def _ap_has_traffic(self):
+        if self.ap_if.isconnected():
             from webserver import is_active
             # Calculate prefix, i.e. if config.ap_ip is "192.168.144.1"
             # then the prefix for all assigned addresses
@@ -240,4 +236,4 @@ class WiFiManager:
             # Since /get_progress URL is checked every 2 to 5 seconds
             # asking for 20 seconds of inactivity is on the safe side.
             return is_active(20_000, ".".join(config.ap_ip.split(".")[0:3]))
-        # if ap_if is not active, it cannot have traffic...
+        # if ap_if is not connected, it cannot have traffic...

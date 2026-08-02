@@ -346,6 +346,10 @@ save_process()
 
 commonGetProgress.setSleep( 2_000 );
 // No need to register updateProgress function
+
+// Must avoid reloading if tunelib changes!!
+JsonCache.setReloadIfTunelibChanged( false );
+
 commonGetProgress.startBackground();
 </script>
 </html>

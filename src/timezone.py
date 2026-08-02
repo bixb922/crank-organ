@@ -9,7 +9,7 @@ import scheduler
 import fileops
 
 # To test starting RTC from 0: 
-# import machine;machine.RTC().init((2000,1,1,0,0,0,0,0));machine.soft_reset()
+# from network import WLAN,STA_IF,AP_IF;WLAN(STA_IF).active(False);WLAN(AP_IF).active(False);import machine;machine.RTC().init((2000,1,1,0,0,0,0,0));machine.soft_reset();
 
 # Don't use config.py, because timezone is needed before
 _TZFILE = const("data/timezone.json")

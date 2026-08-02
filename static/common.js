@@ -367,35 +367,16 @@ async function sleep_ms( t ){
 class GetProgress{
 	// Usage: instantiated in common.js only once (like a singleton)
 	// commonGetProgress.registerCallback() to register callback when progress has been updated
-	// commonGetProgress.setReloadIfTunelibChanged(v) true=reload this page if tunelib has changed, false=don't.
 	// commonGetProgress.fetchProgress("/drop_setlist", post_data) to
 	// call some fetch_json that returns a progress and filter it, will also do callbacks.
-	// commonGetProgress.registerCache( ) to register a JsonCache for fill/drop functions
 	constructor(){
 		this.callbackList = [];
-		this.cacheList = [];
 		this.sleep_ms = 10_000;
-		this.reloadIfTunelibChanged = false;
 	}
 	registerCallback( callback ){
 		this.callbackList.push( callback );
 	}
-	registerCache( cache ){
-		this.cacheList.push( cache );
-	}
-	async fillCaches(){
-		for( let cache of this.cacheList ){
-			await cache.get();
-		}
-	}
-	dropCaches(){
-		for( let cache of this.cacheList ){
-			cache.drop();
-		}
-	}
-	setReloadIfTunelibChanged( v ){
-		this.reloadIfTunelibChanged = v;
-	}
+
 	setSleep( v ){
 		// in milliseconds
 		this.sleep_ms = v ;
@@ -422,13 +403,15 @@ class GetProgress{
 		}
 		// do a fetch_json that returns a progress, and filter it
 		// before returning.
+		// >>> add timeout
 		let progress = await fetch_json( url, post );
 		if( !progress ){
 			throw new Error("fetch_json progress is empty, ignored");
 		}
 
+		await JsonCache.check_session( progress.boot_session, progress.tunelib_signature );
 		await this.#filterProgress( progress );
-		await this.#checkCaches(progress);
+
 		return progress;
 	}
 
@@ -454,50 +437,13 @@ class GetProgress{
 			catch(e){
 				console.error("GetProcess.#background process fetch failed", e);
 			}
-			// >>> should sleep dependon time since last progress?
+			// >>> should sleep depend on time since last progress?
 			// >>> i.e. time between call initial vs. sleep
 			await sleep_ms(this.sleep_ms);
 		}
 	}
-	async #checkCaches(progress){
-		// Check if caches have to be dropped or page reloaded
-		// to reload caches with fresh information.
-		// this info is kept per page (not in tab storage)
-		// to ensure pages are reloaded when they need it
-		// console.log(">>>#checkCaches this.stored_boot_session=", this.stored_boot_session, "this.stored_tunelib_signature", this.stored_tunelib_signature);
-		if( this.stored_boot_session == undefined || this.stored_tunelib_signature == undefined ){
-			// The page was just reloaded. Get these session values to check if they change.
-			this.stored_boot_session = progress.boot_session ;
-			this.stored_tunelib_signature =  progress.tunelib_signature ;
-			// console.log(">>>#checkCaches return, first time this.stored_boot_session getting values", this.stored_boot_session, this.stored_tunelib_signature);
-			return ;
-		}
-
-		// Cache is refreshed on boot and when tunelib changes significantly.
-		let tunelib_change = progress.tunelib_signature != this.stored_tunelib_signature ;
-		let reboot = progress.boot_session != this.stored_boot_session;
-		// console.log(">>>#checkCaches reboot=", reboot, "tunelib_change=", tunelib_change);
-		if( tunelib_change || reboot ){
-			// Force refresh of all the (registered) JsonCache objects
-			// by calling their drop method
-			this.dropCaches();
-			// console.log(">>>dropCaches done");
-		}
-	
-		if( tunelib_change ){
-			this.stored_tunelib_signature =  progress.tunelib_signature ;
-		}
-		if( reboot ){
-			this.stored_boot_session = progress.boot_session ;
-		}
-		if( reboot || (tunelib_change && this.reloadIfTunelibChanged) ){
-			// Reload page if reboot or tunelib changed EXCEPT
-			// when the page asks not to do so (like tunelist.html)
-			location.reload();
-		}
-	}
-
 }
+
 let commonGetProgress = new GetProgress();
 
 class PageHeader{
@@ -832,21 +778,107 @@ function removeSpecialHtmlChars( text ){
 }
 
 class JsonCache{
-	constructor(url, postOnly=false ){
+	static boot_session = null;
+	static tunelib_signature = null;
+	static cacheList = [];
+	static reloadIfTunelibChanged = false;
+
+	static async check_session( boot_session, tunelib_signature ){
+		const reload1 = this.#check_storage( boot_session, tunelib_signature );
+		const reload2 = this.#check_page( boot_session, tunelib_signature );
+		// console.log(">>>check_session reload1=", reload1, "reload2=", reload2);
+		if( reload1 || reload2 ){
+			// Queue a reload
+			// console.log("Waiting for reload 15s");
+			// await sleep_ms(15_000);
+			location.reload();
+			// yield to allow reload to happen. If not, GetProgress class will start to
+			// fetch tunelib.json but it will not complete due to the reload. To avoid that
+			// we stall here to allow the .reload() to happen immediately.
+			await sleep_ms(1000);
+			// should never get here. 
+		}
+	}
+	static #check_storage( boot_session, tunelib_signature ){
+		// console.log(">>>enter check_session", boot_session, tunelib_signature);
+		// Check if session storage is up to date compared to microcontroller.
+		const sbs = sessionStorage.getItem("storageBootSession");
+		const sts = sessionStorage.getItem("storageTunelibSignature");
+		if( sbs == null || sts == null )	{
+			// This is the first time a page is loaded on this tab. 
+			// Store the session values.
+			// If some cached items have loaded between page load and thiss, they will remain and
+			// not be dropped. This race condition is not a problem, since
+			// in that short time the cached items will not change.
+			sessionStorage.setItem("storageBootSession", boot_session);
+			sessionStorage.setItem("storageTunelibSignature", tunelib_signature);
+			JsonCache.boot_session =  boot_session ;
+			JsonCache.tunelib_signature =  tunelib_signature ;
+			// console.log(">>>session storage was null, setting values");
+			return false;
+		}
+		// check current sessionStorage values against microcontroller values
+		const reboot = sbs !=  boot_session;
+		const tunelib_change = sts != tunelib_signature;
+		// console.log(">>>JsonCache.#check_storage   fetch=", boot_session, tunelib_signature);
+		// console.log(">>>JsonCache.#check_storage storage=", sbs, sts);
+	
+		if( reboot ){
+			JsonCache.dropCaches();
+		}
+		if( tunelib_change ){
+			tunelibCache.drop();
+			lyricsCache.drop();
+			timezoneCache.drop(); // timezoneCache caches the tunelib_signature, it has  changed!
+			// console.log(">>>>dropped tunelib, lyrics & timezone cache");
+		}
+		sessionStorage.setItem("storageTunelibSignature", tunelib_signature);
+		sessionStorage.setItem("storageBootSession", boot_session);
+
+		// console.log(">>>check session sessionStorage tunelib now set to", sessionStorage.getItem("storageTunelibSignature" ));
+		return reboot || (tunelib_change && JsonCache.reloadIfTunelibChanged) ;
+	}
+	static #check_page( boot_session, tunelib_signature ){
+		if( JsonCache.boot_session == null || JsonCache.tunelib_signature == null ){
+			// The page was just reloaded.
+			// Store new session values to monitor change from now on.
+			JsonCache.boot_session = boot_session ;
+			JsonCache.tunelib_signature =  tunelib_signature ;
+			// console.log(">>>page just loaded, assigning values to JsonCache.boot_session=", JsonCache.boot_session, "JsonCache.tunelib_signature=", JsonCache.tunelib_signature);
+			return false;
+		}
+		// console.log(">>>tunelib_signature de storage=", tunelib_signature, "JsonCache.tunelib_signature=", JsonCache.tunelib_signature);
+		
+		// Check if info on page is obsolete and needs reload.
+		const reboot = boot_session != JsonCache.boot_session;
+		const tunelib_change = tunelib_signature != JsonCache.tunelib_signature ;
+		return reboot || (tunelib_change && JsonCache.reloadIfTunelibChanged) ;
+	}
+
+	static setReloadIfTunelibChanged( v ){
+		JsonCache.reloadIfTunelibChanged = v;
+	}
+	static dropCaches(){
+		// console.log(">>>drop all caches");
+		for( let cache of JsonCache.cacheList){
+			cache.drop();
+		}
+		// Do not use sessionStorage.clear(), it would clear also the stored storageBootSession and storageTunelibSignature
+		// and thus be ignored.
+		// The other item that isn't deleted here is the note repetition rate.
+	}
+
+
+	constructor(url){
 		this.url = url;
-		this.postOnly = postOnly;
 		this.reentry = 0;
-		this.theData = null;
-		// It's better to drop on reboot, to ensure configuration
-		// changes take effect here after reboot
-		commonGetProgress.registerCache( this );
+		this.theJson = null;
+		JsonCache.cacheList.push( this );
 	}
 	async get(post){
-		if( this.theData != null ){
-			return this.theData;
-		}
-		if( !post && this.postOnly ){
-			return ;
+		// post parameter is optional (for /set_time_zone)
+		if( this.theJson != null ){
+			return this.theJson;
 		}
 		// avoid reentering the critical section, if not,
 		// the same element may be asked for twice, slowing down
@@ -861,9 +893,14 @@ class JsonCache{
 			// User can clear sessionStorage by changing tab (unlike localStorage) in case of problems.
 			// Cache API does not work since we use http and not https.
 			data = sessionStorage.getItem( this.url );
+
 			if( !data || typeof data != "string" || (data.substring(0,1) != "{" && data.substring(0,1) != "["))	{
-				data = JSON.stringify( await fetch_json( this.url, post ));
-				sessionStorage.setItem( this.url,  data )  ;
+				// consoledebug(">>>jsoncache fetch start", this.url);
+				let json_data = await fetch_json( this.url, post )
+				// consoledebug(">>>jsoncache fetch end", this.url);
+				// Cache the response.
+				data = JSON.stringify(json_data);
+				sessionStorage.setItem( this.url,  data) ;
 			}
 		}
 		catch(e){
@@ -873,24 +910,27 @@ class JsonCache{
 		}
 		this.reentry -= 1;
 		// JSON.parse takes about 1msec for 100kb tunelib with 600 tunes.
-		this.theData = JSON.parse( data ) ;
-		return this.theData;
+		// Speed this up caching the parsed data in page storage.
+		this.theJson = JSON.parse( data ) ;
+		return this.theJson;
 	}
 	drop(){
-		// console.log(">>>cache drop", this.url );
 		sessionStorage.removeItem( this.url  );
-		this.theData = null;
+		this.theJson = null;
 	}
 
 }
-let tunelibCache = new JsonCache( "/data/tunelib.json");
-let lyricsCache = new JsonCache( "/data/lyrics.json");
+const configCache = new JsonCache( "/get_current_config");
+const tunelibCache = new JsonCache( "/data/tunelib.json");
+const lyricsCache = new JsonCache( "/data/lyrics.json");
+
+
+
+
 async function lyricsCacheTuneid( tuneid ){
 	// If no lyrics available, return empty string
 	return ((await lyricsCache.get())[tuneid]) || "";
 }
-let configCache = new JsonCache( "/get_current_config");
-
 
 async function isMultipleSetlistsEnabled(){
 	let config = await configCache.get();
@@ -1190,29 +1230,32 @@ class PasswordDialog{
 }
 
 // Share current time zone information with server
+// Also: get boot_session and tunelib_signature to initialize JsonCache
+const timezoneCache = new JsonCache("/set_time_zone")
 async function setTimezone(){
 	let offsetMinutes = new Date().getTimezoneOffset();
 	let timeInfo = new Date().toLocaleString([], {timeZoneName:"short"}).split(" ");
 	let shortName = timeInfo[timeInfo.length-1];
 	let longName = Intl.DateTimeFormat().resolvedOptions().timeZone; 
-	// Allow only posts with this cache, this prevents race condition with index.html's cach refill
-	if( !setTimezone.cache ){
-		setTimezone.cache = new JsonCache( "/set_time_zone", postOnly=true ) ;
-	}
-	// fetch_json will be done only once 
-	await setTimezone.cache.get({"offset": offsetMinutes*60, 
+	// consoledebug(">>>setTimezone fetch start");
+	// Cache this call. So a webservice is only called whenever the cache is invalidated,
+	// i.e. mainly when the microcontroller is rebooted (or the tunelib changes, tough luck).
+	// In both cases it brings back the session ids with a overhead similar to a getProgress.
+	let resp = await timezoneCache.get( 
+			{"offset": offsetMinutes*60, 
 			  "shortName":shortName,
 			  "longName": longName,
 			  // current time in Unix epoch seconds
 			  "timestamp": Math.round( Date.now()/1000 )
 			 });
-	// if get() should be called without a post (GetProgress.fillCaches)
-	// the postOnly ensures it is not sent.
+	// 	consoledebug(">>>setTimezone response", resp.boot_session, resp.tunelib_signature);	
+	// /set_time_zone returns the current boot_session and tunelib_signature
+	// in the format of a /get_progress response. Used to initialize JsonCache.
+	await JsonCache.check_session( resp.boot_session, resp.tunelib_signature );
 }
-// Calling this in background does not interfere with page load
-// Since the call is cached, this means effectively one call per boot session
-setTimezone();
 
+// Call setTimezone once per page load. Also gets boot session.
+setTimezone();
 
 // https://github.com/6502/sha256
 //
@@ -1971,5 +2014,4 @@ function translate_html(){
 		d.innerText = tlt(d.innerText) ;
 	}
 }
-
 

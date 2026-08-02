@@ -7,6 +7,7 @@ from drehorgel import tunemanager, config, timezone
 import fileops
 
 # Compress midi, html, css and js files in the browser: NO, bad idea.
+# >>> a veces dice File manager y a veces "Files", ej boton index page
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
