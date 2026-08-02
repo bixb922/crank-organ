@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!-- Copyright (c) 2025 Hermann von Borries
+ MIT License-->
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Busca organillo</title>
+</head>
+<body>
+<style>
+html {
+  font-size: 62.5%; }
+body {
+  font-size: 1.4em; /* 1.4em currently ems cause chrome bug misinterpreting rems on body element */
+  line-height: 1.4;
+  font-weight: 400;
+  font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #222; }
+table {
+  border-collapse: collapse; /* Merges borders into a single line */
+  width: 100%;
+}
+    
+.logtext{
+    font-size:90%;
+    color: #606060;
+}
+
+hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
+    padding: 0;
+}
+
+th, td {
+  border: 1px solid black; /* Adds borders to all cells */
+  padding: 8px; /* Adds space between content and border */
+  text-align: left;
+}
+</style>
+<button onclick="scan()">Buscar organillo</button>
+<p>
+<span id="sta_texto"></span><a id="sta_link"></a>
+</p>
+<p>
+<span id="ap_texto"></span><a id="ap_link"></a>
+</p>
+<hr>
+<p>
+<span id="result" class="logtext">El organillo debe estar energizado.<br></span>
+</p>
+<p></p>
+<center id="qrcode"></center>
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+
+let MCS_UUID = 0x1848 ; //Media Control Service
+// Some private characteristics
+_CHARACTERISTIC_UUIDS = [
+    "2a7c3e29-62f9-47bf-8b00-69db8c3c88f1",
+    "49f99c64-b2c8-40de-a944-ea4fd48b497a",
+    "1732b3cb-c879-4157-a106-65d38cac591b",
+    "c9eb91e8-03ca-4739-a774-8fbee561caee",
+    "98bfa6b0-55fc-4197-905e-635d68e58bf6",
+    "35dcf9be-89be-404b-bb7f-61dde7160e96",
+    "b17957bc-c797-470c-b844-6015c9f7f390"
+    // pending: add MCS UUIDs
+];
+_CHARACTERISTIC_NAMES = [ "stassid1", "stassid2", "apssid", "staip1", "staip2",  "apip", "status"];
+    
+
+function log( s ){
+    let result = document.getElementById("result");
+    if( s == "new"){
+        result.innerText = "";
+        return ;
+    }
+    result.innerHTML = result.innerHTML + s + "<br>";
+}
+// future use?
+async function sleep_ms( t ){
+	await new Promise(r => setTimeout(r, t));
+}
+    
+async function getCharacteristicString( service, uuid ){
+    let characteristic = await service.getCharacteristic(uuid);
+    let value = await characteristic.readValue()
+    return new TextDecoder().decode(value);
+}
+
+async function scan(){
+    log("new");
+    let btinfo = await getBtInfo();
+    let d = new Date();
+    log("Información obtenida " + d.toLocaleDateString() + " " + d.toLocaleTimeString()    );
+    for( k in btinfo ){
+        log(k+": "+btinfo[k]);
+    }
+    let sta_texto = document.getElementById("sta_texto");
+    let sta_link = document.getElementById("sta_link");
+    let ap_texto = document.getElementById("ap_texto");
+    let ap_link = document.getElementById("ap_link");
+    sta_texto.innerText = "";
+    sta_link.innerText = "";
+    sta_link.href = "";
+    ap_texto.innerText = "";
+    ap_link.innerText = "";
+    ap_link.href = "";
+    
+    for( const[sta,other] of [["1","2"], ["2","1"]]){
+        let status = btinfo["stastatus" + sta]  ;
+        let ssid = btinfo["stassid" + sta];
+        if( ssid == "" || status == "n"){
+            continue;
+        }
+        let ssid_other = btinfo["stassid" + other];
+        let staip = btinfo["staip" + sta];
+        if( status == "b"){
+            sta_texto.innerHTML = `El organillo está intentando conectarse a la red WiFi <b>${ssid}</b>. Verifique que esa red esté activada y cerca. `;
+            if( ssid_other != "" ){
+                 sta_texto.innerHTML +=` Si no resulta, el organillo automáticamente probará conectarse a la red Wifi <b>${ssid_other}</b>. `;
+            }
+            sta_texto.innerHTML += " Intente de nuevo.";
+        }
+        else if( status == "c" ){
+            sta_texto.innerHTML = `El organillo está correctamente conectado a la red Wifi <b>${ssid}</b>. Asegúrese que su celular ofrece esta red como hotspot, o que su celular o PC está conectado a esta red. Si es así, haga click `;
+            sta_link.innerText = "aquí para llegar al organillo";
+            sta_link.href = "http://" + staip + "/";
+            break;
+        }
+        // Ignore status == "n"
+        
+    }
+    if( btinfo["apssid"] == undefined){
+        sta_texto.innerHTML = "Intente de nuevo.";
+        return;
+    }
+    let ssid1 = "<b>" + btinfo["stassid1"] + "</b>";
+    let ssid2 = "<b>" + btinfo["stassid2"] + "</b>";
+    if( ssid1 == "<b></b>" ){
+        ssid1 = "(red 1 no definida)";
+    }
+    if( ssid2 == "<b></b>" ){
+        ssid2 = "(red 2 no definida)";
+    }
+    
+    if( sta_texto.innerText == ""){
+        sta_texto.innerHTML = `Ninguna de las redes WiFi ${ssid1} o ${ssid2} están activadas ni visibles. Intente de nuevo.`;
+    }
+    if( btinfo["apstatus"] == "a" ){
+        let apip = btinfo["apip"];
+        let apssid = btinfo["apssid"];
+        
+        ap_texto.innerHTML = `Si no hay forma de conectarse a través ${ssid1} ni ${ssid2}, puede conectarse a la red WiFI propia del organillo <b>${apssid}</b>. Una vez conectado a ese WiFi, haga click `;
+        ap_link.innerText = "aquí para llegar al organillo";
+        ap_link.href = "http://" + apip + "/";
+    }
+    else {
+        ap_texto.innerHTML = "El WiFi propio del organillo solo está disponible por unos minutos cuando se inicia el organillo.";
+    }
+}
+    
+async function getBtInfo(){
+    let options = {}
+    options.filters = [ {services:[MCS_UUID]} ];
+    //options.acceptAllDevices = true;
+    options.optionalServices = [MCS_UUID];
+    let btinfo = {};
+    if( !navigator.bluetooth ){
+        alert("En este browser no funciona bluetooth, use Chrome");
+        return btinfo;
+    }
+    log("Esperando por bluetooth" );
+    try{
+        let device = await navigator.bluetooth.requestDevice(options);
+        console.log("device ", device);
+        btinfo.device_name = device.name;
+        let server = await device.gatt.connect();
+        console.log("server", server);
+        let service = await server.getPrimaryService(MCS_UUID);
+        console.log("service", service);
+
+        for( i = 0; i < _CHARACTERISTIC_UUIDS.length; i++){
+            let value = await getCharacteristicString( service, _CHARACTERISTIC_UUIDS[i]);
+            btinfo[ _CHARACTERISTIC_NAMES[i]] = value;
+        }
+        let status = btinfo["status"];
+        btinfo["stastatus1"] = status[0];
+        btinfo["stastatus2"] = status[1];
+        btinfo["apstatus"] = status[2];
+        console.log("btinfo", btinfo);
+        server.disconnect();
+    }
+    catch(e){
+        log("Problema al conectar con bluetooth"+e);
+        alert("Problema al conectar con blueooth");
+    }
+    return btinfo;
+}
+    
+//new QRCode("qrcode", "WIFI:S:esp32s3;T:WPA;P:password;H:false;;");
+//    Generate a Wi-Fi QR Code: You can use a client-side JavaScript QR code 
+//    library (like qrcode.js) to generate a specialized Wi-Fi configuration 
+//    string: 
+//    WIFI:S:<SSID>;T:<WPA|WEP|blank>;P:<PASSWORD>;H:<true|false|blank>;;. 
+//    When users scan this with their phone cameras, their operating system handles the connection securely
+// H:true for hidden network.
+// P: only accepts correct password.
+    
+</script>
+</body>
