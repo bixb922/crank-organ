@@ -58,6 +58,7 @@
      * [View files](#view-files)
      * [Download files](#download-files)
 15.  [Turning the system on](#15-turning-the-system-on)
+     * [Another way to connect to the WiFi](#another-way-to-connect-to-the-wifi)
 16.  [Installation](#16-installation)
      * [Prerequisite hardware and software](#prerequisite-hardware-and-software)
      * [Installing prerrequisite software](#installing-prerrequisite-software)
@@ -524,6 +525,8 @@ See [WiFi Capabilities](#wifi-capabilities)
 
 You also can change any passwords editing config.json on your PC and then uploading the file with mpremote. After the next reboot, passwords will appear encrypted.
 
+Also you may be interested in this easy way to connect to WiFi [here](#another-way-to-connect-to-the-wifi).
+
 ## Power management settings
 
 Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (shortened a bit) if the maximum is exceeded. Calculate this number by dividing the maximum current less 10% by the current consumption of each solenoid, and truncate to the previous integer. Does not apply to RC servos (the limit for RC servis is not how many are on but how many are moving).
@@ -856,6 +859,14 @@ If there is no current setlist stored (empty setlist), turning the crank or rele
 If you have the tune list or performance page open in your cell phone previously to a reboot or power on, the page will poll the microcontroller until it is powered on and running, and then it will refresh the information. The "broken heart" emoticon on the header bar will disappear automatically once the microcontroller is running. Pages are automatically reloaded on power on.
 
 You don't need your cell phone turned on to play music, only to alter the setlist. In fact, you don't need a cell phone at all to play music with this system.
+
+## Another way to connect to the WiFi
+
+Here is another way to connect to the crank organ from your cell phone. You will need to check "Advertise WiFi names on Bluetooth" on the General Configuration page and save. 
+
+Use Chrome. Go to the page https://bixb922.github.io/. Scroll down to "Find my crank organ" and click that link. Click on the "Find my crank organ" button on the new page. Then follow the instructions.
+
+If you like that page, tell Chrome to put a shortcut on your cell phone's home screen.
 
 
 # 16. Installation
@@ -1284,7 +1295,7 @@ If you the microcontroller's browser does not respond:
 
 If browser response is slow, check the WiFi signal. Move the crank organ nearer to the router, or use the hotspot that your cell phone provides. The WiFi scan on the "System" page provides the signal strength as seen by the microcontroller. dBm in the range of  -70dB to -90dB are good (-90dB is best). Around -60dB leads to delays.
 
-If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. 
+If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. Or see [here](#another-way-to-connect-to-the-wifi)
 
 
 
@@ -1692,6 +1703,9 @@ If tune is not started by crank, it will not react to the crank.
 * Fix configuration parameter to enable writing debug log to flash.
 * Fix all notes off of a register when turning off that register.
 * Fix bad formatting of this document (thanks to oatybiscuit for reporting)
+* New version of json cache in javascript/browser to make loading pages faster.
+* Add a bixb922.github.io page. First version of "Find my organ" on that page.
+* Fix favicon on web pages.
 
 
 # 22. Programming language

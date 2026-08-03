@@ -726,12 +726,12 @@ def serve_favicon( fn ):
 
 @app.route("/favicon.ico")
 async def favicon_ico(request):
-    serve_favicon( "favicon.ico" )
+    return serve_favicon( "favicon.ico" )
 
 
 @app.route("/favicon.png")
 async def favicon_png(request):
-    serve_favicon( "favicon.png" )
+    return serve_favicon( "favicon.png" )
 
 
 # Not called from web page, used for debugging

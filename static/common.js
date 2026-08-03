@@ -812,8 +812,8 @@ class JsonCache{
 			// in that short time the cached items will not change.
 			sessionStorage.setItem("storageBootSession", boot_session);
 			sessionStorage.setItem("storageTunelibSignature", tunelib_signature);
-			JsonCache.boot_session =  boot_session ;
-			JsonCache.tunelib_signature =  tunelib_signature ;
+			JsonCache.boot_session = boot_session ;
+			JsonCache.tunelib_signature = tunelib_signature ;
 			// console.log(">>>session storage was null, setting values");
 			return false;
 		}
@@ -825,15 +825,18 @@ class JsonCache{
 	
 		if( reboot ){
 			JsonCache.dropCaches();
+			sessionStorage.setItem("storageBootSession", boot_session);
+
 		}
 		if( tunelib_change ){
+			// Could as well drop all caches...
 			tunelibCache.drop();
 			lyricsCache.drop();
-			timezoneCache.drop(); // timezoneCache caches the tunelib_signature, it has  changed!
+			timezoneCache.drop(); // timezoneCache caches the tunelib_signature, get rid of old value!!!
 			// console.log(">>>>dropped tunelib, lyrics & timezone cache");
+			sessionStorage.setItem("storageTunelibSignature", tunelib_signature);
+
 		}
-		sessionStorage.setItem("storageTunelibSignature", tunelib_signature);
-		sessionStorage.setItem("storageBootSession", boot_session);
 
 		// console.log(">>>check session sessionStorage tunelib now set to", sessionStorage.getItem("storageTunelibSignature" ));
 		return reboot || (tunelib_change && JsonCache.reloadIfTunelibChanged) ;
@@ -863,9 +866,10 @@ class JsonCache{
 		for( let cache of JsonCache.cacheList){
 			cache.drop();
 		}
-		// Do not use sessionStorage.clear(), it would clear also the stored storageBootSession and storageTunelibSignature
-		// and thus be ignored.
-		// The other item that isn't deleted here is the note repetition rate.
+		// Do not use sessionStorage.clear(), it would also clear the 
+		// stored storageBootSession and storageTunelibSignature and
+		// thus be ignored.
+		// The other storageSession item that isn't deleted here is the note repetition rate.
 	}
 
 
@@ -1238,9 +1242,10 @@ async function setTimezone(){
 	let shortName = timeInfo[timeInfo.length-1];
 	let longName = Intl.DateTimeFormat().resolvedOptions().timeZone; 
 	// consoledebug(">>>setTimezone fetch start");
-	// Cache this call. So a webservice is only called whenever the cache is invalidated,
+	// Cache this call. Hence this webservice is only called whenever the cache is invalidated,
 	// i.e. mainly when the microcontroller is rebooted (or the tunelib changes, tough luck).
 	// In both cases it brings back the session ids with a overhead similar to a getProgress.
+	// and sets the time/timezone if necessary.
 	let resp = await timezoneCache.get( 
 			{"offset": offsetMinutes*60, 
 			  "shortName":shortName,
