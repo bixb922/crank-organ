@@ -107,7 +107,8 @@ async function updateNoteList( notelist ) {
 		// Column 4: amplitude as bar graph, id `amp${midi} (amp_related)
 		// Column 5: pin name
 		let link = document.createElement("a");
-		link.href = `/note/${midi}`;
+		// >>> needs testing
+		link.href = `/static/note.html?id=${midi}`;
 		link.innerText = note["name"];
 		row.cells[0].appendChild( link ) ;
 		let centsBar = document.createElement("canvas", {is:"needle-bar"});

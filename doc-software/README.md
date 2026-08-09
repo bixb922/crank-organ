@@ -154,7 +154,7 @@ Please post a Github issue in this repository for any question you might have. P
 
 
 # 4. If you want to try out the software
-To see this software in operation, there is a demo here: https://drehorgel.pythonanywhere.com/demo/.
+To see this software in operation, there is a demo here: https://bixb922.github.io/demo/.
 
 The demo allows to see the Tune list and the Performance page in operation (although there is certainly no crank organ behind that will make music, as we all know there are no cranks organ on the cloud). You also can see all configuration pages (although no configuration can be changed on the demo).
 
@@ -1361,7 +1361,7 @@ If the browser cannot find the name of your crank organ, turn off WiFi on the ce
 * Dropped FTP support in favor of the included File Manager. The File Manager is faster, easier to use and does not need to install additional software.
 * Many small changes for better stability, corrections and performance enhancements.
 * Several changes to enhance security and password management.
-* Demo on open internet at https://drehorgel.pythonanywhere.com/demo/
+* Demo on open internet at https://bixb922.github.io/demo/
 * A microphone icon next to tune title indicates lyrics are available for this tune (You have to add the lyrics on the Tunelib Edi  tor page).
 * Better location for the lyrics button on the Performance page, button is always shown but enabled/disabled when lyrics are available. 
 * Rename "To beginning" to "Da capo" button (less space on screen).
@@ -1782,6 +1782,9 @@ WiFi AP mode and Station mode have some restrictions on the ESP32-S3. These are 
 If AP mode not in active usage (no browser page open) and no station SSID could be connected so far, then the microcontroller will try to connect to SSID 1, then to SSID 2, etc until one of these happens:
 * One of the SSIDs can be connected.
 * A browser starts using AP mode.
+
+
+History column on tunelist shows count until last reboot
 
 
 # 26. Licensing

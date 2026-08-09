@@ -79,6 +79,11 @@ function format_secHHMM( seconds ) {
 function getResourceFromURL(){
 	let page_url = new URL(window.location.href) ;
 	let path = page_url.pathname.split("/") ;
+	const urlParams = new URLSearchParams(window.location.search);
+    if( urlParams.has("id")){
+        return urlParams.get("id")
+    }
+
 	if( path.length <= 2 ) {
 		return "" ;
 	}
@@ -693,18 +698,18 @@ function setAllTextById( json_result ) {
 }
 
 // Tunelib.json columns, function to verify if correct.
-TLCOL_ID = 0 ;
-TLCOL_TITLE = 1 ;
-TLCOL_GENRE = 2 ;
-TLCOL_AUTHOR = 3 ;
-TLCOL_YEAR = 4 ;
-TLCOL_TIME = 5 ;
-TLCOL_FILENAME = 6 ;
-TLCOL_AUTOPLAY = 7 ;
-TLCOL_INFO = 8 ;
-TLCOL_DATEADDED = 9 ;
-TLCOL_RATING = 10 ;
-TLCOL_SIZE = 11 ;
+const TLCOL_ID = 0 ;
+const TLCOL_TITLE = 1 ;
+const TLCOL_GENRE = 2 ;
+const TLCOL_AUTHOR = 3 ;
+const TLCOL_YEAR = 4 ;
+const TLCOL_TIME = 5 ;
+const TLCOL_FILENAME = 6 ;
+const TLCOL_AUTOPLAY = 7 ;
+const TLCOL_INFO = 8 ;
+const TLCOL_DATEADDED = 9 ;
+const TLCOL_RATING = 10 ;
+const TLCOL_SIZE = 11 ;
 TLCOL_HISTORY = 12 ;
 TLCOL_LYRICS = 13 ; // lyrics present
 TLCOL_COLUMNS = 14 ;
@@ -881,16 +886,14 @@ class JsonCache{
 	}
 	async get(post){
 		// post parameter is optional (for /set_time_zone)
+		// If already in page storage, return the parsed JSON as Javascript object.
 		if( this.theJson != null ){
 			return this.theJson;
 		}
 		// avoid reentering the critical section, if not,
 		// the same element may be asked for twice, slowing down
-		// the system.
-		this.reentry += 1;
-		while( this.reentry > 1 ){
-			await sleep_ms(50);
-		}
+		// the system. 
+		await this.#mutexLock();
 		let data = null;
 		try{
 			// sessionStorage is a good place: valid for multiple pages on the same tab.
@@ -909,10 +912,12 @@ class JsonCache{
 		}
 		catch(e){
 			console.error("JsonCache get failed", e);
-			this.reentry -= 1;
 			throw e ;
 		}
-		this.reentry -= 1;
+		finally{
+			this.#mutexUnlock();
+		}
+		
 		// JSON.parse takes about 1msec for 100kb tunelib with 600 tunes.
 		// Speed this up caching the parsed data in page storage.
 		this.theJson = JSON.parse( data ) ;
@@ -922,12 +927,23 @@ class JsonCache{
 		sessionStorage.removeItem( this.url  );
 		this.theJson = null;
 	}
+	async #mutexLock( ){
+		// A very small mutex.
+		this.reentry += 1;
+		while( this.reentry > 1 ){
+			await sleep_ms(50);
+		}
+	}
+	#mutexUnlock(){
+		this.reentry -= 1;
+	}
 
 }
 const configCache = new JsonCache( "/get_current_config");
 const tunelibCache = new JsonCache( "/data/tunelib.json");
 const lyricsCache = new JsonCache( "/data/lyrics.json");
-
+const timezoneCache = new JsonCache("/set_time_zone")
+// >>> Could also cache: /get_index_page_info, /get_setlist_titles (reset when changed)
 
 
 
@@ -1235,7 +1251,6 @@ class PasswordDialog{
 
 // Share current time zone information with server
 // Also: get boot_session and tunelib_signature to initialize JsonCache
-const timezoneCache = new JsonCache("/set_time_zone")
 async function setTimezone(){
 	let offsetMinutes = new Date().getTimezoneOffset();
 	let timeInfo = new Date().toLocaleString([], {timeZoneName:"short"}).split(" ");

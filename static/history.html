@@ -55,6 +55,7 @@ let pageHeader = new PageHeader().setTitle( tlt("Historia"), "back" );
 
 
 async function getHistory( ) {
+    // Don't use cached version here, we need to show history up-to-date.
 	let histlist = await fetch_json( "/data/history.json" ) ;
     // sort by timestamp 
     histlist.sort( (a,b)=>(b[1]-a[1]) );

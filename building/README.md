@@ -5,7 +5,7 @@ This is a collection of links and random thoughts on building a crank organ.
 To build a crank organ yourself, you need to build:
 * A bellows. This is a good starting point, without bellows, there is no air for the pipes. Search for the links to Melvin Wright's bellows in this file.
 * Pipes. 20 pipes is a good starting point. There are many links below that describe pipe measures and pipe building. "Closed pipes" is a type of pipes that fits very well with crank organs.
-* Pipes are inserted with a small tube into a box called the "wind chest". There is little description on how to make a wind chest, since it's only a box. My photo log here https://drehorgel.pythonanywhere.com/info/static/gallery.html shows how I made the wind chests.
+* Pipes are inserted with a small tube into a box called the "wind chest". There is little description on how to make a wind chest, since it's only a box. My photo log here https://bixb922.github.io/build_photos/ shows how I made the wind chests.
 * Solenoid valves for each pipe. The easiest way is to purchase organ pipe valves, see links below. If you really want to make pipe valves yourself, see this article about valves with RC servos: [RC servos for crank organ valves](/doc-servo/servos.md)
 * The electronics, see here [](/doc-hardware/README.md)
 * A case where all components fit in. The easiest way is to build something to your tase once you have all components is finished.
@@ -331,7 +331,7 @@ You need an axis. The diameter should be 8 mm or larger. 10mm and even 15mm are 
 
 I used this one: https://www.mcmaster.com/products/rotary-shafts/shafts-3~/keyed-rotary-shafts-5/diameter~8-mm/length~300-mm/
 
-In my photo gallery: https://drehorgel.pythonanywhere.com/iot/static/gallery.html are some photos that show my crank construction.
+In my photo gallery: https://bixb922.github.io/build_photos/ are some photos that show my crank construction.
 
 
 # 8. MIDI Files

@@ -79,7 +79,7 @@ Specific documents:
 This is work in progress, but I am actively using this solution on a daily basis, so I feel it is pretty stable. Please post an issue in the "issue" section or start a discussion in this repository for questions or observations.  I'll be happy to correct any problem and will try to help if there is an issue.
 
 # 3. To see a demo
-To see this software in operation, see a demo here: https://drehorgel.pythonanywhere.com/demo/.
+To see this software in operation, see a demo here: https://bixb922.github.io/demo/.
 
 This demo simulates the operation of the software in this repository closely. The pages have some guidance at the beginning. There is no need to install any software on your PC.
 

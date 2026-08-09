@@ -8,7 +8,7 @@ See https://www.youtube.com/@bixb922 to see and hear the crank organ playing mus
 
 See https://www.tapatalk.com/groups/buskerorgan/what-organ-plans-are-available-t38.html for a list of organ plans.
 
-See http://drehorgel.pythonanywhere.com/iot/static/gallery.html for a photo log of the construction of my crank organ.
+See http://bixb922.github.io/build_photos/ for a photo log of the construction of my crank organ.
 
 
 # Contents
