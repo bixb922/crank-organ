@@ -998,10 +998,9 @@ All these files now reside as compiled and compressed files in the ```bin``` fil
 
 If you don't know the date of your version, you can see it on the "System" page.
 
-Update to a newer version with the procedure explained in the previous section: [Installation instructions](#installation). You need to do the ```esptool.py``` command explained there.
+If you already have done these ```mpremote rm``` commands, or if you are updating starting from a version after November 2025, now use the ```esptool.py``` command shown in the section [Installing crank organ software](#installing-crank-organ-software). 
 
-This update procedure does *not* affect MIDI files nor the configuration.
-
+The update procedure does *not* affect MIDI files nor the configuration.
 
 
 # 18. Interesting stuff
@@ -1725,7 +1724,7 @@ If tune is not started by crank, it will not react to the crank.
 # 22. Changes in Sept 2026
 * Remove 8.9 minute maximum length restriction for MIDI files. Maximum length is now 6.2 days for one file. Same for time waiting while crank is stopped and time between MIDI events.
 * Use previously configured Neopixel LED pin at startup instead of pin 48. Default is pin 48.
-* Show save button on pinout page only after form has been filled. If save button is pressed with no data, pinout is saved as blank.
+* Show save button on pinout page only after form has been filled. If save button is pressed with no data, pinout was previously saved as blank.
 * Drop "isUsedForDemo()" javascript function, comment unused functions in umidiparser.
 * Fix compress_midi.py so that number of output tracks matches number of programs. Pair note on/note off. Set a minimum silence between notes of the same pitch.
 * Increase precision of scheduled waits, yielding for required time minus reserved time (has a very small net effect)
