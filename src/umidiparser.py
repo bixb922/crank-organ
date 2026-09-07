@@ -618,23 +618,23 @@ class MidiEvent:
             return self._data[1]
         raise AttributeError
 
-    @property
-    def pitch(self):
-        """
-        Returns the pitch for a PITCHWHEEL midi channel event.
+    # @property
+    # def pitch(self):
+    #     """
+    #     Returns the pitch for a PITCHWHEEL midi channel event.
 
-        -8192 is the lowest value possible, 0 (zero) means "no pitch bend"
-        and 8191 is the highest possible value.
-        """
-        self._check_property_available(PITCHWHEEL)
-        # lsb (0 - 127) and msb (0 - 127) together form a 14-bit number,
-        # allowing fine adjustment to pitch.
-        # Using hex, 00 40 is the central (no bend) setting.
-        # 00 00 gives the maximum downwards bend, and 7F 7F the
-        # maximum upwards bend.
-        # Return 0 for no bend/central bend, -8192 to -1 for downward
-        # bend and -1 to 8191 for upward bend
-        return (((self._data[1] & 0x7F) - 0x40) << 7) | (self._data[0] & 0x7F)
+    #     -8192 is the lowest value possible, 0 (zero) means "no pitch bend"
+    #     and 8191 is the highest possible value.
+    #     """
+    #     self._check_property_available(PITCHWHEEL)
+    #     # lsb (0 - 127) and msb (0 - 127) together form a 14-bit number,
+    #     # allowing fine adjustment to pitch.
+    #     # Using hex, 00 40 is the central (no bend) setting.
+    #     # 00 00 gives the maximum downwards bend, and 7F 7F the
+    #     # maximum upwards bend.
+    #     # Return 0 for no bend/central bend, -8192 to -1 for downward
+    #     # bend and -1 to 8191 for upward bend
+    #     return (((self._data[1] & 0x7F) - 0x40) << 7) | (self._data[0] & 0x7F)
 
     @property
     def program(self):
@@ -644,65 +644,65 @@ class MidiEvent:
         self._check_property_available(PROGRAM_CHANGE)
         return self._data[0]
 
-    @property
-    def control(self):
-        """
-        Returns the value for the controller 0-127 for a CONTROL_CHANGE event.
-        """
-        self._check_property_available(CONTROL_CHANGE)
-        return self._data[0]
+    # @property
+    # def control(self):
+    #     """
+    #     Returns the value for the controller 0-127 for a CONTROL_CHANGE event.
+    #     """
+    #     self._check_property_available(CONTROL_CHANGE)
+    #     return self._data[0]
 
-    @property
-    def number(self):
-        """
-        Returns number of a SEQUENCE_NUMBER meta event.
-        Values range from 0 to 2**24.
-        """
-        self._check_property_available(SEQUENCE_NUMBER)
-        # Meta event sequence number has a 2 byte big endian number
-        return int.from_bytes(self._data[0:2], "big")
+    # @property
+    # def number(self):
+    #     """
+    #     Returns number of a SEQUENCE_NUMBER meta event.
+    #     Values range from 0 to 2**24.
+    #     """
+    #     self._check_property_available(SEQUENCE_NUMBER)
+    #     # Meta event sequence number has a 2 byte big endian number
+    #     return int.from_bytes(self._data[0:2], "big")
 
-    @property
-    def text(self):
-        """
-        Returns the text for a meta events.
+    # @property
+    # def text(self):
+    #     """
+    #     Returns the text for a meta events.
 
-        text property is available for:  TEXT COPYRIGHT LYRICS MARKER CUE_MARKER
+    #     text property is available for:  TEXT COPYRIGHT LYRICS MARKER CUE_MARKER
 
-        Both event.text and event.name decode the data. Non ASCII
-        characters are shown for example as \xa5
+    #     Both event.text and event.name decode the data. Non ASCII
+    #     characters are shown for example as \xa5
 
-        """
-        self._check_property_available(
-            TEXT, COPYRIGHT, LYRICS, MARKER, CUE_MARKER
-        )
+    #     """
+    #     self._check_property_available(
+    #         TEXT, COPYRIGHT, LYRICS, MARKER, CUE_MARKER
+    #     )
 
-        return decode_ascii(self.data)
+    #     return decode_ascii(self.data)
 
-    @property
-    def name(self):
-        """
-        Returns the text for a meta events.
+    # @property
+    # def name(self):
+    #     """
+    #     Returns the text for a meta events.
 
-        name property available for:  TRACK_NAME INSTRUMENT_NAME PROGRAM_NAME DEVICE_NAME
+    #     name property available for:  TRACK_NAME INSTRUMENT_NAME PROGRAM_NAME DEVICE_NAME
 
-        See text property for description of text conversion.
+    #     See text property for description of text conversion.
 
-        The raw data can be retrieved using the data property.
-        """
-        self._check_property_available(
-            TRACK_NAME, INSTRUMENT_NAME, PROGRAM_NAME, DEVICE_NAME
-        )
-        return decode_ascii(self.data)
+    #     The raw data can be retrieved using the data property.
+    #     """
+    #     self._check_property_available(
+    #         TRACK_NAME, INSTRUMENT_NAME, PROGRAM_NAME, DEVICE_NAME
+    #     )
+    #     return decode_ascii(self.data)
 
-    @property
-    def port(self):
-        """
-        Returns the port number  0-256 for a meta MIDI_PORT message
-        """
-        self._check_property_available(MIDI_PORT)
-        # Meta port event
-        return self._data[0]
+    # @property
+    # def port(self):
+    #     """
+    #     Returns the port number  0-256 for a meta MIDI_PORT message
+    #     """
+    #     self._check_property_available(MIDI_PORT)
+    #     # Meta port event
+    #     return self._data[0]
 
     @property
     def tempo(self):
@@ -719,161 +719,161 @@ class MidiEvent:
         # in microseconds per quarter note or beat
         return int.from_bytes(self._data[0:3], "big")
 
-    @property
-    def key(self):
-        """
-        Returns the key, as str, for a KEY_SIGNATURE meta event.
+    # @property
+    # def key(self):
+    #     """
+    #     Returns the key, as str, for a KEY_SIGNATURE meta event.
 
-        For mayor keys:
-        C, D, E, F, G, A, B, C#, F#, Cb, Db, Eb, Gb, Ab
+    #     For mayor keys:
+    #     C, D, E, F, G, A, B, C#, F#, Cb, Db, Eb, Gb, Ab
 
-        For minor keys:
-        Cm, Dm, Em, Fm, Gm, Am, Bm, C#m, F#m, Cbm, Dbm, Ebm, Gbm, Abm
+    #     For minor keys:
+    #     Cm, Dm, Em, Fm, Gm, Am, Bm, C#m, F#m, Cbm, Dbm, Ebm, Gbm, Abm
 
-        If the midi message contains a value out of range, a ValueError
-        is raised. The raw data can be read with the data property.
-        """
-        self._check_property_available(KEY_SIGNATURE)
-        # Translate data of key meta messages to scale name
-        # 2 data bytes: sharps/flats and mayor/minor
-        # sharps/flats: 0=no flats/sharps, 1 to 7 number of sharps, -1 to -7 number of flats
-        # mayor/minor: 0=mayor, 1=minor
-        sharps_flats = self._data[0]
-        minor_mayor = self._data[1]
+    #     If the midi message contains a value out of range, a ValueError
+    #     is raised. The raw data can be read with the data property.
+    #     """
+    #     self._check_property_available(KEY_SIGNATURE)
+    #     # Translate data of key meta messages to scale name
+    #     # 2 data bytes: sharps/flats and mayor/minor
+    #     # sharps/flats: 0=no flats/sharps, 1 to 7 number of sharps, -1 to -7 number of flats
+    #     # mayor/minor: 0=mayor, 1=minor
+    #     sharps_flats = self._data[0]
+    #     minor_mayor = self._data[1]
 
-        if sharps_flats > 128:
-            sharps_flats -= 256
-        if sharps_flats not in range(-7, 8) or minor_mayor not in [0, 1]:
-            raise ValueError(
-                "Midi file format error, key signature meta unrecogized data"
-            )
-        if minor_mayor == 0:
-            scale_names = (
-                "Cb",
-                "Gb",
-                "Db",
-                "Ab",
-                "Eb",
-                "Bb",
-                "F",
-                "C",
-                "G",
-                "D",
-                "A",
-                "E",
-                "B",
-                "F#",
-                "C#",
-            )
-        else:
-            scale_names = (
-                "Abm",
-                "Ebm",
-                "Bbm",
-                "Fm",
-                "Cm",
-                "Gm",
-                "Dm",
-                "Am",
-                "Em",
-                "Bm",
-                "F#m",
-                "C#m",
-                "G#m",
-                "D#m",
-                "A#m",
-            )
-        return scale_names[sharps_flats + 7]
+    #     if sharps_flats > 128:
+    #         sharps_flats -= 256
+    #     if sharps_flats not in range(-7, 8) or minor_mayor not in [0, 1]:
+    #         raise ValueError(
+    #             "Midi file format error, key signature meta unrecogized data"
+    #         )
+    #     if minor_mayor == 0:
+    #         scale_names = (
+    #             "Cb",
+    #             "Gb",
+    #             "Db",
+    #             "Ab",
+    #             "Eb",
+    #             "Bb",
+    #             "F",
+    #             "C",
+    #             "G",
+    #             "D",
+    #             "A",
+    #             "E",
+    #             "B",
+    #             "F#",
+    #             "C#",
+    #         )
+    #     else:
+    #         scale_names = (
+    #             "Abm",
+    #             "Ebm",
+    #             "Bbm",
+    #             "Fm",
+    #             "Cm",
+    #             "Gm",
+    #             "Dm",
+    #             "Am",
+    #             "Em",
+    #             "Bm",
+    #             "F#m",
+    #             "C#m",
+    #             "G#m",
+    #             "D#m",
+    #             "A#m",
+    #         )
+    #     return scale_names[sharps_flats + 7]
 
-    # Time signature meta message
-    @property
-    def numerator(self):
-        """
-        Returns the numerator for the TIME_SIGNATURE meta messages, 0-255.
-        """
-        self._check_property_available(TIME_SIGNATURE)
-        return self._data[0]
+    # # Time signature meta message
+    # @property
+    # def numerator(self):
+    #     """
+    #     Returns the numerator for the TIME_SIGNATURE meta messages, 0-255.
+    #     """
+    #     self._check_property_available(TIME_SIGNATURE)
+    #     return self._data[0]
 
-    @property
-    def denominator(self):
-        """
-        Returns the denominator for the TIME_SIGNATURE meta messages, 0-255.
-        """
-        self._check_property_available(TIME_SIGNATURE)
-        return 2 ** self._data[1]
+    # @property
+    # def denominator(self):
+    #     """
+    #     Returns the denominator for the TIME_SIGNATURE meta messages, 0-255.
+    #     """
+    #     self._check_property_available(TIME_SIGNATURE)
+    #     return 2 ** self._data[1]
 
-    @property
-    def clocks_per_click(self):
-        """
-        Returns the clocks_per_click for the TIME_SIGNATURE meta messages, 0-255.
-        """
-        self._check_property_available(TIME_SIGNATURE)
-        return self._data[2]
+    # @property
+    # def clocks_per_click(self):
+    #     """
+    #     Returns the clocks_per_click for the TIME_SIGNATURE meta messages, 0-255.
+    #     """
+    #     self._check_property_available(TIME_SIGNATURE)
+    #     return self._data[2]
 
-    @property
-    def notated_32nd_notes_per_beat(self):
-        """
-        Returns the notated_32nd_notes_per_beat for the TIME_SIGNATURE meta messages,
-        0-255.
-        """
-        self._check_property_available(TIME_SIGNATURE)
-        return self._data[3]
+    # @property
+    # def notated_32nd_notes_per_beat(self):
+    #     """
+    #     Returns the notated_32nd_notes_per_beat for the TIME_SIGNATURE meta messages,
+    #     0-255.
+    #     """
+    #     self._check_property_available(TIME_SIGNATURE)
+    #     return self._data[3]
 
-    @property
-    def frame_rate(self):
-        """
-        Returns the frame for the SMPTE_OFFSET meta messages,
-        which can be 24, 25, 29.97 or 30.
+    # @property
+    # def frame_rate(self):
+    #     """
+    #     Returns the frame for the SMPTE_OFFSET meta messages,
+    #     which can be 24, 25, 29.97 or 30.
 
-        An invalid value in the MIDI file will raise a IndexError
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return [24, 25, 29.97, 30][(self._data[0] >> 5)]
+    #     An invalid value in the MIDI file will raise a IndexError
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return [24, 25, 29.97, 30][(self._data[0] >> 5)]
 
-    @property
-    def hours(self):
-        """
-        Returns the hour for the SMPTE_OFFSET meta message,
-        usually from 0 to 23.
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return self._data[0] & 0x1F
+    # @property
+    # def hours(self):
+    #     """
+    #     Returns the hour for the SMPTE_OFFSET meta message,
+    #     usually from 0 to 23.
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return self._data[0] & 0x1F
 
-    @property
-    def minutes(self):
-        """
-        Returns the minutes for the SMPTE_OFFSET meta message,
-        usually from 0 to 59.
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return self._data[1]
+    # @property
+    # def minutes(self):
+    #     """
+    #     Returns the minutes for the SMPTE_OFFSET meta message,
+    #     usually from 0 to 59.
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return self._data[1]
 
-    @property
-    def seconds(self):
-        """
-        Returns the seconds for the SMPTE_OFFSET meta message,
-        usually from 0 to 59.
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return self._data[2]
+    # @property
+    # def seconds(self):
+    #     """
+    #     Returns the seconds for the SMPTE_OFFSET meta message,
+    #     usually from 0 to 59.
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return self._data[2]
 
-    @property
-    def frames(self):
-        """
-        Returns the frames for the SMPTE_OFFSET meta message,
-        usually from 0 to 255.
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return self._data[3]
+    # @property
+    # def frames(self):
+    #     """
+    #     Returns the frames for the SMPTE_OFFSET meta message,
+    #     usually from 0 to 255.
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return self._data[3]
 
-    @property
-    def sub_frames(self):
-        """
-        Returns the sub frames for the SMPTE_OFFSET meta message,
-        usually from 0 to 59.
-        """
-        self._check_property_available(SMPTE_OFFSET)
-        return self._data[4]
+    # @property
+    # def sub_frames(self):
+    #     """
+    #     Returns the sub frames for the SMPTE_OFFSET meta message,
+    #     usually from 0 to 59.
+    #     """
+    #     self._check_property_available(SMPTE_OFFSET)
+    #     return self._data[4]
 
     @property
     def data(self):
@@ -1044,14 +1044,14 @@ class MidiTrack:
     def _get_current_miditicks(self):
         return self.current_miditicks
 
-    def play(self):
-        """
-        Plays the track. Intended for use with format 2 MIDI files.
-        Sleeps between events, yielding the events on time.
-        See also MidiFile.play.
+    # def play(self):
+    #     """
+    #     Plays the track. Intended for use with format 2 MIDI files.
+    #     Sleeps between events, yielding the events on time.
+    #     See also MidiFile.play.
 
-        """
-        return MidiPlay(self)
+    #     """
+    #     return MidiPlay(self)
 
 
 class MidiFile:
@@ -1282,82 +1282,82 @@ class MidiFile:
             self._reuse_event_object,
         )
     
-    def length_us(self):
-        """
-        Returns the length of the MidiFile in microseconds.
-        """
-        # Returns the duration of playback time of the midi file microseconds
+    # def length_us(self):
+    #     """
+    #     Returns the length of the MidiFile in microseconds.
+    #     """
+    #     # Returns the duration of playback time of the midi file microseconds
 
-        # Start playing time at 0, in case there are no events
-        playback_time_us = 0
+    #     # Start playing time at 0, in case there are no events
+    #     playback_time_us = 0
 
-        # Iterate through all events
-        # The complete file must be processed to compute length
-        # Open another instance of the file, so that the current process is not disturbed
-        # Use parameters to make it two times faster than without
-        for event in MidiFile(self._filecache.get_filename(), buffer_size=100, reuse_event_object=True):
-            if event.delta_us is not None:
-                playback_time_us += event.delta_us
+    #     # Iterate through all events
+    #     # The complete file must be processed to compute length
+    #     # Open another instance of the file, so that the current process is not disturbed
+    #     # Use parameters to make it two times faster than without
+    #     for event in MidiFile(self._filecache.get_filename(), buffer_size=100, reuse_event_object=True):
+    #         if event.delta_us is not None:
+    #             playback_time_us += event.delta_us
 
-        # Return the last time seen, or 0 if there were no events
-        return playback_time_us
+    #     # Return the last time seen, or 0 if there were no events
+    #     return playback_time_us
 
-    def play(self):
-        """
-        Iterate through the events of a MIDI file or a track,
-        sleep until the event has to take place, and
-        yield the event. Playing time is measured always from the start
-        of file, correcting a possible accumulation of timing errors.
-        """
-        return MidiPlay(self)
+    # def play(self):
+    #     """
+    #     Iterate through the events of a MIDI file or a track,
+    #     sleep until the event has to take place, and
+    #     yield the event. Playing time is measured always from the start
+    #     of file, correcting a possible accumulation of timing errors.
+    #     """
+    #     return MidiPlay(self)
 
     def finalize( self ):
         self._filecache.finalize()
             
         
-class MidiPlay:
-    """
-    Internal class used to play a MIDI file waiting after each event for the next one.
-    Use: MidiPlay( instance_of_MidiFile ) or MidiPlay( instance_of_MidiTrack )
-    Uses the __iter__/__next__ functions of MidiFile and MidiTrack to iterathe over the events.
-    """
+# class MidiPlay:
+#     """
+#     Internal class used to play a MIDI file waiting after each event for the next one.
+#     Use: MidiPlay( instance_of_MidiFile ) or MidiPlay( instance_of_MidiTrack )
+#     Uses the __iter__/__next__ functions of MidiFile and MidiTrack to iterathe over the events.
+#     """
 
-    def __init__(self, midi_event_source):
-        self.midi_event_source = midi_event_source
+#     def __init__(self, midi_event_source):
+#         self.midi_event_source = midi_event_source
 
-    def get_event_generator(self):
-        # Generator to iterate over the events and calculate the wait time
-        # for each event. Wait time is corrected by adjusting with real time compared
-        # to time since start of file.
-        playing_started_at = time_now_us()
-        midi_time = 0
-        for event in self.midi_event_source:
-            midi_time += event.delta_us
-            now = time_now_us()
-            playing_time = time_diff_us(now, playing_started_at)
-            event.timestamp_us = midi_time
-            yield (event, midi_time - playing_time)
+#     def get_event_generator(self):
+#         # Generator to iterate over the events and calculate the wait time
+#         # for each event. Wait time is corrected by adjusting with real time compared
+#         # to time since start of file.
+#         playing_started_at = time_now_us()
+#         midi_time = 0
+#         for event in self.midi_event_source:
+#             midi_time += event.delta_us
+#             now = time_now_us()
+#             playing_time = time_diff_us(now, playing_started_at)
+#             event.timestamp_us = midi_time
+#             yield (event, midi_time - playing_time)
 
-    def __iter__(self):
-        self.iterator = iter(self.get_event_generator())
-        return self
+#     def __iter__(self):
+#         self.iterator = iter(self.get_event_generator())
+#         return self
 
-    def __next__(self):
-        event, wait_time = next(self.iterator)
-        if wait_time > 0:
-            time_sleep_us(wait_time)
-        return event
+#     def __next__(self):
+#         event, wait_time = next(self.iterator)
+#         if wait_time > 0:
+#             time_sleep_us(wait_time)
+#         return event
 
-    def __aiter__(self):
-        return self.__iter__()
+#     def __aiter__(self):
+#         return self.__iter__()
 
-    async def __anext__(self):
-        # asyncio version of __next__
-        try:
-            event, wait_time = next(self.iterator)
-        except StopIteration:
-            raise StopAsyncIteration
-        # If wait time <= 0, execute asyncio.sleep anyhow to yield control to other tasks
-        await asyncio_sleep_ms(max(wait_time // 1_000, 0))
-        return event
+#     async def __anext__(self):
+#         # asyncio version of __next__
+#         try:
+#             event, wait_time = next(self.iterator)
+#         except StopIteration:
+#             raise StopAsyncIteration
+#         # If wait time <= 0, execute asyncio.sleep anyhow to yield control to other tasks
+#         await asyncio_sleep_ms(max(wait_time // 1_000, 0))
+#         return event
     

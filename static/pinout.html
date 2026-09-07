@@ -112,7 +112,7 @@
         <tbody id="tbodyPinoutForm">
         </tbody>
     </table>
-    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()">Save pinout definitions</button>
+    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()" style="display:none">Save pinout definitions</button>
     <br>
 
 When pressing the save button, you may be asked for the password of the microcontroller.
@@ -132,7 +132,6 @@ When pressing the save button, you may be asked for the password of the microcon
 // MIT License
 
 
-// PageHeader.setTitle(headerTitle, upAction)
 let pageHeader = new PageHeader().setTitle( "Pinout and MIDI configuration", "index" );
 
 let currentPinoutFilename = null;
@@ -486,6 +485,8 @@ async function getPinoutDetail( ) {
     updateAllNoteNames();
     document.getElementById("tbodyPinoutForm").style.display = "";
     await get_available_pins() ;
+    // Now that form has data, show button.
+    showHideElement( "savePinoutDetailButton", true );
 }
 
     
@@ -502,7 +503,6 @@ async function savePinoutFilename(){
     showHideElement( "table_list_pinout_by_midi_note", false );
 }
   
-// >>> pressing save when page hasnt loadded may leave pinout []
 async function savePinoutDetail(){
     let newpd = [] ;
     let rows = document.getElementsByTagName( "tr" );
@@ -910,12 +910,7 @@ async function get_available_pins(){
         return s.substring(0,s.length-1);
     }
     let json_result = {};
-    if( !isUsedFromDemo() ){
-        json_result = await fetch_json( "/get_used_pins/" + encodePath(currentPinoutFilenameAbs()) );
-    }
-    else{
-        json_result = await fetch_json( "/get_used_pins" + encodePath(currentPinoutFilenameAbs()) );
-    }
+    json_result = await fetch_json( "/get_used_pins/" + encodePath(currentPinoutFilenameAbs()) );
     for( const [key, value] of Object.entries(json_result)) {
         if( typeof value == typeof []){
             textById( key, list_to_string(value) );

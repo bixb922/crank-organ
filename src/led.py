@@ -31,10 +31,7 @@ class BlinkingLed:
         self.neopixel_led = NoLED()
         self.blink_setlist_task = None
         try: 
-            p = get_led()        
-            if p:
-                self.neopixel_led = neopixel.NeoPixel(Pin(p), 1)
-
+            self.neopixel_led = get_led()
             self.off()
             self.blink_setlist_task = asyncio.create_task(self._blink_setlist_process())  
             self.problem_task = asyncio.create_task(self._problem_process())
@@ -169,7 +166,7 @@ class BlinkingLed:
         self.neopixel_led = NoLED()
 
 def set_led( pin ):
-    # Caching pin makes this module decoupled from pinout
+    # Caching pin decouples this module from pinout
     # and led starts sooner. led.txt is only created if
     # the pin has changed and is different from the default 48.
     if get_led() != pin:
@@ -180,6 +177,14 @@ def set_led( pin ):
 def get_led():
     try:
         with open(_LED_FILE) as file:
-            return int(file.read())
-    except: 
-        return 48
+            p = int(file.read())
+    except: # OSError, ValueError
+        # Most ESP32-S3 boards have neopixel on GPIO 48.
+        p = 48
+    return neopixel.NeoPixel(Pin(p), 1)
+
+# Say hello at startup, with minimal overhead.
+def hello():
+    led = get_led()
+    led[0] = (0, 0, 8)
+    led.write()

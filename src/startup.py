@@ -219,3 +219,4 @@ async def start():
         # test_async(),
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
+    # asyncio.gather() does not return.

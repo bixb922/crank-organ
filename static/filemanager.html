@@ -70,7 +70,6 @@
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
 
-    // PageHeader.setTitle(headerTitle, upAction)
     let pageHeader = new PageHeader().setTitle( "File Manager", ()=>{pageUp()} );
     // input dialog with webkitdirectory may upload entire folders...
     // DFWAB.
@@ -313,9 +312,6 @@
         showPath();
         //let listdir_url = "/listdir?" + new URLSearchParams( {"path":  CURRENT_PATH});
         let listdir_url = "/listdir/" + encodePath(CURRENT_PATH);
-        if( isUsedFromDemo() ){
-            listdir_url = "/demo/listdir"; // demo on server only
-        }
         data = await fetch_json(listdir_url);
 
         if (path !== '/' && path != "") {

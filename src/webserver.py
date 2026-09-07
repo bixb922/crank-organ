@@ -3,7 +3,7 @@
 # Webserver module, serves all http requests.
 
 # >>> check if multipart/form-data is better than shipping json.
-# >>> some day, update Microdot to last version
+# >>> some day, update Microdot to last version (size increase!)
 # >>> evaluate Microdot native authorization
 
 
@@ -34,7 +34,7 @@ _logger = getLogger(__name__)
 # Priority: software/static (if it there) to allow
 # incremental software update and development
 # If one of these folders is not there, no significant overhead is incurred.
-STATIC_FOLDERS = ["/software/static/", "/rom/static/"]
+_STATIC_FOLDERS = ("/software/static/", "/rom/static/")
 
 
 # Session is a dict, key=session_id, session data is a dict, for example {"login":True}
@@ -182,7 +182,7 @@ async def static_files( request, path ):
             return "Safari not supported, use Chrome or Firefox"
     # No RequestSlice here, if someone wants to load pages while
     # playing music, let them.
-    for folder in STATIC_FOLDERS:
+    for folder in _STATIC_FOLDERS:
         filename = folder + path
         # Check first for uncompressed file. 
         # Could make it easier for development since
@@ -718,7 +718,7 @@ async def test_touchpad( request ):
 
 # Generic requests requests: some browsers request favicon
 def serve_favicon( fn ):
-    for folder in STATIC_FOLDERS:
+    for folder in _STATIC_FOLDERS:
         filename = folder + fn
         if fileops.file_exists( filename ):
             return send_file(filename, max_age=MAX_AGE)
@@ -860,7 +860,6 @@ async def filemanager_listdir(request, path=""):
     import filemanager
     return filemanager.listdir( listpath )
 
-# >>> ?? not used
 #@app.route("/listdir_tunelib")
 #async def listdir_tunelib(request):
 #    import filemanager
@@ -1015,7 +1014,7 @@ async def run_webserver():
 
     # Configure file cache for browser
     # MAX_AGE is applied selectively
-    _logger.debug(f"{MAX_AGE=:,} sec {STATIC_FOLDERS=}")
+    _logger.debug(f"{MAX_AGE=:,} sec {_STATIC_FOLDERS=}")
     await app.start_server(host="0.0.0.0", port=80 )
 
 

@@ -23,15 +23,15 @@ class HistoryManager:
         hlist = fileops.read_json(config.HISTORY_JSON,
                                   default=[],
                                   recreate=True)
-        self.logger.debug(f"{len(hlist)} elements in history")
+        # self.logger.debug(f"{len(hlist)} elements in history")
         return hlist
     
-    def add_entry( self, tuneid, start_time, percentage, rfu ):     
+    def add_entry( self, tuneid, start_time, percentage, repeat_count ):  
         hlist = self._read_hlist()
         # use 1/0 instead of true/false to save space
         # use timestamp instead of full ascii date to 
         # make time comparison in self.delete_old() easier.
-        hlist.append((tuneid, start_time, percentage, 1 if rfu else 0 ))
+        hlist.append((tuneid, start_time, percentage, repeat_count ))
         fileops.write_json(hlist, config.HISTORY_JSON, keep_backup=False)
         hlist = None
         

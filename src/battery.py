@@ -237,7 +237,7 @@ class Battery:
         self.calibrated = True
         self.logger.debug(f"Calibration coefficients: {self.coefficients=}, tune capacity: {self.tune_capacity:.0f}")
 
-    def estimate_percent_remaining(self)->None|float:
+    def estimate_percent_remaining(self)->None|float: # type:ignore
         if self.calibrated:
             beta = self.coefficients
             estimate = (beta[0] 
@@ -245,12 +245,12 @@ class Battery:
                         + beta[2]*self.battery_info["solenoid_on_seconds"])
             return max(min(estimate,100),0)
     
-    def estimate_tunes_remaining(self)->None|float:
+    def estimate_tunes_remaining(self)->None|float: # type:ignore
         if self.calibrated:
             # Must be called after updating self.battery_info["percent_remaining"]
             return self.tune_capacity*self.battery_info["percent_remaining"]/100
 
-    def estimate_operating_seconds_remaining(self)->None|float:
+    def estimate_operating_seconds_remaining(self)->None|float: # type:ignore
         if self.calibrated:
             # Estimate average time a tune takes, including the
             # pause between tunes.
@@ -264,12 +264,13 @@ class Battery:
                 total_per_tune = self.battery_info["operating_seconds"]/self.battery_info["tunes_played"]
             return self.estimate_tunes_remaining()*total_per_tune
     
-    def estimate_low(self)->None|bool:
+    def estimate_low(self)->None|bool: # type:ignore
         pr = self.estimate_percent_remaining()
         if pr is not None:
             return pr < _BATTERY_LOW_PERCENT
 
     def complement_progress( self, progress ):
+        # >>> don't add if battery_info is None???
         progress["bat_low"] = self.battery_info["low"]
         progress["bat_percent_remaining"] = self.battery_info["percent_remaining"]
         progress["bat_remaining_seconds"] = self.battery_info["remaining_seconds"]

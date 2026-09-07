@@ -74,7 +74,7 @@ class Config:
         self.password_required = False
         self.ap_ip = "192.168.144.1"
         self.ap_fallback_only = False 
-        self.advertise_bt = False # >>> make client translatable
+        self.advertise_bt = False
 
         # Rotary sensor 
         self.rotary_tempo_mult = 1.0

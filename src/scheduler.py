@@ -3,24 +3,17 @@
 
 # Allows the MIDI player to wait letting well behaved asyncio tasks
 # execute during the times between MIDI events.
+
 from micropython import const
-from time import ticks_diff, ticks_us, ticks_ms, sleep_us
+from time import ticks_diff, ticks_ms
 import asyncio
 import gc
 
 _run_always_flag = True
 
 # Time that is spent waiting with precision timer.
-# On ESP32 and ESP32-S3, async.sleep_ms() is done
-# in clock ticks of 10 or 20 ms, so it's not precise at
-# all. Leaving a RESERVED_US waits short of this time
-# and then time.sleep_us() is used. 
-# sleep_us() does not yield but is very precise,
-# correcting the error of async.sleep_ms most of the times.
-_RESERVED_USEC = const(15_000) # last value 15_000
-# With this value, remaining_us is in the average around 10 msec
-# and is rarely negative. The cause of this is that asyncio.sleep_ms()
-# takes, on the average, 5 msec more than specified.
+# When waiting for next MIDI event, this time is reserved for the precision wait.
+_RESERVED_MS = const(25) # In milliseconds
 
 # Very big int, to use if all time is available to request slices, 
 # (but still a MicroPython small int)
@@ -37,13 +30,12 @@ _DEBUG_TIMES = const(False)
 # Reading the response lines after the first line in Microdot
 # takes 150 to 300 msec in async but blocks sometimes for 50 msec
 # making this wait here late by around 50msec.
-# I patched Microdot with a small asyn delay for safe_read_line()
+# I patched Microdot with a small async delay for safe_read_line()
 # for the subsequent readlines. The initial readline() for the request line
 # does not cause problems. 
 
-# Tally CPU used in time.sleep_us() for aioprof statistics
 
-async def wait_and_yield_usec(for_usec):
+async def wait_ms(for_ms):
     # This function allows to wait for the next MIDI event with precision,
     # and allowing another task to run if the time it needs is less
     # than the wait time between MIDI events.
@@ -52,22 +44,29 @@ async def wait_and_yield_usec(for_usec):
     # This schedules at most one task per wait.
     # but this works well since there are few tasks and many MIDI events.
     global _run_always_flag
-    # If player calls wait_and_yield_usec() it means that
+    # If player calls wait_ms() it means that
     # _run_always_flag must be set to false, 
-    # no free RequestSlice anymore
+    # no free RequestSlice anymore, music is playing!
     _run_always_flag = False
+    # Wait time should not be more than 8.9 minutes, because ticks_diff()
+    # does not work with larger times.
+
+    # Remember when wait started
+    t_start = ticks_ms()
+    async_time_ms = for_ms - _RESERVED_MS
     
-    t_start = ticks_us()
-    async_time = round((for_usec - _RESERVED_USEC)/1000)
-    
-    if async_time > 0:
+    if async_time_ms > 0:
         # Run one task that can run in the available time, minus
         # the reserved time.
-        _find_and_run_task( async_time )
+        _find_and_run_task( async_time_ms )
 
-    # Wait until the time expires, yielding control.
-    while ticks_diff( ticks_us(), t_start ) < for_usec:
+    # Wait until the time set for async tasks expires, yielding control.
+    while ticks_diff( ticks_ms(), t_start ) < async_time_ms:
         await asyncio.sleep_ms(0) # better precision when using 0 msec
+
+    # Now wait the remaining time with precision, without yielding to async.
+    while ticks_diff( ticks_ms(), t_start ) < for_ms:
+        pass
 
 def _find_and_run_task(async_time):
     available = async_time # in msec
@@ -101,7 +100,7 @@ def run_always():
 #       do something
 # Will wait for a slice of requested_msec, but caller will not be kept waiting
 # more than maximum_wait.
-# The priority task (i.e playing MIDI files) must use wait_and_yield_usec() to yield to
+# The priority task (i.e playing MIDI files) must use wait_ms() to yield to
 # the scheduler and make RequestSlice() do its magic.
 # If the priority task calls run_always(), then RequestSlice() will 
 # not block, and RequestSlice() tasks will run freely.

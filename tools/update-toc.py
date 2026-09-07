@@ -87,6 +87,7 @@ def main():
         print("Processing", input_filename )
         level0 = -2
         output = process( input_filename )
+        print(">>>>writing output file", output_filename)
         with open(output_filename, "w") as file:
             for line in output:
                 if line[-1:] != "\n":

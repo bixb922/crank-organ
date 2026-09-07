@@ -15,6 +15,7 @@
          * [How to start a queued tune that is waiting](#how-to-start-a-queued-tune-that-is-waiting)
          * [Setlist control](#setlist-control)
          * [Crank and speed control](#crank-and-speed-control)
+         * [Crank and tune repetitions](#crank-and-tune-repetitions)
 7.  [Multiple stored setlists](#7-multiple-stored-setlists)
      * [Enable multiple setlists with configuration option](#enable-multiple-setlists-with-configuration-option)
      * [Load and save buttons](#load-and-save-buttons)
@@ -108,12 +109,13 @@
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
-22.  [Programming language](#22-programming-language)
-23.  [Credits](#23-credits)
-24.  [Testing](#24-testing)
-25.  [Restrictions](#25-restrictions)
-26.  [Licensing](#26-licensing)
-27.  [Affiliation](#27-affiliation)
+22.  [Changes in Sept 2026](#22-changes-in-sept-2026)
+23.  [Programming language](#23-programming-language)
+24.  [Credits](#24-credits)
+25.  [Testing](#25-testing)
+26.  [Restrictions](#26-restrictions)
+27.  [Licensing](#27-licensing)
+28.  [Affiliation](#28-affiliation)
 # 1. Feedback
 
 Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
@@ -138,7 +140,7 @@ Please post a Github issue in this repository for any question you might have. P
 * Standard type 0 and 1 MIDI files are supported. Program numbers to identify different instruments and the percussion channel (channel 10) can be defined for use.
 * Allows add lyrics
 * Unattended operation is possible too. After a definable number of seconds, the next tune starts automatically.
-* Barrel organ repeats: allows to the current MIDI file just like a barrel organ, repeating the current tune when ended.
+* Barrel organ repetitions: allows to the current MIDI file just like a barrel organ, repeating the current tune when ended.
 * Software or hardware registers (as in "register stop of a organ")
 * Crank turning speed sets MIDI playback speed (optional)
 * Crank turning starts MIDI playback (optional)
@@ -154,7 +156,7 @@ Please post a Github issue in this repository for any question you might have. P
 
 
 # 4. If you want to try out the software
-To see this software in operation, there is a demo here: https://bixb922.github.io/demo/.
+To see this software in operation, there is a demo here: https://bixb922.github.io/demo/index.html.
 
 The demo allows to see the Tune list and the Performance page in operation (although there is certainly no crank organ behind that will make music, as we all know there are no cranks organ on the cloud). You also can see all configuration pages (although no configuration can be changed on the demo).
 
@@ -311,6 +313,19 @@ Touching the Touchpad or start button while the crank is stopped moves to the ne
 Crank info shows only if crank is defined in the Pinout page.
 
 The default settings for "tempo follows crank" is defined in the General Configuration page. After a tune has played, settings are reverted to the default.
+
+
+### Crank and tune repetitions
+
+If the crank is enabled, you can set the number of repetitions for a tune. This is: if you don't stop cranking at the end of the tune, it will start over. You can increase/decrease the number of repetitions before the tune starts or even while cranking the tune.
+
+![repetitions](repetitions.jpg)
+
+For example: you could make a tune for one verse (stanza) and select the verses to sing just before starting the song.
+
+If you want to cancel the repetitions, either press the "Next" button on the Performance page or use the touch pad (or equivalent switch) with the crank stopped. (Pressing that button while turning the crank has no effect).
+
+The number of repetitions is not stored, it is valid only for the current tune.
 
 # 7. Multiple stored setlists
 
@@ -1361,7 +1376,7 @@ If the browser cannot find the name of your crank organ, turn off WiFi on the ce
 * Dropped FTP support in favor of the included File Manager. The File Manager is faster, easier to use and does not need to install additional software.
 * Many small changes for better stability, corrections and performance enhancements.
 * Several changes to enhance security and password management.
-* Demo on open internet at https://bixb922.github.io/demo/
+* Demo on open internet at https://bixb922.github.io/demo/index.html
 * A microphone icon next to tune title indicates lyrics are available for this tune (You have to add the lyrics on the Tunelib Edi  tor page).
 * Better location for the lyrics button on the Performance page, button is always shown but enabled/disabled when lyrics are available. 
 * Rename "To beginning" to "Da capo" button (less space on screen).
@@ -1660,7 +1675,7 @@ If tune is not started by crank, it will not react to the crank.
 * Make MicroPython itself smaller, disabling unnecessary modules, to get more space for ROMFS.
 * Make memory footprint smaller delaying the loading of modules for web pages until needed (new module pinoutweb.py).
 * Add show/hide control for setlist and lyrics on play page, good for very long setlists to avoid scrolling down.
-* Add "Repeats requested" to play page and move "tempo follows crank" up in the page. Replace "barrel mode" configuration option with "repeat requested" option on Performance page. Make touchpad increment "repeat requested" when crank is stopped. (I.E. "barrel mode" is now per tune, not global).
+* Add "Repetitions requested" to play page and move "tempo follows crank" up in the page. Replace "barrel mode" configuration option with "Repetitions requested" option on Performance page. Make touchpad increment "repetitions requested" when crank is stopped. (I.E. "barrel mode" is now per tune, not global).
 * Drop pairing notes in compress_midi.py utility. The crank organ software already does this, it's redundant.
 
 ## Changes from June 1 to June 7, 2026
@@ -1707,8 +1722,18 @@ If tune is not started by crank, it will not react to the crank.
 * Add a bixb922.github.io page. First version of "Find my organ" on that page.
 * Fix favicon on web pages.
 
+# 22. Changes in Sept 2026
+* Remove 8.9 minute maximum length restriction for MIDI files. Maximum length is now 6.2 days for one file. Same for time waiting while crank is stopped and time between MIDI events.
+* Use previously configured Neopixel LED pin at startup instead of pin 48. Default is pin 48.
+* Show save button on pinout page only after form has been filled. If save button is pressed with no data, pinout is saved as blank.
+* Drop "isUsedForDemo()" javascript function, comment unused functions in umidiparser.
+* Fix compress_midi.py so that number of output tracks matches number of programs. Pair note on/note off. Set a minimum silence between notes of the same pitch.
+* Increase precision of scheduled waits, yielding for required time minus reserved time (has a very small net effect)
+* Show number of tune repetitions in history (repetitions only work if crank enabled).
+* Make back arrow on HTML pages more consistent.
+* Update crank debug option to current version.
 
-# 22. Programming language
+# 23. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, and has very little overhead. The MIDI timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in available time slots between notes.
@@ -1726,7 +1751,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser. No installation required.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 23. Credits
+# 24. Credits
 
 Credits to the MicroPython team for MicroPython (https://www.micropython.org) and it's libraries. This is an amazing product! 
 
@@ -1744,12 +1769,12 @@ To ease the installation process, I have included some libraries in the reposito
 
 Also, Microdot has some very minor modifications for the purpose of this software.
 
-# 24. Testing
+# 25. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If you find a glitch or bug, I'd like to correct those as soon as possible. Please report problems as Github issue or discussion on this repository.
 
 
-# 25. Restrictions
+# 26. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1787,7 +1812,7 @@ If AP mode not in active usage (no browser page open) and no station SSID could 
 History column on tunelist shows count until last reboot
 
 
-# 26. Licensing
+# 27. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023-2025 Hermann Paul von Borries
@@ -1814,7 +1839,7 @@ SOFTWARE.
 
 You are not allowed to delete nor hide the copyright notice on the index.html page.
 
-# 27. Affiliation
+# 28. Affiliation
 I have no affiliation nor relationship with any vendor of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get any benefits by promoting them.
 
 In any case, I believe that software products mentioned on this repository are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources. 

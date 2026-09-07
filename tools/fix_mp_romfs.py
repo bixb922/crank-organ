@@ -308,3 +308,8 @@ main()
 # July 2026, 20 note Carl Frei pinout.json, 600 midi files
 # Total startup time (without main, until asyncio ready) 1995 msec
 #   Memory used at startup 126656 gc=21 msec
+
+# Sept 2026, after commenting unused functions in umidiparser. Using 20 note Carl Frei pinout
+# ROMFS = 246756 = 75% = 80924 free
+# Total startup time (without main, until asyncio ready) 1262 msec
+# Memory used at startup 124192 gc=19 msec

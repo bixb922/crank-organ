@@ -200,7 +200,7 @@ class NeedleBar extends HTMLCanvasElement {
         if( value >= 0){
             ctx.fillRect( center, 0,  v-center, this.barHeight);
         }
-        else {
+		else {
             ctx.fillRect( v, 0, center-v, this.barHeight);
         }
         ctx.stroke();
@@ -491,12 +491,13 @@ class PageHeader{
 
 	// Called at the start of each page
 	setTitle( headerTitle, pageupAction ){
+		// The headerTitle is the first div of the page
+		textById( "headerTitle", headerTitle );
 		// pageupAction is one of:
 		// 		a function that handles the page up (go back), used by file manager for folders
-		// 		"back" meaning history.back() 
+		// 		"BACK" meaning history.back() 
 		// 		a page name like "index" or "tunelist" (no /static/, no .html)
-		// 		null, meaning: this is the index page, no arrow.
-		textById( "headerTitle", headerTitle );
+		// 		false, meaning: this is the index page, no arrow.
 		this.pageupAction = pageupAction;
 		// Hide arrow for pages like the index page which has no action here.
 		showHideElement( "uparrow", pageupAction );
@@ -514,16 +515,15 @@ class PageHeader{
 	}
 	#pageUp(){
 		if( typeof this.pageupAction == "function"){
-			return this.pageupAction();
+			this.pageupAction();
 		}
-		let from = document.referrer;
-		if( from == undefined || from.includes(this.pageupAction) || this.pageupAction == "back" ){
-			// to be faster: if the previous page is the "up" page, go back
-			history.back();
-		}
-		else{
-			// Came from another page (not the parent) navigate to this page
-			window.location.href = "/static/" + this.pageupAction + ".html" ;
+		else if( typeof this.pageupAction == "string"){
+			if( this.pageupAction == "BACK"){
+				history.back();
+			}
+			else{
+				window.location.href = "/static/" + this.pageupAction + ".html" ;
+			}
 		}
 	}
 	async #updateConnectedProcess( ){
@@ -963,16 +963,8 @@ function formatRating( tune ){
 }
 
 // Function for mcserver
-function isUsedFromDemo(){
-	return (""+window.location.href).includes("/demo/");
-}
 function isUsedFromIOT(){
 	return (""+window.location.href).includes("/iot/");
-}
-function isUsedFromServer(){
-	// True if this page resides on the drehorgel.pythonanywhere.com server
-	// as IOT crank organ component (via mcserver)
-	return isUsedFromDemo() || isUsedFromIOT();
 }
 
 

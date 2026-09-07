@@ -32,7 +32,6 @@ div class="headerdiv">
             <th>Fecha</th>
             <th>Melodía</th>
             <th>Avance %</th>
-            <th style="display:none"><span>Pedido</span>&nbsp;</th>
           </tr>
         </thead>
         <tbody id="historyBody">
@@ -50,8 +49,7 @@ div class="headerdiv">
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
 
-// PageHeader.setTitle(headerTitle, upAction)
-let pageHeader = new PageHeader().setTitle( tlt("Historia"), "back" );
+let pageHeader = new PageHeader().setTitle( tlt("Historia"), "BACK" );
 
 
 async function getHistory( ) {
@@ -71,7 +69,7 @@ async function getHistory( ) {
         // 0 tuneid
         // 1 date in seconds since 2000/1/1 (ESP32 epoch)
         // 2 percentage
-        // 3 RFU 
+        // 3 formerly: user request, now: repeat count
 
         // Convert date from seconds in ESP32 epoch to string
         // date: yyyy-mm-dd, time: hh:mm
@@ -99,14 +97,15 @@ async function getHistory( ) {
             row.cells[1].appendChild( deleteDay );
          };
         previous_date = date ;
-
+        // Formerly hist_element[3] was used to mark if tune was requested via web site, but this is no longer used.
+        // Now it's the repeat count
         // Mark if tune has been requested via web site
         //let user_request = "" ;
         //if( hist_element[3] ) {
             // user request
         //    user_request = "✔️" ; // check mark &#x2714;
         //}
-        let row = insertRow( body, [time, "", "" ]);
+        let row = insertRow( body, [time, "", ""]);
 
         // Get title (if still in tunelib...)
         let tuneid = hist_element[0];
@@ -117,13 +116,12 @@ async function getHistory( ) {
             // We are calling isMultipleSetlistsEnabled() here, so menu only appears if needed.
             tuneTitle.setTune( tune, { beforeFormat:"hpt", afterFormat:"ms", shortClick:true, menu:multipleSetlists } );
             row.cells[1].appendChild( tuneTitle );
-            row.cells[2].innerText = await make_history_percentage(  tune, hist_element[2] );
+            row.cells[2].innerHTML = await make_history_percentage(  tune, hist_element[2], hist_element[3] );
         }
         else{
             let tuneTitle = document.createElement( "span" );
             tuneTitle.innerText = tlt("(borrado)");
             row.cells[1].appendChild( tuneTitle );
-            row.cells[2].innerText = "";
         }
         
         i += 1;
@@ -148,10 +146,40 @@ async function deleteHistory(){
     window.location.reload() ;
 }
 
-async function make_history_percentage( tune, percentage ){
-    let text = "" + percentage + "%";
+async function make_history_percentage( tune, percentage, repeat_count ){
+    let text = "";
+    // cases
+    // percentage = 100, repeat_count = 1:    2:30 = 100%
+    // percentage < 100, repeat_count = 1:    0:24 = 30%
+    // percentage = 100, repeat_count > 1:    5:00 = 2×
+    // percentage < 100, repeat_count > 1:    5:00 = 2×+30%
     if( tune != undefined ){
-        text += " " + formatMilliMMSS( Math.round(tune[TLCOL_TIME]*percentage/100));
+        // Deal with old records previous to change including repeat_count
+        if( repeat_count == 0 || repeat_count == ""){
+            repeat_count = 1;
+        }
+        let timesPlayed = 0;
+        let formattedRepeats = "";
+        if( percentage == 100 ){
+            timesPlayed = repeat_count;
+            if( repeat_count == 1 ){
+                formattedRepeats = `100%`;
+            }
+            else{
+                formattedRepeats = `${repeat_count}×`;
+            }
+        }
+        else{ // percentage < 100
+            timesPlayed = repeat_count-1 + percentage/100;
+            if( repeat_count == 1 ){
+                formattedRepeats = `${percentage}%`;
+            }
+            else{
+                formattedRepeats = `${repeat_count-1}×+${percentage}%`;
+            }
+        }
+        let fulltime = formatMilliMMSS( Math.round(tune[TLCOL_TIME]*timesPlayed ));
+        text = fulltime + " = " + formattedRepeats;
     }
     return text ;
 }

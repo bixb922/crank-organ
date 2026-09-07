@@ -1,25 +1,22 @@
 
-# (c) Copyright 2023-2025 Hermann Paul von Borries
+# (c) Copyright 2023-2026 Hermann Paul von Borries
 # MIT License
 
 # boot.py and main.py are both frozen. When distributing
 # .bin files, this makes using romfs easier. boot.py and
 # main.py are minimal. boot.py optimizes file system accesss.
-# main.py establishes sys.path.
+# main.py shows led, sets CPU speed and establishes sys.path.
 
 # First thing: turn on led
-from machine import Pin, freq
-from neopixel import NeoPixel
-led = NeoPixel(Pin(48), 1)
-led[0] = (0, 0, 8)
-led.write()
+import led
+led.hello()
 
 # Web response time is nearly 3 times better with 240MHz than with 80MHz
 # Garbage collection time: also nearly 3 times faster.
 # But: 240 MHz consumes about 20 mA more than 80 MHz, that seems affordable.
 # 20mA x 5V = 0.1W
-freq(240_000_000) # machine.freq()
-
+import machine
+machine.freq(240_000_000)
 
 import sys, asyncio, errno
 
@@ -36,9 +33,9 @@ except OSError as e:
         # webserver.py also checks "/software/static" before romfs.
 print(f"{sys.path=}")   
 
-# Start up the software
+# Start up the software as async
 from startup import start # type:ignore
 asyncio.run(start())
-# Does not return.
+# asyncio.run does not return.
 
 

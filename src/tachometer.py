@@ -358,9 +358,9 @@ class Crank:
         progress["tacho_installed"] = self.is_installed()
         progress["tempo_multiplier"] = self.tempo_multiplier
 
-    
-
-# This code will plug TachoDriver and generate random RPS
+# This code will plug TachoDriver and generate random revolutions per sec
+# even without a crank sensor installed. If installed, the crank sensor
+# gets replaced.
 
 if config.debug_tacho:
     class DebugCounter:
@@ -409,11 +409,14 @@ if config.debug_tacho:
                     break
                 except:
                     pass
-            if crank.td.counter:
-                # Monkey patch function to read counter value. Rest of
-                # TachoDriver continues to be enabled.
-                crank.td.counter.value = self.value
-                crank.logger.info("Inject tacho debug data enabled")
-
+            
+            # Monkey patch tacho driver to make it work
+            td = crank.td
+            td.counter = self
+            if not td.counter_task:
+                td.counter_task = asyncio.create_task( td._sensor_process() )
+            if not hasattr( crank, "crank_monitor_task"):
+                crank.crank_monitor_task = asyncio.create_task( crank._start_stop_monitor() )
+            crank.logger.info("Inject tacho debug data enabled")
     debug_task = asyncio.create_task( DebugCounter().start_debug() )
 

@@ -11,7 +11,7 @@ import json
 import argparse
 from pathlib import Path
 import unicodedata
-import mido
+import mido # type:ignore
 from datetime import datetime, timedelta
 import hashlib, binascii
 import sys
@@ -55,11 +55,11 @@ def parse_arguments():
                     action=argparse.BooleanOptionalAction,
                     help="Use status D0 wherever possible" )
 
-    #parser.add_argument("--tunelib", "-t",
-    #                dest="tunelib",
-    #                type=str,
-    #                default=None,
-    #                help="tunelib.json file to compare with microcontroller info")
+    parser.add_argument("--dump", "-t",
+                    dest="dump",
+                    action=argparse.BooleanOptionalAction,
+                    default=False,
+                    help="Dump contents of MIDI file during processing")
     
     parser.add_argument( "--known-programs", "-k",
                         dest="known_programs", 
@@ -88,9 +88,6 @@ def parse_arguments():
         if len(args.folders) >= 2:
             j["output_folder"] = args.folders[1]
         json_changed = True
-    #if args.tunelib:
-    #    j["tunelib"] = args.tunelib
-    #    json_changed = True
 
     if args.known_programs:
         j["known_programs"] = args.known_programs
@@ -113,7 +110,7 @@ def parse_arguments():
             json.dump( j, file )
 
 
-    return j["input_folder"], j["output_folder"], j.get("bass_correction",{}),j.get("known_programs", [1]), j.get("status_d0",False)
+    return j["input_folder"], j["output_folder"], j.get("bass_correction",{}),j.get("known_programs", [1]), j.get("status_d0",False), args.dump
 
 def zlib_compress( original_data ):
                                                                                                           
@@ -195,17 +192,20 @@ def read_midi( filename ):
     print(f"    MIDI file read, {len(midifile.tracks)} tracks, {midifile.ticks_per_beat} ticks per beat")
     event_list = []
     running_time = 0
+    # Translate mido events to "own" events. Calculate running time.
+    # Leave only note_on, note_off and program_change events. 
+    # Convert note_on events that are really a note_off.
     for mido_event in midifile:
         running_time += mido_event.time
         if mido_event.type == "note_on" or mido_event.type == "note_off":
-            ev = Event( running_time, "note_off", mido_event.channel, None, mido_event.note)
+            evtype = "note_off"
             if mido_event.type == "note_on" and mido_event.velocity > 0:
-                ev.type = "note_on"
+                evtype = "note_on"
+            ev = Event( running_time, evtype, mido_event.channel, None, mido_event.note)
             event_list.append( ev )
         elif mido_event.type == "program_change":
             ev = Event( running_time, "program_change", mido_event.channel, mido_event.program+1, None)
             event_list.append( ev )
-    # Don't solve program changes here, first sort!
     return sort_event_list( event_list )
 
 def solve_program_changes( event_list, known_programs ):
@@ -220,6 +220,9 @@ def solve_program_changes( event_list, known_programs ):
             program1 = ev.program1
             if program1 not in known_programs:
                 program1 = known_programs[0]
+                # Reset program change to the known programs, if not
+                # the old program numbers will show up later in the output, which is not desirable.
+                ev.program1 = program1
             channelmap1[ev.channel] = program1
     return event_list
 
@@ -237,46 +240,102 @@ def  apply_bass_correction( event_list, bass_correction ):
         # Keep only these events. 
         if event.type == "note_on" or event.type == "note_off":
             event.time = event.time + correction
-    # Sort by time. If time is equal to 1 msec, then note_on is before note_off
-    # If not the continuity may be affected
+    # Sort again by time, since times have changed. 
     return sort_event_list( event_list )
 
+def next_note_on( event_list, current_event ):
+    for ev in event_list:
+        if ((ev.type == "note_on" or ev.type == "note_off") and 
+            ev.time > current_event.time and 
+            ev.type == "note_on" and 
+            ev.program1 == current_event.program1 
+            and ev.note == current_event.note):
+            return ev
+        
 def pair_note_on_off( event_list ):
-    # Not in use. 
-    # Notes on channel 10 (percussion/drums) should not be paired
     currently_on = {}
     output_list = []
     for event in event_list:
         if event.type == "note_on":
-            cn = currently_on.setdefault( event.key, {"count":0, "start_time": event.time, "program1": event.program1, "note":event.note } )
+            cn = currently_on.setdefault( event.key, {"count":0, "start_time": None, "end_time": None, "program1": event.program1, "note":event.note } )
             cn["count"] += 1
-        elif event.type == "note_off" or ( event.type == "note_on" and event.velocity == 0):
-            if event.key in currently_on:
-                cn = currently_on[ event.key ]
-                cn["count"] -= 1
-                if cn["count"] <= 0:
-                    # Don'r include very, very short notes
-                    if event.time-cn["start_time"] >= 0.01:
+            if cn["start_time"] is None:
+                cn["start_time"] = event.time
+        elif event.type == "note_off":
+            cn = currently_on.setdefault( event.key, {"count":0, "start_time": None, "end_time": None, "program1": event.program1, "note":event.note } )
+            cn["count"] -= 1
+            if cn["count"] == 0 and cn["start_time"] is not None:
+                # Sometimes drum notes don't have a corresponding note off
+                # so make the length standard and ignore note off.
+                if event.program1 == VIRTUAL_DRUM_PROGRAM:
+                    DRUM_NOTE_LENGTH = 0.05
+                    end_time = event.time
+                    if end_time - cn["start_time"] > DRUM_NOTE_LENGTH:
+                        end_time = cn["start_time"] + DRUM_NOTE_LENGTH
+                    note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
+                    note_off = Event(  end_time,        "note_off", event.channel, event.program1, event.note )
+                    output_list.append( note_on )
+                    output_list.append( note_off )
+                else:
+                    MIN_SILENCE = 0.02
+                    MIN_NOTE_LENGTH = 0.01
+                    end_time = event.time
+                    nno = next_note_on(event_list, event)
+                    if nno and nno.time-event.time < MIN_SILENCE:
+                        # note off is very close to next note on OF THE SAME NOTE, 
+                        # shorten current note
+                        # by some milliseconds so there will be no overlap that could
+                        # cause a misinterpretation of the sequence. Also, two adjacent
+                        # notes with such a short silence sound like one...
+                        end_time -= MIN_SILENCE
+                    # Don't output very, very short notes (except drum, but these are handled separately)
+                    if end_time - cn["start_time"] >= MIN_NOTE_LENGTH:
                         note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
-                        note_off = Event(  event.time,      "note_off", event.channel, event.program1, event.note )
+                        note_off = Event(  end_time, "note_off", event.channel, event.program1, event.note )
                         output_list.append( note_on )
                         output_list.append( note_off )
-                    del currently_on[event.key]
+                cn["start_time"] = None
+        elif event.type == "program_change":
+            output_list.append( event )
+        else:
+            assert False, "Unknown event type "+event.type
+            
+
 
     for key, cn in currently_on.items():
+        unpaired = 0
         if cn["count"] > 0:
             note = key % 256
             program1 = key // 256
-            print(f"Note left on since {cn["start_time"]:.3f} to {event.time:.3f} {program1=} {note=}")
+            print(f"Note left on since {cn['start_time']:.3f} to {event.time:.3f} {program1=} {note=}")
             note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
-            note_off = Event(  event.time,      "note_off", event.channel, event.program1, event.note )
+            note_off = Event(  cn["start_time"]+0.1,      "note_off", event.channel, event.program1, event.note )
             output_list.append( note_on )
             output_list.append( note_off )
-    if currently_on:
+            unpaired += 1
+    if unpaired:
         print("???Error, notes left on, stop processing")
         sys.exit()
 
     return sort_event_list( output_list )
+
+def list_events( event_list ):
+    def strnotes( noteon ):
+        return "".join(("." if noteon[i]==0 else str(noteon[i]) for i in range(46,99)))
+    noteon = [0]*128
+    for ev in event_list:
+        t = f"{ev.time:7.3f}"
+        et = ev.type
+        if et == "note_on":
+            noteon[ev.note]+=1
+            print(t, "on  ",  f"{ev.note:2d}", strnotes(noteon) )
+        elif et == "note_off":
+            noteon[ev.note] = max(0, noteon[ev.note]-1)
+            print(t, "off ", f"{ev.note:2d}", strnotes(noteon))
+        elif et == "program_change":
+            print(t, "pc  ", ev.program1 )
+        else:
+            print("unknown event type", ev.type)
 
 def write_midi_file( event_list, output_filename, status_d0 ):
     # Use a high value for ticks_per_beat, if not bass correction does not work
@@ -296,7 +355,6 @@ def write_midi_file( event_list, output_filename, status_d0 ):
     available_channels.pop(DRUM_CHANNEL) # channel 10 is not available for non-drum program numbers
    
     programs = set( ev.program1 for ev in event_list )
-    print(f"programs found {programs=}")
     # Create tracks and fill in data structures
     for program1 in programs:
         track = mido.MidiTrack()
@@ -352,8 +410,9 @@ def write_midi_file( event_list, output_filename, status_d0 ):
         midifile.type = 0xd0
 
     midifile.save( output_filename )
+    print(f"    output tracks={len(trackdict)}, programs used={[x for x in trackdict.keys()]}, ticks per beat={ticks_per_beat} duration={max(tracktime.values()):.3f} sec")
 
-def reformat_midi( input_filename, output_filename, bass_correction, known_programs, status_d0 ):
+def reformat_midi( input_filename, output_filename, bass_correction, known_programs, status_d0, dump ):
     # Get rid of all messages in the file except note on, note off and program_change.
     # MIDO will have preprocessed all set tempo, so we don't need keep them.
     # Convert all note off messages to note on with velocity 0,
@@ -369,22 +428,19 @@ def reformat_midi( input_filename, output_filename, bass_correction, known_progr
     statistics("read_midi", event_list)
 
     event_list = solve_program_changes( event_list, known_programs )
-
+    event_list = pair_note_on_off( event_list )
+    #statistics("pair notes", event_list)
     event_list = apply_bass_correction( event_list, bass_correction )
     statistics("bass correction", event_list)
-
-    # >>> need to fix problem with overlapping drum notes
-    #event_list = pair_note_on_off( event_list )
-    #statistics("pair notes", event_list)
- 
-
+    if dump:
+        list_events( event_list )
     write_midi_file( event_list, output_filename, status_d0 )
 
 
 
 input_filelist = []
 
-def compress_midi_file( input_folder, filename, output_folder, bass_correction, known_programs, status_d0 ):
+def compress_midi_file( input_folder, filename, output_folder, bass_correction, known_programs, status_d0, dump ):
     pf = Path( filename )
     input_filename = Path(input_folder) / pf
     output_filename = (Path(output_folder) / pf).with_suffix( pf.suffix + ".gz")
@@ -394,7 +450,7 @@ def compress_midi_file( input_folder, filename, output_folder, bass_correction, 
     if input_date > output_date:
         print("Input file", filename, "processing...")
         print("    input", input_size, "bytes")
-        reformat_midi( input_filename, "temp.mid", bass_correction, known_programs, status_d0 )
+        reformat_midi( input_filename, "temp.mid", bass_correction, known_programs, status_d0, dump )
         
         data = read_file( "temp.mid" )
         decompressed_size = len(data)
@@ -456,7 +512,7 @@ def make_setlist_newest( output_folder, input_filelist ):
         for n in digest:
             folded_digest[i] ^= n
             i = (i + 1) % len(folded_digest)
-        hash = binascii.b2a_base64(folded_digest).decode()
+        hash = binascii.b2a_base64(bytes(folded_digest)).decode()
         # Make result compatible with URL encoding
         return hash.replace("\n", "").replace("+", "-").replace("/", "_")
 
@@ -488,7 +544,7 @@ def make_setlist_newest( output_folder, input_filelist ):
                 pass
 
 def main():
-    input_folder, output_folder, bass_correction, known_programs, status_d0 = parse_arguments()
+    input_folder, output_folder, bass_correction, known_programs, status_d0, dump = parse_arguments()
     print(f"Input folder", input_folder)
     print(f"Output folder", output_folder)
     if bass_correction:
@@ -516,7 +572,8 @@ def main():
                 output_folder,  
                 bass_correction,
                 known_programs,
-                 status_d0 )
+                status_d0,
+                dump )
             
             max_decompressed_size = max(max_decompressed_size, decompressed_size)
             input_blocks += size_on_flash(input_size)

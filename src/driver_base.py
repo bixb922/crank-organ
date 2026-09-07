@@ -1,7 +1,7 @@
 # Copyright (c) 2023-2025 Hermann von Borries
 # MIT license
 #  
-from time import ticks_ms, ticks_diff, ticks_us
+from time import ticks_ms, ticks_diff
 import asyncio
 from actuatorstats import ActuatorStats
 

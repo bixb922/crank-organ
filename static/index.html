@@ -177,8 +177,7 @@ All rights reserved.
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
 
-// PageHeader.setTitle(headerTitle, upAction)
-let pageHeader = new PageHeader().setTitle( tlt("Índice"), false ) ;
+let pageHeader = new PageHeader().setTitle( tlt("Índice"), null ) ; // No "back" arrow on index page.
 
 async function getPageData(){
     resp = await fetch_json( "/get_index_page_info" ) ;

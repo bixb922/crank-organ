@@ -105,7 +105,7 @@ class BLEMCS:
         self._ble.gatts_write(self.handles[char_name], value.encode())
 
     def set_status( self, net, new_status ):
-        n = ["sta1", "sta2", "ap"].index(net)
+        n = ("sta1", "sta2", "ap").index(net)
         self.status[n] = ord(new_status)
         self._ble.gatts_write(self.handles["status"], self.status )
         

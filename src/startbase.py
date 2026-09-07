@@ -14,9 +14,8 @@ _MSEC_BETWEEN_SAMPLES = const(100)
 # i.e. TouchPad/Button will not sense a second click if time less than MSEC_SETTLE
 _MSEC_SETTLE = const(500)
 
-# _TECHNOLOGY_TOUCHPAD = const(1)
+_TECHNOLOGY_TOUCHPAD = const(1) 
 _TECHNOLOGY_SWITCH_TO_GND = const(2)
-_TECHNOLOGY_MAX = const(2)
 
 class StartBase:
     # Abstract superclass for StartSwitch and StartTouch
@@ -85,6 +84,6 @@ def startButtonFactory( gpio_pin, technology ):
     return button_class( gpio_pin )
 
 def validate_technology( technology ):
-    if technology and (1 <= technology <= _TECHNOLOGY_MAX):
+    if technology in (_TECHNOLOGY_TOUCHPAD, _TECHNOLOGY_SWITCH_TO_GND):
         return
-    raise RuntimeError(f"TouchPad type must be 1 to {_TECHNOLOGY_MAX} but is {technology}")
+    raise RuntimeError(f"Switch techonology unknown {technology}")
