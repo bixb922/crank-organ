@@ -21,12 +21,6 @@ _IRQ_CENTRAL_DISCONNECT = const(2)
 
 _FLAG_READ = const(0x0002)
 
-# >>> show how many users are connected, show web activity?
-# >>> show uptime?
-# >>> show current track title and allow next track button?
-# >>> make client translatable
-
-
 # https://devzone.nordicsemi.com/f/nordic-q-a/24170/16bit-uuid-misunderstandings
 
 # Using Media Control Services standard registered UUID
@@ -107,7 +101,7 @@ class BLEMCS:
     def set_status( self, net, new_status ):
         n = ("sta1", "sta2", "ap").index(net)
         self.status[n] = ord(new_status)
-        self._ble.gatts_write(self.handles["status"], self.status )
+        self._ble.gatts_write(self.handles["status"], bytes(self.status) )
         
     def start_advertising( self ):
         # Ensure address is random to avoid caching of advertised name

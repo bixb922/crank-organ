@@ -871,10 +871,17 @@ async def filemanager_upload(request, path_filename ):
     path, filename, mtime, size = path_filename.split("+")
     path = decodePath( path )
     filename = decodePath( filename )
-    _logger.info(f"Uploading {filename} to {path}")
     import filemanager
     try:
-        return filemanager.upload( request.body, path, filename, int(mtime), int(size)  )
+        # print(f">>>upload {path_filename=} {filename=} {mtime=} {size=}")
+        r =  filemanager.upload( request.body, path, filename, int(mtime), int(size)  )
+        op = "Updating"
+        if r["skip"]:
+            op = "Skipping"
+        elif r["oldFileSize"] == None:
+            op = "Creating"
+        _logger.info(f"{op} {filename} to {path} size={ r['oldFileSize']}->{r['newFileSize']} bytes")
+        return r
     except Exception as e:
         print(f"Error in /upload: {repr(e)}")
         return respond_error_alert(f"Error uploading {repr(e)}")
@@ -916,6 +923,7 @@ async def filemanager_status(request):
     return filemanager.status()
 
 @app.post("/delete_file")
+# >>> ???tune manager delete does not work??????
 @authorize # >>> allow delete midi without password?
 async def filemanager_delete(request):
     # Delete a file
@@ -947,11 +955,8 @@ async def filemanager_delete(request):
 @authorize
 async def make_tarball(request):
     import filemanager
-    filelist = request.json
-    # Archive is the last in the filelist, the rest are files to be archived
-    tar_fn = filelist.pop()
-    filemanager.make_tarball( tar_fn, filelist )
-    return respond_ok()
+    # The json has the list of microcontroller files to be added to the tarball.
+    return filemanager.make_tarball( request.json )
 
 # Test: tarball with 608 files, 3_021_365 bytes net, 4_292_608 bytes on flash
 # took 133.8 sec (2 minutes and 14 seconds) 

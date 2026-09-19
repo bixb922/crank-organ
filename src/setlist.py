@@ -20,10 +20,14 @@ import fileops
 _CURRENT_SETLIST = const(0)
 _STORED_SETLIST = const(1) 
 
+
+
 # This constant must be equal to the same name defined in common.js
 _MAX_SETLIST_SLOTS = const(12)
 
 class Setlist:
+    NEW_SETLIST = 10
+    WIP_SETLIST = 11
     def __init__(self):
         self.logger = getLogger(__name__)
         self.current_setlist = [] # for now
@@ -135,9 +139,10 @@ class Setlist:
             if self.shuffle_if_empty():
                 self.logger.debug("Tunelib empty, setlist terminated")
                 return
+            # At this point setlist is not empty.
 
             # Get top tune and play
-            tuneid = self.current_setlist.pop(0)
+            tuneid = self.pop_top()
             self._save_current()
 
             led.start_tune_flash()
@@ -515,4 +520,10 @@ class Setlist:
             return tuneid
         if self.current_setlist:
             return self.current_setlist[0]
+
+    def pop_top( self ):
+        try:
+            return self.current_setlist.pop(0)
+        except:
+            pass
         

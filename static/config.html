@@ -41,7 +41,7 @@
 
 
 	<div class="middlediv">Network name and description</div>
-	<label for="name">Network name, WiFi Access Point name and Bluetooth name of this device (up to 15 characters A-Z, a-z, 0-9,
+	<label for="name">Network name, WiFi Access Point name and Bluetooth name of this device. The name must be unique in the WLAN network. Up to 15 characters A-Z, a-z, 0-9,
 		start with a letter):</label>
 	<input id="name" name="name" type="text" size="15" maxlength="15" oninput="markField('name')" />
 	<br>
@@ -304,7 +304,7 @@
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
 
-//>>>[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input id=​"ap_password" name=​"ap_password" type=​"password" size=​"15" oninput=​"validateNewPasswords()​" style=​"background-color:​ rgb(255, 255, 255)​;​">​
+// >>>[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input id=​"ap_password" name=​"ap_password" type=​"password" size=​"15" oninput=​"validateNewPasswords()​" style=​"background-color:​ rgb(255, 255, 255)​;​">​
 
 let pageHeader = new PageHeader().setTitle( "Configuration", "index" );
 // Used by mark fields

@@ -1,6 +1,6 @@
 # (c) Copyright 2023-2025 Hermann Paul von Borries
 # MIT License
-import time
+from time import time, localtime
 import ntptime
 import asyncio
 import machine
@@ -50,13 +50,13 @@ class TimeZone:
         # Try several times to get time from ntp server
         if await self._get_ntp_time():
             # Set RTC with this time + time zone offset
-            self.set_rtc( time.time() )
+            self.set_rtc( time() )
             await self.logger.async_info("Time set by NTP")
 
 
     def has_time( self ):
         # Has time been set by ntp or browser?
-        return self.is_valid( time.time() )
+        return self.is_valid( time() )
     
     def is_valid( self, timestamp ):
         # 804_168_000 = somewhere in  2075
@@ -64,7 +64,7 @@ class TimeZone:
     
     def set_rtc( self, timestamp ):
         # Prepare a time tuple as argument for RTC
-        t = time.localtime(timestamp - self.tzinfo["offset"] )
+        t = localtime(timestamp - self.tzinfo["offset"] )
         # Set this as the local time, to be returned
         # by time.localtime() and time.time()
         # year, month, day, weekday, hour, minute, second, subsecond
@@ -123,23 +123,22 @@ class TimeZone:
         
     def get_time_zone_info( self ):
         return self.tzinfo
-    
+
     def now_timestamp(self):
         # time.time() is already in local time, no need to add offset
-        return time.time() 
+        return time() 
     
     def now(self):
-        t = time.localtime(self.now_timestamp())
+        # >>>???is this redundant?
+        t = localtime(self.now_timestamp())
         if self.has_time():
             return t
         # Don't apply time zone if no clock set (no ntptime yet)
-        return time.localtime()
+        return localtime()
 
     def now_ymdhms(self):
         t = self.now()
-        return (
-            f"{t[0]:02d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}:{t[5]:02d}"
-        )
+        return  f"{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}:{t[5]:02d}"
 
     def now_ymdhm(self):
         return self.now_ymdhms()[0:-3]
@@ -152,6 +151,10 @@ class TimeZone:
     def now_ymd(self):
         return self.now_ymdhms()[0:10]
 
+    def format_ymd(self, tstamp):
+        t = localtime(tstamp)
+        return f"{t[0]}-{t[1]:02d}-{t[2]:02d}"
+    
     def now_ymdhmsz(self):
         if self.has_time(): 
             return self.now_ymdhms() + self.tzinfo["shortName"]
@@ -164,6 +167,9 @@ class TimeZone:
         # 30 years in seconds = 946_684_800 (difference of epoch)
         return timestamp - 946_684_800
     
+    def esp32_to_unix( self, timestamp ):
+        return timestamp + 946_684_800
+    
     # Implement a context manager to set time for a short time
     # Use:
     # with timezone.set_time( temporary_javascript_timestamp ):
@@ -173,12 +179,14 @@ class TimeZone:
 
     def set_time( self, temporary_unix_timestamp ):
         # Unix timestamps are in seconds since 1/1/1970
-        self.new_timestamp = self.unix_to_esp32( temporary_unix_timestamp )
+        # Neutralize effect of time zone, set_rtc adds self.tzinfo["offset"] back,
+        # to the timestamp, so the time will be set as requested with no tz adjustment.
+        self.new_timestamp = self.unix_to_esp32( temporary_unix_timestamp ) + self.tzinfo["offset"] 
         return self
     
     def __enter__( self ):
         # Save stamp in UTC to be able to return to this time on __exit__()
-        self.saved_stamp = time.time()+self.tzinfo["offset"] 
+        self.saved_stamp = time()+self.tzinfo["offset"] 
         self.set_rtc( self.new_timestamp )
         return self
 

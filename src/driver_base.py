@@ -78,6 +78,17 @@ class BasePin:
         # Get generator over all active pins (of any kind, RC servo, sole, midi, etc except Null)
         return ( pin for pin in BasePin.pin_list if pin._current_value )
 
+    # async _check_stuck_notes( cls):
+    #   _MAX_ON_MS = const(2000)
+    #   while True:
+    #       await asyncio.sleep_ms(1000)
+    #       now = ticks_ms()
+    #       for p in cls.get_active():
+    #           if ticks_diff( now, p._transition_time()) > _MAX_ON_MS:
+    #               p.force_off()
+    #               ActuatorStats.count("stuck notes")
+    #
+
     @classmethod
     def set_led( cls, led ):
         # Inject led object, used by ActuatorBank, is changed
@@ -99,7 +110,7 @@ class BasePin:
         # nominal_midi_number: note number of nominal_midi_note
         self._driver = driver
         self._pin = pin
-        self._rank = rank # >>> Could be added by browser to save 50bytes/pin of RAM
+        self._rank = rank
         self.nominal_midi_note = nominal_midi_note 
         
         # self._count is the number of note_on received minus

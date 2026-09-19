@@ -189,7 +189,7 @@ def statistics( s, event_list ):
 
 def read_midi( filename ):
     midifile = mido.MidiFile( filename )
-    print(f"    MIDI file read, {len(midifile.tracks)} tracks, {midifile.ticks_per_beat} ticks per beat")
+    print(f"    MIDI file read, tracks={len(midifile.tracks)}, ticks per beat={midifile.ticks_per_beat} ")
     event_list = []
     running_time = 0
     # Translate mido events to "own" events. Calculate running time.
@@ -259,7 +259,7 @@ def pair_note_on_off( event_list ):
         if event.type == "note_on":
             cn = currently_on.setdefault( event.key, {"count":0, "start_time": None, "end_time": None, "program1": event.program1, "note":event.note } )
             cn["count"] += 1
-            if cn["start_time"] is None:
+            if cn["count"] == 1:
                 cn["start_time"] = event.time
         elif event.type == "note_off":
             cn = currently_on.setdefault( event.key, {"count":0, "start_time": None, "end_time": None, "program1": event.program1, "note":event.note } )
@@ -302,17 +302,18 @@ def pair_note_on_off( event_list ):
             
 
 
+    unpaired = 0
     for key, cn in currently_on.items():
-        unpaired = 0
         if cn["count"] > 0:
             note = key % 256
             program1 = key // 256
-            print(f"Note left on since {cn['start_time']:.3f} to {event.time:.3f} {program1=} {note=}")
+            print(f"?Error: Note left on since {cn['start_time']:.3f} to {event.time:.3f} {program1=} {note=}")
             note_on = Event(  cn["start_time"], "note_on",  event.channel, event.program1, event.note )
             note_off = Event(  cn["start_time"]+0.1,      "note_off", event.channel, event.program1, event.note )
             output_list.append( note_on )
             output_list.append( note_off )
             unpaired += 1
+        # could also check here for count<0 meaning more note off than note on
     if unpaired:
         print("???Error, notes left on, stop processing")
         sys.exit()
@@ -410,7 +411,8 @@ def write_midi_file( event_list, output_filename, status_d0 ):
         midifile.type = 0xd0
 
     midifile.save( output_filename )
-    print(f"    output tracks={len(trackdict)}, programs used={[x for x in trackdict.keys()]}, ticks per beat={ticks_per_beat} duration={max(tracktime.values()):.3f} sec")
+    pu = [x if x != 129 else "drums" for x in trackdict.keys()]
+    print(f"    output tracks={len(trackdict)}, ticks per beat={ticks_per_beat}, programs used={pu}, duration={max(tracktime.values()):.3f} sec")
 
 def reformat_midi( input_filename, output_filename, bass_correction, known_programs, status_d0, dump ):
     # Get rid of all messages in the file except note on, note off and program_change.
@@ -426,14 +428,14 @@ def reformat_midi( input_filename, output_filename, bass_correction, known_progr
     # Read the midi file
     event_list = read_midi( input_filename )
     statistics("read_midi", event_list)
+    if dump:
+        list_events( event_list )
 
     event_list = solve_program_changes( event_list, known_programs )
     event_list = pair_note_on_off( event_list )
     #statistics("pair notes", event_list)
     event_list = apply_bass_correction( event_list, bass_correction )
     statistics("bass correction", event_list)
-    if dump:
-        list_events( event_list )
     write_midi_file( event_list, output_filename, status_d0 )
 
 
@@ -519,6 +521,7 @@ def make_setlist_newest( output_folder, input_filelist ):
     input_filelist.sort( key=lambda x:x[2], reverse=True )
     weeks = datetime.now() - timedelta(weeks=STORE_WEEKS)
     i = 0
+    # >>> ???keep new and wip?
     setlist_new = []
     setlist_wip = []
     for i, (filename, file_size, mtime ) in enumerate(input_filelist):
@@ -620,7 +623,9 @@ def main():
     #       3*(100_000/4096)=75 blocks for 3 versions of lyrics.json
     #       15 blocks for other json files
     #       total=225 blocks, YMMV.
-    application_overhead = 250 # blocks of 4096 bytes
+    application_overhead = 512  # blocks of 4096 bytes due to 2MB Micropython+romfs fixed
+    # >>>data folder size is variable
+    application_overhead += 250 # data folder, json files
     print("Estimated capacities based on current average MIDI file size, no lyrics:")
     for flash_size in (8, 16):
         blocks = flash_size*1024*1024/4096

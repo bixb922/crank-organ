@@ -40,7 +40,6 @@ def _check_midi_file( path, file_size=-1 ):
         # Abort sync to avoid duplicate work for tunlib.json and for /tunelib/*-mid
         tunemanager.abort_sync()
         
-
 def listdir(path):
     if not path.endswith("/"):
         path += "/"
@@ -88,10 +87,10 @@ def fast_listdir(path):
               "date":"" # date has to be added later
               } for dir_entry in os.ilistdir(path)]
         
-def upload( filedata, path, filename, mtime, size  ):
+def upload( filedata, path, filename, pc_mtime, size  ):
     # Upload a file from the PC to the microcontroller
-    #   mtime: file modification date of origin file on PC in
-    #          Unix fashion, i.e. seconds since 1/1/1970.
+    #   pc_mtime: file modification date of origin file on PC in
+    #          Unix fashion, i.e. seconds since 1/1/1970 in local time (not UTC)
     #   size: file size of origin file on PC. >>> should check?
     # Check flash full, send message to javascript client.
     if is_flash_full():
@@ -112,8 +111,7 @@ def upload( filedata, path, filename, mtime, size  ):
     # test for diacritics marks, these must be filtered for consistency Mac/Windows/Javascript/MicroPython/browsers
     for z in filename:
         if 0x300 <= ord(z) <= 0x36f:
-           print(filename.encode())
-           raise RuntimeError(f"Diacritical mark  found in {filename}")
+           raise RuntimeError(f"Diacritical mark  found in {filename} {filename.encode()=}")
         
     if path != "__auto__":
         folder = path
@@ -140,14 +138,30 @@ def upload( filedata, path, filename, mtime, size  ):
 
 
     path = folder + filename
-   
-    try:
-        old_file_size = os.stat(path)[6]
-    except OSError:
-        old_file_size = None
-    
-    # Create file with time set to the mtime of the input file
-    with timezone.set_time( mtime ):
+
+    for old_path in (path, fileops.get_equivalent(path)):
+        try:
+            fst = os.stat(old_path)
+            old_file_size = fst[6]
+            old_file_mtime = timezone.esp32_to_unix(fst[7])
+            break
+        except OSError:
+            old_path = None
+            old_file_size = None
+            old_file_mtime = None
+
+    result = {"folder": folder, 
+                    "oldFileSize": old_file_size,
+                    "oldFileMtime": old_file_mtime,
+                    "newFileSize": size,
+                    "newFileMtime": pc_mtime,
+                    "skip": True,
+                    }
+    if old_file_size == size and fileops.file_is_equal( path, filedata ):
+        return result
+
+    # Create file with time set to the pc_mtime of the input file
+    with timezone.set_time( pc_mtime ):
         with open(path, "wb") as file:  # type:ignore
             new_file_size = len(filedata)
             file.write( filedata )
@@ -163,10 +177,9 @@ def upload( filedata, path, filename, mtime, size  ):
     if fileops.file_exists( equiv ):
         # The equiv file is replaced by the new file
         os.remove( equiv )
-        
-    return {"folder": folder, 
-            "oldFileSize": old_file_size,
-            "newFileSize": new_file_size }
+
+    result["skip"] = False
+    return result
 
 def download(path):
     # Download a file from the microcontroller to the PC
@@ -309,16 +322,34 @@ def delete(path):
 #     _check_midi_file( from_fn )
 #     os.rename( from_fn, append(to_fn, n) )
    
-def make_tarball( tar_file, filelist ):
+def make_tarball( filelist ):
     # Make tar_file as tarball of all files in filelist. 
-    from tarfile import TarFile
-    # Should never overwrite existing files (except another tar file)
-    # Javascript client ensures .tar extension
-    assert tar_file.endswith(".tar")
+    from tarfile import TarFile, TarInfo
+    # Tar file name is of the form: 20260910_130122_esp32s3
+    tar_name = timezone.now_ymdhms().replace("-","").replace(":","").replace(" ","_")+"_"+config.name
+    tar_file = tar_name + ".tar"
     try:
+        # Just in case, should not have a tar file there...
         os.remove(tar_file)
     except OSError:
         pass
     with TarFile(tar_file, "w") as tar:
         for filename in filelist:
-            tar.add( filename )
+            sp = filename.split("/")
+            # Example of filename:
+            # /data/tunelist.json
+            # All files should be in the same folder
+            # Folder name inside tar file will be of the form:
+            # 20260910_esp32s3
+            # The original folder name disappears
+            res_name = tar_name+"/"+sp[-1]
+            stat = os.stat(filename)
+            tarinfo = TarInfo(res_name)
+            tarinfo.mode = stat[0]
+            tarinfo.uid = stat[4]
+            tarinfo.gid = stat[5]
+            tarinfo.size = stat[6]
+            tarinfo.mtime = stat[8]
+            with open( filename, "rb") as file:
+                tar.addfile( tarinfo, file )
+    return {"filename": tar_file }

@@ -44,6 +44,7 @@ let pageHeader = new PageHeader().setTitle( tlt("Lista de melodías"), "index" )
 let HEADERMAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
 let HEADER = map_tlcol_names( HEADERMAP );
 HEADER[3] = "mm:ss"; // time column is in mm:ss format
+let HEADERCOL_VISIBLE = Array(HEADERMAP.length).fill(true);
 
 // Current order
 let sortColumn = 0 ;
@@ -116,6 +117,7 @@ function fillHeader( ){
         th.textContent = arrow + HEADER[col];
         th.style.cursor = "pointer";
         th.onclick = function() { changeOrder(col) };
+        th.style.display = HEADERCOL_VISIBLE[col]?"":"none";
         headerRow.appendChild( th );
     }
 }
@@ -123,7 +125,7 @@ let fastSearch = [];
 
 async function fillBody( ) {
     let s = "";
-    let tlbody = document.getElementById( "tunelistbody")
+    let tlbody = document.getElementById( "tunelistbody");
     tlbody.innerHTML = ""; 
     let tunelib = await tunelibCache.get(); // common.js
     await updateTunelibWithHistory( tunelib ); 
@@ -163,6 +165,19 @@ async function fillBody( ) {
             tune[TLCOL_RATING] ;
         fastSearch.push( normalizaTildes(s) );
 	}
+    // Hide blank columns
+    let hiddenCount = 0;
+    let hideableCols = [TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_INFO, TLCOL_RATING];
+    for( let tlcol of hideableCols){
+        if( columnIsBlank(tunelib, tlcol)){
+            let col = HEADERMAP.indexOf( tlcol );
+            hiddenCount += 1;
+            HEADERCOL_VISIBLE[col] = false;
+            for( let row of tlbody.rows ){
+                row.cells[col].style.display = "none";
+            }
+        }
+    }
 }
 
 function navigateToPlayPage() {
@@ -280,6 +295,14 @@ function filterTable() {
         let rowText = fastSearch[ parseInt(row.id.substring(1)) ]; // id of row is "r0", "r1", etc.
         row.style.display = rowText.includes(filter) ? "" : "none";
     }
+}
+function columnIsBlank( tunelib, tlcol ){
+    for( const [tuneid, tune] of Object.entries(tunelib)){
+        if( tune[tlcol] != ""){
+            return false;
+        }
+    }
+    return true;
 }
 
 translate_html();

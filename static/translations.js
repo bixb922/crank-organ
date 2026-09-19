@@ -225,6 +225,8 @@ let translationDict = {
 	["Show lyrics", "Liedtext anzeigen"],
 "mostrar setlist": // play.html 
 	["Show setlist", "Setlist anzeigen"],
+"✅=mostrar en blanco 🔲=mostrar todos.":
+	["✅=Show blank 🔲=Show all","✅=Leer anzeigen 🔲=Alle anzeigen"],
 "nivel de batería registrado": // index.html 
 	["Battery level registered", "Registiert!"],
 "nivel debe estar entre 0 y 100": // index.html 

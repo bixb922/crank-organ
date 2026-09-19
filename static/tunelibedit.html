@@ -21,7 +21,10 @@
 <span id="wait_for_update"></span>
 
 <div class="tableFixHead">
-
+    <div id="showControls" style="display:none">
+        <input id="searchInput" onkeyup="updateFilter()" size="10"/>
+        &emsp;✅=Mostrar en blanco 🔲=Mostrar todos.
+    </div>
     <table>
         <thead id="tunelistHead"></thead>
         <tbody id="tunelistBody"></tbody>
@@ -30,6 +33,7 @@
 <br>
 <button onclick="showAsTable()">Formato de tabla para copiar</button>
 <div class="footerdiv"></div>
+
 
 <div id="modalLyrics" class="modal">
     <div class="modal-content">
@@ -46,12 +50,11 @@
 <script>
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
 // MIT License
+document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
 
-
-let pageHeader = new PageHeader();
+const pageHeader = new PageHeader();
 pageHeader.setTitle( "Tunelib editor", "index"  );
 pageHeader.setBannerInfo( "✅" + tlt("Al día."), "❗" );
-
 
 async function getTuneList( ) {
     let wfu = document.getElementById( "wait_for_update" ) ;
@@ -78,6 +81,7 @@ async function getTuneList( ) {
     }
     sortTunelist( tunelist );
     await updateForm( tunelist ) ;
+    showHideElement( "showControls" , true);
 
     await sleep_ms( 5_000 ) ;
     wfu.innerHTML = "";
@@ -86,11 +90,13 @@ async function getTuneList( ) {
 
 let CHANGED_FIELDS = [] ;
 
-let HEADER_MAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_AUTOPLAY,
+const HEADER_MAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_AUTOPLAY,
     TLCOL_RATING, TLCOL_INFO, TLCOL_LYRICS, TLCOL_TIME, TLCOL_DATEADDED,
     TLCOL_FILENAME, TLCOL_SIZE ] ;
-let TABLE_HEADER = map_tlcol_names( HEADER_MAP );
+const TABLE_HEADER = map_tlcol_names( HEADER_MAP );
 TABLE_HEADER.push( tlt("Borrar")  ); // last column is delete button
+const FILTERED = [ TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR,
+                TLCOL_RATING, TLCOL_INFO];
 
 async function updateForm( tunelist ){
 
@@ -98,11 +104,26 @@ async function updateForm( tunelist ){
     if( tunelistHead.innerHTML == "" ){
         // Header not defined, make header row
         let row = document.createElement( "tr" );
+        let col = 0;
         for( let h of TABLE_HEADER ){
             let th = document.createElement( "th" );
-            th.innerHTML = h ;
+            th.style.whiteSpace = "nowrap";
+            const label = document.createElement("label");
+            label.textContent = h;
+            th.appendChild(label);
+            const tlcol = HEADER_MAP[col];
+            if( FILTERED.includes(tlcol) ){
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.id = "blankFilter"+tlcol;
+                checkbox.checked = false;
+                checkbox.onclick = updateFilter;
+                th.appendChild(checkbox);
+            }
             row.appendChild( th );
+            col++; 
         }
+        tunelistHead.appendChild( row );
         tunelistHead.appendChild( row );
     }
 
@@ -335,7 +356,62 @@ async function deleteTuneFile( tuneid, rowid ){
     }
 }
 
+// Columns for filtering
+const hasInputBox = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR,
+TLCOL_RATING, TLCOL_INFO ] ;
+// const skipCol = [TLCOL_AUTOPLAY, TLCOL_LYRICS ] ;
+const hasInnerText = [TLCOL_TIME, TLCOL_DATEADDED,
+TLCOL_FILENAME, TLCOL_SIZE ];
 
+async function updateFilter(){
+    await sleep_ms(200); // don't call too often if someone types fast
+    const searchInput = document.getElementById("searchInput").value.toLowerCase();
+    const tunelistBody = document.getElementById( "tunelistBody" );
+     for( const row of tunelistBody.rows ){
+        const display = rowIsIncomplete(row) && rowHasText(row,searchInput) ? "":"none";;
+        if( display != row.style.display ){
+            row.style.display = display;
+        }
+     }
+}
+function rowIsIncomplete(row){
+    for( const tlcol of FILTERED){
+        const checked = document.getElementById("blankFilter"+tlcol)?.checked;
+        if( !checked){
+            continue;
+        }
+        const col = HEADER_MAP.indexOf(tlcol);
+        const inputBox = row.cells[col].children[0];
+        console.log("rowIsIncomplete? row=", row.id, "inputBox.value=", inputBox.value, "return=", inputBox.value == "");
+        if(inputBox.value != ""){
+            return false;
+        }
+    }
+    return true;
+}
+function rowHasText(row, searchInput){
+    if( searchInput == ""){
+        return true;
+    }
+    for( const col in HEADER_MAP){
+        const tlcol = HEADER_MAP[col];
+        let rowValue = null;
+        if(  hasInputBox.includes(tlcol)){
+            rowValue = row.cells[col].children[0].value;
+        }
+        else if( hasInnerText.includes(tlcol)){
+            rowValue = row.cells[col].innerText;
+            if( tlcol == TLCOL_FILENAME ){
+                // skip .mid
+                rowValue = rowValue.substring(0, rowValue.length-4);
+            }
+        }
+        if( rowValue?.toLowerCase().includes(searchInput)){
+            return true;
+        }
+    }
+    return false;
+}
 translate_html();
 // fill form with tunelib
 getTuneList() ;

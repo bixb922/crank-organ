@@ -220,3 +220,5 @@ async def start():
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
     # asyncio.gather() does not return.
+
+# >>> after startup, sometimes RAM goes up from 135 to 250 kb? not always?

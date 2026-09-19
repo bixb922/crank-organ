@@ -28,10 +28,10 @@
         <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
         <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
         <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
-        <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()">Select if not in PC tunelib</button>
-        <button id="downloadFilesButton" onclick="downloadSelectedFiles()">Download</button>
-        <button id="downloadAsTarButton" onclick="downloadAsTar()">Download as tar</button>
-        <button id="deleteFilesButton" onclick="deleteFiles()" >Delete</button>
+        <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()"  style="display:none">Select if not in PC tunelib</button>
+        <button id="downloadFilesButton" onclick="downloadSelectedFiles()" class="inactive">Download</button>
+        <button id="downloadAsTarButton" onclick="downloadAsTar()" class="inactive">Download as tar</button>
+        <button id="deleteFilesButton" onclick="deleteFiles()"  class="inactive">Delete</button>
         <button id="selectForBackup"  onclick="selectForBackup()" style="display:none">Select for backup</button>
     </div>
 
@@ -159,10 +159,15 @@
         let sizeTitle = document.getElementById("thisFolderSize");
 
         let fileList = document.getElementById("filePicker").files;
+        let n = 0;
         for (let file of fileList) {
             await uploadFile(file, CURRENT_PATH, UPLOAD_MODE);
             body.innerHTML = "";
             sizeTitle.innerHTML = "";
+            n += 1;
+            if( n%10 == 0){
+                logNotification(`${Math.round(n/fileList.length*100)}%`);
+            }
         };
         logNotification("Upload complete");
         // Page should be refreshed, but sometimes this may take too long to be practical
@@ -179,11 +184,18 @@
         if (mode == "autoFolder") {
             destFolder = "__auto__";
         }
+        // Convert file.lastModified to unix timestamp in local time
+        // This must be done in the browser where we have the time zone of
+        // back then when the file was created.
+        const lm = new Date(file.lastModified);
+        // Convert to seconds and adjust by time zone offset at the time of file.lastModified
+        // i.e. make a "local timezone pseudo Unix time stamp"
+        const file_mtime = Math.round(file.lastModified/1000 - lm.getTimezoneOffset()*60);
         // encodePath() will also normalize("NFC")
         let url = "/upload/" + encodePath(destFolder) 
                             + "+" + encodePath(file.name)
                             // convert time to Unix style seconds since 1/1/1970
-                            + "+" + Math.round(file.lastModified/1000)
+                            + "+" + file_mtime
                             + "+" + file.size;
 
         try {
@@ -199,10 +211,18 @@
                 logError(`Could not upload file, http error code ${response.status}`);
                 return;
             }
-            let resp = await response.json();
+            const resp = await response.json();
             if (!resp.error) {
-                if (resp.oldFileSize != null) {
-                    logNotification(`Upload replacing "${file.name}" folder "${resp.folder}" ${file.size} bytes, old size: ${resp.oldFileSize} bytes`);
+                let newSize = `${resp.newFileSize}`;
+                // Date info is preent but not shown.
+                if( resp.skip ){
+                    logNotification(`No change, skipped: "${file.name}" in folder "${resp.folder}"`);
+                }
+                else if (resp.oldFileSize != null) {
+                    if( resp.oldFileSize != resp.newFileSize ){
+                        newSize = `${resp.oldFileSize}->${resp.newFileSize}`;
+                    }
+                    logNotification(`Upload replacing "${file.name}" in folder "${resp.folder}"  ${newSize} bytes`);
                 }
                 else {
                     logNotification(`Upload creating "${file.name}" to folder "${resp.folder}" ${file.size} bytes`);
@@ -298,6 +318,7 @@
         }
         showHideElement("selectForBackup", CURRENT_PATH == "/data");
         showHideElement("selectIfNotInPCButton", CURRENT_PATH == "/tunelib");
+        
     }
 
 
@@ -502,27 +523,18 @@
         if( filelist.length == 0 ){
             return;
         }
+        // All files should be in the same folder.
         let config = await configCache.get();
-        let hostname = config["name"];
-        const now = new Date();
-        const pad = (num) => String(num).padStart(2, '0');
-        const datetime = 
-            now.getFullYear() +
-            pad(now.getMonth() + 1) + 
-            pad(now.getDate()) + "_" +
-            pad(now.getHours()) +
-            pad(now.getMinutes()) +
-            pad(now.getSeconds());
-        let filename = "/data/" + hostname + "_" + datetime + ".tar";
         logNotification(`Creating tarball with ${filelist.length} files, wait...`);
         // Last name = name of output tar archive.
-        filelist.push( filename );
-        await fetch_json("/make_tarball", filelist);
+        const resp = await fetch_json("/make_tarball", filelist);
+        const filename = resp.filename;
         logNotification(filename +" created, starting download");
         downloadFile( filename );
         // no way to know when download is complete, so wait a bit before deleting the tarball
         // Only need to wait until download started. If a file is deleted
-        // after opening, the open file handle will still work in MicroPython/LittleFS2.
+        // after opening, the open file handle will still work in MicroPython/LittleFS2
+        // and the file disappears as it should when closing that handle.
         await sleep_ms(3000); 
         await fetch_json("/delete_file", {"delete_filename": filename });
         logNotification(filename +" deleted");
@@ -676,29 +688,18 @@
 
     async function selectForBackup(){
         // Select files that are useful to backup
-        let pinfo = await fetch_json("/get_pinout_filename");
-        let pinout_filename =  pinfo["pinout_filename"].split("/")[1];
-        // >>> select all json and txt?
-        let check_these = [ "pinout.txt", "config",
-            "drumdef", "history", "setlist_stored_", 
-            "setlist_titles", 
-            "tunelib", "lyrics", pinout_filename ];
-        // organtuner, timezone, battery are rebuilt when necessary
-        // error logs don't need backup. *.mid files are temporary.
-        let body = document.getElementById("fileListBody");
+        const body = document.getElementById("fileListBody");
         for( let row of body.rows ){
             let filename = row.cells[1].innerText ;
-            if( !filename.endsWith(".json")&&
-                !filename.endsWith(".txt")){
-                    continue;
-                }
-            for( let ct of check_these ){
-                if( filename.includes(ct)){
-                    row.cells[0].children[0].checked = true ;
-                    let checkbox = row.cells[0].children[0]; 
-                    selectFile( checkbox.id, checkbox.getAttribute("myfilepath") );
-                    continue;
-                }
+            // json, txt in "data" folder
+            // tsv in "signal" folder
+            if( filename.endsWith(".json") ||
+                filename.endsWith(".txt")||
+                filename.endsWith(".tsv")){
+                row.cells[0].children[0].checked = true ;
+                let checkbox = row.cells[0].children[0]; 
+                selectFile( checkbox.id, checkbox.getAttribute("myfilepath") );
+                logNotification(`${filename} checked for backup`);
             }
         }
     }

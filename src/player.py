@@ -87,7 +87,8 @@ class MIDIPlayer:
             battery.end_heartbeat()
             # get_info_by_id() could fail in case tunelib
             # has not been correctly updated. 
-            midi_fn, duration, title = tunemanager.get_info_by_tuneid(tuneid)
+            # midi_fn can be either the original file name or the cached file name.
+            midi_fn, duration, title, original_fn = tunemanager.get_info_by_tuneid(tuneid) # type:ignore
             if not midi_fn:
                 # tuneid not in tunelib. Could be reported better in history
                 # or shown in play page?
@@ -95,7 +96,7 @@ class MIDIPlayer:
             # Get MidiFile object
             midifile = open_midi( midi_fn ) # fileops.open_midi
 
-            self.logger.info(f"Start {tuneid=} '{title}' tracks={len(midifile.tracks)} type={midifile.format_type}" )
+            self.logger.info(f"Start {original_fn} '{title}' tracks={len(midifile.tracks)} type={midifile.format_type}" )
             controller.all_notes_off()
             ActuatorStats.zero()
             # From play_tune from tunemanager to _play = 150 msec
@@ -130,7 +131,7 @@ class MIDIPlayer:
             # Let async tasks run freely
             # This will also run all pending scheduled tasks
             scheduler.run_always()
-            self.logger.info(f"End {tuneid=} '{title}' {midi_fn=}, played {self.time_played_us/1_000_000:.2f}s of {duration/1_000:.2f}s")
+            self.logger.info(f"End {original_fn} '{title}' {midi_fn=}, played {self.time_played_us/1_000_000:.2f}s of {duration/1_000:.2f}s")
             s = ", ".join( f"{k}={v}" for k,v in stats.items())
             self.logger.info(f"Actuator stats: {s}")
             battery.start_heartbeat()

@@ -14,8 +14,6 @@ import scheduler
 import fileops
 from driver_base import BasePin
 
-# >>> evaluate value of battery monitor
-
 # update readings every 60 seconds
 _UPDATE_EVERY_SECONDS = const(60) 
 
@@ -270,7 +268,6 @@ class Battery:
             return pr < _BATTERY_LOW_PERCENT
 
     def complement_progress( self, progress ):
-        # >>> don't add if battery_info is None???
         progress["bat_low"] = self.battery_info["low"]
         progress["bat_percent_remaining"] = self.battery_info["percent_remaining"]
         progress["bat_remaining_seconds"] = self.battery_info["remaining_seconds"]

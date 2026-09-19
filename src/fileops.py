@@ -239,7 +239,7 @@ def get_file_date( filename ):
         # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
         # which is far, far in the future... fortunately raises overflow.
         return "2000-01-01 00:00"
-    return f"{t[0]:4d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
+    return f"{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
 
 
 
@@ -260,3 +260,8 @@ def get_mime_type( filename ):
     }
     # Default MIME type is text/plain
     return mime_types.get( get_file_type(filename), "text/plain")  + ";charset=UTF-8"
+
+def file_is_equal( filename, filedata ):
+    with open(filename, "rb") as file:
+        data_read = file.read()
+    return filedata == data_read
