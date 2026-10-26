@@ -101,7 +101,7 @@
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
-     * [Changes Sept 8, 2026 to ....](#changes-sept-8-2026-to)
+     * [Changes Sept 8, 2026 to Oct 26. 2026](#changes-sept-8-2026-to-oct-26-2026)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -1609,7 +1609,7 @@ If tune is not started by crank, it will not react to the crank.
 * Make back arrow on HTML pages more consistent.
 * Update crank debug option to current version.
 
-## Changes Sept 8, 2026 to ....
+## Changes Sept 8, 2026 to Oct 26. 2026
 Tune List page:
 * Don't show empty columns in the Tune List page.
 * Suppress adding "~" before tune title to show it was derived from file name. This was formerly done to show tunes that need editing in Tunelib Editor, but now there are filters.
