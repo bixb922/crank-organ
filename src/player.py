@@ -4,12 +4,12 @@
 
 # Plays MIDI files using the umidiparser module
 from micropython import const
-from time import ticks_us, ticks_diff, ticks_ms, ticks_add
+from time import ticks_us, ticks_diff, ticks_ms, ticks_add, time
 import asyncio
 from random import getrandbits
 
 from minilog import getLogger
-from drehorgel import tunemanager, controller, battery, history, crank, config, timezone
+from drehorgel import tunemanager, controller, battery, history, crank, config
 
 import scheduler
 from fileops import open_midi
@@ -73,7 +73,7 @@ class MIDIPlayer:
 
         # Assign variables here so finally: does not fail for "local variable referenced before assignment"
         self.time_played_us = 0
-        start_time = timezone.now_timestamp()
+        start_time = time()
         midi_fn = None
         duration = 1 
         title = None
@@ -88,7 +88,7 @@ class MIDIPlayer:
             # get_info_by_id() could fail in case tunelib
             # has not been correctly updated. 
             # midi_fn can be either the original file name or the cached file name.
-            midi_fn, duration, title, original_fn = tunemanager.get_info_by_tuneid(tuneid) # type:ignore
+            midi_fn, duration, title = tunemanager.get_info_by_tuneid(tuneid) 
             if not midi_fn:
                 # tuneid not in tunelib. Could be reported better in history
                 # or shown in play page?
@@ -96,7 +96,7 @@ class MIDIPlayer:
             # Get MidiFile object
             midifile = open_midi( midi_fn ) # fileops.open_midi
 
-            self.logger.info(f"Start {original_fn} '{title}' tracks={len(midifile.tracks)} type={midifile.format_type}" )
+            self.logger.info(f"Start {midi_fn} '{title}' tracks={len(midifile.tracks)} type={midifile.format_type}" )
             controller.all_notes_off()
             ActuatorStats.zero()
             # From play_tune from tunemanager to _play = 150 msec
@@ -114,7 +114,7 @@ class MIDIPlayer:
             await asyncio.sleep_ms(100)
 
         except asyncio.CancelledError:
-            self.logger.debug("Player cancelled (next or da capo button, tuner)")
+            self.logger.debug("Player cancelled (next or da capo button, maintenance functions)")
             self.progress.tune_cancelled()
         except Exception as e:
             self.logger.exc(e, f"play_tune+umidiparser {tuneid=} '{title}' {midi_fn=}")
@@ -131,7 +131,7 @@ class MIDIPlayer:
             # Let async tasks run freely
             # This will also run all pending scheduled tasks
             scheduler.run_always()
-            self.logger.info(f"End {original_fn} '{title}' {midi_fn=}, played {self.time_played_us/1_000_000:.2f}s of {duration/1_000:.2f}s")
+            self.logger.info(f"End {midi_fn} '{title}' {midi_fn=}, played {self.time_played_us/1_000_000:.2f}s of {duration/1_000:.2f}s")
             s = ", ".join( f"{k}={v}" for k,v in stats.items())
             self.logger.info(f"Actuator stats: {s}")
             battery.start_heartbeat()
@@ -221,6 +221,7 @@ class MIDIPlayer:
                 # Sleep until scheduled time has elapsed
                 t1 = ticks_ms()
                 await scheduler.wait_ms(wait_time_ms)
+                
                 sum_real_waits_ms += ticks_diff( ticks_ms(), t1 )
                 sum_scheduled_waits_ms += wait_time_ms
 
@@ -304,7 +305,7 @@ class MIDIPlayer:
         # Start tuneid=iM3PgolP5 '~DC072 A022' tracks=1 type=208
         # MIDI processing: midi_events=4922, msec/event=0.95, busy=3.4%, avg gc=24 msec, late ratio=0.31% self.repeat_count=1 controller=0.66 msec/event
         # Actuator stats: note on=1731, note not found=729, max polyphony=7
-        # Grease has drum notes.
+        # Grease has drum notes!!
         # Start tuneid=iedTbEvZJ '~grease' tracks=10 type=208
         # MIDI processing: midi_events=3120, msec/event=4.89, busy=21.0%, avg gc=26 msec, late ratio=0.26% self.repeat_count=1 controller=4.49 msec/event
         # End tuneid=iedTbEvZJ '~grease' midi_fn=/data/midi_cached.mid, played 72.52s of 72.52s
@@ -314,6 +315,14 @@ class MIDIPlayer:
         # MIDI processing: midi_events=3112, msec/event=4.96, busy=21.3%, avg gc=28 msec, late ratio=0.19% self.repeat_count=1 controller=4.57 msec/event
         # End tuneid=iedTbEvZJ '~grease' midi_fn=/data/midi_cached.mid, played 72.52s of 72.52s
         # Actuator stats: note on=982, note not found=573, max polyphony=8
+
+        # With MidiFileCache in RAM and 50kb buffer gc= goes up to 40-50 msec average during playing, late ratio stays at 0.2%
+        # 2026-09-25 03:26:12GMT-3 - player - INFO - Start tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' tracks=8 type=1
+        # 2026-09-25 03:28:44GMT-3 - player - INFO - MIDI processing: msec/event=0.96, busy=5.5%, avg gc=73 msec, late ratio=0.31% self.repeat_count=1 controller=0.69 msec/event
+        # 2026-09-25 03:28:44GMT-3 - player - INFO - End tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' midi_fn=tunelib/Trompeten Echo Polka r1.mid, played 151.71s of 151.71s
+        # 2026-09-25 03:28:44GMT-3 - player - INFO - Actuator stats: midi events=8690, note on=3139, note not found=1201, max polyphony=7
+        # 2026-09-24 23:20:14GMT-3 - player - INFO - Start tunelib/BU068_A040 Medici March rvb 2.mid.gz 'Medici March' tracks=1 type=208
+        # busy goes down from 3% to 0.8%. MIDI file sync goes down from 1.5sec to 1sec.
 
     def get_progress(self):
         progress = self.progress.get()
@@ -345,7 +354,6 @@ class MIDIPlayer:
             controller.all_notes_off()
             # Wait for the crank to start turning
             await crank.wait_start_turning()
-
             # Now the crank is turning again. Resume scheduler
             await scheduler.wait_ms(1)
     

@@ -9,8 +9,6 @@
 # extracts an aspect of the information and organizes it,
 # see below "subclasses of PinoutParser"
 
-# >>> describe pinout.json file
-# >>> up/down arrows are for servopulse and not midi note?
 from machine import Pin, SoftI2C
 
 from minilog import getLogger
@@ -19,27 +17,6 @@ import fileops
 from midicontroller import MIDIController, RegisterBank
 from solenoid import PinTest
 
-
-# ESP32-S3 Technical Manual
-# See 2.3.3 Restrictions for GPIOs and RTC_GPIOs
-# See Table 2-3. IO MUX Pin Functions, 
-# See Table 2-4. RTC and Analog Functions
-# Reserved: 0 for bootstrapping, chip boot mode
-# Usable: Pin 3 is JTAG signal source, ignored if eFuse 1, 2, 3 are zero.
-# When GPIO0 and 3 are high on boot, device goes into bootloader.
-# Reserved: 19, 20 for USB
-# Reserved: 22 to 37 not usable, SPI, flash SPIRAM, not available
-# Usable: 38 (is "neopixel" 3 color LED on some boards)
-# Usable: 39 to 42: JTAG, unused if JTAG not enabled (enable with pin 3)
-# Reserved: 43, 44: UART
-# Reserved: 45, 46: VDD_SPI voltage, ROM message printing
-# Please do not use the interrupt of GPIO36 and GPIO39 when using ADC or Wi-Fi and Bluetooth with sleep mode enabled.
-# This definition is for ESP32-S3 N16R8 or N8R8.
-# N32R8V has more reserved pins, but that should be
-# supported (not tested).
-ESP32_S3_RESERVED_PINS  = [ 0, 19, 20,43, 44, 45, 46] +\
-                          [ pin for pin in range(22,38) ]
-ESP32_S3_AVAILABLE_GPIO_PINS = [ pin for pin in range(49) if pin not in ESP32_S3_RESERVED_PINS]
 
 
 # ClassPinoutList
@@ -259,19 +236,6 @@ class GPIODef(PinoutParser):
     def __init__(self, *args):
         _logger.debug(f"Parsing pinout file '{args[0]}'")
         self.register_bank = RegisterBank()
-        global ESP32_S3_AVAILABLE_GPIO_PINS
-        valid_pins = []
-        for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
-            try:
-                # Compare our definition to the MicroPython definition
-                # Mark unavailable pins as reserved
-                Pin( pin, Pin.IN )
-                valid_pins.append( pin )
-            except ValueError: # Invalid pin
-                _logger.error( f"Pin {pin} is not available on this ESP32-S3")
-                ESP32_S3_RESERVED_PINS.append( pin )
-                del ESP32_S3_AVAILABLE_GPIO_PINS[ESP32_S3_AVAILABLE_GPIO_PINS.index(pin)]
-        ESP32_S3_AVAILABLE_GPIO_PINS = valid_pins
         super().__init__(*args)
 
     def define_start( self ):
@@ -365,10 +329,8 @@ class ActuatorDef(PinoutParser):
 
 
     def define_start( self ):
-        self.pin_dict = {}
-        self.driver_dict = {}
-        self.known_programs = set() 
-        self.known_programs.add(1) # 1 always is a known program...
+        self.pin_dict = {} # must be dict, see factory in define_midi
+        self.driver_dict = {} # must be dict, see driver_factory
 
         # Pass initialized registers to MIDIController
         self.controller = MIDIController( self.register_bank )
@@ -378,26 +340,19 @@ class ActuatorDef(PinoutParser):
         
         self.controller.define_start()
 
-        # gpio driver is the default driver, should
-        # the ["gpio"] entry in pinout.json be missing,
-        # also for compatibility with previous versions
-        from driver_gpio import GPIODriver
-        self.current_driver = self.driver_factory( GPIODriver() )
-        self.pin_list = []
+        self.current_driver = None
 
 
     # define_register is defined in pinout.py/GPIOdef, not here  
     def define_i2c(self, sda, scl):
         self.current_i2c_number += 1
 
-        sclpin = Pin(scl)
-        sdapin = Pin(sda)
-
         if PinTest.testI2Cconnected(sda, scl):
             from drehorgel import config
             i2cfreq = config.i2c_frequency_khz 
             assert 10 <= i2cfreq <= 800, "I2C frequency must between 10 and 800 kHz"
-            self.current_i2c = SoftI2C(sclpin, sdapin, freq=i2cfreq*1_000)
+            from driver_i2c import I2Cdriver
+            self.current_i2c = I2Cdriver(scl, sda, i2cfreq*1_000)
             # 100kHz = 2 msec per MCP23017 transaction (pin on or pin off)
             # 400kHz = 1 a 2 msec per MCP23017 transaction
             # About 25% faster. 
@@ -446,8 +401,10 @@ class ActuatorDef(PinoutParser):
         from driver_gpioservo import GPIOServoDriver
         self.current_driver = self.driver_factory( GPIOServoDriver( period_us  ) )
 
-    # >>> test if pinout can be ordered in different ways.
     def define_midi(self, pin, midi_note, rank, register_name ):
+        if not self.current_driver:
+            from driver_gpio import GPIODriver
+            self.current_driver = self.driver_factory( GPIODriver() )
         # Disregard if midi_note.midi_number is None (i.e. blank in web page/pinout.json)
         # Also disregard if midi_note or program number out of range
         if not midi_note.is_correct():
@@ -465,10 +422,6 @@ class ActuatorDef(PinoutParser):
         # and pass this to the controller so MIDI can find the pin
         self.controller.define_note( midi_note, pin, register_name )
 
-        p = midi_note.program_number
-        if p: # don't wildcard to known programs
-            self.known_programs.add( p )
-        
     def define_serial_driver( self, uart, pin, channel, rxpin, passthrough ):
         from driver_midiserial import MIDISerialDriver
         if not rxpin or not pin:

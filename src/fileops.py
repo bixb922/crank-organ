@@ -5,9 +5,7 @@ import json
 import asyncio
 import errno
 import os
-import time
 
-from deflate import DeflateIO, AUTO
 import scheduler
 
 _KEEP_OLD_VERSIONS = const(2)
@@ -120,13 +118,13 @@ def make_folder( folder ):
     except OSError:
         pass
 
-def copy_file( source, destination ):
-    # Copy file from source to destination
-    # If destination exists, it will be overwritten.
-    # If source does not exist, OSError is raised.
-    with open(source, "rb") as src:
-        with open(destination, "wb") as dst: # type:ignore
-            dst.write(src.read())
+# def copy_file( source, destination ):
+#     # Copy file from source to destination
+#     # If destination exists, it will be overwritten.
+#     # If source does not exist, OSError is raised.
+#     with open(source, "rb") as src:
+#         with open(destination, "wb") as dst: # type:ignore
+#             dst.write(src.read())
 
 # def copy_folder( src_folder, dst_folder, overwrite=False ):
 #         for fn in  os.listdir(src_folder):
@@ -139,51 +137,47 @@ def copy_file( source, destination ):
 def is_folder( folder_name ):
     return os.stat( folder_name )[0] == 16384
 
-def decompress_midi( filename, temp_filename ):
-    # Will first return filename of .mid file, if it exists.
-    # iI not, will add .gz (if not present) and
-    # then try to decompress the .mid.gz file and return the temp_filename
-    # of the decompressed .mid.gz file.
-    # If not found: OSError
-    if file_exists( filename ) and not is_compressed(filename):
-        return filename
-    # Decompress in one go, there is enough RAM
-    # and RAM will be freed immediately. Store in flash.
-    # Caching the decompressed file in RAM would raise gc.collect() times.
-    with open( filename, "rb") as file:
-        with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
-            data = stream.read()
+# Moved to filecache.py
+# def decompress_midi( filename, temp_filename ):
+#     # Will first return filename of .mid file, if it exists.
+#     # iI not, will add .gz (if not present) and
+#     # then try to decompress the .mid.gz file and return the temp_filename
+#     # of the decompressed .mid.gz file.
+#     # If not found: OSError
+#     if file_exists( filename ) and not is_compressed(filename):
+#         return filename
+#     # Decompress in one go, there is enough RAM
+#     # and RAM will be freed immediately. Store in flash.
+#     # Caching the decompressed file in RAM would raise gc.collect() times.
+#     with open( filename, "rb") as file:
+#         with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
+#             data = stream.read()
 
-    # Also: temp_filename does not get deleted after use, it remains there
-    # until the next file is decompressed.
-    with open( temp_filename, "wb") as output:  # type:ignore
-        output.write(data)
-    return temp_filename
+#     # Also: temp_filename does not get deleted after use, it remains there
+#     # until the next file is decompressed.
+#     with open( temp_filename, "wb") as output:  # type:ignore
+#         output.write(data)
+#     return temp_filename
 
 def open_midi( filename ):
     # Reading the whole file to memory (buffer_size=0) makes garbage
-    # collection times much higher.
-    # With filecache=True, 500 bytes is appropriate. There is a minor
-    # gain with 1000 bytes in terms of overall performance
-    # but open/first note times increase with 1000 to 5000 bytes.
-    # Also: 500 bytes per track keeps gc times low.
+    # collection times much higher. Waiting for gc enhancements in MicroPython
+    # and then the MIDI file can be cached via MidiFileCache.
     from umidiparser import MidiFile
-    # Files should be decompressed at this point. But there is very little overhead
-    # in calling decompress_midi for MIDI file that is already decompressed.
-    return MidiFile( decompress_midi( filename, "/data/midi_fileops.mid"),
+    return MidiFile( filename,
                     buffer_size=100,
                     reuse_event_object=True )
 
 def get_file_type( filename ):
-        # foo.mid.gz returns "mid"
-        # foo.mid returns "mid"
-        # foo.MID returns "mid"
-        # Also works with .html, .json, .html.gz etc.
-        parts = filename.split(".")
-        keep = -1
-        if is_compressed( filename ):
-            keep = -2
-        return parts[keep].lower()
+    # foo.mid.gz returns "mid"
+    # foo.mid returns "mid"
+    # foo.MID returns "mid"
+    # Also works with .html, .json, .html.gz etc.
+    parts = filename.split(".")
+    keep = -1
+    if is_compressed( filename ):
+        keep = -2
+    return parts[keep].lower()
 
 def is_compressed( filename ):
     return filename.endswith(".gz")
@@ -223,24 +217,6 @@ def filename_no_gz( filename ):
     if filename.endswith(".gz"):
         return filename[:-3]
     return filename
-
-def get_file_date( filename ):
-    try:
-        t = time.localtime(os.stat(filename)[7])
-    except OverflowError:
-        # This really happened.... the cause
-        # is that a file got transferred with /filemanager
-        # without having
-        # set the ntp time. Since the time zone offset was minus 3 hours
-        # this gives a negative time. 
-        # C language interpreted that negative number as
-        # unsigned int.
-        # This means: 
-        # -3 hrs plus some == -10441 == 0xffffd737 == 4294956855
-        # which is far, far in the future... fortunately raises overflow.
-        return "2000-01-01 00:00"
-    return f"{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
-
 
 
 def get_mime_type( filename ):

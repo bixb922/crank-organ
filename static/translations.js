@@ -241,6 +241,8 @@ let translationDict = {
 	["No tune in progress", "Es läuft keine Melodie"],
 "no probados": // notelist.html
 	["untested", "nicht getestet"],
+"no se puede realizar esta acción mientras está tocando música": // common.js
+	["Cannot be done while music is playing", "Kann nicht ausgeführt werden, während Musik spielt"],
 "nombre archivo": // tunelibedit.html
 	["Filename", "Dateiname"],
 "nuevos": // common.js
@@ -279,6 +281,8 @@ let translationDict = {
 	["Registers", "Register"],
 "test repetición": // note.html
 	["Repetition test", "Wiederholungstest"],
+"recargue página cuando deje de tocar música:": // common.js
+	["Reload page after music player stops:","Seite neu laden nachdem Musikwiedergabe aufgehört hat:"],
 "repetición progresiva": // note.html 
 	["Progressive repetition", "Wiederholungstest, steigende Rate"],
 "repetición fija": // note.html
@@ -325,8 +329,8 @@ let translationDict = {
 	["Time playing", "Zeit Musikwiedergabe"],
 "título": // tunelist.html play.html 
 	["Title", "Titel"],
-"tocar música deshabilitado por afinador, pinout. debe reiniciar para reestablecer.": // tunelist.html play.html 
-	["Playback disabled by tuner or pinout test. Reboot to reset.", "Stimmgerät oder Pinout test aktiv, keine Musikwiedergabe. Reboot zum zurücksetzen."],
+"tocar música deshabilitado por por funciones de configuración. debe reiniciar para reestablecer.": // tunelist.html play.html 
+	["Playback disabled by configuration functions. Reboot to reset.", "Keine Musikwiedergabe wegen Benutzung von Konfigurationsfunktionen. Reboot zum zurücksetzen."],
 "usar frecuencia media": // notelist.html
 	[ "Use average frequency", "Frequenzmittelwert verwenden"],
 "ver log": // diag.html 

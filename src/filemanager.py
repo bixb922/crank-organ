@@ -7,7 +7,7 @@ from drehorgel import tunemanager, config, timezone
 import fileops
 
 # Compress midi, html, css and js files in the browser: NO, bad idea.
-# >>> a veces dice File manager y a veces "Files", ej boton index page
+# >>> Check "File Manager" vs "Files" in docs and HTML
 
 DESTINATION_FOLDERS = {
     "mid": config.TUNELIB_FOLDER,
@@ -52,15 +52,15 @@ def listdir(path):
     getdate = 0
     for fileinfo in listing:
         # Add date from tunelib.json if available.
-        date = tunelibfd.get(fileinfo["name"], "") 
+        file_timestamp = tunelibfd.get(fileinfo["name"], None) 
         # Show date for up to 100 files, if not, response
         # time becomes slow.
         # This maximum does not apply to tunelib.
         # 100 files can take about 4 seconds due to os.stat()
-        if not date and getdate<100:
-            date = fileops.get_file_date(path + fileinfo["name"])
+        if file_timestamp is None and getdate<100:
+            file_timestamp =  os.stat(path + fileinfo["name"])[7]
             getdate += 1
-        fileinfo["date"] = date
+        fileinfo["timestamp"] = file_timestamp
     del tunelibfd
     return listing
 
@@ -84,14 +84,16 @@ def fast_listdir(path):
               "isDirectory":1 if dir_entry[1]==16384 else 0, 
               "size": get_size( dir_entry), 
               "path":path+dir_entry[0],
-              "date":"" # date has to be added later
+              "timestamp":None # date has to be added later
               } for dir_entry in os.ilistdir(path)]
         
 def upload( filedata, path, filename, pc_mtime, size  ):
     # Upload a file from the PC to the microcontroller
     #   pc_mtime: file modification date of origin file on PC in
-    #          Unix fashion, i.e. seconds since 1/1/1970 in local time (not UTC)
+    #          Unix fashion, i.e. seconds since 1/1/1970 in UTC time
     #   size: file size of origin file on PC. >>> should check?
+    new_file_mtime = timezone.unix_to_esp32( pc_mtime )
+
     # Check flash full, send message to javascript client.
     if is_flash_full():
         raise RuntimeError("Flash full, can't upload")
@@ -131,7 +133,7 @@ def upload( filedata, path, filename, pc_mtime, size  ):
 
     # Create folder if it does not exist
     if "software" in folder:
-        # Only case of nested folders, should more nested
+        # Only case of nested folders, should other nested
         # folders be supported?
         fileops.make_folder( "/software" )
     fileops.make_folder( folder )   
@@ -143,25 +145,28 @@ def upload( filedata, path, filename, pc_mtime, size  ):
         try:
             fst = os.stat(old_path)
             old_file_size = fst[6]
-            old_file_mtime = timezone.esp32_to_unix(fst[7])
+            old_file_mtime =fst[7]
             break
         except OSError:
             old_path = None
             old_file_size = None
             old_file_mtime = None
 
-    result = {"folder": folder, 
-                    "oldFileSize": old_file_size,
-                    "oldFileMtime": old_file_mtime,
-                    "newFileSize": size,
-                    "newFileMtime": pc_mtime,
-                    "skip": True,
-                    }
+    result = {  "folder": folder, 
+                "oldFileSize": old_file_size,
+                "oldFileMtime": old_file_mtime, # ESP32 timestamp
+                "newFileSize": size,
+                "newFileMtime": new_file_mtime, # ESP32 timestamp
+                "skip": True,
+                }
+    # Check for size and contents, if equal, skip file.
     if old_file_size == size and fileops.file_is_equal( path, filedata ):
         return result
+    # We are replacing or creating the file, show that in the result
+    result["skip"] = False
 
     # Create file with time set to the pc_mtime of the input file
-    with timezone.set_time( pc_mtime ):
+    with timezone.set_time( new_file_mtime ):
         with open(path, "wb") as file:  # type:ignore
             new_file_size = len(filedata)
             file.write( filedata )
@@ -173,12 +178,9 @@ def upload( filedata, path, filename, pc_mtime, size  ):
     # And vice-versa. Only one instance (the newer) of two equivalent
     # files will be allowed, to avoid duplicity and confusion.
     equiv = fileops.get_equivalent( path )
-
     if fileops.file_exists( equiv ):
-        # The equiv file is replaced by the new file
         os.remove( equiv )
 
-    result["skip"] = False
     return result
 
 def download(path):
@@ -213,7 +215,7 @@ def _formatLogGenerator(filename):
     # Generator function to yield log lines
     def log_generator():
         # Format log as HTML
-        # >>> could be done in browser
+        # Could be done in browser, little gain since filemanager is loaded on request only
         color = { "DEBUG": "logdeb", "ERROR": "logerr", "EXCEPTION": "logexc" }
         with open(filename) as file:
             yield "<!DOCTYPE html><head>"
@@ -222,7 +224,6 @@ def _formatLogGenerator(filename):
             yield ".logerr { color: red; }"
             yield ".logexc { color: magenta; }"
             yield ".loginfo { color: black; }"
-            yield ".logdate1 {text-wrap:nowrap}"
             yield ".logdate2 {font-size:large;font-weight:bold;text-wrap:nowrap}"
             yield "</style>"
             yield "</head><body><title>Error log</title>"
@@ -256,7 +257,7 @@ def _formatLogGenerator(filename):
                     c = color.get( p[2], ".loginfo" )
                     yield f"<tr class='{c}'>"
                     try:
-                        yield "<td class='logdate1'>" + t + "</td>"
+                        yield "<td>" + t + "</td>"
                         yield "<td>" + p[1] + "</td>"
                         yield "<td>" + p[2] + "</td>"
                         yield "<td>" + escapeHtml( " - ".join(p[3:]) ) + "</td>"
@@ -304,24 +305,6 @@ def delete(path):
     os.remove(path)
     _check_midi_file( path )
 
-# def purge_tunelib_file( fn ):
-#     def append( fn, n ):
-#         if n:
-#             fn += f"_({n})"
-#         return fn
-   
-#     fileops.make_folder( config.PURGED_FOLDER )
-#     n = 0
-#     from_fn = config.TUNELIB_FOLDER + fn
-#     to_fn = config.PURGED_FOLDER + fn
-#     # Don't overwrite existing files in "purged" folder
-#     while fileops.file_exists( append(to_fn, n) ):
-#         n += 1
-#         if n > 10:
-#             raise RuntimeError(f"Too many purged file versions {fn=} {n=}")
-#     _check_midi_file( from_fn )
-#     os.rename( from_fn, append(to_fn, n) )
-   
 def make_tarball( filelist ):
     # Make tar_file as tarball of all files in filelist. 
     from tarfile import TarFile, TarInfo
@@ -340,7 +323,7 @@ def make_tarball( filelist ):
             # /data/tunelist.json
             # All files should be in the same folder
             # Folder name inside tar file will be of the form:
-            # 20260910_esp32s3
+            # 20260910_data_esp32s3, same internal folder name as the name of the tar file
             # The original folder name disappears
             res_name = tar_name+"/"+sp[-1]
             stat = os.stat(filename)
@@ -349,7 +332,7 @@ def make_tarball( filelist ):
             tarinfo.uid = stat[4]
             tarinfo.gid = stat[5]
             tarinfo.size = stat[6]
-            tarinfo.mtime = stat[8]
+            tarinfo.mtime = timezone.esp32_to_unix(stat[8])
             with open( filename, "rb") as file:
                 tar.addfile( tarinfo, file )
     return {"filename": tar_file }

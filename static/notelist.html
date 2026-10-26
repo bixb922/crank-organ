@@ -58,8 +58,13 @@ let tuning_cents = 5 ; // default, will be updated from config
 
 async function refreshNoteList() {
 	// refresh every 5 seconds
-	while( true ) {
-		// ensure tuning_cents is updated before updateNoteList()
+	for(;;){
+		await wait_until_visible();
+
+		// If music player is active, updateTuningStats will throw exception and
+		// this loop will exit, as it should, and music will continue.
+		// If, by some chance, /get_organ_tuner_json gets called anyhow, music
+		// playback will stop, because we are in some "maintenance mode" now.
 		await updateTuningStats();
 		await updateNoteList( await fetch_json( "/get_organtuner_json" ) );
 		await sleep_ms( 5_000 ) ;
@@ -162,6 +167,7 @@ async function updateNoteList( notelist ) {
 async function tuneAll() {
 	// >>> may be interesting to leave disabled or
 	// >>> with "active" color until tuning has finished?
+	// >>> user should get some feedback that action is in progress.
 	// but then, the other buttons here should also have same behavior, e.g. stop button should be active until tuning has stopped.
 	await fetch_json( "/tune_all" ) ;
 }

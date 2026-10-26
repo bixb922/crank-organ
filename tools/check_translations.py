@@ -14,7 +14,7 @@ do_not_translate = ["", "\xa0", "\xa0\xa0","\xa0\xa0\xa0",
      "[bytes]","Host name, AP SSID, BLE name:",
      "IP", "Connection status","SSID","IP","WiFi scan",
      "SSID","dBm","Cents","Pin","👑", "🎼🎵🎶", "...", "×", ".", "▼",
-     "0", "🔼", "🔽"]
+     "0", "🔼", "🔽", "⬇", "⬆"]
 class MyHTMLParser(HTMLParser):
     def __init__(self, pagename, translations):
         self.pagename = pagename
@@ -120,8 +120,9 @@ def main():
     filelist = []
     # demo folder is not checked since all files originate in crank-organ/static
     # info folder is not checked, no translations available.
-    for folder in [ "crank-organ/static/", "server/mysite/iot/static/"]:
-        filelist.extend( [(folder, fn) for fn in os.listdir(folder) if fn.endswith(".html")] )
+    # for folder in [ "crank-organ/static/", "server/mysite/iot/static/"]:
+    folder =  "crank-organ/static/"
+    filelist.extend( [(folder, fn) for fn in os.listdir(folder) if fn.endswith(".html")] )
     analyze_translations( filelist )
     print("")
     if errors_found:

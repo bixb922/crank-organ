@@ -106,10 +106,9 @@ class NoteDef:
         # midi_number has to be neither None nor 0
         return self.midi_number or self.program_number != 0
     
-    # controller.notedict uses NoteDef as key
+    # controller.notedict uses NoteDef objects as key
     # Two NoteDef are equal if both program_number and midi_number are equal
     # Define __hash__ and __eq__ accordingly.
-    # No hash calculated if self.midi_number is None.
     def __hash__( self ):
         return self.program_number*256 + self.midi_number
     

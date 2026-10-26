@@ -11,15 +11,6 @@
 </head>
 
 <body>
-<!--<<span id="popup" class="popuptext"></span>
-div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp()">&#11013;</a>
-		&nbsp;<span>Historia</span>
-    </span>
-	<span class="headerright" id="header_time"></span>
-</div>
--->
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
@@ -41,7 +32,7 @@ div class="headerdiv">
 <div class="middlediv"></div>
 	<span>Si historia más antigua que</span>
 	<input type="text" size="3" value="90" id="days"/><span>días</span>,
-	<button onclick="deleteHistory()" id="purgeButton">Borrar</button>
+	<button onclick="deleteHistory()" id="purgeButton" name="deleteButtons">Borrar</button>
 <div class="footerdiv"></div>
 </body>
 
@@ -73,18 +64,8 @@ async function getHistory( ) {
 
         // Convert date from seconds in ESP32 epoch to string
         // date: yyyy-mm-dd, time: hh:mm
-        let d = new Date(946_684_800_000); // ESP32 epoch start
-        d.setUTCSeconds( hist_element[1] );
-        let datetime = "2000-01-01T00:00" ;
-        try{
-            datetime = d.toISOString() ; // e.g. 2024-05-13T08:40:49.000Z
-        } catch(e){
-            console.error("Error converting date", e, "hist_element=", hist_element );
-            continue;
-        }
-        let tsplit = datetime.split("T");
-        let date = tsplit[0] ;
-        let time = tsplit[1].substring(0,5) ;
+        let datetime = ymdhm( hist_element[1] );
+        const [date, time] = datetime.split(" ");
 
         // Insert separator row with date when date changes
         if( date != previous_date) {
@@ -94,6 +75,7 @@ async function getHistory( ) {
             let deleteDay = document.createElement("button");
             deleteDay.innerText = "🗑️";
             deleteDay.onclick = ()=>{deleteHistoryDate(date)};
+            deleteDay.name = "deleteButtons";
             row.cells[1].appendChild( deleteDay );
          };
         previous_date = date ;
@@ -128,10 +110,17 @@ async function getHistory( ) {
     }
     commonGetProgress.setSleep( 2_000 );
     commonGetProgress.registerCallback( (progress)=>TuneTitle.updateProgress( progress ) );
+    commonGetProgress.registerCallback( updateButtons );
     JsonCache.setReloadIfTunelibChanged(true);
     commonGetProgress.startBackground();
 }
 
+async function updateButtons( progress ){
+    // disable slow buttons during playback
+	for( const button of document.getElementsByName("deleteButtons")){
+        button.disabled =  progress["status"] == "playing";
+	}
+}
 
 async function deleteHistory(){
     // Purge old elements from history

@@ -17,16 +17,14 @@ from scheduler import is_player_active
 # and vice-versa. rpsec = _FACTOR/msec, msec = _FACTOR/rpsec
 _FACTOR = 1000/config.pulses_per_revolution
 
-# Crank does not influence music playback
-# Crank starts tunes, tune stops if crank stops
-# Crank starts tunes, crank speed governs tempo
-
+# Smooth out raw crank reading using a moving average
 def rpsec_filter(filter_window_len, stopped_rpsec, higher_threshold_rpsec):
     if filter_window_len == 0:
-        # yield raw always,
+        # Always yield raw
         while True:
             raw = yield 0 # Return number to keep pylint happy
             yield raw
+            # does never leave this while loop
 
     moving = [0]
     while True:
@@ -34,16 +32,17 @@ def rpsec_filter(filter_window_len, stopped_rpsec, higher_threshold_rpsec):
         moving.append( raw )
         while len(moving)>filter_window_len:
             moving.pop(0)
-
-        big_up = min(moving)<stopped_rpsec and raw>higher_threshold_rpsec
-        big_down = max(moving)>higher_threshold_rpsec and raw<stopped_rpsec
+        # See if there was a big rise or big fall
+        big_rise = min(moving)<stopped_rpsec and raw>higher_threshold_rpsec
+        big_fall = max(moving)>higher_threshold_rpsec and raw<stopped_rpsec
         
-        if big_up or big_down:
+        if big_rise or big_fall:
             # Make a faster response if crank starts or stops.
             # Reduce moving window to the minimum to get fast response
             moving = [raw]
             yield raw
         else:
+            # Smaller difference: return average over moving window
             yield sum(moving)/len(moving)
 
 # This is the low level driver for the crank rotation sensor
@@ -113,11 +112,12 @@ class TachoDriver:
 
         while True:
             # Wait approximately "step" milliseconds
-            # sleep_ms does not need to be precise.
+            # asyncio.sleep_ms() does not need to be precise.
 
-            # The goal is to have about 50 pulses per step.
+            # The goal should be to have at least 50 pulses per step.
             # 50 pulses means a maximal error of 1 pulse in 50, about 2%
-            # at nominal speed.
+            # at nominal speed, which compounds with a 1% of error
+            # with a step of 100 ms using ticks_ms().
             await asyncio.sleep_ms(step)
 
             # Get pulses since last call, i.e. value(0) resets
@@ -127,19 +127,18 @@ class TachoDriver:
             # direction. When using abs() neither the order of the pins
             # nor the direction of rotation matters
 
-            # Don't divide pulses by number of phases to make this reading here equal
-            # to what test crank button on web page reports.
-            pulses =  abs(self.counter.value(0))
             new_time = ticks_ms()
             time_ms = ticks_diff( new_time, last_time )
             last_time = new_time
-
+            
             # time_ms should never be 0, because there is a sleep_ms in this loop
             # so there should never a division by 0 here
-            raw = pulses * _FACTOR / time_ms
+            # There is no need to consider phases here, since General Configuration
+            # asks for the number of pulses per sec multiplied by the phases.
+            raw = abs(self.counter.value(0)) * _FACTOR / time_ms
 
             # Apply filter
-            next(filter) # Needed to advance the generator
+            next(filter) # Needed to advance the generator, discard result
             self.rpsec = filter.send( raw )
 
             self._accumulate_readings( new_time, raw, self.rpsec )
@@ -221,7 +220,7 @@ class TachoDriver:
         self.t0 = ticks_ms()
         self.tacho_data.append( (dt,raw,filtered) )
         # keep accumulating raw data if player is active.
-        # If player is not active and data is long, store
+        # If player is not active and data is long, store.
         # If player is not active and no significant data,
         # then keep about 2 seconds of tacho data to show the
         # start.
@@ -282,9 +281,9 @@ class Crank:
         self.registered_event = ev
 
     async def _start_stop_monitor( self ):
-         # This task sets/resets events when crank movement
-         # starts and stops.
-         while True:
+        # This task sets/resets events when crank movement
+        # starts and stops.
+        while True:
             await asyncio.sleep_ms(100)
             r = self.td.get_rpsec()
             if r <= config.lower_threshold_rpsec and not self.crank_stopped.is_set():
@@ -293,10 +292,10 @@ class Crank:
             elif r >= config.higher_threshold_rpsec:
                 # Handle registered event
                 if config.wait_stop_turning:
-                      # set only on transition from stopped to turning
-                      # Allows code to clear event and detect transition from
-                      # turning to stopped.
-                      if not self.crank_turning.is_set():
+                    # set only on transition from stopped to turning
+                    # Allows code to clear event and detect transition from
+                    # turning to stopped.
+                    if not self.crank_turning.is_set():
                         self.registered_event.set()
                 else:
                     # keep set always while crank is turning

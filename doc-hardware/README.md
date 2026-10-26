@@ -30,7 +30,7 @@
          * [Wires for ground](#wires-for-ground)
          * [Wires for 12V and 5V](#wires-for-12v-and-5v)
          * [Wire from GPIO to touchpad screw terminal](#wire-from-gpio-to-touchpad-screw-terminal)
-         * [Wires from GPIO to ULN2803 input](#wires-from-gpio-to-uln2803-input)
+         * [Wires from GPIO to ULN2803A input](#wires-from-gpio-to-uln2803a-input)
          * [Wires for ULN2803 output to solenoid screw terminals](#wires-for-uln2803-output-to-solenoid-screw-terminals)
          * [Solder the wires](#solder-the-wires)
          * [Clean](#clean)
@@ -393,7 +393,13 @@ If not using a diode: Connect the (+) OUT pin of the DC-DC converter to the 5V t
 
 ![touchpad wiring](mcboard-touchpad.jpg)
 
-### Wires from GPIO to ULN2803 input
+### Wires from GPIO to ULN2803A input
+
+These IC are connected this way:
+* ESP32-S3 GPIO pin to ULN2803A input pin.
+* ULN2803A output to one side of a solenoid valve or electromagnet.
+* COM pin of the ULN2803A to 12V (or whatever voltage you are using).
+* The other contact of the solenoid valve or electromagnet go to the same voltage as the COM pin of the ULN2803A.
 
 Connect each of the GPIO ports to one input of the ULN2803As.
 The GPIO ports to connect are:

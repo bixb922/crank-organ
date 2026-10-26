@@ -24,7 +24,7 @@ from microphone import Microphone
 _TARGET_DURATION = const(0.8) # seconds
 # But never less than this number of frequency measurements:
 _MINIMUM_MEASUREMENTS = const(3)
-
+# >>> feedback to web page to what's happening
 def avg(lst):
     sumval = sum( val for val in lst if val is not None )
     n =      sum(   1 for val in lst if val is not None )
@@ -86,8 +86,6 @@ class OrganTuner:
                 "tuning_cents": tuning_cents }
 
     def queue_tuning(self, method, arg):
-        from drehorgel import setlist
-        setlist.stop_playback()
         
         #  Request is a tuple of an (async organtuner method,
         # and an argument). Normally the argument is a pin_index but can
@@ -114,6 +112,7 @@ class OrganTuner:
         pin_index = int(request_data["pinIndex"])
         play_during = int(request_data["playDuring"])*1000
         if request_data["auto"]:
+            # autoNoteDuration is a string of the format "duration1/silence1 duration2/silence2 ... etc"
             repeat_times = [ x.split("/") for x in request_data["autoNoteDuration"].split(" ")]
             for note_duration, silence_duration in repeat_times:
                 # Queue a repeat, don't queue play_pin(), to 
@@ -135,8 +134,9 @@ class OrganTuner:
             time.sleep_us( note_duration * 1000  )
             actuator.off()
             time.sleep_us( silence_duration * 1000 ) 
+            # No async during repeat
         # Let queued async task do their job now, and leave a bit of
-        # silence before the next note
+        # silence before the next queued action
         await asyncio.sleep_ms(500)
  
 
@@ -177,10 +177,12 @@ class OrganTuner:
         return
                      
     async def play_pin( self, arg ):
+        # Used from all_pin_test, sound_note (8 times)
         #  Make a pipe sound
         pin_index, duration, silence = arg
         actuator = actuator_bank.get_actuator_by_pin_index( pin_index )
         actuator.on()
+        # >>> should time.sleep_us or _ms be used here?
         await asyncio.sleep_ms(round(duration))
         actuator.off()
         await asyncio.sleep_ms(round(silence))

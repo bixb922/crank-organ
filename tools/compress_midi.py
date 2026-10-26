@@ -342,6 +342,7 @@ def write_midi_file( event_list, output_filename, status_d0 ):
     # Use a high value for ticks_per_beat, if not bass correction does not work
     # Compression could be better with a lower value....
     tempo = 500_000
+    # Perhaps should add set tempo?
     ticks_per_beat = 96 # better not use lower values!
     tempo_secs = tempo/1_000_000
  
@@ -521,7 +522,6 @@ def make_setlist_newest( output_folder, input_filelist ):
     input_filelist.sort( key=lambda x:x[2], reverse=True )
     weeks = datetime.now() - timedelta(weeks=STORE_WEEKS)
     i = 0
-    # >>> ???keep new and wip?
     setlist_new = []
     setlist_wip = []
     for i, (filename, file_size, mtime ) in enumerate(input_filelist):
@@ -624,8 +624,8 @@ def main():
     #       15 blocks for other json files
     #       total=225 blocks, YMMV.
     application_overhead = 512  # blocks of 4096 bytes due to 2MB Micropython+romfs fixed
-    # >>>data folder size is variable
-    application_overhead += 250 # data folder, json files
+    # Basic data=100kb. Tunelib=200*2000=400kb lyrics=300 estimatied => 800 kb net, 220 blocks of 4096 bytes
+    application_overhead += 220 # data folder, json files. Tunelib=200 bytes/tune
     print("Estimated capacities based on current average MIDI file size, no lyrics:")
     for flash_size in (8, 16):
         blocks = flash_size*1024*1024/4096

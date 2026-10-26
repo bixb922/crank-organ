@@ -81,8 +81,7 @@ class PowerManager:
     async def wait_and_power_off(self):
         # Deepsleep is the closest thing to "self power off"
         # Could not make wake_on_touch work here.
-        # >>>must find root cause, but deepsleep leaves some GPIO (GPIO 11) on.
-        # >>> (this is a hardware problem)
+        # GPIO 11 hardware contact corrected
         await self._wait_and_action( machine.deepsleep )
         # Does not return
         # await self._wait_and_action( self.lowpower )

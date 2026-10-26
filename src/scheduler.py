@@ -123,7 +123,6 @@ class RequestSlice:
         self.event = asyncio.Event()
         self.available = _INFINITY
         self.wait_at_most = wait_at_most
-        return
 
     async def __aenter__(self):
         self.start = ticks_ms()

@@ -5,7 +5,7 @@
 # for a full driver.
 
 from micropython import const
-from driver_base import SolePin, BaseDriver
+from driver_sole import SolePin, SoleDriver
 
 # register addresses in bank=0 mode 
 _MCP_IODIR = const(0x00)  # R/W I/O Direction Register
@@ -19,7 +19,7 @@ _MCP_GPIO = const(0x12)  # R/W General Purpose I/O Port Register
 
 
 # Not a singleton, one instance for each MCP23017 chip
-class MCP23017Driver(BaseDriver):
+class MCP23017Driver(SoleDriver):
     def __init__( self, i2c, i2c_number, address ):
         super().__init__(  i2c_number, address )
 
@@ -52,34 +52,38 @@ class MCP23017Driver(BaseDriver):
             self._write( _MCP_INTCON+bank, 0 ) # Interrupt-on-change: disabled
             self._write( _MCP_GPPU+bank, 0 )  # Pull ups disabled (valid only for inputs anyhow)
         
-        self.all_notes_off()
+        self.fast_off()
 
     def _write(self, reg, val):
         #assert 0 <= val <= 255
-        # >>> evaluate use of try/except TimeoutError,
+        # >>> pending: use of try/except OSError ENODEV 
+        # >>> must guard read and write.
         # also for MCP23017Driver._read() and PCA9685Driver.set_pwm()
         # As it is, the current tune will abort and the error log
         # will show a TimeoutError if I2C connection is flaky.
         # I2C bus frequency can be configured in General Configuration.
-        self._i2c.writeto_mem(
-            self._address, reg, (val).to_bytes(1) 
-        )
+        #self._i2c.writeto_mem(
+        #    self._address, reg, (val).to_bytes(1) 
+        #)
+        self._i2c.write_byte( self._address, reg, val )
         
     def _read(self, reg):
-        data = self._i2c.readfrom_mem(
-            self._address, reg, 1
-        )
-        return data[0]
+        #data = self._i2c.readfrom_mem(
+        #    self._address, reg, 1
+        #)
+        #return data[0]
+        return self._i2c.read_byte( self._address, reg )
 
     def define_pin( self, *args ):
         # Pass this driver and then the *args
         return MCPPin( self, *args )
     
-    def all_notes_off( self ):
+    def fast_off( self ):
         # Low level "driver level" fast off of all notes
         # Set all outputs to off
         self._write( _MCP_GPIO, 0 )
         self._write( _MCP_GPIO+1, 0 )
+        # Now BasePin._count is off, fix that
     
 
 class MCPPin(SolePin):

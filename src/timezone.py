@@ -18,6 +18,10 @@ _NTP_RETRIES = const(3)
 # Time zone longName if no time zone info is available
 _NO_TZ_INFO = const("no tz info")
 
+# Difference to convert from Unix epoch (1970/1/1) to ESP32 epoch (2000/1/1)
+# 30 years in seconds
+_ESP32_EPOCH = const(946_684_800)
+
 class TimeZone:
     def __init__(self):
         self.ntp_task = None
@@ -37,7 +41,6 @@ class TimeZone:
        
 
     def network_up(self):
-        # >>> move to async polling process?
         # wifimanager calls here when network is up
         if self.ntp_task or self.has_time():
             # Avoid reentering task while it is active
@@ -46,12 +49,13 @@ class TimeZone:
         self.ntp_task = asyncio.create_task(self._ntp_process())
 
     async def _ntp_process(self):
+        # Wait for things to settle a bit, for instance, for self.set_logger() to run.
+        # if not self.logger below fill fail.
+        await asyncio.sleep_ms(1000)
         # Get ntp time, then update time zone 
         # Try several times to get time from ntp server
         if await self._get_ntp_time():
-            # Set RTC with this time + time zone offset
-            self.set_rtc( time() )
-            await self.logger.async_info("Time set by NTP")
+            self.logger.async_info("Time set by NTP")
 
 
     def has_time( self ):
@@ -59,14 +63,13 @@ class TimeZone:
         return self.is_valid( time() )
     
     def is_valid( self, timestamp ):
-        # 804_168_000 = somewhere in  2075
-        return 804_168_000 <= timestamp <= 2_380_968_000
+        # 316_000_000 some time in 2010.
+        # 2_380_968_000 = some time  in  2075.
+        return 316_000_000 <= timestamp <= 2_380_968_000
     
-    def set_rtc( self, timestamp ):
+    def _set_rtc( self, timestamp ):
         # Prepare a time tuple as argument for RTC
-        t = localtime(timestamp - self.tzinfo["offset"] )
-        # Set this as the local time, to be returned
-        # by time.localtime() and time.time()
+        t = localtime(timestamp)
         # year, month, day, weekday, hour, minute, second, subsecond
         machine.RTC().datetime( (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
 
@@ -80,12 +83,12 @@ class TimeZone:
                     ntptime.settime()
                 return True
             except (asyncio.TimeoutError, OSError) as e:
-                await self.logger.async_info(f"Recoverable ntptime exception {repr(e)}") 
+                self.logger.async_info(f"Recoverable ntptime exception {repr(e)}") 
                 # RequestSlice did not give slice, retry later
                 # OSError -202 means server not found, happens once in a while
                 pass
             except Exception as e:
-                await self.logger.async_info(f"Unrecoverable ntptime exception {repr(e)}") 
+                self.logger.async_info(f"Unrecoverable ntptime exception {repr(e)}") 
                 return
 
             await asyncio.sleep_ms(retry_time)
@@ -98,47 +101,34 @@ class TimeZone:
         # Called from webserver with /set_time_zone
         # which in turn is called from common.js every now and then.
         newtimestamp = newtz["timestamp"]
-        del newtz["timestamp"]
+        del newtz["timestamp"] # doesn't need to get saved to flash.
         if newtz != self.tzinfo:
             # Don't replace self.tzinfo, better to show times with
             # old timezones instead of mixing new time zone with old offset
             # until reboot.
             fileops.write_json( newtz, _TZFILE, keep_backup=True )
-            await self.logger.async_info("Timezone info updated, takes effect next reset") 
+            self.logger.async_info("Timezone info updated, takes effect next reset") 
         
         # If we don't have ntptime, use the timestamp provided
         # by the browser. This is normally case if using AP mode
         # but sometimes ntptime fails, since there is no guarantee
         # of service for ntptime. And also: if setting a new
-        # time zone, this sets the time and resets the RTC
-        # to the new time zone.
+        # time zone, this sets the time
         if self.has_time():
             return # NTP or browser has already set time.
         # Check that time is in a reasonable range
         if self.is_valid( newtimestamp ):
-            self.set_rtc( self.unix_to_esp32(newtimestamp) )
-            await self.logger.async_info("Time set by browser") 
+            self._set_rtc( self.unix_to_esp32(newtimestamp) )
+            self.logger.async_info("Time set by browser") 
         else:
-            await self.logger.async_info("Ignoring time set by browser, out of range")
+            self.logger.async_info("Ignoring time set by browser, out of range")
         
     def get_time_zone_info( self ):
         return self.tzinfo
 
-    def now_timestamp(self):
-        # time.time() is already in local time, no need to add offset
-        return time() 
-    
-    def now(self):
-        # >>>???is this redundant?
-        t = localtime(self.now_timestamp())
-        if self.has_time():
-            return t
-        # Don't apply time zone if no clock set (no ntptime yet)
-        return localtime()
 
     def now_ymdhms(self):
-        t = self.now()
-        return  f"{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}:{t[5]:02d}"
+        return self.ymdhms( time() )
 
     def now_ymdhm(self):
         return self.now_ymdhms()[0:-3]
@@ -151,24 +141,40 @@ class TimeZone:
     def now_ymd(self):
         return self.now_ymdhms()[0:10]
 
-    def format_ymd(self, tstamp):
-        t = localtime(tstamp)
-        return f"{t[0]}-{t[1]:02d}-{t[2]:02d}"
-    
     def now_ymdhmsz(self):
         if self.has_time(): 
             return self.now_ymdhms() + self.tzinfo["shortName"]
         # No ntptime (yet)
         return self.now_hms()
 
+    # Same but with timestamp instead of now. Not all variants are needed
+    #def ymd(self, timestamp):
+        # "2026-09-18"
+        #  1234567890
+    #    return self.ymdhms(timestamp)[0:10]
+
+    #def ymdhm(self, timestamp):
+    #    return self.ymdhms(timestamp)[0:-3]
+    
+    def ymdhms(self, timestamp):
+        if self.has_time():
+            timestamp -= self.tzinfo["offset"]
+        try:
+            t = localtime(timestamp)
+        except OverflowError:
+            # This happened when a tstamp is year 2000 and
+            # a negative time zone was applied, yielding a negative time.
+            # Could not reproduce with MicroPython 1.28, so may be this was fixed.
+            return "2000-01-01 00:00"
+        return f"{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}:{t[5]:02d}"
+
     def unix_to_esp32( self, timestamp ):
         # ESP32 time is zero on 1/1/2000
         # Unix time is zero on 1/1/1970
-        # 30 years in seconds = 946_684_800 (difference of epoch)
-        return timestamp - 946_684_800
+        return timestamp - _ESP32_EPOCH
     
     def esp32_to_unix( self, timestamp ):
-        return timestamp + 946_684_800
+        return timestamp + _ESP32_EPOCH
     
     # Implement a context manager to set time for a short time
     # Use:
@@ -177,20 +183,18 @@ class TimeZone:
     #        to have temporary_unix_timestamp as file creation date.
     # Upon exit of the with statement, time will return to normal.
 
-    def set_time( self, temporary_unix_timestamp ):
-        # Unix timestamps are in seconds since 1/1/1970
-        # Neutralize effect of time zone, set_rtc adds self.tzinfo["offset"] back,
-        # to the timestamp, so the time will be set as requested with no tz adjustment.
-        self.new_timestamp = self.unix_to_esp32( temporary_unix_timestamp ) + self.tzinfo["offset"] 
+    def set_time( self, temporary_esp32_timestamp ):
+        # Store timestamp to be used in __enter__ below
+        self.new_timestamp = temporary_esp32_timestamp
         return self
     
     def __enter__( self ):
-        # Save stamp in UTC to be able to return to this time on __exit__()
-        self.saved_stamp = time()+self.tzinfo["offset"] 
-        self.set_rtc( self.new_timestamp )
+        # Save stamp in UTC to be able to return to this time on __exit__
+        self.saved_stamp = time()
+        self._set_rtc( self.new_timestamp )
         return self
 
     def __exit__( self, _unused_exc_type, _unused_exc_val, _unused_exc_traceback ):
-        self.set_rtc( self.saved_stamp )
+        self._set_rtc( self.saved_stamp )
 
 

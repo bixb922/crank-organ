@@ -1,5 +1,3 @@
-# >>> update Microdot to latest version. Use native authentication.
-
 # This makefile is used during software development.
 # Run from folder just above crank-organ:
 # Use gmake -C crank-organ/tools
@@ -35,11 +33,14 @@ drehorgel.mpy \
 driver_base.mpy \
 driver_gpio.mpy \
 driver_gpioservo.mpy \
+driver_i2c.mpy \
 driver_mcp23017.mpy \
 driver_midiserial.mpy \
 driver_null.mpy \
 driver_ftoms.mpy \
 driver_pca9685.mpy \
+driver_rcservo.mpy \
+driver_sole.mpy \
 filemanager.mpy \
 filecache.mpy \
 history.mpy \

@@ -270,7 +270,17 @@ button.minibutton:active  {
 	background-color:#0a283E;
 }
 
+button:disabled{
+  color:#afafaf;
+}
+button:disabled:active{
+  color:#afafaf;
+  background-color:white;
+}
 
+input:disabled{
+  color:#afafaf;
+}
 button.inactive {
   color:#afafaf;
 }

@@ -6,7 +6,8 @@ from time import sleep_ms
 import fileops
 from drehorgel import config
 import midi
-from driver_base import BaseDriver, BasePin, SolePin
+from driver_base import BaseDriver, BasePin
+from driver_sole import SolePin
 from actuatorstats import ActuatorStats
 
 # Does not need to be declared singleton. Since __repr__ is
@@ -76,6 +77,7 @@ class VirtualDrumPin(BasePin):
                 pin = self._driver.actuator_bank.get_pin_by_midi_number( midi_number )
                 if pin and pin.is_solepin:
                     pinset.add( pin )
+                # >>> should have message for non-solepins?
 
         
 
@@ -94,6 +96,7 @@ class VirtualDrumPin(BasePin):
         # notes from the drum cluster.
         # Don't bother to update SolePin.sole_polyphony here, when
         # leaving this function, the drum note will be already turned off.
+        # But use  SolePin.sole_polyphony to calculate how many pins can be turned on now.
         allowed =  SolePin.config_max_polyphony - SolePin.sole_polyphony - len(strong_virtual_pins)
         if allowed <= 0:
             # Not enough power. It's not nice to turn off regular notes

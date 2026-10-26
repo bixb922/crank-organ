@@ -1,5 +1,5 @@
 from machine import PWM, Pin
-from driver_base import RCServoPin, BaseDriver
+from driver_rcservo import RCServoPin, RCServoDriver
 
 # This class is instantiated when a ["gpioservo", x,x,x] entry
 # is found in pinout.json.
@@ -7,7 +7,7 @@ from driver_base import RCServoPin, BaseDriver
 # These servos need a pulse at least every 20 msec
 # Pulse with 1 msec = 0 degree turn, pulse with 2msec = 180 degree turn.
 
-class GPIOServoDriver(BaseDriver):
+class GPIOServoDriver(RCServoDriver):
 
     def __init__( self, period_us ):
         # Restriction: all GPIOServos have the same period_us.
@@ -29,11 +29,9 @@ class GPIOServoPin(RCServoPin):
 
     
     def low_level_on( self ):
-        super()._movement_start( )
         self._pwm.duty_u16( self._duty1 )
 
     def low_level_off( self ):
-        super()._movement_start( )
         self._pwm.duty_u16( self._duty0 )
 
     def set_servopulse( self, pulse0_us, pulse1_us ):

@@ -70,18 +70,18 @@ async function updateTunelibWithHistory( tunelib ){
 }
 
 // Keep track of which rows are visible
-function tunelistVisibilityChanges( entries ){
-    // Page has scrolled, update TitleTunes that entered/exited viewport.
-    for( let entry of entries ){
-        // Add/remove class according to visibility in viewport
-        if( entry.isIntersecting ){
-            entry.target.classList.add("tunelist-visible");
-        }
-        else{
-            entry.target.classList.remove("tunelist-visible");
-        }
-    }
-}
+// function tunelistVisibilityChanges( entries ){
+//     // Page has scrolled, update TitleTunes that entered/exited viewport.
+//     for( let entry of entries ){
+//         // Add/remove class according to visibility in viewport
+//         if( entry.isIntersecting ){
+//             entry.target.classList.add("tunelist-visible");
+//         }
+//         else{
+//             entry.target.classList.remove("tunelist-visible");
+//         }
+//     }
+// }
 
 // Called when loading page
 async function pageRefreshProcess( ) {
@@ -135,7 +135,7 @@ async function fillBody( ) {
         let row = insertRow( tlbody, ["",tune[TLCOL_GENRE],
                 tune[TLCOL_AUTHOR], formatMilliMMSS( tune[TLCOL_TIME] ),
                 tune[TLCOL_YEAR], tune[TLCOL_HISTORY],
-                "", tune[TLCOL_DATEADDED], formatRating(tune)] );
+                "", ymd(tune[TLCOL_DATEADDED]), formatRating(tune)] );
 
         let tuneTitle = document.createElement( "span", {"is":"tune-title"});
         // full format is "hptm%ds"
@@ -161,7 +161,7 @@ async function fillBody( ) {
             formatMilliMMSS( tune[TLCOL_TIME] ) + "\t" +
             tune[TLCOL_YEAR] + "\t" +
             tune[TLCOL_INFO] + "\t" +
-            tune[TLCOL_DATEADDED] + "\t" +
+            ymd(tune[TLCOL_DATEADDED]) + "\t" +
             tune[TLCOL_RATING] ;
         fastSearch.push( normalizaTildes(s) );
 	}
@@ -189,14 +189,8 @@ function updateProgress( progress ) {
     let tunelib = progress["tunelib"];
 
     let startButton = document.getElementById("startButton");
-    if( progress["setlist"].length > 0 && 
-        progress["status"] == "waiting"
-    ){
-        startButton.classList.remove("inactive");
-    }
-    else {
-        startButton.classList.add("inactive");
-    }
+    startButton.disabled = !( progress["setlist"].length > 0 && 
+        progress["status"] == "waiting");
     TuneTitle.updateProgress( progress );
 
 }

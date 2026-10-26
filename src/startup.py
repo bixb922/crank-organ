@@ -157,9 +157,6 @@ async def signal_ready( controller ):
     # gc time also can be seen on diag.html
     _logger.debug(f"Total startup time (without main, until asyncio ready) {start_dt} msec")
     _logger.debug(f"Memory used at startup {alloc} gc={gc_t} msec")
-    # May 2026 with 20_note_Carl_Frei.json
-    # Total startup time (without main, until asyncio ready) 1952 msec
-    # Memory used at startup 130688 gc=20 msec    
 
     controller.all_notes_off()
     
@@ -220,5 +217,3 @@ async def start():
         do_aioprof() # only does something if aioprof installed.
     ) # type:ignore
     # asyncio.gather() does not return.
-
-# >>> after startup, sometimes RAM goes up from 135 to 250 kb? not always?

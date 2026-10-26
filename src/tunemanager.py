@@ -10,7 +10,8 @@ import time
 import scheduler
 from minilog import getLogger
 import fileops
-from drehorgel import config, timezone
+from drehorgel import config
+from filecache import MidiFileCache
 
 # Design procedure to restore a ESP32 from scratch.
 #   esptool
@@ -32,6 +33,7 @@ if sys.implementation.version[0] <= 1 and sys.implementation.version[1] < 26: # 
 
 def _compute_hash(filename_no_gz):
     # Compute hash for midi filename (.gz must be stripped before calling)
+    # setlist.get_titles() depends on this function
     digest = hashlib.sha256(filename_no_gz.encode()).digest()
     return _fold_digest( digest, len(digest) ).decode() # type:ignore
 
@@ -86,7 +88,7 @@ _TLCOL_TIME = const(5) # in milliseconds, integer
 _TLCOL_FILENAME = const(6)
 _TLCOL_AUTOPLAY = const(7) # bool.
 _TLCOL_INFO = const(8)
-_TLCOL_DATEADDED = const(9) # string,  format: "yyyy-mm-dd"
+_TLCOL_DATEADDED = const(9) # number, ESP32 timestamp starting 2000-01-1
 _TLCOL_RATING = const(10)
 _TLCOL_SIZE = const(11)  # in bytes, integer.
 _TLCOL_HISTORY = const(12) # Is now calculated in the browser and filled in this position. i.e.: reserved for browser.
@@ -164,7 +166,7 @@ class TuneManager:
                 dirty = True
         if dirty:
             # Rewrite tunelib without ~
-            # This will be done only once (with the first cache midi  or tunelibedit or file upload)
+            # This will be done only once (with the first cache_midi()  or tunelibedit or file upload)
             # and is for transition only.
             self._write_tunelib_json(tunelib)
 
@@ -183,19 +185,15 @@ class TuneManager:
     def get_info_by_tuneid(self, tuneid):
         # Used by player.py to get tune info and
         # decompressed MIDI file
-        self.cache_midi( tuneid )
-        if tuneid != self.cached_tune[ _TLCOL_ID]:
-            # cache_midi could not find/decompress file
-            # return filename=None, duration=0 and title=None.
-            return None, 0, None
-        # return self.cached_midifile, \
-        #     int(self.cached_tune[ _TLCOL_TIME]), \
-        #     self.cached_tune[ _TLCOL_TITLE], \
-        #     self.cached_tune[ _TLCOL_FILENAME ]
-        return ( self.cached_midifile,
-                int(self.cached_tune[_TLCOL_TIME]),
-                self.cached_tune[_TLCOL_TITLE],
-                self.cached_tune[_TLCOL_FILENAME])
+        # Cache if not previously done
+        tune = self.cache_midi( tuneid )
+        if tune:
+            return ( config.TUNELIB_FOLDER + tune[_TLCOL_FILENAME],
+                int(tune[_TLCOL_TIME]),
+                tune[_TLCOL_TITLE])
+        # cache_midi could not find/decompress file
+        # return filename=None, duration=0 and title=None.
+        return None, 0, None,
         
     def get_tune_count(self):
         return len(self._read_tunelib())
@@ -222,6 +220,7 @@ class TuneManager:
         # This is used by webserver.py when the tunelibedit.html
         # page has loaded so queue a "complete sync" operation
         self._queue_change( [_TLOP_SYNCALL,0,0,0])
+
         # and kick _sync_process() to start it right now!
         # since user is waiting for page to load
         self.sync_event.set()
@@ -245,14 +244,6 @@ class TuneManager:
     def get_sync_progress( self ):
         # For webserver
         return self.tunelib_progress
-
-    # async def _wait_a_bit(self):
-    #     # If sync is taking too long, yield CPU to other tasks
-    #     # but sometimes only... not too frequently
-    #     if random()>0.8:
-    #         # On ESP32, minimum time to wait is 10 or 20 msec
-    #         # anyhow...
-    #         await asyncio.sleep_ms(10)
 
     def _dedup_midi_files( self, filedict ):
         # If file is .gz, then check for .mid
@@ -286,21 +277,23 @@ class TuneManager:
                 del newtunelib[tuneid]
             except KeyError:
                 self.logger.info(f"File {filename} was already removed from tunelib.json")
-                return # No change
+                # >>> transition only? filename and id don't match
+                # >>> i.e. tunelib got corrupt. This is result of a test, never seen happen elsewhere.
+                fndict = { tune[_TLCOL_FILENAME]: tune[_TLCOL_ID] 
+                     for tune in newtunelib.values() }
+                if filename in fndict:
+                    print(">>>fixing entry for ", filename )
+                    del newtunelib[ fndict[filename]]
             return "Deleting entry"
         
         # Get file date
         try:
-            # Use shorter date than usual in filemanager. The hour/minute
-            # isn't that relevant to know for a file date, and this way the tunelib
-            # is a bit smaller, and the tunelist.html listing needs less 
-            # screen space.
-            file_mtime = timezone.format_ymd(os.stat( config.TUNELIB_FOLDER + filename)[8])
+            file_timestamp = os.stat(config.TUNELIB_FOLDER + filename)[8]
         except OSError:
-            file_mtime = "2000/01/01"
+            file_timestamp = 0
             
         # Is it a new tune or a tune update?
-        tune:(list|None) = newtunelib.get(tuneid)
+        tune:list = newtunelib.get(tuneid)
         if tune is None:
             # New tune
             operation = "Adding"
@@ -314,17 +307,14 @@ class TuneManager:
         # Update only if different name or different size.
         # Different name with same tuneid can happen with xxx.mid and xxx.mid.gz
         # because these two are considered equal.
-        elif filesize == tune[ _TLCOL_SIZE] and filename == tune[ _TLCOL_FILENAME] and file_mtime == tune[_TLCOL_DATEADDED]:
+        elif filesize == tune[ _TLCOL_SIZE] and filename == tune[ _TLCOL_FILENAME] and file_timestamp == tune[_TLCOL_DATEADDED]:
             return # no change
         else:
-            # print(f">>>{filesize=} {tune[ _TLCOL_SIZE]=} {filename=} {tune[ _TLCOL_FILENAME]=} {file_mtime} {tune[_TLCOL_DATEADDED]=}")
+            # print(f">>>{filesize=} {tune[ _TLCOL_SIZE]=} {filename=} {tune[ _TLCOL_FILENAME]=} timestamp={file_timestamp} {tune[_TLCOL_DATEADDED]=}")
             operation = "Updating"
-
         # Update tune info both for updated and new files
         tune[ _TLCOL_SIZE] = filesize
-        # Formerly: tune[ _TLCOL_DATEADDED] = timezone.now_ymd()
-        # Use PC file date, converted to a local timezone date in yyyy-mm-dd format
-        tune[ _TLCOL_DATEADDED] = file_mtime
+        tune[ _TLCOL_DATEADDED] = file_timestamp
         # This can take some time!!! (up to 3 seconds per tune)
         tune[ _TLCOL_TIME] = self.get_duration(filename)
         # Update filename, the file could now
@@ -335,10 +325,9 @@ class TuneManager:
     async def _sync_process(self):
         while True:
             # self.sync_event is set when:
-            # - tunelibedit.html is loaded
-            # - a field or set of fields are changed with self.safe()
-            # Also this code
-            # will wake up anyhow every few
+            # - tunelibedit.html "sync all" button is clicked
+            # - a field or set of fields are changed with self.queue_...() functions
+            # Also this code will wake up anyhow every few
             # seconds and process whatever has been accumulated.
             # The timeout of wait_for() is in seconds
             try:
@@ -355,10 +344,10 @@ class TuneManager:
                     # "file not found" means: nothing pending
                     continue
 
-                # if file is young, wait a bit, unless file contains only
-                # an empty list [], in that case sync all files right away.
+                # if file is young, wait a bit.
                 # This allows to process many files in one go (i.e. much faster)
-                # when doing uploads. This time should be a bit larger than
+                # when doing uploads. 
+                # This time should be a bit larger than
                 # the time it takes to ship changes on the tunelibedit.html page
                 # and more than the time it takes to upload a file.
                 if file_stat[6] > 2 and (time.time() - file_stat[8]) < 12:
@@ -368,9 +357,13 @@ class TuneManager:
             # Don't sync during playback of music.
             # Let changes accumulate until playback stops.
             await scheduler.wait_for_player_inactive()
+            # This is (normally) a fast sync, not a full sync.
             await self._sync_now()
 
     async def _sync_now(self):
+        # Fast sync: already waited for player to be inactive.
+        # Full sync: player is stopped.
+
         await asyncio.sleep_ms(20) # let browser catch up
         # By default log to flash.
         changed = False
@@ -387,7 +380,7 @@ class TuneManager:
             # and update tunelib.json.
             self._sync_progress( "Listing files in tunelib folder" )
             # Yield CPU for a bit to allow webserver and other processes to run
-            await asyncio.sleep_ms(100)
+            await asyncio.sleep_ms(500)
             # Make a dict with key=filename and data=file size (bytes)
             filedict = {direntry[0]: direntry[3]
                     for direntry in os.ilistdir(config.TUNELIB_FOLDER)
@@ -397,7 +390,6 @@ class TuneManager:
             # First upload the data folder including backed up tunelib. No sync will take place. Then upload tunelib
             # in one go. Then do sync via tunelibedit page.
             if not filedict:
-                self.logger.info("Tunelib empty. No sync will take place.")
                 self._sync_progress("Tunelib empty. No sync will take place.")
                 self._sync_progress( "", type="end" )
                 try:
@@ -405,7 +397,6 @@ class TuneManager:
                 except OSError:
                     pass
                 return
-            
             # Remove duplicate files 
             # i.e. delete one if both aaa.mid and aaa.mid.gz present
             self._dedup_midi_files( filedict )
@@ -417,16 +408,27 @@ class TuneManager:
                                 for tune in newtunelib.values() 
                                 if tune[ _TLCOL_FILENAME] not in filedict )
 
+        else:
+            self.logger.info("Fast tunelib sync will start now")
 
         t0 = time.ticks_ms()
         n = 0
         for op, p1,p2,p3 in change_queue:
             n += 1
             self.sync_count += 1
+            if scheduler.is_player_active():
+                # This could only happen with a "fast sync" but not
+                # with a full sync. A full sync is started by the
+                # tunelibedit.html web page and the player is stopped.
+                # Whereas a fast sync is started by the _sync_process
+                # with file modifications only, and thus takes ony
+                # a few seconds.
+                self.logger.info("Player started, postponing sync")
+                return
             # >>> add LED blinking color to show sync in progress
             if time.ticks_diff(time.ticks_ms(), t0) > 5000 or n == 1:
                 # Every 5 seconds yield a bit to feed browser.
-                await asyncio.sleep_ms(600)
+                await asyncio.sleep_ms(1000)
                 t0 = time.ticks_ms()
                 self._sync_progress(f"Sync progress {n/len(change_queue)*100:.0f}%")
 
@@ -468,8 +470,8 @@ class TuneManager:
             if self.recent_changes > 0:
                 self.logger.debug("Recent file uploads, postpone sync")
                 return
-
-        changed = changed or self._sync_lyrics( newtunelib  )
+        if self._sync_lyrics( newtunelib  ):
+            changed = True
         await asyncio.sleep_ms(50)
 
         # Check that setlist has only valid tuneids
@@ -495,17 +497,16 @@ class TuneManager:
         
         self._sync_progress( "", type="end" )
         del newtunelib
-        # >>> ???create wip and new setlist here?
-        # new = file modification date > now-time
-        # wip = letters WIP somewhere in title, info or ???filename
 
     def _make_unique_hash(self, path, newtunelib):
+        # Find a unique 8 byte id for the given MIDI file. The hash
+        # depends on the filename.
         fn = path.split("/")[-1]
-        fn_no_gz = fileops.filename_no_gz(fn)
         #  .gz is not part of the hash
         # Make a collision-less hash for each file. The probability
         # of collisions is nil after a few iterations.
-        for _ in range(3):
+        for i in range(3):
+            fn_no_gz = fileops.filename_no_gz(fn)
             tuneid = _compute_hash(fn_no_gz)
             tune = newtunelib.get(tuneid, None)
             # If new tune or if existing tune with correct filenames, return
@@ -521,12 +522,12 @@ class TuneManager:
             # probability of the order 2**(-72) of this algorithm.
             
             # Mangle filename to get another hash
-            newfn = fn.replace(".", "_.", 1)
+            newfn = fn.replace(".", str(i)+".", 1)
             self.logger.info( f"Hash collision, renaming {fn} to {newfn}, lucky day" )
             # Change filename to avoid hash collisions...
             os.rename(config.TUNELIB_FOLDER + fn, config.TUNELIB_FOLDER  + newfn)
             fn = newfn
-            # Now hash function should be one-to-one, no collisions
+        # Now hash function has computed to be one-to-one, no collisions
         return tuneid, fn
 
     def queue_field_changes(self, update):
@@ -534,11 +535,6 @@ class TuneManager:
         # fields to update tunelib with changes.
         change_queue = self._read_sync_file()
         for tlop in update:
-            # Just some integrity checks
-            if tlop[0] != _TLOP_REPLACE_FIELD:
-                raise ValueError(f"Invalid operation {tlop[0]} in {tlop}")
-            if tlop[2] not in ( _TLCOL_RATING,  _TLCOL_INFO,  _TLCOL_TITLE,  _TLCOL_AUTHOR,  _TLCOL_GENRE,  _TLCOL_YEAR,  _TLCOL_AUTOPLAY):
-                raise ValueError(f"Invalid column {tlop[2]} in {tlop}")
             change_queue.append( tlop )
         self._write_sync_file( change_queue )
         # setting event would make update faster but
@@ -551,10 +547,6 @@ class TuneManager:
         all_lyrics = self._read_lyrics()
         all_lyrics[tuneid] = new_lyrics
         fileops.write_json( all_lyrics, config.LYRICS_JSON, keep_backup=True )
-        # No need for get_lyrics function since
-        # javascript can get the complete lyrics.json 
-        # file as data and cache int.
-        del all_lyrics
     
     def _sync_lyrics( self, newtunelib ):
         # Delete all lyrics where the tune has been deleted
@@ -567,12 +559,11 @@ class TuneManager:
             fileops.write_json( all_lyrics, config.LYRICS_JSON, keep_backup=True )
             self._sync_progress( "Lyrics updated" )
         
-        # Mark all tunes that have lyrics
+        # Update the _TLCOL_LYRICS if chaned
         tunelib_changes = set( tune[ _TLCOL_ID] for tune in newtunelib.values() if bool(tune[ _TLCOL_LYRICS]) != bool(tune[ _TLCOL_ID] in all_lyrics))
         for tuneid in tunelib_changes:
             newtunelib[tuneid][_TLCOL_LYRICS] = 1 if tuneid in all_lyrics else 0
         
-        del all_lyrics
         # Caller must write tunelib.json back to flash if changed
         return bool(tunelib_changes)
     
@@ -642,45 +633,38 @@ class TuneManager:
                     # Get top tune from setlist, cache the info
                     # and decompress midi (if needed). 
                     # setlist.top() could be None if setlist empty,
-                    # that doesn't alter currently cached item.
-                    # If tune already in cache, this will be very fast.
+                    # that empties the cache.
                     self.cache_midi( setlist.get_top() )
             await asyncio.sleep_ms(2000)
 
     def cache_midi( self, tuneid ):
-        if not tuneid or tuneid == self.cached_tune[ _TLCOL_ID]:
+        if not tuneid:
+            # Empty setlist.
             return
+        tune = MidiFileCache.get_metadata( )
+        if tune and tune[_TLCOL_ID] == tuneid:
+            # Already cached, no need to cache again.
+            return tune
         tunelib = self._read_tunelib()
         try:
             tune = tunelib[tuneid]
+            filename = config.TUNELIB_FOLDER + tune[ _TLCOL_FILENAME]
+            MidiFileCache.prepare( filename, tune )
+            return tune
         except KeyError:
-            # Not in tunelib. Or tuneid is None because the setlist is empty.
-            self.cached_midifile = None
-            self.cached_tune = [""]
-            return
-        filename = config.TUNELIB_FOLDER + tune[ _TLCOL_FILENAME]
-        try:
-            self.cached_midifile = fileops.decompress_midi( filename, "/data/midi_cached.mid" )
-            self.cached_tune = tune
+            # setlist has tuneids that are not in tunelib
+            self.logger.error( f"{tuneid} not in tunelib" )
         except Exception as e:
-            self.logger.info( f"MIDI file {filename} not found or could not be decompressed {e}" )
-            # File not found
-            self.empty_cache()
-            # File not found, skip.
-            from drehorgel import setlist
-            setlist.pop_top()
-            return
-        del tunelib
-        #  get_info_by_tuneid has to check if the cache could be filled or not.
-    
+            # tunelib not has files that are not in flash.
+            self.logger.error( f"MIDI file {filename} not found or could not be decompressed: {e}" )
+
+        self.empty_cache()
+        from drehorgel import setlist
+        setlist.pop_top()
+
+
     def empty_cache( self ):
-        try:
-            # Not very relevant to delete this file, just for cleanup
-            os.remove( self.cached_midifile)
-        except:
-            pass
-        self.cached_midifile = None
-        self.cached_tune = [""]
+        MidiFileCache.clear()
 
     def abort_sync( self ):
         # Some file related to tunelib has changed or has
@@ -698,7 +682,7 @@ class TuneManager:
     #         # If time is no set (i.e. 2000-01-01) then all files would be detected as "new"
     #         # If no multiple setlists, then this can't be used.
     #         return
-    #     start_date = timezone.format_ymd(time.time() - config.new_setlist*24*3600)
+    #     start_date = time.time() - config.new_setlist*24*3600
     #     wiplist = []
     #     newlist = []
     #     for tune in newtunelib.values():

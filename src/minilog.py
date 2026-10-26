@@ -16,7 +16,7 @@
 
 # Default mode is: debug messages to console, info messages to flash.
 from micropython import const
-import sys, io, os, re, asyncio
+import sys, io, os, re, time, asyncio
 
 from compiledate import compiledate 
 from scheduler import RequestSlice
@@ -142,6 +142,7 @@ class getLogger:
         s = cls._formatRecord(module, level, message)
         cls.print_console( s, level )
         if cls._levels[level][0]:
+            # >>> add \n during formatting?
             cls._write(f"{s}\n")
 
         if level == "ERROR" or level == "EXCEPTION":
@@ -194,12 +195,23 @@ class getLogger:
     def exc(self, exception, message):
         self.log_exc(self.module, exception, message )
 
-    async def async_info( self, message ):
+    def async_info( self, message ):
         # Version of logger.info() that can be called
         # safely while playing a tune. error() and exc()
         # don't have this version, since writing these
         # has absolute priority.
-        s = self._formatRecord(self.module, "INFO", message)
-        self.print_console( s, "INFO" )
-        async with RequestSlice( "minilog", 200 ):
-            self._write( s+"\n" )
+        # Debug also hasn't since debug normally will only print
+        # on the console
+        async def write_info(message):
+            level = "INFO"
+            # Format now so timestamp is correct
+            s = getLogger._formatRecord(self.module, level, message)
+            getLogger.print_console(s+"\n", level)
+            if getLogger._levels[level][0]:
+                # Reserve enough time even for a log file switch
+                async with RequestSlice( "minilog", 300 ):
+                    # Mark with ***, this entry may be out of order in log.
+                    getLogger._write(f"{s} ***\n")
+        # Launch and let log entry wait for later...
+        asyncio.create_task( write_info(message))
+

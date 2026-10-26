@@ -1,18 +1,51 @@
 import os
 import re
-
+from machine import Pin
 import fileops
 from minilog import getLogger
 
+
 # Reserved and available pins are updated by GPIODef at startup
 # and are validated against MicroPython's board definition.
-from pinout import PinoutParser, ESP32_S3_RESERVED_PINS, ESP32_S3_AVAILABLE_GPIO_PINS, get_current_pinout
+from pinout import PinoutParser, get_current_pinout
+
+# ESP32-S3 Technical Manual
+# See 2.3.3 Restrictions for GPIOs and RTC_GPIOs
+# See Table 2-3. IO MUX Pin Functions, 
+# See Table 2-4. RTC and Analog Functions
+# Reserved: 0 for bootstrapping, chip boot mode
+# Usable: Pin 3 is JTAG signal source, ignored if eFuse 1, 2, 3 are zero.
+# When GPIO0 and 3 are high on boot, device goes into bootloader.
+# Reserved: 19, 20 for USB
+# Reserved: 22 to 37 not usable, SPI, flash SPIRAM, not available
+# Usable: 38 (is "neopixel" 3 color LED on some boards)
+# Usable: 39 to 42: JTAG, unused if JTAG not enabled (enable with pin 3)
+# Reserved: 43, 44: UART
+# Reserved: 45, 46: VDD_SPI voltage, ROM message printing
+# Please do not use the interrupt of GPIO36 and GPIO39 when using ADC or Wi-Fi and Bluetooth with sleep mode enabled.
+# This definition is for ESP32-S3 N16R8 or N8R8.
+# N32R8V has more reserved pins, but that should be
+# supported (not tested).
+ESP32_S3_RESERVED_PINS  = set( (0,19,20,43,44,45,46)) | set(range(22,38))
+ESP32_S3_AVAILABLE_GPIO_PINS = set( pin for pin in range(49)) - ESP32_S3_RESERVED_PINS
+# Pins that don't work for input. 3 is a strap pin
+# 4 isn't but doesn't work either as input pin. It leaves
+# the ESP32-S3 suspended at startup if at the right level.
+ESP32_S3_NOT_FOR_INPUT = set((3,4))
 
 # Pins 1 to 10 can be ADC1 pins, ADC2 block cannot be used with WiFi 
-_ESP32_S3_ADC1_PINS = const((1,2,3,4,5,6,7,8,10)) # [ pin for pin in range(1,11) 
+ESP32_S3_ADC1_PINS = set(range(1,11)) # [ pin for pin in range(1,11) 
 
 # Pins 1 to 15 can be TouchPad pins
-_ESP32_S3_TOUCHPAD_PINS = const((1,2,3,4,5,6,7,8,9,10,11,12,13,14)) # [ pin for pin in range(1,15) ]
+ESP32_S3_TOUCHPAD_PINS = set(range(1,15)) - ESP32_S3_NOT_FOR_INPUT
+
+# Validate against MicroPython's definition
+for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
+    try:
+        Pin( pin, Pin.IN )
+    except ValueError: # Invalid pin
+        ESP32_S3_RESERVED_PINS.add( pin )
+        ESP32_S3_AVAILABLE_GPIO_PINS.discard(pin)
 
 # Class to validate a pinout and save it
 # to the current json file. This class is invoked by
@@ -20,6 +53,10 @@ _ESP32_S3_TOUCHPAD_PINS = const((1,2,3,4,5,6,7,8,9,10,11,12,13,14)) # [ pin for
 # These checks are not applied when loading the pinout,
 # so if the pinout.json is modified externally, it's a good idea
 # to save it once to check it.
+def gpio_for_input( gpio ):
+    if gpio in ESP32_S3_NOT_FOR_INPUT:
+        raise RuntimeError(f"Pin {gpio} is not available for input")
+
 class SaveNewPinout(PinoutParser):
     def __init__(self, output_filename, source, raise_error):
         # source must be json formatted list
@@ -56,6 +93,8 @@ class SaveNewPinout(PinoutParser):
         self._add_GPIO_to_list(gpio)
 
     def define_tachometer(self, gpio1, gpio2 ):
+        gpio_for_input(gpio1)
+        gpio_for_input(gpio2)
         self._add_GPIO_to_list(gpio1)
         self._add_GPIO_to_list(gpio2)
 
@@ -63,27 +102,32 @@ class SaveNewPinout(PinoutParser):
         if not gpio:
             return
         self._add_GPIO_to_list(gpio)
-        if gpio not in _ESP32_S3_ADC1_PINS:
-            raise RuntimeError(f"Pin {gpio} must be ADC1 pin (3 to 10)")
-
+        # Should also check gpio_for_input?
+        
     # For "touchpad" entry
     def define_touchpad( self, gpio, technology ):
         if not gpio:
             # Not assigned, ignore
             return
+        gpio_for_input(gpio)
+
         from startbase import validate_technology
         validate_technology( technology )
         self._add_GPIO_to_list(gpio)
-        if gpio not in _ESP32_S3_TOUCHPAD_PINS:
+        if gpio not in ESP32_S3_TOUCHPAD_PINS:
             raise RuntimeError(f"Pin {gpio} must be TouchPad pin 1 to 14")
 
     def define_register( self, gpio, name, initial_value ):
+        gpio_for_input(gpio)
         self._add_GPIO_to_list(gpio)
 
     def define_tempo( self, gpio_a, gpio_b, gpio_switch ):
         self._add_GPIO_to_list(gpio_a)
         self._add_GPIO_to_list(gpio_b)
         self._add_GPIO_to_list(gpio_switch)
+        gpio_for_input(gpio_a)
+        gpio_for_input(gpio_a)
+        gpio_for_input(gpio_switch)
         return
     
     def define_midi(self, pin, midi_note, rank, register_name):
@@ -233,24 +277,14 @@ class GPIOstatistics(PinoutParser):
         return super().define_serial_driver(uart, pin, channel, rxpin, passthrough)
 
     def get_used_pins( self ):
-        # Sort GPIO pins
-        gpiopins = [ x for x in self.used_gpio_pins ]
-        gpiopins.sort()
-        ESP32_S3_RESERVED_PINS.sort()
-        availableGPIO = [ pin for pin in ESP32_S3_AVAILABLE_GPIO_PINS if pin not in gpiopins ]
-        availableADC1 = [ pin for pin in _ESP32_S3_ADC1_PINS if pin not in gpiopins ]
-        availableTouchpad = [ pin for pin in _ESP32_S3_TOUCHPAD_PINS if pin not in gpiopins ]
+        # Javascript doesn't like the way sets show in JSON, use lists.
         return {
-            "usedGPIO": gpiopins,
-            "availableGPIO": availableGPIO,
-            "reservedGPIO": ESP32_S3_RESERVED_PINS,
-            "availableADC1": availableADC1,
-            "availableTouchpad": availableTouchpad,
-            "usedGPIOcount": len(gpiopins),
-            "availableGPIOcount": len(availableGPIO),
-            "reservedGPIOcount": len(ESP32_S3_RESERVED_PINS),
-            "availableADC1count": len(availableADC1),
-            "availableTouchpadcount": len(availableTouchpad)
+            "usedGPIO": list(self.used_gpio_pins),
+            "availableGPIO": list(ESP32_S3_AVAILABLE_GPIO_PINS - self.used_gpio_pins),
+            "reservedGPIO": list(ESP32_S3_RESERVED_PINS),
+            "availableADC1": list(ESP32_S3_ADC1_PINS - self.used_gpio_pins),
+            "availableTouchpad": list(ESP32_S3_TOUCHPAD_PINS - self.used_gpio_pins),
+            "availableForInput": list(ESP32_S3_AVAILABLE_GPIO_PINS - ESP32_S3_NOT_FOR_INPUT - self.used_gpio_pins),
         }
     
 
@@ -260,9 +294,10 @@ class PinoutList:
         self.pinout_txt_filename = pinout_txt_filename
         self.pinout_folder = pinout_folder
         self.pinout_files = {}
+        self.logger = getLogger(__name__)
+
         # self.pinout_files is a dict, key=filename, data=description
         self._fill_pinout_files()
-        self.logger = getLogger(__name__)
         self.current_pinout_filename = get_current_pinout( pinout_txt_filename )
         self.logger.info(f"Current pinout {self.current_pinout_filename}")
 

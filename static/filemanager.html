@@ -29,9 +29,9 @@
         <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
         <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
         <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()"  style="display:none">Select if not in PC tunelib</button>
-        <button id="downloadFilesButton" onclick="downloadSelectedFiles()" class="inactive">Download</button>
-        <button id="downloadAsTarButton" onclick="downloadAsTar()" class="inactive">Download as tar</button>
-        <button id="deleteFilesButton" onclick="deleteFiles()"  class="inactive">Delete</button>
+        <button id="downloadFilesButton" onclick="downloadSelectedFiles()" disabled>Download</button>
+        <button id="downloadAsTarButton" onclick="downloadAsTar()" disabled>Download as tar</button>
+        <button id="deleteFilesButton" onclick="deleteFiles()"  disabled>Delete</button>
         <button id="selectForBackup"  onclick="selectForBackup()" style="display:none">Select for backup</button>
     </div>
 
@@ -184,13 +184,9 @@
         if (mode == "autoFolder") {
             destFolder = "__auto__";
         }
-        // Convert file.lastModified to unix timestamp in local time
-        // This must be done in the browser where we have the time zone of
-        // back then when the file was created.
-        const lm = new Date(file.lastModified);
-        // Convert to seconds and adjust by time zone offset at the time of file.lastModified
-        // i.e. make a "local timezone pseudo Unix time stamp"
-        const file_mtime = Math.round(file.lastModified/1000 - lm.getTimezoneOffset()*60);
+        
+        // Send file modification time in Unix format: UTC seconds since 1/1/1970
+        const file_mtime =  Math.round(file.lastModified/1000);
         // encodePath() will also normalize("NFC")
         let url = "/upload/" + encodePath(destFolder) 
                             + "+" + encodePath(file.name)
@@ -214,6 +210,9 @@
             const resp = await response.json();
             if (!resp.error) {
                 let newSize = `${resp.newFileSize}`;
+                // oldFileMtime and newFileMtime are in ESP32 format
+                let newDate = ymdhm( resp.newFileMtime );
+
                 // Date info is preent but not shown.
                 if( resp.skip ){
                     logNotification(`No change, skipped: "${file.name}" in folder "${resp.folder}"`);
@@ -222,10 +221,13 @@
                     if( resp.oldFileSize != resp.newFileSize ){
                         newSize = `${resp.oldFileSize}->${resp.newFileSize}`;
                     }
-                    logNotification(`Upload replacing "${file.name}" in folder "${resp.folder}"  ${newSize} bytes`);
+                    if( resp.oldFileMtime != null ){
+                        newDate =  ymdhm( resp.oldFileMtime ) + "->" + ymdhm( resp.newFileMtime );
+                    }
+                    logNotification(`Upload replacing "${file.name}" in folder "${resp.folder}",  ${newSize} bytes, ${newDate}`);
                 }
                 else {
-                    logNotification(`Upload creating "${file.name}" to folder "${resp.folder}" ${file.size} bytes`);
+                    logNotification(`Upload creating "${file.name}" to folder "${resp.folder}" ${file.size} bytes, ${newDate}`);
                 }
             }
             else {
@@ -300,22 +302,16 @@
         else {
             d.innerText = "";
         }
+        console.log(">>>selectFile before updateButtons count=", count);
         updateButtons();
     }
 
 
     function updateButtons() {
-        if (getSelectedFileCount() > 0) {
-            document.getElementById("downloadFilesButton").classList.remove("inactive");
-            document.getElementById("deleteFilesButton").classList.remove("inactive");
-            document.getElementById("downloadAsTarButton").classList.remove("inactive");
-        }
-        else {
-            document.getElementById("downloadFilesButton").classList.add("inactive");
-            document.getElementById("deleteFilesButton").classList.add("inactive");
-            document.getElementById("downloadAsTarButton").classList.add("inactive");
-
-        }
+        const noSelection = (getSelectedFileCount() == 0);
+        document.getElementById("downloadFilesButton").disabled = noSelection;
+        document.getElementById("deleteFilesButton").disabled = noSelection;
+        document.getElementById("downloadAsTarButton").disabled = noSelection;
         showHideElement("selectForBackup", CURRENT_PATH == "/data");
         showHideElement("selectIfNotInPCButton", CURRENT_PATH == "/tunelib");
         
@@ -333,7 +329,7 @@
         showPath();
         //let listdir_url = "/listdir?" + new URLSearchParams( {"path":  CURRENT_PATH});
         let listdir_url = "/listdir/" + encodePath(CURRENT_PATH);
-        data = await fetch_json(listdir_url);
+        const data = await fetch_json(listdir_url);
 
         if (path !== '/' && path != "") {
             let row = insertRow(body, ["", ""]);
@@ -343,7 +339,7 @@
             row.cells[1].appendChild(link);
         }
 
-        let files = data.sort((a, b) => ((1 - a.isDirectory).toString() + "_" + a.name).localeCompare((1 - b.isDirectory).toString() + "_" + b.name));
+        const files = data.sort((a, b) => ((1 - a.isDirectory).toString() + "_" + a.name).localeCompare((1 - b.isDirectory).toString() + "_" + b.name));
         let rownum = 0;
         let sumsize = 0;
         let sumblocks = 0;
@@ -355,14 +351,14 @@
                 mime_fileType = parts.pop().toLowerCase();
             }
             if (file.isDirectory) {
-                let row = insertRow(body, ["", "📁\u{a0}", "", file.date])
+                let row = insertRow(body, ["", "📁\u{a0}", "", ymdhm(file.timestamp)])
                 let link = document.createElement("a");
                 link.href = `/filemanager/${encodePath(file.path)}`;
                 link.innerText = file.name;
                 row.cells[1].appendChild(link);
             }
             else {
-                let row = insertRow(body, ["", `📄\u{a0}`, file.size, file.date])
+                let row = insertRow(body, ["", `📄\u{a0}`, file.size, ymdhm(file.timestamp)])
                 let input = document.createElement("input");
                 let checkbox_id = `checkbox_${rownum}`;
                 input.id = checkbox_id;
@@ -450,6 +446,7 @@
         await refreshAll();
         commonGetProgress.setSleep( 5_000 );
         commonGetProgress.startBackground();
+        commonGetProgress.registerCallback( updateButtons );
     }
 
     async function refreshAll() {
@@ -703,6 +700,7 @@
             }
         }
     }
+
     createFilePicker();
     startPageRefresh();
 

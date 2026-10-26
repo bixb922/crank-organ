@@ -37,7 +37,7 @@ class HistoryManager:
         
     def delete_old(self, days):
         # purge indicated number of days of history
-        cutoff = timezone.now_timestamp()-(days*_SECONDS_PER_DAY)
+        cutoff = time.time()-(days*_SECONDS_PER_DAY)
         self._delete( lambda h: h[1]<cutoff )
 
     def delete_date( self, yyyy_mm_dd ):

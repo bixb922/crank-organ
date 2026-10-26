@@ -42,7 +42,6 @@ class Setlist:
         #   4. time between tune elapsed (if automatic playback enabled) 
         
         self.music_start_event = asyncio.Event()
-        crank.register_start_crank_event(self.music_start_event)
 
         # TouchButton acts correctly if gpio.touchpad_pin is not defined
         start_button = startButtonFactory( gpio.touchpad_pin, gpio.touchpad_technology )
@@ -60,6 +59,10 @@ class Setlist:
             # Task to start next tune after some seconds
             # if automatic delay was configured.
             self.automatic_playback_task = asyncio.create_task( self._automatic_playback_process(self.music_start_event) )
+        else:
+            # Crank does not start music in "automatic delay" mode.
+            # Touchpad is enabled.
+            crank.register_start_crank_event(self.music_start_event)
 
         # blink_empty_task: blink if setlist is empty
         self.blink_empty_task = asyncio.create_task( self._blink_empty() )
@@ -146,7 +149,7 @@ class Setlist:
             self._save_current()
 
             led.start_tune_flash()
-            # >>> delay play_tune if tunelib changes are being applied????
+            # >>> delay play_tune or cancel player if tunelib changes are being applied????
             # Play tune. Store task to have a handle
             # because we may need to cancel it on request (next tune
             # button or da capo button or playback disabled)
@@ -363,6 +366,7 @@ class Setlist:
             permutation[j], permutation[i] = permutation[i], permutation[j]
         self._save_current()
 
+    # >>> configure a upper limit for shuffle all?
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
         # Must get a deep copy of tunelib to self.current_setlist
@@ -429,13 +433,16 @@ class Setlist:
 
     # >>> Revisit need of setlist.sync()
     # >>> Javascript is already guarding itself against unsync'ed setlists
+    # and tunemanager.cache_midi checks the top setlist item and skips if
+    # not available.
     def sync( self, tunelib ):
         # setlist.sync is not strictly necessary since javascript
         # layer checks if setlist's tuneids are in tunelib.
+        tunelibset = set(tunelib)
         for slot in range(_MAX_SETLIST_SLOTS):
             stored_setlist = self.load( slot, False )
             # self.load() will return [] if file does not exist
-            delete = set(stored_setlist)-set(tunelib)
+            delete = set(stored_setlist)-tunelibset
             for tuneid in delete:
                 del stored_setlist[stored_setlist.index(tuneid)]
             if delete:
@@ -443,18 +450,22 @@ class Setlist:
                 if slot == _CURRENT_SETLIST:
                     # And reload from stored
                     self.load( _CURRENT_SETLIST )
+        
 
     def stop_playback( self ):
         # Called to stop playback of music immediately until the next reboot.
         # Organtuner: to avoid interference with tuning
         # Pinout: if pinout was changed to force user to reboot
         # Test pins (pinout.html): to avoid interference with pin testing
+        # Tunelib sync: to avoid interference with tunelib changes
+        stopping_now = False
         if self.player_task:
             self.player_task.cancel() # type:ignore
             self.player_task = None
             # If _setlist_process() is awaiting the  player_task,
             # the _setlist_process() will receive the CancelledError
             # and will abort.
+            stopping_now = True
 
         # And prevent playing any more tunes
         # self.playback_enabled is tested by the different setlist processes
@@ -462,12 +473,24 @@ class Setlist:
         if self.playback_enabled:
             self.logger.debug("Playback disabled, setlist process will stop")
         self.playback_enabled = False
-
+        # Return True if this call stopped the player,
+        # False on all calls after.
+        return stopping_now
+    
     def stored_setlist_filename( self, slot ):
         # used by mcserver
         return f"{config.DATA_FOLDER}setlist_stored_{slot}.json"
     
     def get_titles( self ):
+        def entries( slot):
+            # Just look at the file size, entries are always
+            # "i12345789",_
+           # 1234567890123
+            try:
+                return  os.stat(self.stored_setlist_filename(slot))[6]//13
+            except:
+                return 0
+             
         if config.multiple_setlists:
             # returns slot 1-(_MAX_SETLIST_SLOTS-1), title, number of tunes
             # The "titles file" has _MAX_SETLIST_SLOTS elements. 
@@ -477,7 +500,11 @@ class Setlist:
             while len(titles) < _MAX_SETLIST_SLOTS:
                 titles.append("")
             # [slot_number, title, number of tunes in setlist]
-            return [ [slot,title, len(self.load(slot,False))]
+            return [[ slot,
+                      title, 
+                      #len(self.load(slot,False)))
+                      entries(slot)
+                    ]
                     for slot, title in enumerate(titles)
                     if slot >= 1]
         # Single stored setlist enabled. Signal this to javascript

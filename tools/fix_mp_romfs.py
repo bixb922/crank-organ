@@ -182,7 +182,7 @@ def patch_mpconfigport():
             r"#define MICROPY_PY_WEBREPL\s+(.+)",
             "#define MICROPY_PY_WEBREPL (0)")
     
-# >>> for webrepl also modify these:
+# To disable webrepl also modify these:
 # https://github.com/orgs/micropython/discussions/12303
 # micropython/extmod/extmod.cmake
 #  diff extmod.cmake extmod.cmake-ORIG
@@ -271,9 +271,11 @@ main()
 # Total startup time (without main, until asyncio ready) 1262 msec
 # Memory used at startup 126464 gc=19 msec
 # 
-# Number of note influences startup time and memory usage.
+# Number of notes (pins) influences startup time and memory usage.
 # Per note or pin memory used at startup increases about 500 bytes
 # for all the datastructures kept to make note on/off fast.
+# Tunelib size does not influence startup memory usage, since tunelib is not loaded.
+# A large tunelib makes startup time 0.5 to 0.8 sec slower.
 
 # May 2026 MicroPython sizes, no ROMFS, no define 0 added, small manifest.py
 # bootloader  @0x000000    19232  (   13536 remaining)
@@ -313,3 +315,17 @@ main()
 # ROMFS = 246756 = 75% = 80924 free
 # Total startup time (without main, until asyncio ready) 1262 msec
 # Memory used at startup 124192 gc=19 msec
+
+# Sept 2026, general cleanup. 20 note Carl Frei. 722 tunes in tunelib.
+# Total startup time (without main, until asyncio ready) 1696 msec
+# Memory used at startup 122608 gc=18 msec
+# MicroPython = 1602656/0x1A8000= 92% = 101280 frees
+# ROMFS = 250332 = 76.4% = 77348 free
+
+# Oct 2026, split  RCServoPin/SolePin. 20 note Carl Frei, 727 tunes in tunelib
+# plus some new functionality.
+# Total startup time (without main, until asyncio ready) 1495 msec
+# Memory used at startup 122960 gc=19 msec
+# ROMFS = 255546 = 77.9% = 72134 free
+
+

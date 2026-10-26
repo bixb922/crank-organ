@@ -4,7 +4,8 @@
 # Controller for MIDI output over serial
 from machine import UART
 
-from driver_base import SolePin, BaseDriver
+from driver_sole import SolePin, SoleDriver
+
 from umidiparser import SYSEX, ESCAPE
 
 # >>> Add support for MIDI over USB?
@@ -13,7 +14,7 @@ BYTEBUFFER = bytearray(1)
 
 # Not a singleton, there could be different serial
 # drivers, each for a uart/pin/channel combination
-class MIDISerialDriver(BaseDriver):
+class MIDISerialDriver(SoleDriver):
 
     def __init__( self, uart_number, txpin, channel, rxpin ):
         self.txpin = txpin
@@ -53,7 +54,7 @@ class MIDISerialDriver(BaseDriver):
         BYTEBUFFER[0] = one_byte
         self.write( BYTEBUFFER )
 
-    def all_notes_off( self ):
+    def fast_off( self ):
         # Turn all notes off by sending a control message.
         # Control message has three byte message:
         #   Status byte 1011cccc where c is the channel number
@@ -69,7 +70,7 @@ class MIDISerialDriver(BaseDriver):
                 self._uart.write( bytes( (0xB0+channel, value, 0) ) )
         # In case the receiver does not understand this message,
         # actuator_bank.all_notes_off() will also force each note off
-        # individually.
+        # individually (in fact, must do that to reset BasePin._count)
 
     def define_pin( self, *args):
         return VirtualMIDIPin( self, *args )

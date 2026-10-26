@@ -40,16 +40,6 @@
      * [Automatic playback](#automatic-playback)
      * [Battery calibration](#battery-calibration)
 12.  [Pin and MIDI configuration](#12-pin-and-midi-configuration)
-     * [Select scale](#select-scale)
-     * [Transpose scale (only if necessary)](#transpose-scale-only-if-necessary)
-     * [Test solenoids or RC servos](#test-solenoids-or-rc-servos)
-     * [Test touchpad, microphone, crank and I2C bus](#test-touchpad-microphone-crank-and-i2c-bus)
-     * [Adjust "on" and "off" position for each RC servo](#adjust-on-and-off-position-for-each-rc-servo)
-     * [Redefine MIDI notes (only if necessary)](#redefine-midi-notes-only-if-necessary)
-     * [Microphone, crank sensor, touchpad and neopixel LED (important)](#microphone-crank-sensor-touchpad-and-neopixel-led-important)
-     * [Standard pin definitions for 20 note organ](#standard-pin-definitions-for-20-note-organ)
-     * [MIDI over serial (5 PIN DIN connector)](#midi-over-serial-5-pin-din-connector)
-     * [Available GPIO pins](#available-gpio-pins)
 13.  [System](#13-system)
      * [Error log](#error-log)
 14.  [File manager](#14-file-manager)
@@ -70,6 +60,7 @@
      * [WiFi capabilities](#wifi-capabilities)
          * [WiFi AP mode and PC with Windows](#wifi-ap-mode-and-pc-with-windows)
          * [WiFi AP mode and Android or Mac](#wifi-ap-mode-and-android-or-mac)
+     * [Restrictiones during music playback](#restrictiones-during-music-playback)
      * [Increase MIDI file capacity (compression)](#increase-midi-file-capacity-compression)
      * [SD card](#sd-card)
      * [Time zone](#time-zone)
@@ -109,13 +100,14 @@
      * [Changes from June 8, 2026 to July 7, 2026](#changes-from-june-8-2026-to-july-7-2026)
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
-22.  [Changes in Sept 2026](#22-changes-in-sept-2026)
-23.  [Programming language](#23-programming-language)
-24.  [Credits](#24-credits)
-25.  [Testing](#25-testing)
-26.  [Restrictions](#26-restrictions)
-27.  [Licensing](#27-licensing)
-28.  [Affiliation](#28-affiliation)
+     * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
+     * [Changes Sept 8, 2026 to ....](#changes-sept-8-2026-to)
+22.  [Programming language](#22-programming-language)
+23.  [Credits](#23-credits)
+24.  [Testing](#24-testing)
+25.  [Restrictions](#25-restrictions)
+26.  [Licensing](#26-licensing)
+27.  [Affiliation](#27-affiliation)
 # 1. Feedback
 
 Feedback is welcome. Please post questions, corrections or comments here: https://github.com/bixb922/crank-organ/discussions
@@ -244,6 +236,12 @@ Once starting to play, the tune pops off the pending list, and the next tune wai
 The queued tunes are in fact a setlist.  The Performance page allows to manage this setlist. If there is a request for a certain tune, you go back to the Tune list page, tap the tune to add to setlist, go to the performance control page, and move it to the required position.
 
 You always can navigate back from the performance page to the tune page without disrupting the play list and without disrupting playing the music. 
+
+To see all columns of the Tune List page, you can need to fill in information about tunes with the Tunelib Editor, see [here](#edit-tunelib). Empty columns will not show, so initially you will see:
+* a title derived from the file name
+* duration in minutes:seconds 
+* history (how many times played) 
+* file date: this is the file modification date on the PC, not the date of upload
 
 ## The performance control page
 With this page you can see information about the current tune, start/stop the current tune, see lyrics and manage the setlist. As well as the tunelist page, this page is designed to be used even when MIDI files are playing.
@@ -459,7 +457,9 @@ Note on and note off will act on solenoids or RC servos.  Set tempo events are i
 
 Be sure to play any MIDI file at least once on your PC to see if it works.
 
-Use the ```compress_midi.py``` utility in the ```crank-organ/tools```folder to make the MIDI files lean and to compress them to almost one third of the original size. See [here](#increase-midi-file-capacity). Compressed files are not suitable to be converted back to regular MIDI files, so keep the original MIDI files as backup!
+There is no size limitation on MIDI files, but the File Manager has a limit of 1 Mb (one megabyte) file size limit. It is possible to play a 100kb or 200kb MIDI file that lasts, say, 20 or 30 minutes. However, if the file contains several tunes, it is probably more convenient to split into the individual tunes and use the setlist functionality to make a sequence of tunes (i.e. set up your own medley)
+
+If you prefer, you can use the ```compress_midi.py``` utility in the ```crank-organ/tools```folder to make the MIDI files lean and to compress them to almost one third of the original size. See [here](#increase-midi-file-capacity). Compressed files are not suitable to be converted back to regular MIDI files, so keep the original MIDI files as backup!
 
 
 ## Adding and deleting MIDI tunes
@@ -471,6 +471,8 @@ MIDI files become visible after a few seconds (10 or 20 seconds). You may need t
 If you update many tunes: processing each tune takes on average 3 seconds. So if you upload, say, 500 tunes, you'll have to wait 1500 seconds until the update is complete. You can view progress by starting the "Tunelib editor" page.
 
 You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB. You will need to enter the Tunelib Editor page to process these files. 
+
+Sure you have a backup of all MIDI files on your PC. The recommended procedure is to use a tunelib folder on your PC, copy new MIDI files to that folder and then use the File Manager to upload new additions to the microcontroller, i.e. select upload, sort by "date modified" and select the last few. If you upload more than needed, the File Manager skips files that are already uploaded by comparing the contents of both files.
 
 ## The Tunelib Editor page (Tunelib Editor button on index page)
 
@@ -624,172 +626,8 @@ The pin configuration assigns GPIO pins for functions like touch pad, crank sens
 
 There are templates for the pin definition for several usual crank organ scales. For a 20 note Carl Frei scale, the preconfigured settings should normally do.
 
-Any Pin and MIDI configuration change needs a reboot of the microcontroller after saving changes to become effective.
+See [Pinout and MIDI configuration](/doc-pinout/README.md) for a complete description of this functionality.
 
-This page is long and wide and is best used on device with a large screen.
-
-## Select scale
-
-Go to "MIDI configuration" to select the scale of the organ:
-
-* 20 note Carl Frei scale (the default, very common)
-* 26 note Alderman/Melvin Wright scale
-* 31 note Raffin scale (a very common scale for larger crank organs)
-* 35 note custom (a custom scale)
-* 40 note RC servo (radio control servo)
-* 64 note scale for MIDI over serial
-
-What you select is a template that allows to see and change pin assignment for different hardware configurations:
-* Use GPIO pins only (useful for 20 note organs), only ULN2803 drivers necessary for the solenoids
-* Use MCP23017 16 port expander for larger configurations
-* Use a MIDI over serial driver to send the data to a DIN type MIDI connector
-* Use RC servos to move valves or percussion
-
-If you need another scale or hardware configuration, post an issue in this Github repository or look at the configuration files to figure out how they work. The configuration files are JSON text files. Follow the same order as a existing file. The 35 and 48 note custom scale uses almost all configuration options, except putting more than one MCP23017 on the same I2C bus, so that may be a starting point. Any file in the /data folder called nn_note_xxxx.json (with nn a number and xxx a description) is considered a MIDI pinout description file, so you can add your own file here.
-
-You can mix and match, i.e. you can specify a template that sends some MIDI messages to a MIDI DIN serial plug, others that hits a drum with a solenoid on a GPIO port, and others that turn on solenoid valves via a MCP23017 port expander, and yet others that turn on RC servos.
-
-You also specify additional hardware you connect to the microcontroller:
-* A touchpad button (which is really any metallic drawer knob connected with a single wire to the microcontroller) or a push button
-* A microphone for tuning
-* Electronic register switches
-* A rotary sensor for the crank (to detect movement, and/or to sense velocity)
-
-## Transpose scale (only if necessary)
-If you have a organ with, say, a 20 note Carl Frei scale, that scale may start on F, G or other notes as lowest note. Use the transpose buttons to adjust the scale until the lowest note fits. The transpose buttons shift the complete scale up or down one semitone.
-
-## Test solenoids or RC servos
-Next to each solenoid pin definition there is a test button. If the hardware and solenoids are connected, this is a way to test if the wiring is correct.
-
-If a solenoid is connected to the wrong port, instead of swapping wires, you can change the association between MIDI notes and ports here.
-
-The solenoid or RC servo should move a few times after clicking the Test button. Unlike the tuner page, multiple button clicks are not queued but done simultaneously. You can press a new button before the current solenoids stop moving.
-
-## Test touchpad, microphone, crank and I2C bus
-
-There is a ```Test``` button next to these devices on the pinout configuration page:
-
-![Test button](pinout_test_buttons.jpg)
-
-* For the microphone it will refresh a graph of the sound detected. Make some sounds and see the signal wiggle. If the microphone is not connected, this entry will probably show some noise, since the ADC inputs of the ESP32-S3 pick up electrical ambient noise.
-* For the touchpad, it will show the ESP32-S3 reading of the touchpad input. The values may be around 30000 for "not being touched" and around 150000 for "being touched". Your values may vary. They depend on the mass of the knob used and the air or skin moisture. The important value here is the difference between the two readings. Record the difference between "on" and "off" state. There is a value on the General Configuation page that can be set to a value that has to be clearly lower than that difference. 
-* If you are using a push button instead of the touchpad, it will show the state of the push button, 1 for open and 0 for closed.
-* For the I2C, the Test button will do a scan and show the addresses of the devices on the I2C bus. If nothing is connected, it will say so, because the test detects the absence of pull up resistors. If SDA and SCL connected but switched, the address list will be empty.
-* For the crank sensor: This will show the pulse count. Make one whole turn and you will know the number of pulses to enter on the General Configuration page. Leave the crank without movement and the count will reset to zero. Once configured, the "System" page will also have a button to show a crank sensor graph in time.
-
-The tests will stop after 30 seconds to 1 minute. It is best to reboot after activating these tests, since they can change the hardware configuration of the ESP32-S3.
-
-If you change a pin number, the test button will work on the pin numbers just entered, not the saved ones. This allows for quick testing of different pins.
-
-Registers do not have a test button. The register status appears on the bottom of the Performance page.
-
-## Adjust "on" and "off" position for each RC servo
-
-For RC servos there is a arrow up and arrow down position to adjust the position of the "off" position in small steps. The servo "off" position is changed immediately following the values entered or following the up and down arrows. A starting value for "off" is 1500 (halfway between 1000 and 2000 microseconds, the standard for RC servos).
-
-The "on" position needs you to enter a value into the "on (usec difference)" box, and then use the ```Test``` button to verify the "on" position of the servo.  200 is normally a good starting point. If the servo has to turn counterclockwise, use a negative value, i.e. -200
-
-Once your adjustments are done, save the changes with the save button on the bottom of the page.
-
-## Redefine MIDI notes (only if necessary)
-
-This is advanced configuration, should be necessary only for custom scales, or crank organs with drums/percussion or glockenspiel, where the glockenpiel have their own program number and the drums are on the percussion channel number 10.
-
-There are three ways to define a MIDI note here:
-* Only the MIDI note number, leaving program number blank or zero. This will match any MIDI program number in the MIDI file. This is the most common way to define notes, since for simple organs there is only one voice or instrument, and the program number in the MIDI file does not matter.
-
-* Program number and MIDI note number. The output port will activate only if the specified program nubmer and MIDI number is encountered. This is necesary to implement, for example, a glockenspiel.
-
-* Program number 129 and MIDI note number. The output port will activate if the MIDI note number is encountered on the percussion channel 10  The program number 129 is not part of the MIDI standard and is only used here to define drum or percussion sounds.
-
-## Microphone, crank sensor, touchpad and neopixel LED (important)
-
-These configurations are necessary to review depending on what sensors you install in your microcontroller hardware.
-
-You select if you will have a microphone, crank sensor, neopixel led, touchpad button or push button installed, and which GPIO ports will be assigned to them. 
-
-Available GPIO ports for each function are shown on the Pinout page, see [here](#available-gpio-pins).
-
-Most ESP32-S3 boards have a "neopixel" RGB LED, also known as WS2812 LED either on pin 38 or 48. See the vendor's description or schematic, or try with both values. You can use the Pin and MIDI Configuration page to redefine the pin number. The default pin number is 48. Sometimes the LED is disconnected and you need to solder a bridge on the DEVKIT-C board.
-
-If you don't have a microphone, leave the pin definition blank to tell the software to ignore the microphone. The same applies to all sensors.
-
-It's best if you have at least the touchpad button, which essentially is a single wire from the microcontroller to a metallic knob or disc. This knob is used to signal the start of tune, when released.
-
-The available pins are shown on the pinout configuration page.
-
-*After saving configuration, please reboot.*
-
-## Standard pin definitions for 20 note organ
-
-| pin | MIDI note number | Note |
- -------- | ----|--- |
-| 6  |  53 |F3 |
-| 7  | 58 | Bb3 |
-| 15 | 60 | C4|
-| 16 | 62 | D4|
-| 17 | 63 | Eb4 |
-| 18 | 64 | E4 |
-| 8  | 65 | F4 |
-| 9  | 67 | G4 |
-| 10 | 69 | A4 |
-| 11 | 70 | Bb4 |
-| 12 | 72 | C5 |
-| 13 | 74 | D5 |
-| 14 | 75 | Eb5 |
-| 1  | 76 | E5 |
-| 42 | 77 | F5 |
-| 41 | 79 | G5 |
-| 40 | 81 | A5 |
-| 39 | 82 | Bb5 |
-| 47 | 84 | C6 |
-| 21 | 86 | D6 |
-
-The definition for the 20 note scale is in /data/20_note_Carl_Frei.json. You can transpose this scale to start with another note using the Pin and MIDI configuration.
-
-Please see other scale definitions in their respective json files. Several scales are provided as example. 
-
-The Pin and MIDI configuration allows to alter that the default. For example, I don't care very much which valve is connected to what pin, I just connect and then use the Test button on the Pin and MIDI Configuration to find out what wiring I did, and then adjust configuration correspondingly. I usually don't even label the wires. However, I write the position of the pipe in the rank field.
-
-The MIDI pin definition is ordered by the hardware layout. For each hardware pin, it specifies one or more notes that will activate each pin, possibly with the control of a register.
-
-The pin definition columns are:
-* Pin number: this cannot be altered and is the hardware pin. To change this, you will have to change the JSON template.
-* Program number/midi note indicates a MIDI note which will activate this pin. If program number is left blank, any program number in the MIDI file will do. If you specify a program number (1 to 128, 1=piano), that specific program number must be present in the MIDI file to make the note sound. If you specify 129, that MIDI note number on the percussion/drum channel (channel 10) will activate the note.
-* Rank: Any comment or description, for example a description of the location of the pipe (e.g. "bass windchest pipe 3")
-* Register: a register (either hardware or software register) that must be active for the note to sound.
-* Test: Will test this pin. No MIDI note needs to be defined nor saved to test the pin. It will activate/deactivate the pin several times in succession.
-
-## MIDI over serial (5 PIN DIN connector)
-
-For a MIDI over serial, the pin number has no meaning, but it must be present. See this file: /data/64_note_midi_over_serial.json for an example.
-
-For MIDI over serial, it will be best that you only include the MIDI note numbers that your configuration really has, and leave the unused MIDI positions of the board with a blank MIDI note number. This will speed up the tuning.
-
-See the hardware section for connection diagramos for MIDI output over a 5 pin DIN connector.
-
-
-## Available GPIO pins
-This page provides summary of available GPIO pins. The summary is updated when loading the page or after saving changes. This is an example:
-
-Category|List of pin numbers | Count
-Used GPIO pins	|4,5,48|	(3 )|
------------------|-------|-----|
-Available GPIO pins	|1-3,6-18,21,38-42,47|	(23 )|
-Reserved GPIO pins|	0,19,20,22-37,43-46	|(23 )|
-Available GPIO ADC1 pins	|1-3,6-10	(8 )|
-Available GPIO Touchpad pins|	1-3,6-14	(12 )|
-
-
-* Used GPIO pins: ESP32-S3 pins used as input or output pins on the "Pinout and MIDI configuration page" such as microphone, touchpad, push button, I2C bus and GPIO output
-* Available GPIO pins: ESP32-S3 pins that can be assigned. They can be used as input or output pins. Not all can used for microphone and touchpad, see below. But all can be used as output pins for MIDI.
-* Reserved GPIO pins: some pins of the ESP32-S3 cannot be used or interfere with the inner working of the chip. For example, some of these are used for WiFi or for the flash. These cannot be used for crank organ functions. On some ESP32-S3, GPIO 3 and/or 4 can have certain restrictions too.
-* Available GPIO ADC1 pins: ESP32-S3 Analog-Digital-Converter bank 1. Select the microphone pin from this list. (Bank 2 cannot be used, this bank is reserved for WiFi)
-* Available GPIO Touchpad pins: Select a pin for the touchpad function from this list.
-
-The output pins of the ESP32-S3 cannot drive solenoids (electromagnets) directly. The current they supply is not enough, and solenoids produce very high current pulses when turned off that must be absorbed with a "kick back diode". Always connect the GPIO output to a driver such as the ULN2803 IC, which will amplify the current and provide kick back diodes.
-
-However, the output pins of the ESP32-S3 can perfectly be connected to standard RC Servos. Up to 8 servos can be connected to the ESP32-S3 GPIO ports.
 
 # 13. System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
@@ -961,6 +799,8 @@ The start of the configuration page looks like this:
 
 Configuration is best done on a PC or Mac. Automatic browser translation can also help here!
 
+Besides configuring WiFi, you should set the "Network name" of the microcontroller. This name must be unique (no two microcontrollers with the same name).
+
 Once WiFi is configured, further updates can be made with the [File Manager](#file-manager), for example, uploading MIDI files. Further configuration parameters can be done with the different configuration pages provided by the microcontroller.
 
 If you can't configure WiFi, see [here](#another-way-to-configure-wifi).
@@ -1068,6 +908,21 @@ Disabling Smart Network Switch
 * Tap Connections or Network & internet.
 * Select Wi-Fi.Tap the three dots menu (⋮) or Intelligent Wi-Fi / Advanced settings.
 * Turn off Switch to mobile data or Auto network switch
+
+## Restrictiones during music playback
+
+During music playback, most functions not related to playback are restricted, since the ESP32-S3 needs all the resources to keep the music on time. 
+
+Try to stay on the Tune List and Performance pages (tunelist.html, play.html) while music is playing. The History page and the Index page (Home page) are also ok. Please do maintenance functiones such as MIDI pin configuration, pin tests, file uploads, system page, etc when no music is playing. Also: you should not be looking at the cell phone while cranking, look at the audience or listen to the music.
+
+In other words: Maintenance functiones such as Tuner, Tunelib Editor, General Configuration, Pinout and MIDI configuration, System page and File Manager are restricted during music playback.
+
+If used while the music player is not active, most maintenance functions will stop the music player and ask for a reboot (power off/power on) of the microcontroller:
+* The tuner needs to stop the player because you can't tune while music is playing
+* Other maintenance functions need a reboot to enable the changes to become effective
+* Test functions on the Pinout and MIDI Configuration page need the music player to stop because testing interferes with the microcontroller peripherals
+
+After you get the message "Cannot be done while music is playing", you will need to reload (refresh) the page, because all background actions in the page abort when music is playing.
 
 
 ## Increase MIDI file capacity (compression)
@@ -1235,11 +1090,11 @@ After 15 minutes without activity, the microprocessor will shut itself down to s
 This time can be changed using the General Configuration, section "Power Management". To disable, set a very high value, like 99999 minutes.
 
 ## The onboard RGB LED
-ESP32-S3 boards usually have a onboard red/green/blue led. This LED flashes or lights up. Most are just indications for normal functions:
+ESP32-S3 boards usually have a onboard red/green/blue LED. These are some color codes:
 
 * Blue to green during start up.
 * Four white flashes when connected to WiFi.
-* Low blue flash when setlist is empty
+* Low intensity blue flash when setlist is empty
 
 Some are for feedback of user actions:
 * White while the touchpad is down
@@ -1291,7 +1146,25 @@ Go to the File Manager, navigate to the ```data``` folder and press the button l
 
 Also you will need backup of the /tunelib/*.mid and /tunelib/*.mid.gz files. Instead of doing backup, it's best to have a staging folders /tunelib and a /tunelib_compressed folder somewhere on the PC and then upload the latest MIDI files from there with the [File Manager](#file-manager) to the microcontroller.
 
-To restore a backup: If you start with an empty ESP32S3, install the software as per installation instructions. Copy the MIDI files to the /tunelib folder using the File manager. Then copy the backed up  configuration files (tunelib.json, lyrics.json and config.json) to the /data folder. Reboot.
+To restore a backup: 
+* Start with an empty ESP32-S3 (see below how to erase all files except the software)
+* Install the software as per installation instructions. 
+* Use the File Manager to restore the configuration files (tunelib.json, lyrics.json and config.json) to the /data folder.
+* Use the File Manager to restore all MIDI files in one go (that's easy if you have all MIDI files in a tunelib folder on your PC, as recommended)
+
+If the MIDI file restore was interrupted, you will have to:
+* Do a complete sync using the Tunelib Editor 
+* Restore the configuration files tunelib.json and lyrics.json again, 
+* Reboot.
+
+To erase all files on the microcontroller except the installed software use this:
+```
+% mpremote
+>>> import vfs
+>>> vfs.VfsLfs2.mkfs(bdev)
+```
+It is very fast. Now only the /rom partition remains with the software. Reboot.
+
 
 
 # 20. Troubleshooting
@@ -1302,7 +1175,7 @@ If you added tunes to the /tunelib folder of the microcontroller, and they do no
 
 If you the microcontroller's browser does not respond:
 * Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
-* Some cell phones that are older than about 2021 do not recognize node names such as mycrankorgan.local. You'll have to use the IP address.
+* Some cell phones that are older than 2021 do not recognize node names such as mycrankorgan.local. You'll have to use the IP address.
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 * Make sure both microcontroller and cell phone are in WiFi range of the router.
@@ -1311,7 +1184,7 @@ If browser response is slow, check the WiFi signal. Move the crank organ nearer 
 
 If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. Or see [here](#another-way-to-connect-to-the-wifi)
 
-
+If this message appears "Playback disabled by configuration functions. Reboot to reset." and you don't know why: There is some configuration or the tuner page open on a PC or the cell phone. Close these pages when not needed and reboot.  See here for details [Restrictiones during music playback](#restrictiones-during-music-playback)
 
 # 21. Recent changes
 
@@ -1721,7 +1594,7 @@ If tune is not started by crank, it will not react to the crank.
 * Add a bixb922.github.io page. First version of "Find my organ" on that page.
 * Fix favicon on web pages.
 
-# 22. Changes in Sept 2026
+## Changes in July 2026 to Sept 7, 2026
 * Remove 8.9 minute maximum length restriction for MIDI files. Maximum length is now 6.2 days for one file. Same for time waiting while crank is stopped and time between MIDI events.
 * Use previously configured Neopixel LED pin at startup instead of pin 48. Default is pin 48.
 * Show save button on pinout page only after form has been filled. If save button is pressed with no data, pinout was previously saved as blank.
@@ -1732,7 +1605,45 @@ If tune is not started by crank, it will not react to the crank.
 * Make back arrow on HTML pages more consistent.
 * Update crank debug option to current version.
 
-# 23. Programming language
+## Changes Sept 8, 2026 to ....
+Tune List page:
+* Don't show empty columns in the Tune List page.
+* Suppress adding "~" before tune title to show it was derived from file name. This was formerly done to show tunes that need editing in Tunelib Editor, but now there are filters.
+
+Tune manager: 
+* Show % progress during sync. Ensure async response so the progress shows every few seconds.
+* Add some filters to Tunelib editor.
+* Calculate local date of uploaded file in browser using origin time zone. This optimizes tunelib sync in some border cases.
+* Don't sync tunelib if folder is empty. This makes it easier to restore a backup.
+* Remove top tune from setlist if associated file had been deleted.
+* Standarize all file times to ESP32 UTC time, including tunelib.json. To make this standarization work, the microcontroller needs to be backed up, files erased and then restored. There is no big problem if you don't do this, the file creation times on the microcontroller may be wrong by a couple of hours. This doesn't affect the working of the solution.
+
+File Manager:
+* Skip upload for files if new file is equal to existing file. This makes it a bit faster to upload many files just to make sure everything is up to date, and no sync is triggered.
+* Hide buttons on File Manager page at startup. 
+* Path inside tar file (File manager/download) is now <date>_<network name>_<folder>, same as tar file name.
+* Measure stuff: Upload of MIDI files: about 3 seconds per MIDI file with an average size of 7kb per file. Sync startup: 10 seconds. Sync per changed file 1.5 sec average. Sync for unchanged file 0.1 seconds per file.
+
+commpress_midi.py utility program:
+* Fix issue with 0 length notes in compress_midi.py 
+
+Startup:
+* Rewrite led.txt only when changed.
+
+Play page:
+* Change "collapse setlist" and "collapse lyrics" control to "navigate buttons" and add "navigate up" for long setlists to navigate back to top.
+
+Music playback:
+* Try not to connect WiFi while music is playing.
+* Block maintenance functions during music playback. 
+
+Pinout and MIDI configuration:
+* Hide "Add row" button and register input in MIDI definition if no registers defined.
+* Validate  GPIO pins 3 and 4 are not used for input. These pins can block boot process of the ESP32-S3. Pin 3 is officially a "strapping pin". Pin 4 also has been seen to block boot process.
+* New "Pinout and MIDI configuration" document now provides detailed information about this function and even describes how to make a new pinout configuration templates.
+
+
+# 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
 The MIDI file parser is written in highly optimized MicroPython, and has very little overhead. The MIDI timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in available time slots between notes.
@@ -1750,7 +1661,7 @@ If you want to program in MicroPython, a IDE (integrated development environment
 * Viper IDE (https://github.com/vshymanskyy/ViperIDE), runs in the browser. No installation required.
 * Thonny (https://thonny.org/), for beginners, does a lot of stuff behind the scenes, which sometimes is very good but can sometimes be a bit confusing.
 
-# 24. Credits
+# 23. Credits
 
 Credits to the MicroPython team for MicroPython (https://www.micropython.org) and it's libraries. This is an amazing product! 
 
@@ -1768,12 +1679,12 @@ To ease the installation process, I have included some libraries in the reposito
 
 Also, Microdot has some very minor modifications for the purpose of this software.
 
-# 25. Testing
+# 24. Testing
 
 Most code, especially the MIDI file parser, has been tested extensively, although I keep making changes and enhancements. I have tried and tested all options under many circumstances. If you find a glitch or bug, I'd like to correct those as soon as possible. Please report problems as Github issue or discussion on this repository.
 
 
-# 26. Restrictions
+# 25. Restrictions
 Safari as a browser is not supported.
 
 The security and protection of this software is designed for a WiFi network such as a home network or a hotspot on a cell phone. I have put many safeguards in the software, such as: passwords on flash are encrypted with a hidden key, WiFi to files is controlled with a password, primary keys are not accessible via WiFi, you can block configuration changes with a password, and others. However, the webserver on the microcontroller should not be made available on the public internet, since it does not have the required security mechanisms necessary to be a public web server. For example, no https is available (but the WiFi protocol encrypts data anyways). When accessing the microcontroller via USB, all elements including passwords can be ultimately retrieved and new code can be installed. However, if you use this software on a private home WiFi network or with an access point on your cell phone, then I believe the protections provided should be strong enough for the purpose of the software.
@@ -1807,11 +1718,13 @@ If AP mode not in active usage (no browser page open) and no station SSID could 
 * One of the SSIDs can be connected.
 * A browser starts using AP mode.
 
-
 History column on tunelist shows count until last reboot
 
+Files uploaded or created on the microcontroller before October 2026 may appear with a file time off by some hours due to time zone differences. This doesn't cause problems, except if you want to compare the file date+time on the PC with the microcontroller. To clear this situation, you will have to backup the microcontroller, erase all files and restore the files again, see [here](#backup) how to restore a backup.
 
-# 27. Licensing
+After you get the message "Cannot be done while music is playing", you will need to reload (refresh) the page, because all background actions in the page abort when music is playing.
+
+# 26. Licensing
 This software is available under the MIT license:
 
 Copyright (c) 2023-2025 Hermann Paul von Borries
@@ -1838,7 +1751,7 @@ SOFTWARE.
 
 You are not allowed to delete nor hide the copyright notice on the index.html page.
 
-# 28. Affiliation
+# 27. Affiliation
 I have no affiliation nor relationship with any vendor of hardware or software nor other products mentioned in this page. I do not endorse specific products, nor do I get any benefits by promoting them.
 
 In any case, I believe that software products mentioned on this repository are either available under very permissive licenses such as MIT license or GPL, or are hardware products which are fairly generic and available from many vendors and sources. 

@@ -1,9 +1,7 @@
 # Copyright (c) 2023-2025 Hermann von Borries
 # MIT license
 #  
-from time import ticks_ms, ticks_diff
-import asyncio
-from actuatorstats import ActuatorStats
+from time import ticks_ms
 
 class BaseDriver:
 
@@ -37,6 +35,7 @@ class BaseDriver:
     
     def __eq__( self, other):
         return self._repr == other._repr
+
     
 
 class BasePin:
@@ -91,8 +90,7 @@ class BasePin:
 
     @classmethod
     def set_led( cls, led ):
-        # Inject led object, used by ActuatorBank, is changed
-        # by all_notes_off, no led blinking there.
+        # Inject led object
         cls.led = led 
 
     @classmethod
@@ -117,7 +115,7 @@ class BasePin:
         # the number of note_offs, but is never allowed to go negative.
         self._count = 0
         self._transition_time = ticks_ms() # is the last time when an actuator has been turned on or off
-        # Current value, on or off.
+        # Current value, on or off 
         self._current_value = 0
 
     @property
@@ -136,13 +134,17 @@ class BasePin:
             # Record time when pin was set on
             self._transition_time = ticks_ms()
             # Turn pin on (low level, implemented by subclass)
+            self._movement_start()
             self.low_level_on() # type: ignore
+
 
         # Count this "note on" event, to be able to pair note on/off
         # This also enables to turn off all pins that are on when pausing crank
         # or when the MIDI files ends or stops.
-        self._count += 1
         self._current_value = 1
+        self._count += 1
+
+
 
     def off( self ):
         # Set to off only when currently on and this the last note on
@@ -153,7 +155,9 @@ class BasePin:
                 # Moving limit exceeded, turning off postponed.
                 return
             # Set pin to off (low level)
+            self._movement_start()
             self.low_level_off() # type: ignore
+
             # Accumulate the time the battery was used
             self._compute_battery_time()
             # Now record transition time
@@ -163,10 +167,14 @@ class BasePin:
         # if there are more note offs than note ons.
         self._count = max(0, self._count-1)
         self._current_value = 0
+        # It's not a good idea to let _count <0.
+        # When crank stops, there may be a note off with note
+        # on. That note will never sound again during the MIDI file
+
 
     def force_off( self ):
         # Force off, even if note on and note off don't match
-        # but only if note is already on
+        # but only if note is already on.
         if self._count >= 1:
             self._count = 1
             self.off()
@@ -198,185 +206,15 @@ class BasePin:
         # Sets pulse with for ON and OFF states for RC servos.
         pass
 
+    def _movement_start(self):
+        # RC Servos override this to keep track of moving servos
+        # for current consumption
+        pass
+
     def __hash__( self ):
         return hash( repr(self) )
     
     def __eq__( self, other ):
         return repr(self) == repr(other)
     
-    
-class SolePin(BasePin):
-    # Superclass for all drivers that move solenoids
-    # Subclasses must implement:
-    #   __init__() calling super().__init__()
-    #   low_level_on() and low_level_off()
-    is_solepin = True
-
-    # Management of maximum solenoids that can be on
-    sole_polyphony = 0 
-    # Configuration parameter for polyphony
-    config_max_polyphony = 10
-
-    @classmethod
-    def set_config( cls, config ) :
-        # Set by ActuatorBank for all SolePin pins.
-        # Inject configuration
-        cls.config_max_polyphony = max( config.max_polyphony, 1)
-
-    @classmethod
-    def clear_active( cls ):
-        # When doing all notes off, reset
-        SolePin.sole_polyphony = 0
-        
-    def _compute_battery_time( self ):
-        BasePin._battery_consumption += ticks_diff(ticks_ms(), self._transition_time)     
-        
-    # Actuator_change for solenoid pins
-    # There is a different code for RC servos.
-    def _actuator_change( self, new_value ):
-        if new_value:
-            while SolePin.sole_polyphony >= SolePin.config_max_polyphony:
-                ActuatorStats.count( "exceeded polyphony" )
-                try:
-                    # Find oldest active solenoid pin
-                    oldest_pin = min( pin for pin in BasePin.get_active() if pin.is_solepin )
-                    oldest_pin.force_off()
-                except ValueError:
-                    # No active pins, but then, why is SolePin.sole_polyphony != 0?
-                    SolePin.sole_polyphony = 0
-                    break
-            SolePin.sole_polyphony += 1
-        else:
-            SolePin.sole_polyphony -= 1
-        ActuatorStats.max( "max polyphony", SolePin.sole_polyphony )
-         # Any polyphony problem has been taken care of, now turn on current note
-        return True
-    
-    def __lt__( self, other ):
-        # pin1 < pin2 iff pin1 moved before pin2
-        # For use only over BasePin.get_active() iterator
-        # with the min() funcion to find the oldest active pin
-        return ticks_diff( self._transition_time,  other._transition_time ) < 0 
-
-class RCServoPin(BasePin):
-    # Abstract class to derive RC Servo classes GPIOServoPin and PCA9685ServoPin
-    # Subclasses must implement:
-    #   1. __init__() including super().__init__()
-    #   2. low_level_on() and low_level_off() calling _movement_start()
-    #   3. set_servopulse() calling super().set_servopulse()
-    #   4. stop_pwm()
-    is_rcservo = True
-
-    # Count of pins that are moving
-    _global_moving = 0
-
-    @classmethod
-    def set_config( cls, config ):
-        # Set by ActuatorBank for all RC pins
-        cls.config_rc_moving_time = config.rc_moving_time
-        cls.config_rc_pwm_auto_off = config.rc_pwm_auto_off
-        cls.config_rc_max_moving = config.rc_max_moving
-
-    def __init__( self, period_us, *args ):
-        super().__init__( *args )
-        self._period_us = period_us
-        # Counter if this pin is currently moving
-        self._this_moving = 0
-        # Simulate that the RC Servo is on,
-        # so the first call to controller.all_notes_off() will
-        # move all servos to the off position and
-        # then (if so configured turn off PWM 
-        self._count = 1
-
-    def _movement_start( self ):
-        # A servo movement is about to start
-        # RCServoPin._global_moving is a counter of all currently moving servos
-        if self._this_moving == 0: 
-            # Count only when self._this_moving goes from 0 to 1
-            # to include case of very close movements
-            RCServoPin._global_moving += 1
-        self._this_moving += 1
-        # Launch task to time when movement has finished
-        asyncio.create_task( self._wait_movement_end() )
-
-    async def _wait_movement_end( self ):
-        # Wait for servo movement to finish.
-
-        # self._wait_movement_end() will take about 1% of the CPU
-        # Having a unique background job for all pins will also take about 1% of CPU
-        # but this design distributes the time in very small tasks 
-        # which is even nicer for asyncio
-
-        await asyncio.sleep_ms( self.config_rc_moving_time )
-        # self._this_moving should never go below zero, since +1 and -1 are always paired by this code here.
-        self._this_moving -= 1
-        if self._this_moving == 0:
-            # Any overlapping movements of this pin have stopped now
-            # One servo less moving.
-            RCServoPin._global_moving -= 1
-            if self.config_rc_pwm_auto_off and not self._current_value:
-                # Actuator state is off and movement has stopped, no servo force necessary.
-                self.stop_pwm() # type:ignore
-
-    def _compute_battery_time( self ):
-        # 2 movements, on and off, battery is used only when RC Servo moves.
-        # If there is a mix of solenoids and RC servos, this
-        # will not be very precise.
-        BasePin._battery_consumption += 2 * RCServoPin.config_rc_moving_time
-
-    def set_servopulse( self, pulse0_us, pulse1_us ):
-        from drehorgel import config
-        # To be completed by the subclass. Servo pulse width is in microseconds
-        # and can is set individually for each RC servo pin.
-        if not( config.rc_min_pulse <= pulse0_us <= config.rc_max_pulse and 
-                config.rc_min_pulse <= pulse1_us <= config.rc_max_pulse ):
-            raise ValueError(f"Pulse width must be between {config.rc_min_pulse} and {config.rc_max_pulse}")
-
-    def _actuator_change( self, new_value ):
-        # Limit the maximum of moving servos (both turning on and off)
-        # Polyphony does not apply for RC servos 
-        # Return True=ok to move, False=don't start movement.
-
-        # It is about the same overhead if _global_moving
-        # is calculated each time here using _transition_time
-        # (without turning off servos when not moving)
-        moving_servos = RCServoPin._global_moving 
-
-        ActuatorStats.max( "max moving servos", moving_servos ) 
-
-        # Restrict movement of servos if some limit exceeded
-        if (moving_servos > RCServoPin.config_rc_max_moving):
-            BasePin.led_short_problem()
-            ActuatorStats.count( "rc exceeded moving" ) 
-            # For on: suppress movement
-            # for off: delay movement (and suppress current movement)
-            if not new_value:
-                asyncio.create_task( self._delayed_off( self.config_rc_moving_time ))
-            # Return False means "supress movement"
-            return False
-        return True
-    
-    async def _delayed_off( self, t ):
-        # Delay RC servo off movement by about t milliseconds, used by self._actuator_change()
-        await asyncio.sleep_ms( t )
-        # Using pin.off() will enable check _actuator_change again after this delay.
-        # That means that a note_off could be delayed several times.
-        self.off()
-
-# Exception processing pinout file for line ['midi', 7, '', 79, '17 G violin G5', ''] Pulse width must be between 1000 and 2000
-# Traceback (most recent call last):
-#   File "main.py", line 41, in <module>
-#   File "asyncio/core.py", line 1, in run
-#   File "asyncio/core.py", line 1, in run_until_complete
-#   File "asyncio/core.py", line 1, in run_until_complete
-#   File "crank-organ/src/startup.py", line 204, in start
-#   File "crank-organ/src/drehorgel.py", line 74, in init
-#   File "crank-organ/src/pinout.py", line 674, in __init__
-#   File "crank-organ/src/pinout.py", line 103, in __init__
-#   File "crank-organ/src/pinout.py", line 180, in parse
-#   File "crank-organ/src/pinout.py", line 170, in <lambda>
-#   File "crank-organ/src/pinout.py", line 772, in define_midi
-#   File "crank-organ/src/driver_pca9685.py", line 72, in set_servopulse
-#   File "crank-organ/src/driver_base.py", line 317, in set_servopulse
-# ValueError: Pulse width must be between 1000 and 2000
 

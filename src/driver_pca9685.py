@@ -4,10 +4,11 @@
 import ustruct
 from time import sleep_us
 
-from driver_base import RCServoPin, BaseDriver
+from driver_rcservo import RCServoPin, RCServoDriver
+from actuatorstats import ActuatorStats
 
 # one instance for each PCA chip i.e. one instance for 16 outputs
-class PCA9685Driver(BaseDriver):
+class PCA9685Driver(RCServoDriver):
     def __init__(self, i2c, i2c_number, address, period_us):
         # period_us is the same for all pins of a PCA9685.
         super().__init__(  i2c_number, address )
@@ -22,25 +23,24 @@ class PCA9685Driver(BaseDriver):
             raise OSError(
                 f"PCA9685 not found at I2C address {address:#x}"
             )
-
-        self._reset()
         # Frequency is the same for all outputs.
-        self._freq( 1_000_000/period_us )
+        self._pwmfreq =  1_000_000/period_us 
+        self._reset()
 
     def define_pin( self, *args ):
         return PCAServoPin( self._period_us,  self, *args )
 
-    def _write(self, address, value):
-        self.i2c.writeto_mem(self.address, address, bytearray([value]))
+    def _write(self, register, value):
+        self.i2c.write_byte( self.address, register, value)
+        #self.i2c.writeto_mem(self.address, regiregisterster_address, bytearray([value]))
 
-    def _read(self, address):
-        return self.i2c.readfrom_mem(self.address, address, 1)[0]
-
+    def _read(self, register):
+        #return self.i2c.readfrom_mem(self.address, register_address, 1)[0]
+        return self.i2c.read_byte( self.address, register)
+    
     def _reset(self):
         self._write(0x00, 0x00) # Mode1
-
-    def _freq(self, freq):
-        prescale = int(25000000.0 / 4096.0 / freq + 0.5)
+        prescale = int(25000000.0 / 4096.0 / self._pwmfreq + 0.5)
         old_mode = self._read(0x00) # Mode 1
         self._write(0x00, (old_mode & 0x7F) | 0x10) # Mode 1, sleep
         self._write(0xfe, prescale) # Prescale
@@ -55,15 +55,30 @@ class PCA9685Driver(BaseDriver):
         # both on a scale of 0 to 4095. 
         # Write in one go.
         data = ustruct.pack('<HH', start, stop)
-        self.i2c.writeto_mem(self.address, 0x06 + 4 * index,  data)
+        for i in range(10):
+            try:
+                self.i2c.writeto_mem(self.address, 0x06 + 4 * index,  data)
+                return
+            except OSError:
+                print(f">>>???error ENODEV {i} {self.i2c.scan()=}")
+                for k in range(5):
+                    try:
+                        self.i2c.init()
+                        self._reset()
+                        ActuatorStats.count("PCA9685 resets")
+                        print(">>>???reset successful iteration", k)
+                        break
+                    except OSError:
+                        pass
+        ActuatorStats.count("PCA9685 fail")
+        print(">>>???could not do SoftI2c.write_to_mem, retries exceeded")
+
 
 class PCAServoPin(RCServoPin):
     def low_level_on( self ):
-        super()._movement_start()
         self._driver.set_pwm( self._pin, self._pulse_start, self._1_pulse_stop )
        
     def low_level_off( self ):
-        super()._movement_start()
         self._driver.set_pwm( self._pin, self._pulse_start, self._0_pulse_stop )
         
 

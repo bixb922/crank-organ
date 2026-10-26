@@ -67,7 +67,7 @@ class StartBase:
 
     # def read() provided by assignment in init() of subclasses
     # self.read() is also used by pinout.py for tests.
-    # Abstract methods:
+    # Abstract methods to be overridden by subclass:
     # def init(self, gpio ):
     #     return self.read
     # def _transition_up(self, val, last_val):

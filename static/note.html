@@ -93,7 +93,8 @@ let pageHeader = new PageHeader().setTitle( tlt("Afinar nota"), "notelist" );
 
 // Refresh note info every second
 async function getNoteInfo() {
-	while( true ) {
+	for(;;){
+		await wait_until_visible();
 		await updateNoteInfo( await fetch_json( "/get_organtuner_json" ) ) ;
 		await sleep_ms( 5_000 );
 	}

@@ -88,7 +88,7 @@
                     Configuración pins/MIDI
 				</button>
 			</td>
-			<td id="pinout_description">
+			<td>
 			</td>
 		</tr>
 		<tr>
@@ -181,18 +181,15 @@ let pageHeader = new PageHeader().setTitle( tlt("Índice"), null ) ; // No "back
 
 async function getPageData(){
     resp = await fetch_json( "/get_index_page_info" ) ;
-    textById( "pinout_description", resp.pinout_description ) ;
-    if( resp["servernode"] ){
+	let server = resp["servernode"]
+    if( server ){
         document.getElementById("serverinfo").style.display = "" ;
-		let server = resp["servernode"];
-		if( server != "" ){
-			if( !server.startsWith("http")){
-				if( server.endsWith(".com")){
-					server = "https://" + server;
-				}
-				else{
-					server = "http://" + server;
-				}
+		if( !server.startsWith("http")){
+			if( server.endsWith(".com")){
+				server = "https://" + server;
+			}
+			else{
+				server = "http://" + server;
 			}
 		}
         document.getElementById("serverlink").href = server;
@@ -215,7 +212,8 @@ async function getBatteryInfo( ) {
     // This is the detailed battery info in the body
     // of the page, the battery info in the header
     // gets updated in common.js class GetProgress/PageHeader.
-	while( true ) {
+	for(;;){
+		await wait_until_visible();
 		updateBatteryInfo( await fetch_json( "/battery" ) ) ;
 		await sleep_ms( 15000 ) ;
 	}

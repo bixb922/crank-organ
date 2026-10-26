@@ -13,6 +13,8 @@ from minilog import getLogger
 _LED_FILE = const("data/led.txt")
 
 # 1=lowest, 255=highest
+_MINIMAL = const(1)
+_ITSY = const(2)
 _VERY_LOW = const(4)
 _LOW = const(8)
 _MEDIUM = const(32)
@@ -156,7 +158,7 @@ class BlinkingLed:
         while True:
             await asyncio.sleep_ms(900)
             if self.blink_setlist:
-                self.on( (0,0,_VERY_LOW ) )
+                self.on( (_MINIMAL,_ITSY,0 ) )
                 await asyncio.sleep_ms(80)
                 self.off()
 
@@ -169,19 +171,22 @@ def set_led( pin ):
     # Caching pin decouples this module from pinout
     # and led starts sooner. led.txt is only created if
     # the pin has changed and is different from the default 48.
-    if get_led() != pin:
+    if get_led_pin() != pin:
         # Write led.txt only if pin definition is different
         with open(_LED_FILE, "w") as file:
             file.write(str(pin))
 
-def get_led():
+def get_led_pin():
     try:
         with open(_LED_FILE) as file:
             p = int(file.read())
     except: # OSError, ValueError
         # Most ESP32-S3 boards have neopixel on GPIO 48.
         p = 48
-    return neopixel.NeoPixel(Pin(p), 1)
+    return p
+
+def get_led():
+    return neopixel.NeoPixel(Pin(get_led_pin()), 1)
 
 # Say hello at startup, with minimal overhead.
 def hello():

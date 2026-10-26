@@ -84,10 +84,10 @@ def main():
              if f.endswith("_editable.md") ]
     for input_filename in input_files:
         output_filename = input_filename.replace("_editable", "")
-        print("Processing", input_filename )
+        print("update-toc: Processing", input_filename )
         level0 = -2
         output = process( input_filename )
-        print("writing output file", output_filename)
+        print("update-toc: writing output file", output_filename)
         with open(output_filename, "w") as file:
             for line in output:
                 if line[-1:] != "\n":

@@ -9,23 +9,18 @@
 	<link rel="stylesheet" type="text/css" href="skeleton.css">
 </head>
 <body>
-<!--<span id="popup" class="popuptext"></span>
-<div class="headerdiv">
-	<span class="headerleft">
-        <a onclick="pageUp('index')">&#11013;</a>
-    </span>
-	&nbsp;Pinout and MIDI configuration
-	<span class="headerright" id="header_time"></span>
-</div>
--->
+
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
-
-<div class="middlediv">Select template</div>
     This configuration should be needed only once, when setting up the system.
     
     Configuration changes only take place after a microcontroller reset.
 
+
+<div class="middlediv">
+    <a name="collapse" id="selectPinout"style="color:white">▼</a>
+    Select pinout file</div>
+  <span id="selectPinoutSpan">
     Select organ scale (for example 20 note Carl Frei, 31 note Raffin) and see or modify the pin and MIDI assignments.
 
     Select a scale and press "save scale" to show the corresponding form. "Save scale" may take several seconds.
@@ -36,17 +31,17 @@
     </table>
     
     <button type="button" id="savePinoutFilenameButton" onclick="savePinoutFilename()">Save scale</button>
-    
-<div class="middlediv">Pin to MIDI mapping</div>
+  </span>
+<div class="middlediv">
+     <a name="collapse" id="gelaber" style="color:white">▶</a>
+    Overview</div>
+  <span id="gelaberSpan">
     Modify or enter GPIO pin numbers for microphone (typically GPIO 4), crank sensor or touchpad (typically GPIO 5) and neopixel (typically GPIO 38 or 48, see schematic of your board).  Leave empty if nothing is connected.
     <br>
-    If there is no crank sensor, it may be useful to define a start touchpad or start switch instead. Defining both is redundant.
-    <br>
-    Microphone pin and touchpad must be from ADC bank 1 (see ESP32-S3 specs).
+    If there is no crank sensor, it may be useful to define a start touchpad or start switch instead. 
     <br>
     For each solenoid you enter:
     <ul>
-    <li>Pin number: GPIO pin or MCP23017 pin.</li>
     <li>Instrument: this defines the program number or channel that will make the note sound. Leave this blank, except if you have instruments like glockenspiel, drums, etc. Can be:
         <ul>
             <li>A MIDI program number (1 to 128, 1=piano, 20=church organ).</li> 
@@ -59,22 +54,24 @@
         Midi note: MIDI note number, 0 to 127, for example: 69=central A4, 60=central C4. If left blank or zero, this output pin is disregarded (the MIDI note 0 C-2 can not be assigned).
     </li>
     </ul>
-    For I2C connections, enter the SDA and SCL  GPIO pin number. SCL is the same as SCK. For each MCP23017 on that bus enter the address (must be 32 to 39). For each MCP23017 fill the out the pin definitions.
+    For I2C connections, enter the SDA and SCL  GPIO pin number. SCL is the same as SCK. For each MCP23017 on that bus enter the address (must be 32 to 39). 
     <br>
-    If the MCP23017 address is left blank, the definition is ignored. This is useful to test the software and configuration without having MCP23017 connected.
-    <br>
+  </span>
+<div class="middlediv">
+    <a name="collapse" id="transposition" style="color:white">▶</a>
+    Transposition</div>
+  <span id="transpositionSpan">
     Use the transpose button to transpose up/down until the scale match yours. The intervals between notes are kept. 
-    <br>
-    For MIDI over serial (5 pin DIN) leave unused MIDI note numbers blank.
-    <br>
-    Save pinout definitions to make changes permanent, then reboot.
-    <br>
-    The Test button will activate the port several times.
     <br>
     <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
     <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
     <br>
-    <table>
+     <button type="button" id="saveTransposition" onclick="savePinoutDetail()" style="display:none">Save transposed pinout</button>
+  </span>
+<div class="middlediv">
+    <a name="collapse" id="availability" style="color:white">▶</a>
+    Available and used pins</div>
+    <table id="availabilitySpan">
         <thead><tr>
             <td>Category</td>
             <td>List of pin numbers</td>
@@ -84,48 +81,57 @@
         <tr>
             <td>Used GPIO pins</td>
             <td id="usedGPIO"></td>
-            <td>(<span id="usedGPIOcount"></span> )</td>
-        </tr>
-        <tr>
-            <td>Available GPIO pins</td>
-            <td id="availableGPIO"></td>
-            <td>(<span id="availableGPIOcount"></span> )</td>
+            <td id="usedGPIOcount"></td>
         </tr>
         <tr>
             <td>Reserved GPIO pins</td>
             <td id="reservedGPIO"></td>
-            <td>(<span id="reservedGPIOcount"></span> )</td>
+            <td id="reservedGPIOcount"></td>
+        </tr>
+        <tr>
+            <td>Available GPIO pins</td>
+            <td id="availableGPIO"></td>
+            <td id="availableGPIOcount"></td>
         </tr>
         <tr>
             <td>Available GPIO ADC1 pins</td>
             <td id="availableADC1"></td>
-            <td>(<span id="availableADC1count"></span> )</td>
+            <td id="availableADC1count"></td>
         </tr>
         <tr>
             <td>Available GPIO Touchpad pins</td>
             <td id="availableTouchpad"></td>
-            <td>(<span id="availableTouchpadcount"></span> )</td>
+            <td id="availableTouchpadcount"></td>
+        </tr>
+        <tr>
+            <td>Available GPIO input pins</td>
+            <td id="availableForInput"></td>
+            <td id="availableForInputcount"></td>
         </tr>
         </tbody>
     </table>
+<div class="middlediv">
+    <a name="collapse" id="pinoutDetail" style="color:white">▶</a>
+    Pinout detail</div>
+  <span id="pinoutDetailSpan">
     <table>
         <tbody id="tbodyPinoutForm">
         </tbody>
     </table>
-    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()" style="display:none">Save pinout definitions</button>
     <br>
-
-When pressing the save button, you may be asked for the password of the microcontroller.
-<br>
-<b>  After saving pinout definitions or using the test button, reboot microcontroller.
-</b>
-<br>
-<button type="button" onclick="list_pinout_by_midi_note()">List pinout by midi note</button>
-<br>
-<table id="table_list_pinout_by_midi_note" style="display:none">
-    <thead id="thead_list_pinout_by_midi_note"></thead>
-    <tbody id="tbody_list_pinout_by_midi_note"></tbody>
-</table>	
+    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()" style="display:none">Save pinout definitions</button>
+  </span>
+<div class="middlediv">
+    <a id="listByMidi" name="collapse" style="color:white">▶</a>
+    List pinout by MIDI note</div>
+  <span id="listByMidiSpan">
+    <button type="button" onclick="list_pinout_by_midi_note()">List pinout by MIDI note</button>
+    <br>
+    <table id="table_list_pinout_by_midi_note" style="display:none">
+        <thead id="thead_list_pinout_by_midi_note"></thead>
+        <tbody id="tbody_list_pinout_by_midi_note"></tbody>
+    </table>	
+  </span>
 <div class="footerdiv"></div>
 <script>
 // (c) Copyright 2025 Hermann Paul von Borries. All rights reserved.
@@ -204,7 +210,7 @@ async function getPinoutDetail( ) {
     let rownum = 0;
     let lastPin = null ;
     let lastPDtype = null;
-
+    let registerSeen = false;
     let tbody = document.getElementById( "tbodyPinoutForm" );
     tbody.innerHTML = "";
 
@@ -294,6 +300,9 @@ async function getPinoutDetail( ) {
                 makeCheckbox( `reginival.${f}`, pd[3] ),
                 "Set at startup"
             ] );
+            if( pd[2] || pd[1]){
+                registerSeen = true;
+            }
         }
         // in older versions, this was be gpio.midi, mcp.midi etc instead of just "midi"
         else if( pdtype == "gpio.midi" || pdtype == "mcp.midi" || 
@@ -320,17 +329,20 @@ async function getPinoutDetail( ) {
             if( pd.length >= 6  ){
                 register = pd[5];
             }
-            let readonlyPin = "" ;
-            if( pin == lastPin ){
-                readonlyPin = "readonly='readonly'";
-            }
+            // unused
+            // let readonlyPin = "" ;
+            // if( pin == lastPin ){
+            //    readonlyPin = "readonly='readonly'";
+            // }
             lastPin = pin ;
             if( pdtype != lastPDtype ){
                 let row = insertFormRow( tbody, "", [
                     title, "", "MIDI note",
                     "Rank", "Register"] );
+                row.cells[4].style.display = registerSeen?"":"none";
+                
                 row.cells[1].colSpan = 2;
-                row.cells[1].innerHTML = `Program number (1-128)<br>or ${DRUM_PROGRAM}=drum or blank for any`;
+                row.cells[1].innerHTML = `Program number (1-128)<br>${DRUM_PROGRAM}=drum, blank=any`;
                 row.cells[2].colSpan = 2 ;
                 rownum += 1;
             }
@@ -360,10 +372,13 @@ async function getPinoutDetail( ) {
             row.cells[3].onchange = function() { showNoteName(f) };      
             row.cells[4].id = `nn.${f}`;
             if( pininfo.type == "gpioservo" || pininfo.type == "pca9685"){
-                // alternate test buttons aid adjusting "off" position of a RC Servo
+                // additional test buttons aid adjusting "off" position of a RC Servo
                 row.insertCell(-1).appendChild( makeButton( `up${f}`,   "▲", function(){ testPin( testPinArgs, "up"  )} ));
                 row.insertCell(-1).appendChild( makeButton( `down${f}`, "▼", function(){ testPin( testPinArgs, "down")} ));
             }
+            // Show/hide register input box and Add Row button depending if register was defined
+            row.cells[6].style.display = registerSeen?"":"none";
+            row.cells[8].style.display = registerSeen?"":"none";
         }
         else if( pdtype == "i2c" ){
             pininfo.i2ccount += 1 ;
@@ -442,7 +457,7 @@ async function getPinoutDetail( ) {
         }
         else if( pdtype == "gpio" ){
             pininfo.type = pdtype ;
-            let row = insertFormRow( tbody, `row_${f}_gpio`, [ "GPIO output"] );
+            let row = insertFormRow( tbody, `row_${f}_gpio`, [ "GPIO MIDI"] );
             titlerow(row);
             rownum += 1;
             
@@ -497,7 +512,7 @@ async function savePinoutFilename(){
     
     let resp = await fetch_json("/save_pinout_filename",
                         req  ) ;
-    showPopup( "savePinoutFilenameButton", "Pinout template selection stored in flash, reboot needed")
+    showPopup( "savePinoutFilenameButton", "Pinout file selection stored in flash, reboot needed")
     await getPinoutDetail();
     await get_available_pins();
     showHideElement( "table_list_pinout_by_midi_note", false );
@@ -795,6 +810,7 @@ function transpose( semitones ){
         }
     }
     updateAllNoteNames();
+    showHideElement( "saveTransposition", true);
 }
  
 let changed_fields = [];
@@ -918,6 +934,9 @@ async function get_available_pins(){
         else{
             textById( key, value )
         }
+        const tdcount = document.getElementById(key+"count");
+        tdcount.innerText = value.length;
+        tdcount.style.textAlign = "right";
     }
 
 }
@@ -1176,6 +1195,26 @@ function getSelectedOption( id ){
     let select = document.getElementById(id);
     return select.selectedIndex+1;
 }
+function initializeDivCollapse(){
+    function showHideCollapse( collapseAnchor ){
+        showHideElement(collapseAnchor.id+"Span", collapseAnchor.innerText == "▼" );
+    }
+    for( const collapseAnchor of document.getElementsByName("collapse")){
+        console.log(">>>collapseAnchor for", collapseAnchor);
+        collapseAnchor.addEventListener("click", (event)=>{
+            const target = event.target;
+            if( target.innerText == "▼"){
+                target.innerText = "▶";
+            }
+            else{
+                target.innerText = "▼";
+            }
+            showHideCollapse(target);
+        });
+        showHideCollapse(collapseAnchor);
+    }
+}
+initializeDivCollapse();
 
 getPinoutList();
 

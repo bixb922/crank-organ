@@ -15,6 +15,7 @@ import network
 
 from drehorgel import config, timezone, led
 from minilog import getLogger
+import scheduler
 import blemcs
 
 # 15 seconds waiting for this device in station mode to connect to an AP
@@ -102,10 +103,10 @@ class WiFiManager:
         while True:
             while not self.ap_if.isconnected():
                 await asyncio.sleep(_SLEEP_INTERVAL)
-            await self.logger.async_info("AP mode connected")
+            self.logger.async_info("AP mode connected")
             while self.ap_if.isconnected():
                 await asyncio.sleep(_SLEEP_INTERVAL)
-            await self.logger.async_info("AP mode disconnected")
+            self.logger.async_info("AP mode disconnected")
 
     async def _station_process(self):
         while True:
@@ -134,10 +135,11 @@ class WiFiManager:
         ssid = getattr( config, "access_point" + n )
         if self._ap_has_traffic() or not config.wifi_configured(int(n)) or not ssid:
             # If AP mode has a traffic, don't search for a STA SSID
+            # because that interferes with AP mode (a ESP32 restriction)
             # AP mode is fallback, don't disturb AP mode searching for a SSID!
             # If user wants to search for SSID, reboot is needed. Or stop
             # using AP mode.
-            # Also: just skip if not configured
+            # Also: don't connect if this STA SSID is not configured yet.
             return
         self.sta_if_ssid = ssid
         self.logger.debug( f"WiFi starting connection to ssid={self.sta_if_ssid=}")
@@ -146,13 +148,13 @@ class WiFiManager:
             ssid, config.get_password("password" + n)
             ):
             led.connected()
-            await self.logger.async_info( f"Connected to {self.sta_if.config('ssid')} IP {self.sta_if.ipconfig('addr4')} hostname {network.hostname()}")
+            self.logger.async_info( f"Connected to {self.sta_if.config('ssid')} IP {self.sta_if.ipconfig('addr4')} hostname {network.hostname()}")
             timezone.network_up()
             self.blemcs.set_status( "sta"+n, "c" )
             self.blemcs.set_characteristic( "staip"+n, self.sta_if.ipconfig('addr4')[0] )
+
             # Also start AP for fun, not because fallback is sorely needed.
-            if not config.ap_fallback_only:
-                self._start_ap_interface()
+            self._start_ap_interface()
 
         # Loop until connection stops
         while self.sta_if.isconnected():
@@ -163,12 +165,18 @@ class WiFiManager:
         self.blemcs.set_characteristic( "staip"+n, "" )
         
     async def _station_connect(self, ssid, password ):
-        # Connect station interface to a router or wifi hotspot
+        # Turn radio on, if not active
         self.sta_if.active(True)
+
         # Power modes for WiFi
         # Hard reset default is network.WLAN.PM_PERFORMANCE=1
         # No clear difference beteen PM_NONE and PM_PERFORMANCE...
         # self.sta_if.config(pm=network.WLAN.PM_NONE)
+
+        # It seems a failed WiFi connect could interfere with music playback
+        # so do retries only when music has finished. This isn't perfect since
+        # connect could happen just before music starts.
+        await scheduler.wait_for_player_inactive()
 
         # Now connect to the SSID
         self.sta_if.connect(ssid, password)
@@ -177,19 +185,19 @@ class WiFiManager:
             if self.sta_if.isconnected():
                 self.sta_if_status = ssid + " connected"
                 return True
+            # ??? bad idea? the problem isn't AP/STA mode but interference with play?
             if self._ap_has_traffic():
                 self.sta_if_status = "AP mode active"
-                await self.logger.async_info(
+                self.logger.async_info(
                                 f"Stopped connecting to {ssid}, {self.sta_if_status}"
                             )
                 return False
             await asyncio.sleep(1)
 
-        
         # Problems? Get the status and log it
         status = self.sta_if.status()
         self.sta_if_status = ssid + " " + str(status) + " " + self.translate_status( status )
-        await self.logger.async_info(
+        self.logger.async_info(
             f"Status for {self.sta_if_status}, could not connect to {ssid}"
         )
             

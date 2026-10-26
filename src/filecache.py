@@ -1,11 +1,65 @@
 # (c) Copyright 2026 Hermann Paul von Borries
 # MIT License
 
-# Provides a very basic file cache
+# Provides a  MIDI file cache
 # Purpose: speed up MIDI file handling of umidiparser
+
+import os
+from deflate import DeflateIO, AUTO
+
+import fileops
+from minilog import getLogger
+_logger = getLogger(__name__)
+
+
+_DECOMPRESSED_FILE_NAME = const("/data/midi_cached.mid")
 class MidiFileCache:
+    # Compressed files are decompressed and cached in _DECOMPRESSED_FILE_NAME
+    # Uncompressed MIDI files are used "as is"
+    # Allow for one cached MIDI file and it's metadata (tunelib row)
+    cached_filename = None
+    cached_metadata = None
+    # For cache in flash file
+    cached_data =  None # shows where the data is, either xyzzy.mid or _DECOMPRESSED_FILE_NAME
+
+    @classmethod
+    def prepare( cls, filename, metadata ):
+        if filename == cls.cached_filename and cls.cached_metadata:
+            # Already cached, metadata also cached.
+            return
+
+        if fileops.is_compressed( filename ):
+            #  Decompress to /data/midi_cached.mid
+            cls.cached_data = _DECOMPRESSED_FILE_NAME
+            with open( filename, "rb") as file:
+                with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
+                    with open( _DECOMPRESSED_FILE_NAME, "wb") as output:  # type:ignore
+                        output.write(stream.read())
+        else:
+            # The data is in the original MIDI file, no need to copy/decompress
+            cls.cached_data = filename
+        # This is the filename that is now in cache
+        cls.cached_filename = filename
+        cls.cached_metadata = metadata
+
+    @classmethod
+    def get_metadata(cls):
+        return cls.cached_metadata
+
+    @classmethod
+    def clear(cls):
+        cls.cached_filename = None
+        cls.cached_metadata = None
+        try:
+            # Not strictly necessary
+            os.remove(_DECOMPRESSED_FILE_NAME)
+        except:
+            pass
+
     def __init__( self, filename ):
-        self.fileobject = open( filename, "rb" )
+        if filename != self.cached_filename:
+            self.prepare( filename, None ) # No metadata in this case
+        self.fileobject = open( self.cached_data, "rb")
         self.filename = filename
         
     def open( self ):
@@ -15,9 +69,10 @@ class MidiFileCache:
         # Allow caller to control when the the physical file
         # can be closed.
         self.fileobject.close()
-        # From now on, any attempt to use the file will raise a ValueErro
+        # From now on, any attempt to use the file will raise a ValueError
 
     def get_filename( self ):
+        # >>> check if get_filename is needed.
         return self.filename
     
 class _FileInstance:
@@ -48,7 +103,6 @@ class _FileInstance:
         self.position = fo.tell()
         return n
     
-    # umidiparser needs both readinto and read.
     def read( self, length ):
         fo = self.fileobject
         fo.seek( self.position )
@@ -94,3 +148,79 @@ class _FileInstance:
             if unread_bytes <= 0 or bytes_read <= 0:
                 break
         # StopIteration if caller gets here.
+
+    # REPLACE THIS IN _FileInstance
+    # def byte_reader(self, initial_position, length, buffer_size ):
+    #     # buffer_size not not needed here, this is much faster.
+    #     yield from memoryview(self.fileobject.getvalue())[initial_position:initial_position+length]
+# _FileInstance.readinto may be unused if this bytereader is used..
+
+_logger.debug("MIDI file cache decompresses to flash")
+
+
+# No common superclass since only one MidiFileCache class should be present
+# RAM cache: for future use, not in use now.
+# _FileInstance is optimized with new byte_reader()
+# import io
+# class MidiFileCache:
+#     # Allow for one cached MIDI file and it's metadata (tunelib row)
+#     cached_filename = None
+#     cached_metadata = None
+
+#     cached_data =  bytearray(50_000) # automatically increased if larger files are cached.
+#     cached_size = 0
+
+#     @classmethod
+#     def prepare( cls, filename, metadata ):
+#         if filename == cls.cached_filename and cls.cached_metadata:
+#             # Already cached. With no metadata: that was an occasional use, not a regular cache operation.
+#             return
+#         while True:
+#             if fileops.is_compressed( filename ):
+#                 with open( filename, "rb") as file:
+#                     with DeflateIO(file, AUTO, 0, True) as stream: # type:ignore
+#                        size = stream.readinto(cls.cached_data)
+#             else:
+#                 with open( filename, "rb")  as file:
+#                     size = file.readinto(cls.cached_data)
+#             if size < len(cls.cached_data):
+#                 # Data did fit correctly into buffer.
+#                 break
+#             # Make buffer a bit larger, to accomodate requested file size
+#             new_size = round(len(cls.cached_data)*1.3)
+#             _logger.info(f"file {filename} did not fit into buffer, increasing from {len(cls.cached_data)} to {new_size}" )
+#             cls.cached_data = bytearray( new_size )
+#         #  This is what is is now in the cache
+#         cls.cached_filename = filename
+#         cls.cached_metadata = metadata
+#         cls.cached_size = size
+
+#     @classmethod
+#     def get_metadata(cls):
+#         return cls.cached_metadata
+
+#     @classmethod
+#     def clear(cls):
+#         cls.cached_filename = None
+#         cls.cached_metadata = None
+
+#     def __init__( self, filename ):
+#         if filename != self.cached_filename:
+#             self.prepare( filename, None ) # No metadata in this case
+
+#         self.fileobject = io.BytesIO(memoryview(self.cached_data)[0:self.cached_size])
+#         self.filename = filename
+
+#     def open( self ):
+#         return _FileInstance( self.fileobject )
+           
+#     def finalize( self ):
+#         # Allow caller to control when the the physical file
+#         # can be closed.
+#         self.fileobject.close() 
+
+#     def get_filename( self ):
+#         return self.filename
+
+# _logger.debug(f"MIDI file cache in RAM, initial buffer size={len(MidiFileCache.cached_data)} bytes")
+# For transition delete remaining midi files in /data

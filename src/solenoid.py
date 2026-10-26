@@ -9,10 +9,9 @@ from time import sleep_ms
 from minilog import getLogger
 from drehorgel import led
 from midi import DRUM_PROGRAM
-from driver_base import RCServoPin, BasePin, SolePin
+from driver_base import BasePin
 
 _logger = getLogger(__name__)
-
 
 class ActuatorBank:
     # Holds all actuator drivers (and all actuators) according to
@@ -23,12 +22,19 @@ class ActuatorBank:
         # in the pinout.
         # pin_info is info about all devices, to show to the user.
         self.pin_list = actuator_def.get_pin_list()
+        self.pin_classes = set(pin.__class__ for pin in self.pin_list )
         self.driver_list = actuator_def.get_driver_list() 
-        self.known_programs = actuator_def.known_programs
 
         # Inject configuration for pins
-        RCServoPin.set_config( config )
-        SolePin.set_config( config )
+        for pin_class in self.pin_classes:
+            if hasattr(pin_class, "set_config"):
+                pin_class.set_config( config )
+
+        # Don't import unnededed classes
+        # RCServoPin.set_config( config )
+        # SolePin.set_config( config )
+
+        # Also things all pins need
         BasePin.set_led( led )
         BasePin.set_pinlist( self.pin_list )
 
@@ -38,29 +44,28 @@ class ActuatorBank:
         _logger.debug(f"init done {pi}")
 
     def all_notes_off( self ):
-        # Don't flash led if some problem occurs during all notes off,
-        # It's distracting
-        BasePin.set_led( None )
 
-        # Some drivers have a very fast and
-        # very effective "all notes off" 
-        # method, for example MIDI output and MCP23017.
-        # pin objects are not informed about this change,
-        # so below we turn off all pins anyhow.
-        for drv in self.driver_list:
-            if hasattr( drv, "all_notes_off"):
-                drv.all_notes_off()
-
-        # Use force_off() to ensure that
-        # mismatched note on/note off pairs are turned off,
-        # and to leave pins in a consistent state.
-        for actuator in self.pin_list:
-            actuator.force_off()
-
-        # Reset state now that all notes are off
-        SolePin.clear_active()
+        # Don't import RCServo or Sole drivers here 
+        # if not they may be in memory but unused
         
-        BasePin.set_led( led )
+        
+        # All notes off for solenoid-type pins
+        for drv in self.driver_list:
+            try:
+                drv.all_sole_off(self.driver_list, self.pin_list)
+                # Needs to be called once only
+                break
+            except AttributeError:
+                pass
+
+        # Find all_notes_off for RC servo-type pins
+        for drv in self.driver_list:
+            try:
+                drv.all_servos_off(self.pin_list)
+                # Needs to be called once only
+                break
+            except AttributeError:
+                pass
 
     def get_pin_info(self, sep):
         # Get summary of current devices for display
@@ -130,6 +135,10 @@ class PinTest:
         # ??? = 01 = ??? probably not connected
         # NC  = 10 = input follows the pull ups, not connected
         # I2C = 11 = there is something that pulls up this pin, example: I2C
+        # This assumes that the I2C pull up is less than the
+        # port pull up. ESP32-S3 pull ups/downs are about 40kOhm
+        # and typical I2C pullups should be 3-10 kOhm, so this should 
+        # be true.
         return ("DEV", "???", "NC", "I2C")[n]
 
     # Test several times if something pulls the voltage
@@ -149,12 +158,11 @@ class PinTest:
     # Used by solenoid.py to check if something on I2C
     @classmethod
     def testI2Cconnected(cls, sda, scl):
-        sdaok = cls.testGPIO(sda) == "I2C"
-        sclok = cls.testGPIO(scl) == "I2C"
-        return sdaok and sclok
+        return cls.testGPIO(sda) == "I2C" and  cls.testGPIO(scl) == "I2C"
     
     @classmethod
     async def web_test_pin( cls, pininfo, actuator_bank ):
+
         # Called by web server to test a pin, expects a "pininfo" dict
         # with info filled out by pinout.html
         # The "pininfo" dictionary has all fields about the pin,
@@ -197,7 +205,7 @@ class PinTest:
             actuator = actuator_bank.get_pin_by_repr(pin_repr) 
         except KeyError:
              return f"Pin not found: {pin_repr}"
-        from drehorgel import config
+       
         try:
             # Non RC Servo pins will ignore this call
             actuator.set_servopulse( int(pininfo["pulse0"]), int(pininfo["pulse1"]) )
@@ -206,13 +214,10 @@ class PinTest:
             # Or actuator does not support set_servopulse, ignore.
             pass
         
-        # No worries about polyphony or moving servos here
-        # since there is not much else happening.
-        # So we use low level functions that don't check current consumption limits.
         for _ in range(pininfo["repeat"]):
-            actuator.low_level_on()
+            actuator.on()
             await asyncio.sleep_ms(pininfo["pause"])
-            actuator.low_level_off()
+            actuator.off()
             await asyncio.sleep_ms(pininfo["pause"])
 
         # If pininfo["repeat"] is 0, 
@@ -220,8 +225,7 @@ class PinTest:
         # This makes it easy to adjust
         # "off" position of each servo with arrow buttons
         await asyncio.sleep_ms(120)
-        actuator.low_level_off()
-        # RC Servo low_level_off will eventually call stop_pwm()
+        actuator.off()
 
     @classmethod
     def scan_i2c( cls, pininfo ):

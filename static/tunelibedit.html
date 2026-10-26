@@ -23,7 +23,7 @@
 <div class="tableFixHead">
     <div id="showControls" style="display:none">
         <input id="searchInput" onkeyup="updateFilter()" size="10"/>
-        &emsp;✅=Mostrar en blanco 🔲=Mostrar todos.
+        ✅=Mostrar en blanco 🔲=Mostrar todos.
     </div>
     <table>
         <thead id="tunelistHead"></thead>
@@ -54,13 +54,18 @@ document.getElementById("searchInput").placeholder = tlt("🔍Búsqueda");
 
 const pageHeader = new PageHeader();
 pageHeader.setTitle( "Tunelib editor", "index"  );
-pageHeader.setBannerInfo( "✅" + tlt("Al día."), "❗" );
+pageHeader.setBannerInfo( "", "❗" );
 
 async function getTuneList( ) {
+    pageHeader.setBannerInfo( "✅" + tlt("Al día."), "❗" );
     let wfu = document.getElementById( "wait_for_update" ) ;
     wfu.innerHTML = "";
+    // Do not sync page if not visible, it must be visible by user.
+    while( document.hidden ){
+			await sleep_ms(200);
+	}
 	let resp = await fetch_json( "/start_tunelib_sync" ) ;
-    while( true ){
+   for(;;){
         let resp = await fetch_json( "/tunelib_sync_progress" );
         wfu.innerHTML =  "<p>" + resp["progress"] ;
         if( resp["progress"].includes( "***end***") ){
@@ -86,6 +91,9 @@ async function getTuneList( ) {
     await sleep_ms( 5_000 ) ;
     wfu.innerHTML = "";
     showHideElement( "changes_auto", true );
+
+    // start the process to save in background
+    save_process();
 }
 
 let CHANGED_FIELDS = [] ;
@@ -160,7 +168,7 @@ async function updateForm( tunelist ){
 
         row.cells[8].innerText = formatMilliMMSS( tune[TLCOL_TIME] );
         row.cells[8].style.textAlign = "right";
-        row.cells[9].innerText = tune[TLCOL_DATEADDED];
+        row.cells[9].innerText = ymdhm(tune[TLCOL_DATEADDED]);
         row.cells[10].innerText = tune[TLCOL_FILENAME];
 
         row.cells[11].innerText = tune[TLCOL_SIZE];
@@ -214,7 +222,7 @@ async function save_process( ){
     // tunelib., i.e. a list of
     // [TLOP_FIELD, tuneid, tlcol, value]
     const TLOP_FIELD = 3 ;
-    while( true ){
+    for(;;){
         await sleep_ms( 1000 );
         if( CHANGED_FIELDS.length == 0 ){
             continue ; // nothing to save
@@ -248,7 +256,20 @@ async function save_process( ){
         // newjson now is a list of lists, each of the form
         // [TLOP_FIELD, tuneid, tlcol, value]
         // Unchanged fields are not transmitted.
-        resp = await fetch_json( "/save_tunelib", newjson ) ;
+        let resp = null ;
+        try{
+            resp = await fetch_json( "/queue_field_changes", newjson ) ;
+        }
+        catch(e){
+            // Don't process any furter.
+            console.log("save_process() exception", e);
+            const inputs = document.querySelectorAll('input');
+            for( const inp of inputs ){
+                inp.style.backgroundColor = "white" ;
+                inp.disabled = true ;
+            }
+            return;
+        }
         // Now that the microcontroller has the data, unmark the fields.
         for( let eleid of cfcopy ){
             let ele = document.getElementById(eleid)
@@ -293,6 +314,7 @@ async function closeLyrics(){
 
 async function saveLyrics(){
     if( currentTuneid == ""){
+        // how did we get here?
         alert("No current tuneid, cannot save");
         closeLyrics();
     }
@@ -329,7 +351,7 @@ async function showAsTable(){
         let row = insertRow( tableBody,[tune[TLCOL_TITLE],tune[TLCOL_GENRE],
             tune[TLCOL_AUTHOR], tune[TLCOL_YEAR], tune[TLCOL_RATING],
             tune[TLCOL_INFO], formatMilliMMSS( tune[TLCOL_TIME]),
-            tune[TLCOL_DATEADDED], tune[TLCOL_FILENAME],
+            ymdhm(tune[TLCOL_DATEADDED]), tune[TLCOL_FILENAME],
             tune[TLCOL_SIZE]]);
         tableBody.appendChild( row );
     }
@@ -412,19 +434,14 @@ function rowHasText(row, searchInput){
     }
     return false;
 }
-translate_html();
-// fill form with tunelib
-getTuneList() ;
-// save in background
-save_process()
 
+translate_html();
+getTuneList();
 
 commonGetProgress.setSleep( 2_000 );
 // No need to register updateProgress function
-
 // Must avoid reloading if tunelib changes!!
 JsonCache.setReloadIfTunelibChanged( false );
-
 commonGetProgress.startBackground();
 </script>
 </html>

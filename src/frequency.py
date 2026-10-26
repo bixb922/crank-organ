@@ -43,17 +43,18 @@ _HIRES_FILE_PREFIX = const("hires")
 
 
 def vertex( x1, y1, x2, y2, x3, y3 ):
-    # return vertex (maximum or minimum) of parabola
+    # return vertex x (maximum or minimum) of a parabola
     # that passes through (x1,y1), (x2,y2) and (x3,y3)
     # Calculate parameters of parabola
+    # by design, x1, x2 and x3 are different, so denom should never be zero.
     denom = (x1 - x2) * (x1 - x3) * (x2 - x3)
     A = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom
     B = (x3*x3 * (y1 - y2) + x2*x2 * (y3 - y1) + x1*x1 * (y2 - y3)) / denom
-    C = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / denom
-    # Calculate the location of the maximum (or minimum)
-    xv = -B / (2*A)
-    yv = C - B*B / (4*A)
-    return xv, yv
+    # C = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / denom
+    # Calculate the location of the maximum
+    # xv = -B / (2*A)
+    # yv = C - B*B / (4*A) # yv not needed
+    return -B / (2*A)
 
 def find_max( signal ):
     # Finds the peak frequency in spectrum
@@ -75,10 +76,10 @@ def find_max( signal ):
     return p-1, signal[p-1], p, signal[p], p+1, signal[p+1]
 
 def get_peak( abs_fft ):
-    x1, y1, x2, y2, x3, y3  = find_max( abs_fft )
-    xv, yv = vertex( x1, y1, x2, y2, x3, y3 ) 
-    return xv
-
+    # x1, y1, x2, y2, x3, y3  = find_max( abs_fft )
+    # xv , yv = vertex( x1, y1, x2, y2, x3, y3 ) 
+    # return xv
+    return vertex( *find_max( abs_fft ) )
 
 def frequency( signal, duration, nominal_freq, fft_module, midi_note, save_result ):
     signal_len=len(signal)
@@ -140,7 +141,7 @@ def save( signal, duration, midi_note, step, prefix=_HIRES_FILE_PREFIX ):
             file.write(f"{round(v)}\n")
             
 def compute_amplitude( signal ):
-    avgsignal =  sum( s for s in signal )/len(signal)
+    avgsignal =  sum( signal )/len(signal)
     return sqrt(sum( (s-avgsignal)**2 for s in signal ))/len(signal)
             
 def compute_time_step_usec( nominal_frequency  ):

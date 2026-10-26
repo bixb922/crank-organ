@@ -13,8 +13,7 @@
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
-
-<table id="main_info_table">
+<table id="main_info_table" style="display:none">
 	<tbody>
 		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
 		<tr><td colspan="4"><h2><span is="tune-title" id="title"></span></h2></td></tr>
@@ -58,7 +57,7 @@
 
 <span id="setlist_span">
 	<div class="middlediv">
-		<a id="collapseSetlist" onclick="flipCollapse('collapseSetlist', 'setlistTable')" style="color:white">▼</a>
+		<a href="#crank_span" style="color:white">&#11015;</a>
 		Setlist<span id="totalDuration"></span></div>
 
 	<table id="setlistTable">
@@ -77,7 +76,7 @@
 </span>
 <span id="lyrics_span" style="display:none">
 	<div class="middlediv">
-		<a id="collapseLyrics" onclick="flipCollapse('collapseLyrics', 'lyricsTable')" style="color:white">▼</a>
+		<a href="#crank_span" style="color:white">&#11015;</a>
 		Letra&nbsp;
 		<a onclick="formatLyrics(1)" id="col1_link">1️⃣</a>&nbsp;
 		<a onclick="formatLyrics(2)" id="col2_link">2️⃣</a>
@@ -90,7 +89,9 @@
 </span>
 <p></p>
 <span id="crank_span">
-	<div class="middlediv">Control tempo</div>
+	<div class="middlediv">
+		<a href="#main_info_table" style="color:white">&#11014;</a>
+		Control tempo</div>
 		<span>Ajuste velocidad:</span>
 		<span id="velocityText"></span>
 		<br>
@@ -106,7 +107,9 @@
 		</span>
 </span>	
 <span id="register_span" style="display:none">
-	<div class="middlediv">Registros</div>
+	<div class="middlediv">
+		<a href="#main_info_table" style="color:white">&#11014;</a>
+		Registros</div>
 	<span id="registers"></span>
 </span>
 <div style="width:100%; height:5px"></div>
@@ -286,11 +289,17 @@ async function pageRefreshProcess() {
 
 let previous_setlist = [];
 async function updateProgress( progress ) {
+
 	// Called by commonGetProgress every few seconds with the progress
 
     if( progress == undefined ){
         return ;
     }
+	// disable slow shuffles during playback
+	for( const id of ["shuffleAllTunes","shuffle3Stars"]){
+		const button = document.getElementById(id);
+		button.disabled = progress["status"] == "playing";
+	}
 	let tunelib = progress["tunelib"]; 
 
     //let tune_requests = progress["tune_requests"] ;
@@ -300,14 +309,8 @@ async function updateProgress( progress ) {
 
 	let startButton = document.getElementById("startButton");
 	let daCapoButton = document.getElementById("daCapoButton");
-    if( progress["status"] == "waiting" ){
-        startButton.classList.remove("inactive");
-		daCapoButton.classList.add("inactive");
-    }
-    else {
-        startButton.classList.add("inactive");
-		daCapoButton.classList.remove("inactive");
-    }
+		startButton.disabled =  progress["status"] != "waiting";
+		daCapoButton.disabled =  progress["status"] == "waiting";
 
 	let toggle_button = document.getElementById("toggleSetlistLyricsButton") ;
     let s = "" ;
@@ -322,7 +325,7 @@ async function updateProgress( progress ) {
         
 		textById("progress", "...") ;
 		document.getElementById("timebar").draw( 0 );
-		toggle_button.classList.add("inactive");;
+		toggle_button.disabled = true;
 		let col1 = document.getElementById( "col1") ;
     	col1.innerText ="" ;
 		// Make sure to show setlist controls if no tune
@@ -355,7 +358,12 @@ async function updateProgress( progress ) {
 				else if( tlcol == TLCOL_RATING ){
 					data = formatRating(tune) ;
 				}
+				else if( tlcol == TLCOL_DATEADDED ){
+					data = ymdhm( tune[TLCOL_DATEADDED] );
+				}
 				row.childNodes[1].innerText = data ;
+				// Rows i==5 and i==6 have time mm:ss and date added, so they
+				// can be always be shown.
 				if( i <= 4 ){
 					row.style.display = (data!="" ? "" : "none");
 				}
@@ -369,20 +377,12 @@ async function updateProgress( progress ) {
 			status_text = make_status_text( progress["status"], percent, progress["repeats_count"] ) ;
 			textById("progress", status_text) ;
 			document.getElementById("timebar").draw( percent );
-			// >>> may be interesting to show air consumption graph
-			// >>> to alert of more air needed ahead of time.
-			// >>> It's better to correct MIDI files beforehand.
-			// >>> evaluate if instant air consumption is useful.
+			// May be interesting to show air consumption graph
+			// to alert of more air needed ahead of time.
+			// But: it's better to correct MIDI files beforehand.
 		}
 		// format and set page fields with lyrics
-		if( tune && tune[TLCOL_LYRICS] ){
-			// There are lyrics: activate button to toggle setlist/lyrics
-			toggle_button.classList.remove("inactive"); ;
-		}
-		else{
-			// Mark button as hidden
-			toggle_button.classList.add("inactive");
-		}
+		toggle_button.disabled = !(tune && tune[TLCOL_LYRICS]) ;
 		// start always showing setlist, button caption "Show lyrics"
 		if( tune_change ){
 			// If tune changed, format lyrics (if any) for 1 column
@@ -572,13 +572,13 @@ async function startTune() {
 async function stopTuneSetlist() {
 	await commonGetProgress.fetchProgress("/stop_tune_setlist" ) ;
     await check_cancelled( ) ;
-	await commonGetProgress.getProgress();  // >>> necessary???
+	await commonGetProgress.getProgress(); 
 }
 
 async function backSetlist() {
 	await commonGetProgress.fetchProgress( "/back_setlist" ) ;
     await check_cancelled() ;
-	await commonGetProgress.getProgress( ) ;// >>> necessary???
+	await commonGetProgress.getProgress( ) ;
 }
     
 async function tempo_follows_crank(){
@@ -704,16 +704,16 @@ function make_status_text( progress_status, percentage, repeats ) {
 	return status_text ;
 }
 
-function flipCollapse(collapseAnchorId, tableId){
-    let collapseElement = document.getElementById(collapseAnchorId);
-    if( collapseElement.innerText == "▼"){
-        collapseElement.innerText = "▶";
-    }
-    else{
-        collapseElement.innerText = "▼";
-    }
-	showHideElement(tableId, collapseElement.innerText == "▼" );
-}    
+// function flipCollapse(collapseAnchorId, tableId){
+//     let collapseElement = document.getElementById(collapseAnchorId);
+//     if( collapseElement.innerText == "▼"){
+//         collapseElement.innerText = "▶";
+//     }
+//     else{
+//         collapseElement.innerText = "▼";
+//     }
+// 	showHideElement(tableId, collapseElement.innerText == "▼" );
+// }    
 translate_html();
 pageRefreshProcess() ;
 

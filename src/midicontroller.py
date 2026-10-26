@@ -9,6 +9,8 @@ from random import choice
 from midi import  DRUM_CHANNEL, DRUM_PROGRAM, NoteDef
 from umidiparser import NOTE_OFF, NOTE_ON, PROGRAM_CHANGE
 from actuatorstats import ActuatorStats
+import fileops
+
 
 # Allocate a NoteDef once (instead of creating a new one for each note on and off event) to avoid
 CURRENT_NOTE = NoteDef(0,0)
@@ -151,12 +153,14 @@ class MIDIController:
         # Add simulated drum notes if no drums defined via the pinout.html page
         # There is a recursion of one level here: the simulated drum notes
         # in turn are composed again of midi notes.
-        from driver_ftoms import FauxTomDriver
         # define_complete is only called once, no need to check that
         # FauxTomDriver is called twice.
-        for virtual_pin in FauxTomDriver( actuator_bank ):
-            # Faux Toms are not controlled by a register, use "always on" register.
-            self.define_note( virtual_pin.nominal_midi_note, virtual_pin, "" )
+        from drehorgel import config
+        if fileops.file_exists(config.DRUMDEF_JSON):
+            from driver_ftoms import FauxTomDriver
+            for virtual_pin in FauxTomDriver( actuator_bank ):
+                # Faux Toms are not controlled by a register, use "always on" register.
+                self.define_note( virtual_pin.nominal_midi_note, virtual_pin, "" )
         self.register_bank.set_midicontroller( self )
          
     def _get_actions( self, midi_note ):

@@ -3,7 +3,7 @@
 
 from machine import Pin
 
-from driver_base import SolePin, BaseDriver
+from driver_sole import SolePin, SoleDriver
 
 # This is called when a ["gpio"] definition is encountered
 # in the current pinout.json to set up for MIDI definitions
@@ -12,7 +12,7 @@ from driver_base import SolePin, BaseDriver
 
 # Does not need to be declared @singleton. Since __repr__ is
 # defined in BaseDriver, GPIODriver has only one instance, see ActuatorDef.driver_factory()
-class GPIODriver(BaseDriver):
+class GPIODriver(SoleDriver):
 
     def define_pin( self, *args ):
         # Return a individual pin
