@@ -350,12 +350,15 @@ class ActuatorDef(PinoutParser):
         if PinTest.testI2Cconnected(sda, scl):
             from drehorgel import config
             i2cfreq = config.i2c_frequency_khz 
-            assert 10 <= i2cfreq <= 800, "I2C frequency must between 10 and 800 kHz"
+            if not(10 <= i2cfreq <= 800):
+                _logger.error( "I2C frequency must between 10 and 800 kHz")
+                i2cfreq = 100
             from driver_i2c import I2Cdriver
             self.current_i2c = I2Cdriver(scl, sda, i2cfreq*1_000)
             # 100kHz = 2 msec per MCP23017 transaction (pin on or pin off)
-            # 400kHz = 1 a 2 msec per MCP23017 transaction
+            # 400kHz = 1 a 2 msec per MCP23017 transaction (pin on or pin off)
             # About 25% faster. 
+            # Hardware I2C has similar times since transactions are very short.
             _logger.info(f"Operating I2C {sda=} {scl=} at {i2cfreq} kHz")
         else:
             _logger.error(f"No I2C connected {sda=} {scl=}")

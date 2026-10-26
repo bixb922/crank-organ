@@ -4,7 +4,9 @@ from time import ticks_diff, ticks_ms
 
 class SoleDriver(BaseDriver):
     def all_sole_off(self, driver_list, pin_list):
-        # Turn notes off wholesale if possible
+        # Turn notes off wholesale if possible. This ensures
+        # clearing any discrepancies (not that I have found some)
+        # with the controlled devices (where possible)
         for drv in driver_list:
             if hasattr(drv, "fast_off"):
                 drv.fast_off()
@@ -14,7 +16,6 @@ class SoleDriver(BaseDriver):
         for pin in pin_list: 
             if pin.is_solepin:
                 pin.force_off()
-        assert SolePin.sole_polyphony == 0 # >>>
         SolePin.sole_polyphony = 0
 
 

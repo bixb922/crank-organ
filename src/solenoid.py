@@ -48,7 +48,6 @@ class ActuatorBank:
         # Don't import RCServo or Sole drivers here 
         # if not they may be in memory but unused
         
-        
         # All notes off for solenoid-type pins
         for drv in self.driver_list:
             try:

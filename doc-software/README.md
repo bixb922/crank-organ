@@ -453,9 +453,11 @@ The Edit Tunelib option allows to add information about each MIDI file, such as 
 ## MIDI files
 Both MIDI file type 0 (single track) and MIDI file type 1 (multitrack) files are supported. 
 
-Note on and note off will act on solenoids or RC servos.  Set tempo events are interpreted for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers for certain or all MIDI notes or to specify MIDI notes for percussion channel 10. All other messages such as aftertouch, Meta messages such as lyrics or text and sysex messages may be present but are ignored on playback.
+Note on and note off will act on solenoids or RC servos.  Set tempo events are interpreted for MIDI file playing. The default configuration ignores MIDI program numbers, although the pinout configuration allows to specify program numbers for certain or all MIDI notes or to specify MIDI notes for percussion channel 10. All other messages such as aftertouch, Meta messages such as lyrics or text and sysex messages may be present but are ignored on playback (except in passthrough mode for MIDI ouput).
 
 Be sure to play any MIDI file at least once on your PC to see if it works.
+
+Check if note on and note off events for the same note are correctly paired. The software will ignore note off without previous note on, and will try to pair note on and note off messages if more note on than note off for the same note.
 
 There is no size limitation on MIDI files, but the File Manager has a limit of 1 Mb (one megabyte) file size limit. It is possible to play a 100kb or 200kb MIDI file that lasts, say, 20 or 30 minutes. However, if the file contains several tunes, it is probably more convenient to split into the individual tunes and use the setlist functionality to make a sequence of tunes (i.e. set up your own medley)
 
@@ -924,6 +926,8 @@ If used while the music player is not active, most maintenance functions will st
 
 After you get the message "Cannot be done while music is playing", you will need to reload (refresh) the page, because all background actions in the page abort when music is playing.
 
+Check that note on and note off messages are correctly paired. If not correctly paired, there might be some unexpected result such as a note that sounds for a long time.
+
 
 ## Increase MIDI file capacity (compression)
 
@@ -1094,7 +1098,7 @@ ESP32-S3 boards usually have a onboard red/green/blue LED. These are some color 
 
 * Blue to green during start up.
 * Four white flashes when connected to WiFi.
-* Low intensity blue flash when setlist is empty
+* Low intensity green/yellowish flash when setlist is empty
 
 Some are for feedback of user actions:
 * White while the touchpad is down
@@ -1642,6 +1646,10 @@ Pinout and MIDI configuration:
 * Validate  GPIO pins 3 and 4 are not used for input. These pins can block boot process of the ESP32-S3. Pin 3 is officially a "strapping pin". Pin 4 also has been seen to block boot process.
 * New "Pinout and MIDI configuration" document now provides detailed information about this function and even describes how to make a new pinout configuration templates.
 
+Actuator drivers
+* Allow retries when ENODEV error for PCA9685
+* Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
+* Limit battery usage according to config parameters when doing "all notes off" at beginning and end of tune for RC Servos.
 
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
