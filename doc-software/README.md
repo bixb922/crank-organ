@@ -102,6 +102,7 @@
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
      * [Changes Sept 8, 2026 to Oct 26. 2026](#changes-sept-8-2026-to-oct-26-2026)
+     * [Changes Oct 27, 2026 to ...](#changes-oct-27-2026-to)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -915,7 +916,7 @@ Disabling Smart Network Switch
 
 During music playback, most functions not related to playback are restricted, since the ESP32-S3 needs all the resources to keep the music on time. 
 
-Try to stay on the Tune List and Performance pages (tunelist.html, play.html) while music is playing. The History page and the Index page (Home page) are also ok. Please do maintenance functiones such as MIDI pin configuration, pin tests, file uploads, system page, etc when no music is playing. Also: you should not be looking at the cell phone while cranking, look at the audience or listen to the music.
+Try to stay on the Tune List and Performance pages (tunelist.html, play.html) while music is playing. The History page and the Index page (Home page) are also ok. Please do maintenance functiones such as MIDI pin configuration, pin tests, file uploads, system page, etc when no music is playing. 
 
 In other words: Maintenance functiones such as Tuner, Tunelib Editor, General Configuration, Pinout and MIDI configuration, System page and File Manager are restricted during music playback.
 
@@ -1651,6 +1652,13 @@ Actuator drivers
 * Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
 * Limit battery usage according to config parameters when doing "all notes off" at beginning and end of tune for RC Servos.
 
+
+## Changes Oct 27, 2026 to ...
+* Refresh setlist menu for multiple setlist if tune is queued
+* logger.async_info to terminal doesn't need newline
+* Disable load setlist and save setlist buttons on Performance page during playback.
+* Guard setlist operations during music playback.
+
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
@@ -1699,7 +1707,7 @@ The security and protection of this software is designed for a WiFi network such
 
 Although it is possible to connect several clients (several cell phones or PCs) simultaneously, it is recommended to connect only one client at a time, mainly because many users may delay notes when playing back music. 
 
-While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music. 
+While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music. Also: during music playback, operations such as moving items in a setlist are slower than without playing music, since playing music has priority.
 
 If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed. Post an issue and I'll assist, or look at the examples provided.
 
