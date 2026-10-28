@@ -205,13 +205,13 @@ class getLogger:
         async def write_info(message):
             level = "INFO"
             # Format now so timestamp is correct
-            s = getLogger._formatRecord(self.module, level, message)
-            getLogger.print_console(s+"\n", level)
+            # Mark with ***, this entry may be out of order
+            s = getLogger._formatRecord(self.module, level, message+" ***")
+            getLogger.print_console(s, level)
             if getLogger._levels[level][0]:
                 # Reserve enough time even for a log file switch
                 async with RequestSlice( "minilog", 300 ):
-                    # Mark with ***, this entry may be out of order in log.
-                    getLogger._write(f"{s} ***\n")
+                    getLogger._write(s+"\n")
         # Launch and let log entry wait for later...
         asyncio.create_task( write_info(message))
 

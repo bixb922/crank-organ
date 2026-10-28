@@ -1476,6 +1476,7 @@ async function queueTune( tuneid, slot ) {
         "slot": slot } ;
 	// queue tune and update page with result
 	await commonGetProgress.fetchProgress( "/queue_tune", postdata) ;
+	setlistTitlesCache.drop();
 }
 
 

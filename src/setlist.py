@@ -149,7 +149,6 @@ class Setlist:
             self._save_current()
 
             led.start_tune_flash()
-            # >>> delay play_tune or cancel player if tunelib changes are being applied????
             # Play tune. Store task to have a handle
             # because we may need to cancel it on request (next tune
             # button or da capo button or playback disabled)
@@ -249,7 +248,6 @@ class Setlist:
     def save(self, slot, slist=None ):
         # setlist 0 is written twice at start of tune?
         
-        # >>> consider guarding with RequestSlice in webserver.py
         if not( 0 <= slot < _MAX_SETLIST_SLOTS):
             raise ValueError
 
@@ -263,7 +261,6 @@ class Setlist:
         self.save( _CURRENT_SETLIST )
 
     def load(self, slot, into_current=True):
-        # >>> consider guarding with RequestSlice, better in webserver.py?
         # Read setlist from flash
         filename = self.stored_setlist_filename( slot )
         slist = fileops.read_json(filename, default=[])
@@ -366,19 +363,40 @@ class Setlist:
             permutation[j], permutation[i] = permutation[i], permutation[j]
         self._save_current()
 
-    # >>> configure a upper limit for shuffle all?
+    # >>> configure a upper limit for shuffle all/shuffle 3stars?
+    # a) fixed upper limit (512 byte setlist=39 tunes). 
+    #    Optional: If doing shuffle_all again, exclude files
+    #    that have played today. When all have been used,
+    #    start over.
+    #    Pros: simple.
+    #    Cons: invisible magic number.
+    # b) Config limit. Pros: makes limit visible.
+    #    Cons: very static.
+    # c) Ask for maximum of tunes to be included, if
+    #    more than a certain number of tunes, default=39 
+    #    Pros: very visible
+    #    Cons: More complex interaction.
+    # In any case, shuffle_all and shuffle_3stars are restricted
+    # during playback, but top/down/up setlist take 0.5msec/item
+    # that is 390msec with 750 tunes in the setlist.
+    # 39 tuens:
+    #   Queue tune, Up/down/bottom etc 40 ms sometimes100
+    #    40 ms, sometimes 100ms
+    # 100 tunes
+    #   queue tune  up/down/bottom etc 100 ms, sometimes 150ms
+    # 236 tunes
+    #   queue tune ,  up/down/bottom etc140 ms sometimes 200ms
+
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
         # Must get a deep copy of tunelib to self.current_setlist
         # if not tunemanager._tuneids will be emptied while playing....
-        # >>> ??? RequestSlice 2 seconds
         self.current_setlist = tunemanager.get_autoplay()
         self.shuffle()
         led.shuffle_all_flash()
 
     def shuffle_3stars(self):
         # See shuffle_all_tunes for comments
-        # >>> ??? RequestSlice of 2 seconds
         self.current_setlist = tunemanager.get_autoplay_3stars()
         self.shuffle()
         led.shuffle_all_flash()
@@ -432,7 +450,7 @@ class Setlist:
             await asyncio.sleep_ms(1000) # type:ignore
 
     # >>> Revisit need of setlist.sync()
-    # >>> Javascript is already guarding itself against unsync'ed setlists
+    # Javascript is already guarding itself against unsync'ed setlists
     # and tunemanager.cache_midi checks the top setlist item and skips if
     # not available.
     def sync( self, tunelib ):
@@ -553,4 +571,6 @@ class Setlist:
             return self.current_setlist.pop(0)
         except:
             pass
-        
+
+    def get_len(self):
+        return len(self.current_setlist)

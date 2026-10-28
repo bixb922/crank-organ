@@ -3,11 +3,11 @@ import re
 from machine import Pin
 import fileops
 from minilog import getLogger
+from pinout import PinoutParser, get_current_pinout
 
 
 # Reserved and available pins are updated by GPIODef at startup
 # and are validated against MicroPython's board definition.
-from pinout import PinoutParser, get_current_pinout
 
 # ESP32-S3 Technical Manual
 # See 2.3.3 Restrictions for GPIOs and RTC_GPIOs
@@ -47,15 +47,17 @@ for pin in ESP32_S3_AVAILABLE_GPIO_PINS:
         ESP32_S3_RESERVED_PINS.add( pin )
         ESP32_S3_AVAILABLE_GPIO_PINS.discard(pin)
 
+# Validate if GPIO is available for
+def gpio_for_input( gpio ):
+    if gpio in ESP32_S3_NOT_FOR_INPUT:
+        raise RuntimeError(f"Pin {gpio} is not available for input")
+
 # Class to validate a pinout and save it
 # to the current json file. This class is invoked by
 # the save button on pinout.html
 # These checks are not applied when loading the pinout,
 # so if the pinout.json is modified externally, it's a good idea
 # to save it once to check it.
-def gpio_for_input( gpio ):
-    if gpio in ESP32_S3_NOT_FOR_INPUT:
-        raise RuntimeError(f"Pin {gpio} is not available for input")
 
 class SaveNewPinout(PinoutParser):
     def __init__(self, output_filename, source, raise_error):

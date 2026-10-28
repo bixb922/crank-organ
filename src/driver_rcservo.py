@@ -31,9 +31,8 @@ class RCServoDriver(BaseDriver):
         for pin in pin_list:
             if pin.is_rcservo:
                 pin.force_off()  
-        # Don't force  RCServoPin._global_moving here, because there may
-        # be _wait_movement_end() tasks pending.
-
+                if RCServoPin.config_rc_pwm_auto_off:
+                    pin.stop_pwm()
 
 # Abstract RC Servo pin driver, superclass to PCA9685 and GPIOServoPin
 class RCServoPin(BasePin):

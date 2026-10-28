@@ -19,6 +19,7 @@ Request.max_body_length = 1_000_000
 from compiledate import compiledate
 from minilog import getLogger
 import scheduler
+from scheduler import RequestSlice
 import fileops
 from midi import NoteDef
 
@@ -53,6 +54,9 @@ def func_before_req( request ):
     request.g.t0 = ticks_ms()
 
 
+# >>>If web services are slow (for example: waiting for RequestSlice)
+# >>>and a reboot is done, the pending webservices are served
+# >>>after reboot. Check if this is desirable.
 @app.after_request
 def func_after_req( request, response ):
     try:
@@ -134,14 +138,23 @@ def authorize(func):
     return wrapper
 
 
-# Define (async capable) decorator to check if player is active
-#
-# Use @check_player_active for web functions that are likely 
-# to be used during playback but can delay music while playing.
-#
-# Use @stop_playback for maintenance functions that
-# will interfere with music playing and/or that require a reboot.
-# @stop_playback will do a @check_player_active so music doesn't stop abruptly
+# 4 levels of protection of music playback:
+# 1. No protection, web services are optimized to be used freely
+#    during music playback
+# 2. Buttons are disabled while music plays. This may be a bit
+#    delayed since it is triggered with get_progress
+# 3. Use RequestSlice.  Web services are are squeezed
+#    in the time between MIDI events.
+# 4. Web services are disabled during music playback
+#    Use @check_player_active for web functions that  
+#    can delay music while playing, and are not necessary
+#    during music playback.
+# 5. Web services are disabled during music playback
+#    and also will stop further music playback because they
+#    interfere with music playback (example: test pins)
+#    Use @stop_playback for maintenance functions that
+#    will interfere with music playing and/or that require a reboot.
+#    @stop_playback will do a @check_player_active so music doesn't stop abruptly
 
 def _player_decorator(func, stop_playback):
     async def wrapper(*args, **kwargs):
@@ -328,13 +341,20 @@ async def set_time_zone(request):
 #
 ### Setlist management (play.html, tunelist.html, history.html)
 #
+def setlist_time():
+    # 1 msec per item in setlist average time
+    # 2 msec per item worst case
+    # for setlist operations like top,setlist_time bottom, queue_tune.
+    # Prepare for average case. Worst case may cause a little delay
+    return setlist.get_len()
 
 @app.post("/queue_tune")
 async def queue_tune(request):
     # Queue tune to setlist
-    data = request.json
-    setlist.queue_tune(data["tuneid"], data["slot"] )
-    return get_progress()
+    async with RequestSlice("queue_tune", setlist_time()):
+        data = request.json
+        setlist.queue_tune(data["tuneid"], data["slot"] )
+        return get_progress()
 
 
 @app.route("/start_tune")
@@ -351,67 +371,76 @@ async def stop_tune_setlist(request):
 
 @app.route("/back_setlist")
 async def back_setlist(request):
-    setlist.to_beginning_of_tune()
-    return get_progress()
+    async with RequestSlice("back_setlist", setlist_time()):
+        setlist.to_beginning_of_tune()
+        return get_progress()
 
 
 @app.post("/save_setlist")
 async def save_setlist(request):
-    data = request.json
-    setlist.save( data["slot"] )
-    return get_progress()
+    async with RequestSlice("save_setlist", setlist_time()):
+        setlist.save( request.json["slot"] )
+        return get_progress()
 
 
 @app.post("/load_setlist")
 async def load_setlist(request):
-    setlist.load( request.json["slot"] ) 
-    return get_progress()
+    async with RequestSlice("load_setlist", setlist_time()):
+        setlist.load( request.json["slot"] ) 
+        return get_progress()
 
 
 @app.route("/clear_setlist")
 async def clear_setlist(request):
-    setlist.clear()
-    return get_progress()
+    async with RequestSlice("clear_setlist", setlist_time()):
+        setlist.clear()
+        return get_progress()
 
 @app.route("/up_setlist/<tuneid>")
 async def up_setlist(request, tuneid):
-    setlist.up(tuneid)
-    return get_progress()
+    async with RequestSlice("up_setlist", setlist_time()):
+        setlist.up(tuneid)
+        return get_progress()
 
 
 @app.route("/down_setlist/<tuneid>")
 async def down_setlist(request, tuneid):
-    setlist.down(tuneid)
-    return get_progress()
+    async with RequestSlice("down_setlist", setlist_time()):
+        setlist.down(tuneid)
+        return get_progress()
 
 @app.route("/top_setlist/<tuneid>")
 async def top_setlist(request, tuneid):
-    setlist.top(tuneid)
-    return get_progress()
+    async with RequestSlice("top_setlist", setlist_time()):
+        setlist.top(tuneid)
+        return get_progress()
 
 @app.route("/bottom_setlist/<tuneid>")
 async def bottom_setlist(request, tuneid):
-    setlist.bottom(tuneid)
-    return get_progress()
+    async with RequestSlice("bottom_setlist", setlist_time()):
+        setlist.bottom(tuneid)
+        return get_progress()
 
 
 @app.route("/drop_setlist/<tuneid>")
 async def drop_setlist(request, tuneid):
-    setlist.drop(tuneid)
-    return get_progress()
+    async with RequestSlice("drop_setlist", setlist_time()):
+        setlist.drop(tuneid)
+        return get_progress()
 
 
 @app.route("/shuffle_set_list")
 async def shuffle_set_list(request):
-    setlist.shuffle()
-    return get_progress()
+    async with RequestSlice("shuffle_set_list", setlist_time()):
+        setlist.shuffle()
+        return get_progress()
 
 
 @app.route("/shuffle_all_tunes")
 async def shuffle_all_tunes(request):
     # Web page disables this button while playing
     # but if progress is slow, there may be a button clicked...
-    async with scheduler.RequestSlice("shuffle_all_tunes", 200):
+    async with RequestSlice("shuffle_all_tunes", setlist_time()):
         setlist.shuffle_all_tunes()
     return get_progress()
 
@@ -419,19 +448,22 @@ async def shuffle_all_tunes(request):
 async def shuffle_3stars(request):
     # Web page disables this button while playing
     # but if progress is slow, there may be a button clicked...
-    async with scheduler.RequestSlice("shuffle_3stars", 200):
+    async with RequestSlice("shuffle_3stars", setlist_time()):
         setlist.shuffle_3stars()
     return get_progress()
 
+# 200 msec
 @app.route("/get_setlist_titles")
 async def get_setlist_titles( request ):
     # This get's cached
-    return { "titles": setlist.get_titles() } 
+    async with RequestSlice("get_setlist_titles", 300):
+        return { "titles": setlist.get_titles() } 
 
 @app.post("/save_setlist_titles")
 async def save_titles( request ):
-    setlist.save_titles( request.json )
-    return respond_ok()
+    async with RequestSlice("save_setlist_titles", 300):
+        setlist.save_titles( request.json )
+        return respond_ok()
 
 
 #
@@ -469,22 +501,22 @@ async def toggle_register( request ):
     return get_progress()
 
 #
-### Organ tuner web services (show tuning)
+### Organ tuner web services
 #
+# Show tuning can be done while music playing, albeit slowly
 @app.route("/get_organtuner_json")
-@check_player_active # allows the user to see tuning without stopping playback
 async def get_organtuner_json( request ):
-    return get_organtuner().get_organtuner_json();
+    async with RequestSlice("get_organtuner_json", 300):
+        return get_organtuner().get_organtuner_json();
 
 @app.route("/get_tuning_stats")
-@check_player_active # allows the user to see tuning without stopping playback
 # If no "check_player_active" then a background page reload may interfere with music
 async def get_tuning_stats(request):
-    return get_organtuner().get_stats()  
+    async with RequestSlice("get_tuning_stats", 300):
+        return get_organtuner().get_stats()  
 
-#
-### Organ tuner web services (do tuning)
-#
+# Rest of organtuner web services will only succeed if music
+# is not playing, and will stop music playback until reboot.
 
 @app.route("/tune_all")
 @stop_playback
@@ -586,28 +618,35 @@ async def errorlog(request):
     return redirect( "/show_file/" + filename )
 
 @app.route("/diag")
-@check_player_active
 async def diag(request):
-    gc.collect()
-    t0 = ticks_ms()
-    gc.collect()  # measure optimal gc.collect() time
-    t1 = ticks_ms()
-    gc_collect_time = ticks_diff(t1, t0)
-    # mem_free and mem_alloc are quite slow, similar to gc.collect()
-    free_ram = gc.mem_free()  
-    used_ram = gc.mem_alloc() 
-    # statvfs takes 1.5 sec
-    vfs = os.statvfs("/")
-
-    midi_files = tunemanager.get_tune_count()
+    if scheduler.is_player_active():
+        gc_collect_time = "n/a"
+        free_ram = "n/a"
+        used_ram = "n/a"
+        used_flash = "n/a"
+        free_flash = "n/a"
+        midi_files = "n/a"
+    else:
+        # Do slow stuff only when no music is playing
+        gc.collect()
+        t0 = ticks_ms()
+        gc.collect()  # measure optimal gc.collect() time
+        t1 = ticks_ms()
+        gc_collect_time = ticks_diff(t1, t0)
+        # mem_free and mem_alloc are quite slow, similar to gc.collect()
+        free_ram = gc.mem_free()  
+        used_ram = gc.mem_alloc() 
+        # statvfs takes 1.5 sec
+        vfs = os.statvfs("/")
+        used_flash = vfs[0] * (vfs[2] - vfs[3])
+        free_flash = vfs[0] * vfs[3]
+        midi_files = tunemanager.get_tune_count()
 
 
     now = timezone.now_ymdhmsz()
     tz = timezone.get_time_zone_info()
     time_zone_info = f'{tz["longName"]}, {tz["shortName"]}, offset={round(-tz["offset"]/60.0)} min'
     reboot_sec = round(ticks_diff(ticks_ms(), config.BOOT_TICKS_MS) / 1000 )
-    used_flash = vfs[0] * (vfs[2] - vfs[3])
-    free_flash = vfs[0] * vfs[3]
     d = {
         "description": config.description,
         "name": config.name,
@@ -635,8 +674,7 @@ async def diag(request):
         d["mcserver"] = mcserver.get_last_backup_time()
     except:
         d["mcserver"] = ""
-
-    _logger.info(f"diag: {used_flash=:_} {free_flash=:_}  {used_ram=:_} {free_ram=:_} {gc_collect_time=} max gc={scheduler.max_gc_time} {midi_files=}")
+    _logger.async_info(f"diag: {used_flash=:_} {free_flash=:_}  {used_ram=:_} {free_ram=:_} {gc_collect_time=} max gc={scheduler.max_gc_time} {midi_files=}")
     return d
 
 
@@ -655,12 +693,13 @@ async def deep_sleep(request):
 
 
 @app.route("/wifi_scan")
-@check_player_active
 async def wifi_scan(request):
-    # Takes 3 seconds or more
-    return wifimanager.sta_if_scan()
-    
-
+    if scheduler.is_player_active():
+        return []
+    else:
+        # Takes 3 seconds or more
+        return wifimanager.sta_if_scan()
+        
 @app.route("/get_wifi_status")
 # This is fast, no @check_player_active needed
 async def get_wifi_status(request):
@@ -678,18 +717,16 @@ async def get_wifi_status(request):
     return c
 
 #
-### General configuration
+### General configuration (config.html)
 #
 @app.route("/get_current_config")
 async def get_current_config(request):
+    # takes about 10 to 30 msec
     return config.get_current_config()
 
-#
-### General configuration (changes)
-#
-# It's ok to show config during playback... but only show.
 @app.route("/get_stored_config")
 async def get_stored_config(request):
+    # takes about 20 msec
     return config.get_stored_config()
 
 
@@ -699,7 +736,8 @@ async def save_config(request):
     # Better use RequestSlice than check_player_active,
     # to ensure config can be changed even with automatic playback
     # and debug crank options
-    async with scheduler.RequestSlice("save_config", 200):
+    # Takes 110 to 180 msec
+    async with RequestSlice("save_config", 200):
         config.save(request.json)
     return respond_ok()
 
@@ -707,23 +745,26 @@ async def save_config(request):
 ### Pinout and MIDI Configuration
 #
 cached_plist = None
-def get_pinout_list():
+async def get_pinout_list():
+    # List of json files with pinout definitions in /data folder
     global cached_plist
     if not cached_plist:
         from pinoutweb import PinoutList
-        cached_plist = PinoutList(  config.PINOUT_FOLDER, config.PINOUT_TXT )
+        # Takes about 300 msec, since it opens all pinout files
+        # to get descriptions.
+        cached_plist = PinoutList( config.PINOUT_FOLDER, config.PINOUT_TXT )
     return cached_plist
 
 @app.route("/pinout_list")
 @check_player_active
 async def pinout_list(request):
-    plist = get_pinout_list()
+    plist = await get_pinout_list()
     return plist.get_filenames_descriptions()
 
 @app.route("/get_pinout_filename")
 @check_player_active
 async def get_pinout_filename(request):
-    plist = get_pinout_list()
+    plist = await get_pinout_list()
     return {
         "pinout_filename": plist.get_saved_pinout_filename(),
         "pinout_description": plist.get_description(),
@@ -736,13 +777,15 @@ async def get_used_pins( request, path ):
     # Let user do this while player is active
     return GPIOstatistics(decodePath(path), False).get_used_pins()
 
+# These functions need reboot or disturb the output pins 
+# so music playback is stopped.
 @app.post("/save_pinout_filename")
 @authorize
 @stop_playback
 async def save_pinout_filename(request):
     # Force reboot to make this take effect.
     data = request.json
-    plist = get_pinout_list()
+    plist = await get_pinout_list()
     plist.set_current_pinout_filename(data["pinout_filename"])
 
     return respond_ok()
@@ -799,16 +842,6 @@ async def list_by_midi_note( request, path ):
                              "actuator_rank": actuator.get_rank_name(), 
                              "register_name": reg.name,
                              "invert": False } )
-        #for actuator in action:
-        #    notedef.append( {
-        #                      "program_number":actuator.nominal_midi_note.program_number, 
-        #                      "midi_number":actuator.nominal_midi_note.midi_number, 
-        #                      "midi_note": str(actuator.nominal_midi_note), 
-        #                      "actuator_name": str(actuator), 
-        #                      "actuator_note": str(actuator.nominal_midi_note) if actuator.nominal_midi_note else "", 
-        #                      "actuator_rank": actuator.get_rank_name(), 
-        #                      "register_name": "",
-        #                      "invert": False } )
     notedef.sort( key=sort_key )
                 
     return notedef
@@ -903,13 +936,13 @@ async def tunelib_sync_progress(request):
 
 @app.post("/queue_field_changes")
 async def queue_field_changes(request):
-    # Queuing is acceptably fast, no need to restrict much
-    async with scheduler.RequestSlice("queue_field_changes", 300):
+    # Queuing changes to tunelib is acceptably fast, no need to restrict much
+    async with RequestSlice("queue_field_changes", 100):
         tunemanager.queue_field_changes(request.json)
     return respond_ok()
 
 @app.post("/save_lyrics")
-@stop_playback
+@check_player_active
 async def save_lyrics( request ): 
     data = request.json
     tunemanager.save_lyrics( data["tuneid"], data["lyrics"])
@@ -944,7 +977,6 @@ def decodePath( path ):
 @app.route("/listdir/<path>")
 @check_player_active
 async def filemanager_listdir(request, path=""):
-    # >>> check_player_active may depend on path? 
     listpath = decodePath(path)
     if listpath.endswith("filemanager.html"):
         # Don't navigate to /static/filemanager.html please.

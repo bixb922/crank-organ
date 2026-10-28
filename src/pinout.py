@@ -19,17 +19,7 @@ from solenoid import PinTest
 
 
 
-# ClassPinoutList
-#   manages list of possible pinouts files and holds
-#   filename of current json file.
-#   Pinout files must have the filename of the format
-#   <number>_note_<description>.json
-#   Where <number> is the number of notes and
-#   <description> the name, example:
-#   20_note_Carl_Frei.json
-#   has <number> equal to 20 and <description> equal
-#   to Carl_Frei
-#
+
 # PinoutParser: provides parsing of pinout json files.
 # Subclasses of PinoutParser implement specific parsers:
 #   class pinout.GPIODef --> stores pin definitions and MIDI notes

@@ -66,12 +66,10 @@ class PCA9685Driver(RCServoDriver):
                         self.i2c.init()
                         self._reset()
                         ActuatorStats.count("PCA9685 resets")
-                        print(">>>???reset successful iteration", k)
                         break
                     except OSError:
                         pass
         ActuatorStats.count("PCA9685 fail")
-        print(">>>???could not do SoftI2c.write_to_mem, retries exceeded")
 
 
 class PCAServoPin(RCServoPin):

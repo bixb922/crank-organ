@@ -142,6 +142,8 @@ class TuneManager:
         # Disregard  _TLCOL_HISTORY for hash because it does not mean a significant change.
         # Add 1 to allow browser distinguish between "empty tunelib" and
         # "no information about tunelib"=0
+        # >>> evaluate if a manual reboot is easier from all points of view than
+        # forcing a page refresh
         self.tunelib_signature = sum( sum(hash(x) for i,x in enumerate(tune) if i!=_TLCOL_HISTORY)  
                                 for tune in tunelib.values() ) + 1
         

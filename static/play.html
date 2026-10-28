@@ -296,10 +296,11 @@ async function updateProgress( progress ) {
         return ;
     }
 	// disable slow shuffles during playback
-	for( const id of ["shuffleAllTunes","shuffle3Stars"]){
+	for( const id of ["shuffleAllTunes","shuffle3Stars", "saveSetlist", "loadSetlist"]){
 		const button = document.getElementById(id);
 		button.disabled = progress["status"] == "playing";
-	}
+	}	
+	
 	let tunelib = progress["tunelib"]; 
 
     //let tune_requests = progress["tune_requests"] ;

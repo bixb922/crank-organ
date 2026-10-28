@@ -26,8 +26,8 @@
 
     <div>
         <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
-        <button onclick="uploadToCurrentFolder()">Upload to current folder</button>
-        <button onclick="uploadToAutoFolder()">Upload to auto folder</button>
+        <button id="uploadCurrent" onclick="uploadToCurrentFolder()">Upload to current folder</button>
+        <button id="uploadAuto" onclick="uploadToAutoFolder()">Upload to auto folder</button>
         <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()"  style="display:none">Select if not in PC tunelib</button>
         <button id="downloadFilesButton" onclick="downloadSelectedFiles()" disabled>Download</button>
         <button id="downloadAsTarButton" onclick="downloadAsTar()" disabled>Download as tar</button>
@@ -302,7 +302,6 @@
         else {
             d.innerText = "";
         }
-        console.log(">>>selectFile before updateButtons count=", count);
         updateButtons();
     }
 

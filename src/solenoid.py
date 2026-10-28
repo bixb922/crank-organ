@@ -17,27 +17,22 @@ class ActuatorBank:
     # Holds all actuator drivers (and all actuators) according to
     # definition in pinout.json
     def __init__(self, actuator_def,  config ):
-        # Parsing fills these definitions.
+        # Parsing pinout fills these definitions.
         # pin_list: a list of all actuators that have been defined
         # in the pinout.
-        # pin_info is info about all devices, to show to the user.
+        # driver_list: drivers for all pins in pin_list. No unused
+        # drivers here.
         self.pin_list = actuator_def.get_pin_list()
-        self.pin_classes = set(pin.__class__ for pin in self.pin_list )
         self.driver_list = actuator_def.get_driver_list() 
 
-        # Inject configuration for pins
-        for pin_class in self.pin_classes:
+        # Inject configuration
+        for pin_class in set(pin.__class__ for pin in self.pin_list):
             if hasattr(pin_class, "set_config"):
                 pin_class.set_config( config )
 
-        # Don't import unnededed classes
-        # RCServoPin.set_config( config )
-        # SolePin.set_config( config )
-
-        # Also things all pins need
+        # Also set things all pins need
         BasePin.set_led( led )
         BasePin.set_pinlist( self.pin_list )
-
 
         # Gather some info for diag.html
         pi = self.get_pin_info(", ")
@@ -46,7 +41,7 @@ class ActuatorBank:
     def all_notes_off( self ):
 
         # Don't import RCServo or Sole drivers here 
-        # if not they may be in memory but unused
+        # to avoid hogging memory.
         
         # All notes off for solenoid-type pins
         for drv in self.driver_list:

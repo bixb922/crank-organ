@@ -237,6 +237,7 @@ class MIDIPlayer:
                 if wtdiff_ms < -20:
                     ActuatorStats.count( "late notes")
                     ActuatorStats.max( "max note late", -wtdiff_ms ) 
+                    print(f">>>note late {-wtdiff_ms} msec")
                 elif wtdiff_ms > 20:
                     # early notes
                     # Never seen early notes.
@@ -316,13 +317,24 @@ class MIDIPlayer:
         # End tuneid=iedTbEvZJ '~grease' midi_fn=/data/midi_cached.mid, played 72.52s of 72.52s
         # Actuator stats: note on=982, note not found=573, max polyphony=8
 
-        # With MidiFileCache in RAM and 50kb buffer gc= goes up to 40-50 msec average during playing, late ratio stays at 0.2%
-        # 2026-09-25 03:26:12GMT-3 - player - INFO - Start tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' tracks=8 type=1
-        # 2026-09-25 03:28:44GMT-3 - player - INFO - MIDI processing: msec/event=0.96, busy=5.5%, avg gc=73 msec, late ratio=0.31% self.repeat_count=1 controller=0.69 msec/event
-        # 2026-09-25 03:28:44GMT-3 - player - INFO - End tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' midi_fn=tunelib/Trompeten Echo Polka r1.mid, played 151.71s of 151.71s
-        # 2026-09-25 03:28:44GMT-3 - player - INFO - Actuator stats: midi events=8690, note on=3139, note not found=1201, max polyphony=7
-        # 2026-09-24 23:20:14GMT-3 - player - INFO - Start tunelib/BU068_A040 Medici March rvb 2.mid.gz 'Medici March' tracks=1 type=208
+        # 2026/09/25 With MidiFileCache in RAM and 50kb buffer gc= goes up to 40-50 msec average during playing, late ratio stays at 0.2%
+        # Start tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' tracks=8 type=1
+        # MIDI processing: msec/event=0.96, busy=5.5%, avg gc=73 msec, late ratio=0.31% self.repeat_count=1 controller=0.69 msec/event
+        # End tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' midi_fn=tunelib/Trompeten Echo Polka r1.mid, played 151.71s of 151.71s
+        # Actuator stats: midi events=8690, note on=3139, note not found=1201, max polyphony=7
+        # Start tunelib/BU068_A040 Medici March rvb 2.mid.gz 'Medici March' tracks=1 type=208
         # busy goes down from 3% to 0.8%. MIDI file sync goes down from 1.5sec to 1sec.
+
+        # Oct 26, 2026
+        # Start tunelib/DC072_A022.mid.gz 'DC072 A022' tracks=1 type=208
+        # MIDI processing: msec/event=0.39, busy=1.3%, avg gc=32 msec, late ratio=0.20% self.repeat_count=1 controller=0.45 msec/event
+        # End tunelib/DC072_A022.mid.gz 'DC072 A022' midi_fn=tunelib/DC072_A022.mid.gz, played 136.73s of 136.73s
+        # Actuator stats: midi events=4702, note on=1658, note not found=692, max polyphony=7
+        #
+        # Start tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' tracks=8 type=1
+        # MIDI processing: msec/event=0.69, busy=4.0%, avg gc=28 msec, late ratio=0.29% self.repeat_count=1 controller=0.49 msec/event
+        # End tunelib/Trompeten Echo Polka r1.mid 'Trompeten-Echo, Na Golici' midi_fn=tunelib/Trompeten Echo Polka r1.mid, played 151.71s of 151.71s
+        # Actuator stats: midi events=8690, note on=3139, note not found=1201, max polyphony=7
 
     def get_progress(self):
         progress = self.progress.get()

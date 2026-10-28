@@ -220,11 +220,12 @@ def _formatLogGenerator(filename):
         with open(filename) as file:
             yield "<!DOCTYPE html><head>"
             yield "<style>"
-            yield ".logdeb { color: darkgreen; }"
-            yield ".logerr { color: red; }"
-            yield ".logexc { color: magenta; }"
-            yield ".loginfo { color: black; }"
-            yield ".logdate2 {font-size:large;font-weight:bold;text-wrap:nowrap}"
+            yield "tr.logdeb {color:darkgreen;}"
+            yield "tr.logerr {color:red;}"
+            yield "tr.logexc {color:magenta;}"
+            yield "tr.loginfo {color: black; }"
+            yield "td.logdate {font-size:large;font-weight:bold;text-wrap:nowrap}"
+            yield "td.logtime {text-wrap:nowrap;}"
             yield "</style>"
             yield "</head><body><title>Error log</title>"
             yield '<body><table>'
@@ -251,13 +252,13 @@ def _formatLogGenerator(filename):
 
                     if d != current_date:
                         # Show date once only
-                        yield "<tr><td class='logdate2'>" + d + "</td></tr>"
+                        yield "<tr><td class='logdate'>" + d + "</td></tr>"
                         current_date = d
                     
                     c = color.get( p[2], ".loginfo" )
                     yield f"<tr class='{c}'>"
                     try:
-                        yield "<td>" + t + "</td>"
+                        yield "<td class='logtime'>" + t + "</td>"
                         yield "<td>" + p[1] + "</td>"
                         yield "<td>" + p[2] + "</td>"
                         yield "<td>" + escapeHtml( " - ".join(p[3:]) ) + "</td>"
