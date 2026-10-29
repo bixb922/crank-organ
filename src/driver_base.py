@@ -137,7 +137,6 @@ class BasePin:
             self._movement_start()
             self.low_level_on() # type: ignore
 
-
         # Count this "note on" event, to be able to pair note on/off
         # This also enables to turn off all pins that are on when pausing crank
         # or when the MIDI files ends or stops.

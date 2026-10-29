@@ -233,4 +233,4 @@ class PinTest:
             return "I2C not connected or no pull up resistors.)"
         i2c = SoftI2C( sda=Pin(sda), scl=Pin(scl)  )
         # return a list of hex addresses, example: "0x20, 0x21, 0x22"
-        return ", ".join( f"0x{addr:02x}" for addr in i2c.scan() )
+        return ", ".join( f"{addr}" for addr in i2c.scan() )

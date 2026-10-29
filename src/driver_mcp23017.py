@@ -6,6 +6,7 @@
 
 from micropython import const
 from driver_sole import SolePin, SoleDriver
+from actuatorstats import ActuatorStats
 
 # register addresses in bank=0 mode 
 _MCP_IODIR = const(0x00)  # R/W I/O Direction Register
@@ -34,45 +35,61 @@ class MCP23017Driver(SoleDriver):
             raise OSError(
                 f"MCP23017 not found at I2C address {address:#x}"
             )
-        
+        self._reset()
+
+    def _reset(self):
         # The MCP23017 operates in bank mode 0 here,
         # i.e. bank 0 uses register+0 and bank 1 uses register+1
         # IOCON is unique, no bank designation needed
-        self._write( _MCP_IOCON, 0 )
-        for bank in range(2):
-            # Configure MCP23017 for output
-            self._write( _MCP_IODIR+bank, 0) # Direction: output
-            # After power-on reset, all registers should be zero,
-            # except IODIR, which is set to "input" (all ones)
-            # So it should not be necessary to initialize all these
-            # but let's do it anyways
-            self._write( _MCP_IPOL+bank, 0) # Polarity: normal
-            self._write( _MCP_GPINTEN+bank, 0 ) # Interrupts disabled
-            self._write( _MCP_DEFVAL+bank, 0 )  # Default value for interrupts: 0
-            self._write( _MCP_INTCON+bank, 0 ) # Interrupt-on-change: disabled
-            self._write( _MCP_GPPU+bank, 0 )  # Pull ups disabled (valid only for inputs anyhow)
-        
+        for _ in range(5):
+            try:
+                self._write( _MCP_IOCON, 0 )
+                for bank in range(2):
+                    # Configure MCP23017 for output
+                    self._write( _MCP_IODIR+bank, 0) # Direction: output
+                    # After power-on reset, all registers should be zero,
+                    # except IODIR, which is set to "input" (all ones)
+                    # So it should not be necessary to initialize all these
+                    # but let's do it anyways
+                    self._write( _MCP_IPOL+bank, 0) # Polarity: normal
+                    self._write( _MCP_GPINTEN+bank, 0 ) # Interrupts disabled
+                    self._write( _MCP_DEFVAL+bank, 0 )  # Default value for interrupts: 0
+                    self._write( _MCP_INTCON+bank, 0 ) # Interrupt-on-change: disabled
+                    self._write( _MCP_GPPU+bank, 0 )  # Pull ups disabled (valid only for inputs anyhow)
+            except OSError:
+                self._i2c.init()
+                ActuatorStats.count("MCP23017 reset retries")
         self.fast_off()
 
     def _write(self, reg, val):
-        #assert 0 <= val <= 255
-        # >>> pending: use of try/except OSError ENODEV 
-        # >>> must guard read and write.
-        # also for MCP23017Driver._read() and PCA9685Driver.set_pwm()
-        # As it is, the current tune will abort and the error log
-        # will show a TimeoutError if I2C connection is flaky.
-        # I2C bus frequency can be configured in General Configuration.
         #self._i2c.writeto_mem(
         #    self._address, reg, (val).to_bytes(1) 
         #)
-        self._i2c.write_byte( self._address, reg, val )
-        
+        #self._i2c.write_byte( self._address, reg, val )
+        for i in range(5):
+            try:
+                if i > 0:
+                    self._reset()
+                self._i2c.write( self._address, reg, val )
+            except OSError:
+                self._i2c.init()
+                ActuatorStats.count("MCP23017 ENODEV")
+        ActuatorStats.count("MCP23017 write fails")
+
     def _read(self, reg):
-        #data = self._i2c.readfrom_mem(
-        #    self._address, reg, 1
-        #)
+        #data = self._i2c.readfrom_mem( self._address, reg, 1)
         #return data[0]
-        return self._i2c.read_byte( self._address, reg )
+        #return self._i2c.operate( self, self._i2c.read_byte, self._address, reg )
+        for i in range(5):
+            try:
+                if i > 0:
+                    self._reset()
+                return self._i2c.read_byte( self._address, reg )
+            except OSError:
+                self._i2c.init()
+                ActuatorStats.count("MCP23017 ENODEV")
+        raise RuntimeError("MCP23017 read failed")
+
 
     def define_pin( self, *args ):
         # Pass this driver and then the *args
