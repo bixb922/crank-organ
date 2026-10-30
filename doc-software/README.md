@@ -101,8 +101,7 @@
      * [Changes from July 8 to July 10, 2026](#changes-from-july-8-to-july-10-2026)
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
-     * [Changes Sept 8, 2026 to Oct 26. 2026](#changes-sept-8-2026-to-oct-26-2026)
-     * [Changes Oct 27, 2026 to ...](#changes-oct-27-2026-to)
+     * [Changes Sept 8, 2026 to Oct 30, 2026](#changes-sept-8-2026-to-oct-30-2026)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -1610,54 +1609,62 @@ If tune is not started by crank, it will not react to the crank.
 * Make back arrow on HTML pages more consistent.
 * Update crank debug option to current version.
 
-## Changes Sept 8, 2026 to Oct 26. 2026
+## Changes Sept 8, 2026 to Oct 30, 2026
+Docs:
+* New document with pinout page details.
+
 Tune List page:
+
 * Don't show empty columns in the Tune List page.
 * Suppress adding "~" before tune title to show it was derived from file name. This was formerly done to show tunes that need editing in Tunelib Editor, but now there are filters.
 
 Tune manager: 
+
 * Show % progress during sync. Ensure async response so the progress shows every few seconds.
 * Add some filters to Tunelib editor.
 * Calculate local date of uploaded file in browser using origin time zone. This optimizes tunelib sync in some border cases.
 * Don't sync tunelib if folder is empty. This makes it easier to restore a backup.
-* Remove top tune from setlist if associated file had been deleted.
-* Standarize all file times to ESP32 UTC time, including tunelib.json. To make this standarization work, the microcontroller needs to be backed up, files erased and then restored. There is no big problem if you don't do this, the file creation times on the microcontroller may be wrong by a couple of hours. This doesn't affect the working of the solution.
+* Remove top tune from setlist if associated file had been deleted (the deleted file won't be played anyhow)
+* Standarize all file times to ESP32 UTC time, including tunelib.json. To make this standarization work consistently, the microcontroller needs to be backed up, files erased and then restored. There is no big problem if you don't do this, the file creation times on the microcontroller may be wrong by a couple of hours. This doesn't affect the working of the solution.
 
 File Manager:
+
 * Skip upload for files if new file is equal to existing file. This makes it a bit faster to upload many files just to make sure everything is up to date, and no sync is triggered.
 * Hide buttons on File Manager page at startup. 
 * Path inside tar file (File manager/download) is now <date>_<network name>_<folder>, same as tar file name.
 * Measure stuff: Upload of MIDI files: about 3 seconds per MIDI file with an average size of 7kb per file. Sync startup: 10 seconds. Sync per changed file 1.5 sec average. Sync for unchanged file 0.1 seconds per file.
 
 commpress_midi.py utility program:
+
 * Fix issue with 0 length notes in compress_midi.py 
 
 Startup:
+
 * Rewrite led.txt only when changed.
 
 Play page:
-* Change "collapse setlist" and "collapse lyrics" control to "navigate buttons" and add "navigate up" for long setlists to navigate back to top.
+* Change "collapse setlist" and "collapse lyrics" control to "navigate buttons" and add "navigate up" for long setlists to navigate easily to buttons and back to top.
+* Fix: Refresh setlist menu for multiple setlist if tune is queued
 
-Music playback:
-* Try not to connect WiFi while music is playing.
+
+Music playback: make it more difficult to interfere with other pages
+
+* Avoid connecting WiFi while music is playing.
 * Block maintenance functions during music playback. 
-
+* Disable load setlist and save setlist buttons on Performance page during playback. This avoids accidentally interfering with music playback.
+* Guard setlist operations during music playback.
 Pinout and MIDI configuration:
 * Hide "Add row" button and register input in MIDI definition if no registers defined.
 * Validate  GPIO pins 3 and 4 are not used for input. These pins can block boot process of the ESP32-S3. Pin 3 is officially a "strapping pin". Pin 4 also has been seen to block boot process.
 * New "Pinout and MIDI configuration" document now provides detailed information about this function and even describes how to make a new pinout configuration templates.
 
-Actuator drivers
-* Allow retries when ENODEV error for PCA9685
+Actuator drivers:
+
+* Allow retries when ENODEV error for PCA9685 and MC23017 on I2C bus. Reset I2C devices for each retry.
 * Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
-* Limit battery usage according to config parameters when doing "all notes off" at beginning and end of tune for RC Servos.
+* For RC Servos: Limit battery usage according to config parameters when doing "all notes off" at startup, beginning and end of tune.
 
 
-## Changes Oct 27, 2026 to ...
-* Refresh setlist menu for multiple setlist if tune is queued
-* logger.async_info to terminal doesn't need newline
-* Disable load setlist and save setlist buttons on Performance page during playback.
-* Guard setlist operations during music playback.
 
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

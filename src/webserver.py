@@ -56,7 +56,8 @@ def func_before_req( request ):
 
 # >>>If web services are slow (for example: waiting for RequestSlice)
 # >>>and a reboot is done, the pending webservices are served
-# >>>after reboot. Check if this is desirable.
+# >>>after reboot. Check if this is avoidable.
+# Would require to manage session on all json webservices?
 @app.after_request
 def func_after_req( request, response ):
     try:
@@ -598,12 +599,14 @@ async def get_index_page_info(request):
 
 @app.route("/battery_zero")
 async def battery_zero(request):
-    battery.set_to_zero()
+    async with RequestSlice("battery_zero", 150):
+        battery.set_to_zero()
     return battery.get_info()
 
 @app.post("/record_battery_level")
 async def record_battery_level(request):
-    battery.record_level( request.json["level"]  )
+    async with RequestSlice("battery_zero", 150):
+        battery.record_level( request.json["level"]  )
     return battery.get_info()
 
 #

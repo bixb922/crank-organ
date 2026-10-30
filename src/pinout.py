@@ -15,7 +15,6 @@ from minilog import getLogger
 from midi import NoteDef
 import fileops
 from midicontroller import MIDIController, RegisterBank
-from solenoid import PinTest
 
 
 
@@ -325,9 +324,7 @@ class ActuatorDef(PinoutParser):
         # Pass initialized registers to MIDIController
         self.controller = MIDIController( self.register_bank )
 
-        self.current_i2c = None
-        self.current_i2c_number = -1
-        
+        self.i2c_list = []
         self.controller.define_start()
 
         self.current_driver = None
@@ -335,55 +332,54 @@ class ActuatorDef(PinoutParser):
 
     # define_register is defined in pinout.py/GPIOdef, not here  
     def define_i2c(self, sda, scl):
-        self.current_i2c_number += 1
-
-        if PinTest.testI2Cconnected(sda, scl):
+        try:
+            i2c_number = len(self.i2c_list)
             from drehorgel import config
             i2cfreq = config.i2c_frequency_khz 
             if not(10 <= i2cfreq <= 800):
-                _logger.error( "I2C frequency must between 10 and 800 kHz")
+                _logger.error( "I2C frequency must between 10 and 800 kHz, reset to 100")
                 i2cfreq = 100
             from driver_i2c import I2Cdriver
-            self.current_i2c = I2Cdriver(scl, sda, i2cfreq*1_000)
+            self.i2c_list.append(I2Cdriver(i2c_number, scl, sda, i2cfreq*1_000))
+
             # 100kHz = 2 msec per MCP23017 transaction (pin on or pin off)
             # 400kHz = 1 a 2 msec per MCP23017 transaction (pin on or pin off)
             # About 25% faster. 
             # Hardware I2C has similar times since transactions are very short.
-            _logger.info(f"Operating I2C {sda=} {scl=} at {i2cfreq} kHz")
-        else:
-            _logger.error(f"No I2C connected {sda=} {scl=}")
-            self.current_i2c = None
+
+            _logger.info(f"Operating I2C({i2c_number}) {sda=} {scl=} at {i2cfreq} kHz")
+        except (OSError, RuntimeError) as e:
+            _logger.error(f"I2C({i2c_number}) {sda=} {scl=} disabled: {e}")
 
     def define_mcp23017_driver(self, address):
         from driver_null import NullDriver
         # Default in case MCP23017 is not installed
         self.current_driver = self.driver_factory( NullDriver() )
-
-        if self.current_i2c and address is not None :
+        if self.i2c_list and address is not None :
+            current_i2c = self.i2c_list[-1]
             try:
                 from driver_mcp23017 import MCP23017Driver
-
-                self.current_driver = self.driver_factory( MCP23017Driver(self.current_i2c, self.current_i2c_number, address) )
-            except OSError as e:
-                _logger.error(
-                    f"MCP23027 at {self.current_i2c=} {address=} disabled. {e}",
-                )
+                self.current_driver = self.driver_factory( 
+                    MCP23017Driver(current_i2c, address) )
+            except (OSError,RuntimeError) as e:
+                _logger.error( f"MCP23027({current_i2c},{address})  disabled: {e}" )
                 
     def define_pca9685_driver(self, address, period_us ):
         from driver_null import NullDriver
         # Default in case PCA9685 is not installed
         self.current_driver = self.driver_factory( NullDriver() )
 
-        if self.current_i2c and address is not None :
+        if self.i2c_list and address is not None :
+            current_i2c = self.i2c_list[-1]
             try:
                 from driver_pca9685 import PCA9685Driver
-
-                self.current_driver = self.driver_factory( PCA9685Driver(
-                    self.current_i2c, self.current_i2c_number, address, period_us
+                self.current_driver = self.driver_factory(
+                     PCA9685Driver(
+                    current_i2c, address, period_us
                     ) )
-            except OSError as e:
+            except (OSError,RuntimeError) as e:
                 _logger.error(
-                    f"PCA9685 at {self.current_i2c=} {address=} disabled. {e}",
+                    f"PCA9685({current_i2c},{address}) disabled: {e}",
                 )
 
     def define_gpio_driver( self ):
@@ -432,6 +428,7 @@ class ActuatorDef(PinoutParser):
         self.pulse1_us = pulse1_us
 
     def define_complete( self ):
+
         self.pin_list = list( self.pin_dict.values() )
         # Organ tuner uses pin index (index to pin_list)
         # So for organ tuner it's nicer to sort by midi number

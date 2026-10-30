@@ -387,7 +387,7 @@ async function getPinoutDetail( ) {
             pininfo.sda = pd[1] ;
             pininfo.scl = pd[2] ;
             let row = insertFormRow( tbody, `row_${f}_i2c`, [
-                `I2C.${pininfo.i2ccount}`,
+                `I2C(${pininfo.i2ccount})`,
                 "SDA",
                 makeInput( `i2c.sda.${f}`, 3, pininfo.sda),
                 "SCL",
@@ -405,8 +405,7 @@ async function getPinoutDetail( ) {
             pininfo.mcpcount += 1 ;
             pininfo.mcpaddr = pd[1] ; 
             let row = insertFormRow( tbody, `row_${f}_mcp23017`, [
-                `I2C.${pininfo.i2ccount}`,
-                `MCP23017.${pininfo.mcpcount}`,
+                `I2C(${pininfo.i2ccount}) MCP23017(${pininfo.i2ccount},${pininfo.mcpaddr})`,
                 "Address",
                 makeInput( `mcp23017.address.${f}`, 2, pininfo.mcpaddr ),
                 "(32 to 39, decimal)"
@@ -421,8 +420,7 @@ async function getPinoutDetail( ) {
             pininfo.pcaaddr = pd[1] ; 
             pininfo.period = pd[2];
             let row = insertFormRow( tbody, `row_${f}_pca9685`, [
-                `I2C.${pininfo.i2ccount}`,
-                `PCA9685.${pininfo.pcacount}`,
+                `I2C(${pininfo.i2ccount}) PCA9685(${pininfo.i2ccount},${pininfo.pcaaddr})`,
                 "Address",
                 makeInput( `pca9685.address.${f}`, 2, pininfo.pcaaddr ),
                 "Period (μsec)",

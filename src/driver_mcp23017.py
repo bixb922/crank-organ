@@ -6,7 +6,6 @@
 
 from micropython import const
 from driver_sole import SolePin, SoleDriver
-from actuatorstats import ActuatorStats
 
 # register addresses in bank=0 mode 
 _MCP_IODIR = const(0x00)  # R/W I/O Direction Register
@@ -20,76 +19,49 @@ _MCP_GPIO = const(0x12)  # R/W General Purpose I/O Port Register
 
 
 # Not a singleton, one instance for each MCP23017 chip
+# i.e. one instance for 16 outputs.
 class MCP23017Driver(SoleDriver):
-    def __init__( self, i2c, i2c_number, address ):
-        super().__init__(  i2c_number, address )
-
-        # i2c is the machine.I2C instance
-        self._i2c = i2c
+    def __init__( self, i2c, address ):
+        super().__init__(  i2c.i2c_number, address )
         self._address = address
-        # The number is used to identify the I2C bus in __repr__
-        self._i2c_number = i2c_number
 
-        # error if device not found at i2c addr
-        if self._i2c.scan().count(self._address) == 0:
-            raise OSError(
-                f"MCP23017 not found at I2C address {address:#x}"
-            )
-        self._reset()
+        # Initialize MCP23017, link to the I2C
+        # Throw exception if not successful
+        i2c.with_retries( self, self.reset, i2c )
 
-    def _reset(self):
-        # The MCP23017 operates in bank mode 0 here,
-        # i.e. bank 0 uses register+0 and bank 1 uses register+1
-        # IOCON is unique, no bank designation needed
-        for _ in range(5):
-            try:
-                self._write( _MCP_IOCON, 0 )
-                for bank in range(2):
-                    # Configure MCP23017 for output
-                    self._write( _MCP_IODIR+bank, 0) # Direction: output
-                    # After power-on reset, all registers should be zero,
-                    # except IODIR, which is set to "input" (all ones)
-                    # So it should not be necessary to initialize all these
-                    # but let's do it anyways
-                    self._write( _MCP_IPOL+bank, 0) # Polarity: normal
-                    self._write( _MCP_GPINTEN+bank, 0 ) # Interrupts disabled
-                    self._write( _MCP_DEFVAL+bank, 0 )  # Default value for interrupts: 0
-                    self._write( _MCP_INTCON+bank, 0 ) # Interrupt-on-change: disabled
-                    self._write( _MCP_GPPU+bank, 0 )  # Pull ups disabled (valid only for inputs anyhow)
-            except OSError:
-                self._i2c.init()
-                ActuatorStats.count("MCP23017 reset retries")
-        self.fast_off()
+    def reset(self, i2c):
+        # Retries are managed by caller
+        # Use low level i2c functions
+        addr = self._address
+        i2c.write( addr, _MCP_IOCON, 0 )
+        for bank in range(2):
+            # Configure MCP23017 for output
+            i2c.write(addr, _MCP_IODIR+bank, 0) # Direction: output
+            # After power-on reset, all registers should be zero,
+            # except IODIR, which is set to "input" (all ones)
+            # So it should not be necessary to initialize all these
+            # but let's do it anyways
+            i2c.write(addr, _MCP_IPOL+bank, 0) # Polarity: normal
+            i2c.write(addr, _MCP_GPINTEN+bank, 0 ) # Interrupts disabled
+            i2c.write(addr, _MCP_DEFVAL+bank, 0 )  # Default value for interrupts: 0
+            i2c.write(addr, _MCP_INTCON+bank, 0 ) # Interrupt-on-change: disabled
+            i2c.write(addr, _MCP_GPPU+bank, 0 )  # Pull ups disabled (valid only for inputs anyhow)
+            i2c.write(addr, _MCP_GPIO+bank, 0 )  # same as fast_off(): turn off outputs
+
+        i2c.devices.add(self)
+        self._i2c = i2c
 
     def _write(self, reg, val):
         #self._i2c.writeto_mem(
         #    self._address, reg, (val).to_bytes(1) 
         #)
         #self._i2c.write_byte( self._address, reg, val )
-        for i in range(5):
-            try:
-                if i > 0:
-                    self._reset()
-                self._i2c.write( self._address, reg, val )
-            except OSError:
-                self._i2c.init()
-                ActuatorStats.count("MCP23017 ENODEV")
-        ActuatorStats.count("MCP23017 write fails")
+        self._i2c.with_retries( self, self._i2c.write, self._address, reg, val )
 
     def _read(self, reg):
         #data = self._i2c.readfrom_mem( self._address, reg, 1)
         #return data[0]
-        #return self._i2c.operate( self, self._i2c.read_byte, self._address, reg )
-        for i in range(5):
-            try:
-                if i > 0:
-                    self._reset()
-                return self._i2c.read_byte( self._address, reg )
-            except OSError:
-                self._i2c.init()
-                ActuatorStats.count("MCP23017 ENODEV")
-        raise RuntimeError("MCP23017 read failed")
-
+        return self._i2c.with_retries( self, self._i2c.read_byte, self._address, reg )
 
     def define_pin( self, *args ):
         # Pass this driver and then the *args
@@ -100,7 +72,6 @@ class MCP23017Driver(SoleDriver):
         # Set all outputs to off
         self._write( _MCP_GPIO, 0 )
         self._write( _MCP_GPIO+1, 0 )
-        # Now BasePin._count is off, fix that
     
 
 class MCPPin(SolePin):
@@ -115,14 +86,19 @@ class MCPPin(SolePin):
         super().__init__(driver, pin_number, rank, nominal_midi_note )
 
     def low_level_on( self ):
-        # It is better reading the current state from the
-        # MCP than caching state in memory.
-        r = self._driver._read( self._gpioreg )
-        self._driver._write( self._gpioreg, r | self._bit )
+        try:
+            r = self._driver._read( self._gpioreg )
+            self._driver._write( self._gpioreg, r | self._bit )
+        except (OSError, RuntimeError):
+            # retries exceeded. driver_i2c did already report
+            pass
 
     def low_level_off( self ):
-        r = self._driver._read( self._gpioreg )
-        self._driver._write( self._gpioreg, r & (~self._bit) )
-
+        try:
+            r = self._driver._read( self._gpioreg )
+            self._driver._write( self._gpioreg, r & (~self._bit) )
+        except (OSError, RuntimeError):
+            # retries exceeded. driver_i2c did already report
+            pass
     
     

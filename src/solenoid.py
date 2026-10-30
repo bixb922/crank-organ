@@ -223,6 +223,13 @@ class PinTest:
 
     @classmethod
     def scan_i2c( cls, pininfo ):
+        def ta(addr):
+            if 64<=addr<=127:
+                return f"{addr}=0x{addr:02x}=PCA9685"
+            if 32<=addr<=39:
+                return f"{addr}=0x{addr:02x}=MCP23017"
+            return f"{addr}=0x{addr:02x}"
+        
         # Called by web server to scan for I2C devices on a pair of pins.
         # Expects a "pininfo" dict with info filled out by pinout.html
         # The "pininfo" dictionary has all fields about the pin, some fields may be superfluous.
@@ -232,5 +239,5 @@ class PinTest:
         if not cls.testI2Cconnected(sda, scl):
             return "I2C not connected or no pull up resistors.)"
         i2c = SoftI2C( sda=Pin(sda), scl=Pin(scl)  )
-        # return a list of hex addresses, example: "0x20, 0x21, 0x22"
-        return ", ".join( f"{addr}" for addr in i2c.scan() )
+        # return a list of devices on bus
+        return ", ".join( f"{ta(addr)}" for addr in i2c.scan() )

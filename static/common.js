@@ -1737,7 +1737,6 @@ class SetlistMenu extends HTMLButtonElement{
 
 			// send a list of tuples just as /queue_field_changes likes it
 			// just with one change, but its a list of lists...
-			// >>> should rating be limited to * ** and ***?
 			await fetch_json( "/queue_field_changes", [[TLOP_REPLACE_FIELD, SetlistMenu.tuneid, tlcol, info]] );
 			showPopup("", tlt("Cambios almacenados, actualización pendiente")); 
 			await sleep_ms(1000);

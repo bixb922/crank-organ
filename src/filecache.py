@@ -44,6 +44,7 @@ class MidiFileCache:
 
     @classmethod
     def get_metadata(cls):
+        # tunelib entry of cached MIDI file
         return cls.cached_metadata
 
     @classmethod
