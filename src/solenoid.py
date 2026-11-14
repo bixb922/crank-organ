@@ -209,9 +209,9 @@ class PinTest:
             pass
         
         for _ in range(pininfo["repeat"]):
-            actuator.on()
+            actuator.low_level_on()
             await asyncio.sleep_ms(pininfo["pause"])
-            actuator.off()
+            actuator.low_level_off()
             await asyncio.sleep_ms(pininfo["pause"])
 
         # If pininfo["repeat"] is 0, 
@@ -219,7 +219,7 @@ class PinTest:
         # This makes it easy to adjust
         # "off" position of each servo with arrow buttons
         await asyncio.sleep_ms(120)
-        actuator.off()
+        actuator.low_level_off()
 
     @classmethod
     def scan_i2c( cls, pininfo ):

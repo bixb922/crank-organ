@@ -31,7 +31,7 @@
     </table>
 </div>
 <br>
-<button onclick="showAsTable()">Formato de tabla para copiar</button>
+<button onclick="showAsTable()"  class="disable-during-playback">Formato de tabla para copiar</button>
 <div class="footerdiv"></div>
 
 
@@ -41,7 +41,7 @@
       <br>
       <textarea id="lyricsText" rows="30"></textarea>
       <br>
-      <button onclick="saveLyrics()">Guardar</button>
+      <button onclick="saveLyrics()"  class="disable-during-playback">Guardar</button>
     </div>
   
 </div>
@@ -158,25 +158,25 @@ async function updateForm( tunelist ){
         lyricsButton.onclick = function(){ editLyrics( tune[TLCOL_ID] ) };
         lyricsButton.id = `lyrics_${tune[TLCOL_ID]}`;
         if( tune[TLCOL_LYRICS]) {
-            lyricsButton.innerText = "Edit";
+            lyricsButton.textContent = "Edit";
         }
         else{
-            lyricsButton.innerText = "Add";
+            lyricsButton.textContent = "Add";
         }
         
         row.cells[7].appendChild( lyricsButton );
 
-        row.cells[8].innerText = formatMilliMMSS( tune[TLCOL_TIME] );
+        row.cells[8].textContent = formatMilliMMSS( tune[TLCOL_TIME] );
         row.cells[8].style.textAlign = "right";
-        row.cells[9].innerText = ymdhm(tune[TLCOL_DATEADDED]);
-        row.cells[10].innerText = tune[TLCOL_FILENAME];
+        row.cells[9].textContent = ymdhm(tune[TLCOL_DATEADDED]);
+        row.cells[10].textContent = tune[TLCOL_FILENAME];
 
-        row.cells[11].innerText = tune[TLCOL_SIZE];
+        row.cells[11].textContent = tune[TLCOL_SIZE];
         row.cells[11].style.textAlign = "right";
         let deleteButton = document.createElement( "button" );
         deleteButton.classList.add( "smallbutton" );
         deleteButton.onclick = function(){ deleteTuneFile( tune[TLCOL_ID], rowid ) };
-        deleteButton.innerHTML = "🗑️";
+        deleteButton.textContent = "🗑️";
         row.cells[12].appendChild( deleteButton );
     }   
  
@@ -301,7 +301,7 @@ async function editLyrics(tuneid){
     lyricsText.value = await lyricsCacheTuneid( currentTuneid );
     modal.style.display = "block";
     // at next refresh, button name gets recalculated
-    document.getElementById(`lyrics_${tuneid}`).innerText = "Edit";
+    document.getElementById(`lyrics_${tuneid}`).textContent = "Edit";
     return ;
 }
 
@@ -338,7 +338,7 @@ async function showAsTable(){
     let headRow = document.createElement( "tr" );
     for( let h of TABLE_HEADER ){
         let th = document.createElement( "th" );
-        th.innerHTML = h ;
+        th.textContent = h ;
         headRow.appendChild( th );
     }
     tableHead.appendChild( headRow );
@@ -404,7 +404,6 @@ function rowIsIncomplete(row){
         }
         const col = HEADER_MAP.indexOf(tlcol);
         const inputBox = row.cells[col].children[0];
-        console.log("rowIsIncomplete? row=", row.id, "inputBox.value=", inputBox.value, "return=", inputBox.value == "");
         if(inputBox.value != ""){
             return false;
         }
@@ -422,7 +421,7 @@ function rowHasText(row, searchInput){
             rowValue = row.cells[col].children[0].value;
         }
         else if( hasInnerText.includes(tlcol)){
-            rowValue = row.cells[col].innerText;
+            rowValue = row.cells[col].textContent;
             if( tlcol == TLCOL_FILENAME ){
                 // skip .mid
                 rowValue = rowValue.substring(0, rowValue.length-4);

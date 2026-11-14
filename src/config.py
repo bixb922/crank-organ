@@ -227,14 +227,13 @@ class Config:
         # Raises AttributeError if k is not a configuration variable
         # Raises ValueError if v is not acceptable for the data type of k
         datatype = self._get_type( k )
+        # Some special validations
+        if k == "ap_password":
+            return self._validate_password( k, v )
+        elif k == "name":
+            return self._validate_hostname( v )
         try:
-            v = self._validation_function(datatype)(v)
-            # Some special validations
-            if k == "ap_password":
-                self._validate_password( v )
-            elif k == "name":
-                self._validate_hostname( v )
-            return v
+            return self._validation_function(datatype)(v)
         except ValueError:
             raise ValueError( f"Error: [{k}]={v} is not {datatype}" )
     
@@ -267,15 +266,16 @@ class Config:
         return client_password == binascii.hexlify( h ).decode() 
     
     def _validate_hostname( self, name ):
-        if len(name) > 15 or  not re.match("[A-Za-z][A-Za-z0-9]*", name):
-            raise ValueError( "Error: hostname '{name}' exceeds 15 characters or is not alphanumeric" )
-
-    def _validate_password( self, v ):
+        if len(name) > 15 or  not re.match("^[A-Za-z][A-Za-z0-9\\-]*$", name):
+            raise ValueError( f"Error: hostname '{name}' exceeds 15 characters or is not alphanumeric nor hyphen" )
+        return name.lower()
+    
+    def _validate_password( self, k, v ):
         # Only needed for AP password
         if not( v.startswith(_PASSWORD_PREFIX) or v == _DEFAULT_PASSWORD or v == _PASSWORD_MASK ):
             if len(v) < 9:
-                raise ValueError( "Error: Password {k} shorter than 9 characters" )
-
+                raise ValueError( f"Error: Password {k} shorter than 9 characters" )
+        return v
 
     def _validate_config( self, cfg, on_error ):
         # on_error can be "raise" or "remove"

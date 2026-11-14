@@ -102,6 +102,7 @@
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
      * [Changes Sept 8, 2026 to Oct 30, 2026](#changes-sept-8-2026-to-oct-30-2026)
+     * [Changes Nov 1, 2026 to ...](#changes-nov-1-2026-to)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -244,7 +245,7 @@ To see all columns of the Tune List page, you can need to fill in information ab
 * file date: this is the file modification date on the PC, not the date of upload
 
 ## The performance control page
-With this page you can see information about the current tune, start/stop the current tune, see lyrics and manage the setlist. As well as the tunelist page, this page is designed to be used even when MIDI files are playing.
+With this page you can see information about the current tune, start/stop the current tune, see lyrics and manage the setlist. As well as the tunelist page, this page is designed to be used even when MIDI files are playing. While playback is active,  buttons and functions that could interfere with music playback are disabled.
 
 ### Current tune
 
@@ -344,7 +345,7 @@ The number in parenthesis ```(15)``` is the number of tunes already in that setl
 
 ## Tune title menu
 
-The [⋮] menu button to the left of a tune title will open the setlist menu. This menu button is only visible if multiple setlists have been configured.
+The [⋮] menu button to the left of a tune title will open the setlist menu. This menu button is only visible if multiple setlists have been configured. It is disabled while music is playing.
 
 ![title menu button](tune_title_menu_button.jpg)
 
@@ -462,6 +463,8 @@ Check if note on and note off events for the same note are correctly paired. The
 There is no size limitation on MIDI files, but the File Manager has a limit of 1 Mb (one megabyte) file size limit. It is possible to play a 100kb or 200kb MIDI file that lasts, say, 20 or 30 minutes. However, if the file contains several tunes, it is probably more convenient to split into the individual tunes and use the setlist functionality to make a sequence of tunes (i.e. set up your own medley)
 
 If you prefer, you can use the ```compress_midi.py``` utility in the ```crank-organ/tools```folder to make the MIDI files lean and to compress them to almost one third of the original size. See [here](#increase-midi-file-capacity). Compressed files are not suitable to be converted back to regular MIDI files, so keep the original MIDI files as backup!
+
+All this doesn't happen very often: Check that note on and note off messages are correctly paired. If not correctly paired, there might be some unexpected result such as a note that sounds for a long time. Be aware that MIDI note on and note off on different channels may trigger the same actuator. These notes should also be correctly paired, and it is better to avoid overlaps to avoid unexpected results. The MIDI module in this software pairs note on/note off during playback, so note on/note on/note off/note off for the same pipe will make the pipe sound for the time between the first note on and the last note off. However, if a MIDI note on and MIDI note off occur exactly at the same time, the result is undefined, i.e. the note off may take place either before or after the note on.
 
 
 ## Adding and deleting MIDI tunes
@@ -630,6 +633,7 @@ There are templates for the pin definition for several usual crank organ scales.
 
 See [Pinout and MIDI configuration](/doc-pinout/README.md) for a complete description of this functionality.
 
+After changing the pinout configuration,  MIDI playback is disabled. Reboot to get back to normal.
 
 # 13. System
 The home page, the System shows diagnostic and technical information about what's going on in the microcontroller.
@@ -719,9 +723,11 @@ You don't need your cell phone turned on to play music, only to alter the setlis
 
 Here is another way to connect to the crank organ from your cell phone. You will need to check "Advertise WiFi names on Bluetooth" on the General Configuration page and save. 
 
-Use Chrome. Go to the page https://bixb922.github.io/. Scroll down to "Find my crank organ" and click that link. Click on the "Find my crank organ" button on the new page. Then follow the instructions.
+Use Chrome as browser. Go to the page https://bixb922.github.io/. Scroll down to "Find my crank organ" and click that link. Click on the "Find my crank organ" button on the new page. Then follow the instructions.
 
-If you like that page, tell Chrome to put a shortcut on your cell phone's home screen.
+If you like that page, have Chrome to put a shortcut on your cell phone's home screen.
+
+That page enables bluetooth to request IP address and status of the crank organ. No data is stored on your cell phone nor on any internet server.
 
 
 # 16. Installation
@@ -913,20 +919,33 @@ Disabling Smart Network Switch
 
 ## Restrictiones during music playback
 
-During music playback, most functions not related to playback are restricted, since the ESP32-S3 needs all the resources to keep the music on time. 
+During music playback, most functions not related to playback are restricted, since the ESP32-S3 needs all the resources to keep the music on time. Buttons and functions that interfere are disabled.
 
-Try to stay on the Tune List and Performance pages (tunelist.html, play.html) while music is playing. The History page and the Index page (Home page) are also ok. Please do maintenance functiones such as MIDI pin configuration, pin tests, file uploads, system page, etc when no music is playing. 
+What you can do during music playback (i.e. while a tune is playing):
+* View the tune list
+* View the history
+* View the Performance page
+* Queue a new tune to the current setlist and reorder the current setlist. These changes will be made permanent only after the tune ends.
+* Stop the tune
+* Change playback speed
+* Change register state (if registers are configured)
+* Add repetitions to current tune (if crank is enabled)
+* General configuration. This is enabled mainly to be able to change back from "automatic playback" mode.
 
-In other words: Maintenance functiones such as Tuner, Tunelib Editor, General Configuration, Pinout and MIDI configuration, System page and File Manager are restricted during music playback.
+These functions cannot be done during music playback. The buttons will be disabled, or you could get a message "403 forbidden":
+* Save and load a setlist
+* Tuner
+* Pinout and MIDI configuration
+* Purge history
+* Edit tunelib
+* File manager
+* Change battery counters on home page
 
-If used while the music player is not active, most maintenance functions will stop the music player and ask for a reboot (power off/power on) of the microcontroller:
+Most maintenance functions will stop the music player and ask for a reboot (power off/power on) of the microcontroller:
 * The tuner needs to stop the player because you can't tune while music is playing
 * Other maintenance functions need a reboot to enable the changes to become effective
 * Test functions on the Pinout and MIDI Configuration page need the music player to stop because testing interferes with the microcontroller peripherals
 
-After you get the message "Cannot be done while music is playing", you will need to reload (refresh) the page, because all background actions in the page abort when music is playing.
-
-Check that note on and note off messages are correctly paired. If not correctly paired, there might be some unexpected result such as a note that sounds for a long time.
 
 
 ## Increase MIDI file capacity (compression)
@@ -1173,9 +1192,7 @@ It is very fast. Now only the /rom partition remains with the software. Reboot.
 
 # 20. Troubleshooting
 
-If there are delays during music playback such as extraneous silences or lengthened notes, check that you only have either the "Tune list" or the "Performance" page open. Only these two pages (and perhaps the Home Page) are well adjusted for music playback.
-
-If you added tunes to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized. 
+If you added MIDI files to the /tunelib folder of the microcontroller, and they do not appear in the tunelist, please click the "Edit Tunelib" button on the main page to have the new files and any changes to the existing files recognized. 
 
 If you the microcontroller's browser does not respond:
 * Some browsers sometimes change the http:// prefix to https://. This software does not recognize https://
@@ -1183,12 +1200,13 @@ If you the microcontroller's browser does not respond:
 * Make sure you have WiFi active in your cell phone.
 * Make sure the access points defined in the configuration of the microcontroller are accessible.
 * Make sure both microcontroller and cell phone are in WiFi range of the router.
+* Reload the page.
 
-If browser response is slow, check the WiFi signal. Move the crank organ nearer to the router, or use the hotspot that your cell phone provides. The WiFi scan on the "System" page provides the signal strength as seen by the microcontroller. dBm in the range of  -70dB to -90dB are good (-90dB is best). Around -60dB leads to delays.
+If browser response is slow, check the WiFi signal. Move the crank organ nearer to the router, or use the hotspot that your cell phone provides. The WiFi scan on the "System" page provides the signal strength as seen by the microcontroller. dBm in the range of  -70dB to -90dB are good.-90dB is best. Signal strengths larger than about -60dB leads to delays.
 
 If the browser cannot find the name of your crank organ, turn off WiFi on the cell phone and then turn on again. I have seen this on some versions of Android only. Or see [here](#another-way-to-connect-to-the-wifi)
 
-If this message appears "Playback disabled by configuration functions. Reboot to reset." and you don't know why: There is some configuration or the tuner page open on a PC or the cell phone. Close these pages when not needed and reboot.  See here for details [Restrictiones during music playback](#restrictiones-during-music-playback)
+If this message appears "Playback disabled by configuration functions. Reboot to reset." this is due to configuration change done for example with the General Configuration page, the Pinout and MIDI Configuration page or the Tuner. Reboot to restore the capability of playing music.  See here for details [Restrictiones during music playback](#restrictiones-during-music-playback)
 
 # 21. Recent changes
 
@@ -1653,6 +1671,7 @@ Music playback: make it more difficult to interfere with other pages
 * Block maintenance functions during music playback. 
 * Disable load setlist and save setlist buttons on Performance page during playback. This avoids accidentally interfering with music playback.
 * Guard setlist operations during music playback.
+
 Pinout and MIDI configuration:
 * Hide "Add row" button and register input in MIDI definition if no registers defined.
 * Validate  GPIO pins 3 and 4 are not used for input. These pins can block boot process of the ESP32-S3. Pin 3 is officially a "strapping pin". Pin 4 also has been seen to block boot process.
@@ -1664,12 +1683,21 @@ Actuator drivers:
 * Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
 * For RC Servos: Limit battery usage according to config parameters when doing "all notes off" at startup, beginning and end of tune.
 
+## Changes Nov 1, 2026 to ...
+* Guard setlist operations during music playback. Disable all buttons that could disturb during music playback and protect webservices behind the buttons for double check.
+* Make current setlist operations faster during playback, to avoid disabling them.
+* Play.html: Show message if setlist is empty.
+* Config: validate on input that host name is alphanumeric or has hyphen only. Validate password to short.
+* Pinout test: Fix valve off when testing RC servos on pinout page.
+* All web pages: Optimize web pages using textContent instead of innerText.
+* Communications: Add timeout to fetch_json() to make network recovery faster.
+* History page: Calculate delete history in UTC time, not local time (minor fix)
 
 
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.
 
-The MIDI file parser is written in highly optimized MicroPython, and has very little overhead. The MIDI timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also well optimized not to interfere with playback of the music. Lengthy tasks are fitted by a scheduler in available time slots between notes.
+The MIDI file parser is written in highly optimized MicroPython, and has very little overhead. The MIDI timing is done in a way to minimize interference of other functions, and the tunelist and performance pages are also designed not to interfere with playback of the music. Wherever possible, lengthy tasks are fitted by a scheduler in available time slots between notes.
 
 Frequency detection is done with the FFT algorithm, interpolating the maximum with a second order polynomial to get the vertex of the maximum.
 
@@ -1714,7 +1742,7 @@ The security and protection of this software is designed for a WiFi network such
 
 Although it is possible to connect several clients (several cell phones or PCs) simultaneously, it is recommended to connect only one client at a time, mainly because many users may delay notes when playing back music. 
 
-While playing music, stay on the Tune list and the Performance pages, since these pages are highly optimized for playback. Other pages may interfere with playing music. Also: during music playback, operations such as moving items in a setlist are slower than without playing music, since playing music has priority.
+While playing music, stay on the Tune list and the Performance pages, since these pages are designed not to interfere with music playback. Other pages may interfere with playing music. Also: during music playback, operations such as moving items in a setlist are slower than without playing music, since playing music has priority.
 
 If a new scale has to be implemented (say: a 50 note scale), a new .json template for that scale has to be designed. Post an issue and I'll assist, or look at the examples provided.
 

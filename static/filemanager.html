@@ -26,13 +26,13 @@
 
     <div>
         <input type="file" id="folderDialogButton" style="display:none;" webkitdirectory directory onchange="processFolderDialog()">
-        <button id="uploadCurrent" onclick="uploadToCurrentFolder()">Upload to current folder</button>
-        <button id="uploadAuto" onclick="uploadToAutoFolder()">Upload to auto folder</button>
-        <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()"  style="display:none">Select if not in PC tunelib</button>
-        <button id="downloadFilesButton" onclick="downloadSelectedFiles()" disabled>Download</button>
-        <button id="downloadAsTarButton" onclick="downloadAsTar()" disabled>Download as tar</button>
-        <button id="deleteFilesButton" onclick="deleteFiles()"  disabled>Delete</button>
-        <button id="selectForBackup"  onclick="selectForBackup()" style="display:none">Select for backup</button>
+        <button id="uploadCurrent" onclick="uploadToCurrentFolder()"  class="disable-during-playback">Upload to current folder</button>
+        <button id="uploadAuto" onclick="uploadToAutoFolder()"        class="disable-during-playback">Upload to auto folder</button>
+        <button id="selectIfNotInPCButton" onclick="selectIfNotInPC()"      style="display:none" class="disable-during-playback">Select if not in PC tunelib</button>
+        <button id="downloadFilesButton" onclick="downloadSelectedFiles()"  style="display:none" class="disable-during-playback">Download</button>
+        <button id="downloadAsTarButton" onclick="downloadAsTar()"          style="display:none" class="disable-during-playback">Download as tar</button>
+        <button id="deleteFilesButton" onclick="deleteFiles()"              style="display:none" class="disable-during-playback">Delete</button>
+        <button id="selectForBackup"  onclick="selectForBackup()"           style="display:none" class="disable-during-playback">Select for backup</button>
     </div>
 
 
@@ -134,7 +134,7 @@
         let usedFlash = Math.round(data.used_flash / 2 ** 20 * 10) / 10;
         let percentUsed = Math.round(data.used_flash / data.total_flash * 100);
         d = document.getElementById("usedFlash");
-        d.innerText = `Flash used ${usedFlash} MB of ${totalFlash} MB (${percentUsed}%)`;
+        d.textContent = `Flash used ${usedFlash} MB of ${totalFlash} MB (${percentUsed}%)`;
 
         return data.total_flash - data.used_flash;
     }
@@ -173,8 +173,8 @@
         // Page should be refreshed, but sometimes this may take too long to be practical
         // So tell the user to reload (if she/he so wishes).
         document.getElementById("thisFolderSize").innerHTML = "<a href='javascript:window.location.href=window.location.href' class='anohref'>Reload page</a> to see changes to current folder."; 
-        document.getElementById("usedFlash").innerText = "";
-        document.getElementById("tunelibAvg").innerText = "";
+        document.getElementById("usedFlash").textContent = "";
+        document.getElementById("tunelibAvg").textContent = "";
         createFilePicker();
     }
 
@@ -297,23 +297,22 @@
         let d = document.getElementById("selectedFilesSpan");
         let count = getSelectedFileCount();
         if( count > 0 ){
-            d.innerText = "" + count + " files selected";
+            d.textContent = "" + count + " files selected";
         }
         else {
-            d.innerText = "";
+            d.textContent = "";
         }
         updateButtons();
     }
 
 
     function updateButtons() {
-        const noSelection = (getSelectedFileCount() == 0);
-        document.getElementById("downloadFilesButton").disabled = noSelection;
-        document.getElementById("deleteFilesButton").disabled = noSelection;
-        document.getElementById("downloadAsTarButton").disabled = noSelection;
+        const selection = (getSelectedFileCount()>0);
+        showHideElement( "downloadFilesButton", selection);
+        showHideElement( "deleteFilesButton", selection);
+        showHideElement( "downloadAsTarButton", selection);
         showHideElement("selectForBackup", CURRENT_PATH == "/data");
         showHideElement("selectIfNotInPCButton", CURRENT_PATH == "/tunelib");
-        
     }
 
 
@@ -321,7 +320,7 @@
     async function refreshFileList(path) {
         let body = document.getElementById("fileListBody");
         body.innerHTML = "";
-        body.innerText = "";
+        body.textContent = "";
         
         // Get file list for path from server and show
         CURRENT_PATH = path;
@@ -334,7 +333,7 @@
             let row = insertRow(body, ["", ""]);
             let link = document.createElement("a");
             link.href = `/filemanager/${encodePath(folderUp(CURRENT_PATH))}`;
-            link.innerText = "\u{a0}⬆️\u{a0}";
+            link.textContent = "\u{a0}⬆️\u{a0}";
             row.cells[1].appendChild(link);
         }
 
@@ -353,7 +352,7 @@
                 let row = insertRow(body, ["", "📁\u{a0}", "", ymdhm(file.timestamp)])
                 let link = document.createElement("a");
                 link.href = `/filemanager/${encodePath(file.path)}`;
-                link.innerText = file.name;
+                link.textContent = file.name;
                 row.cells[1].appendChild(link);
             }
             else {
@@ -380,11 +379,11 @@
                     fileType.startsWith("json-20"))) {
                     let link = document.createElement("a");
                     link.href = "/show_file/" + encodePath(file.path);
-                    link.innerText = file.name;
+                    link.textContent = file.name;
                     row.cells[1].appendChild(link);
                 }
                 else {
-                    row.cells[1].innerText += file.name;
+                    row.cells[1].textContent += file.name;
                 }
                 sumsize += file.size;
                 sumblocks += Math.floor((file.size + 4095) / 4096) * 4096;
@@ -393,7 +392,7 @@
 
         };
         
-        document.getElementById("thisFolderSize").innerText =
+        document.getElementById("thisFolderSize").textContent =
             `This folder: ${files.length} files, ${formatIfNumber(sumsize)} bytes net, ${formatIfNumber(sumblocks)} bytes on flash.`;
         return sumblocks;
     }
@@ -404,7 +403,7 @@
         pathLinks.innerHTML = "";
         let link = document.createElement("a");
         link.href = `/filemanager`;
-        link.innerText = "/";
+        link.textContent = "/";
         link.style.color = "black";
         pathLinks.appendChild(link);
         pathLinks.innerHTML += "&nbsp";
@@ -416,7 +415,7 @@
             path += part;
             link = document.createElement("a");
             link.href = `/filemanager/${encodePath(path)}`;
-            link.innerText = part;
+            link.textContent = part;
             link.style.color = "black"
             pathLinks.appendChild(link);
             pathLinks.innerHTML += "&nbsp;"
@@ -443,7 +442,7 @@
     }
     async function startPageRefresh(){
         await refreshAll();
-        commonGetProgress.setSleep( 5_000 );
+        commonGetProgress.setSleep( 2_000 );
         commonGetProgress.startBackground();
         commonGetProgress.registerCallback( updateButtons );
     }
@@ -504,7 +503,7 @@
             }
         }
         clearSelection();
-        document.getElementById("thisFolderSize").innerText = ""; // Refresh needed
+        document.getElementById("thisFolderSize").textContent = ""; // Refresh needed
         logNotification("Delete complete, now refreshing file list");
         await refreshAll();
     }
@@ -538,7 +537,7 @@
 
     function sortTable() {
         // https://stackoverflow.com/questions/14267781/sorting-html-table-with-javascript
-        const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
+        const getCellValue = (tr, idx) => tr.children[idx].textContent || tr.children[idx].textContent;
 
         const comparer = (idx, asc) => (a, b) => ((v1, v2) =>
             v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
@@ -554,10 +553,10 @@
             let headerCells = document.getElementsByName("filelistth");
             for (let cell of headerCells) {
                 // erase previous arrows
-                cell.innerHTML = "&nbsp;" + cell.innerText.substring(1);
+                cell.innerHTML = "&nbsp;" + cell.textContent.substring(1);
             }
             // Add new up/down arrow to sorted column
-            th.innerHTML = (this.asc ? "↓" : "↑") + th.innerText.substring(1);
+            th.textContent = (this.asc ? "↓" : "↑") + th.textContent.substring(1);
         })));
     }
 
@@ -686,7 +685,7 @@
         // Select files that are useful to backup
         const body = document.getElementById("fileListBody");
         for( let row of body.rows ){
-            let filename = row.cells[1].innerText ;
+            let filename = row.cells[1].textContent ;
             // json, txt in "data" folder
             // tsv in "signal" folder
             if( filename.endsWith(".json") ||

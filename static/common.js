@@ -6,7 +6,7 @@ function consoledebug( ...args  ){
 	let clt1 = Date.now();
 	args.unshift( clt1-clt0 );
 	args.unshift((clt1-clt00)/1000);
-	console.debug(args.join(" "));
+	console.log(args.join(" "));
 	clt0 = clt1;
 }
 consoledebug("common.js start");
@@ -281,14 +281,17 @@ customElements.define("needle-bar", NeedleBar, { extends: "canvas" });
 // Retries communication until successful.
 // fetch_json.isConnected() shows if the connection is active
 let test_avg=[];
-async function fetch_json( url, post_data ){
+async function fetch_json( url, post_data, timeout ){
     let t0 ;
     let t ;
     let response ;
     let json_result ;
-	let post_arg = make_fetch_args( post_data ) ;
 
 	for(;;) {
+		let post_arg = make_fetch_args( post_data ) ;
+		if( timeout ){
+			post_arg.signal = AbortSignal.timeout(timeout);
+		}
 		try {
             t0 = Date.now() ;  // Reports response time
 			fetch_json.last_ok = t0;
@@ -298,6 +301,8 @@ async function fetch_json( url, post_data ){
 			break ;
 		}
 		catch( err ) {
+			// Most likely: TypeError: any type of communication error
+			// TimeoutError: AbortSignal() terminated fetch.
 			console.error("fetch json failed", err, "url=", url ) ;
             // In the header battery time, replace battery
             // icon and time remaining with "network connection broken"
@@ -305,9 +310,21 @@ async function fetch_json( url, post_data ){
 			// keep running average of connects, goes faster up than down
 		    fetch_json.connects_ok = (3*fetch_json.connects_ok + 0)/4; 
 			msg = tlt("no conectado") ;
-			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ) ;
+			// Be prepared in case Timeout is added.
+			popupmsg = (msg + " " + err).replace("TypeError", "Network error" ).replace("TimeoutError", "Network error (timeout)") ;
 			showPopup( "", popupmsg );
-			await sleep_ms( 5_000 ) ;
+			if( err.name == "TimeoutError" ){
+				// Retry immediately
+			}
+			else if( err.name == "TypeError" ){
+				// This is a communication error. Sometimes it is
+				// triggered immediately (with no timeout).
+				await sleep_ms(500);
+			}
+			else{
+				// What other error may lead here?
+				await sleep_ms( 5_000 ) ;
+			};
 		}
 		// retry fetch forever until getting through to server
 	}
@@ -325,38 +342,18 @@ async function fetch_json( url, post_data ){
 			// Fall through and generate 401 message if cancel was pressed.
 		}
 		else if( rstatus == 403 ){
+			// "forbidden" means a button has been pressed
+			// but should be disabled. May happen if pressing
+			// a button about to be disabled.
 			// Player is active, show alert and abort
-			json_result = await response.json();
-			// Disable inputs and buttons ... everything that can be disabled
-			// This is better than replacing document.body since scripts will not fail abjectly.
-			for( const ele of document.getElementsByTagName("button")){
-				ele.disabled = true;
-			};
-			for( const ele of document.getElementsByTagName("input")){
-				ele.disabled = true;
-			};
-
-			document.body.insertAdjacentHTML('afterbegin',
-				"<big>" +
-				tlt("No se puede realizar esta acción mientras está tocando música") +
-				" (" + json_result["alert"] + "). " +
-				"<br>" + 
-				tlt("Recargue página cuando deje de tocar música:") +
-				"<button onclick='window.location.reload()'><big>🔄</big></button>" +
-				"</big>"
-			);
-			// Stop ongoing script. Rest of scripts such as getProgress will
-			// continue running, but in general these refresh processes
-			// stall while this page is hidden, so not much overhead should
-			// happen. If a restricted webservice is called when player active
-			// then this rstatus==403 will prevent that from executing.
-			throw new Error(`Server sent error status ${response.status}`);
+			alert(tlt("No se puede realizar esta acción mientras está tocando música")+": "+url);
+			throw new Error(`Server sent error status ${response.status} (forbidden)`);
 		}
         let response_html = await response.text() ; 
         response_text = response_html.replace(/<[^>]*>/g, ' ');
         console.error("Error response", rstatus, "url", url, "response", response, "text", response_text ) ;
         alert( `Server error ${rstatus} ${response_text}` ) ;
-        throw new Error(`Server sent error status ${response.status}`);
+        throw new Error(`Server sent error status: ${response.status}`);
 		// Fetch calls and call function will abort unless
 		// there is a try/catch block.
 	}
@@ -368,7 +365,7 @@ async function fetch_json( url, post_data ){
 		test_avg.shift();
 	}
 	let avg = Math.round(test_avg.reduce((sum, current) => sum + current, 0) / test_avg.length);
-	console.info("fetch_json ", url, "response time", t, "msec", "avg=", avg);
+	consoledebug("fetch_json ", url, "response time", t, "msec", "avg=", avg);
 	// If there is an alert, show to user and reraise exception
 	if( json_result["alert"]) {
 		let alert_message = json_result["alert"];
@@ -400,10 +397,10 @@ fetch_json.isConnected = ()=>{
 
 
 function make_fetch_args( data ){
-	if( data == undefined ){
-		return undefined ;
+	if( data == undefined || data == null ){
+		return {} ;
 	}
-	// make a post argument for fetch
+	// make a "post" argument for fetch
 	return {
 		method: "POST", // *GET, POST, PUT, DELETE, etc.
 		mode: "same-origin", // no-cors, *cors, same-origin
@@ -435,7 +432,7 @@ class GetProgress{
 	// call some fetch_json that returns a progress and filter it, will also do callbacks.
 	constructor(){
 		this.callbackList = [];
-		this.sleep_ms = 10_000;
+		this.sleep_ms = 2_000;
 	}
 	registerCallback( callback ){
 		this.callbackList.push( callback );
@@ -451,26 +448,28 @@ class GetProgress{
 		this.#backgroundProcess();
 	}
 	async getProgress(){
-		let progress = await this.fetchProgress( "/get_progress");
-		console.debug("progress=", progress);
+		// Only the simple plain /get_progress has timeout.
+		let progress = await this.fetchProgress( "/get_progress", null, 5_000);
+		console.log("progress=", progress); // console.log shows object contents
 		return progress;
 	}
 
-	async fetchProgress( url, post ){
+	async fetchProgress( url, post, timeout ){
+		// fetchProgress is used for any URL that returns progress.
 		if( isUsedFromIOT() ){
 			return {};
 		}
-		// Do not refresh hidden/background pages. Stall.
+		// Do not refresh hidden/background pages (cell phone
+		// turned off, tab not visible)
 		await wait_until_visible();
 
 		// do a fetch_json that returns a progress, and filter it
 		// before returning.
-		// >>> add timeout
-		let progress = await fetch_json( url, post );
+		// get progress with timeout. Retry is done by fetch_json.
+		let progress = await fetch_json( url, post, timeout );
 		if( !progress ){
 			throw new Error("fetch_json progress is empty, ignored");
 		}
-
 		await JsonCache.check_session( progress.boot_session, progress.tunelib_signature );
 		await this.#filterProgress( progress );
 
@@ -478,6 +477,7 @@ class GetProgress{
 	}
 
 	async #filterProgress( progress ){
+
 		let tunelib = await tunelibCache.get();
 		// setlist could have tunes not in tunelib, filter out to make life easier.
 		progress["setlist"] = progress["setlist"].filter((ele)=>{ return ele in tunelib } );
@@ -488,6 +488,10 @@ class GetProgress{
 			progress["tune"] = null;
 		}
 
+		const is_player_active = progress?.is_player_active;
+		for( const button of document.querySelectorAll(".disable-during-playback")){
+			button.disabled = is_player_active;
+		}
 		for( let callback of this.callbackList){
 			callback(progress);
 		}
@@ -505,8 +509,8 @@ class GetProgress{
 			catch(e){
 				console.error("GetProcess.#background process fetch failed", e);
 			}
-			// >>> should sleep depend on time since last progress?
-			// >>> i.e. time between call initial vs. sleep
+			// Time between get_progress is sleep_ms+progress get response.
+			// I.E: sleep_ms=2000 ms + get progress=400ms = 2.4sec.
 			await sleep_ms(this.sleep_ms);
 		}
 	}
@@ -594,6 +598,7 @@ class PageHeader{
 
 		for(;;){
 			await sleep_ms( 5_000 );
+			await wait_until_visible();
 			let isConnected = fetch_json.isConnected();
 			if( isConnected ){
 				// 🛜 Wifi  💚green heart. 💕two hearts 
@@ -617,7 +622,7 @@ class PageHeader{
 		let normal_background = sap_green ;
 		// Check if calibration done. percent_remaining is a number
 		// only if calibration done, as are "low" and "remaining_seconds"
-		if( is_no_number(progress["bat_percent_remaining"])){
+		if( is_no_number(progress?.bat_percent_remaining)){
 			// No calibration done, don't bother requesting
 			// information about battery any more
 			return ;
@@ -625,14 +630,14 @@ class PageHeader{
 		let header_background = normal_background ;
 		let batterySymbol = document.getElementById("batterySymbol");
 
-		if( progress["bat_low"] ) {
+		if( progress?.bat_low ) {
 			// Low battery emoji on white background
-			batterySymbol.innerText = "🪫"; // low battery &#x1faab;
+			batterySymbol.textContent = "🪫"; // low battery &#x1faab;
 			header_background = meter_red_color ;
 		}
 		else {
 			// Normal green battery emoji on white background
-			batterySymbol.innerText = "🔋"; // full battery &#x1f50b;
+			batterySymbol.textContent = "🔋"; // full battery &#x1f50b;
 			header_background = normal_background;
 		}
 		document.getElementById("headerdiv").style.backgroundColor = header_background;
@@ -649,7 +654,7 @@ class PageHeader{
 		let banner = "";
 		
 		// Order is by priority of message.
-	 	if( progress["sync_pending"]){
+	 	if( progress?.sync_pending){
 	 		if( progress["status"] == "playing" ){
 	 			banner = this.bannerWarn + tlt( "Cambios a la espera que la música termine");
 			}
@@ -660,15 +665,15 @@ class PageHeader{
 		else if( !progress["playback_enabled"]){
 			banner = tlt("Tocar música deshabilitado por por funciones de configuración. Debe reiniciar para reestablecer.")
 		}
-	    else if( progress["automatic_delay"] ){
-	 		banner = tlt("Partida automática activada") + `, ${progress["automatic_delay"]} s` ;
+	    else if( progress?.automatic_delay ){
+	 		banner = tlt("Partida automática activada") + `, ${progress.automatic_delay} s` ;
 	 	}
 
 		if( banner == "" ){
 			// page (such as tunelibedit.html) can set own text here
 			banner = this.bannerEmpty;
 		}
-		banner_element.innerText = banner ;
+		banner_element.textContent = banner ;
 		banner_element.style.display = banner ? "": "none" ;
 	}
 }
@@ -702,7 +707,7 @@ function formatIfNumber( newText ) {
 	return formatText ;
 }
 
-// Functions to change innerText and innerHTML of DOM element by id
+// Functions to change textContent and innerHTML of DOM element by id
 function textById( id, newText ) {
 	// Format if number or boolean
     let formattedNewText ;
@@ -718,7 +723,7 @@ function textById( id, newText ) {
 	else {
 		formattedNewText = formatIfNumber( newText ) ;
 	}
-  	document.getElementById(id).innerText = formattedNewText ;
+  	document.getElementById(id).textContent = formattedNewText ;
 }
 
 // DOM helper functions to show/hide, set text and html by id.
@@ -809,7 +814,7 @@ async function showPopup(id_where, show_text) {
 		popup.classList.add("popuptext");
 		document.body.appendChild( popup );
 	}
-	popup.innerText = show_text;
+	popup.textContent = show_text;
 	let saveWidth = popup.style.width ;
 	let saveHeight = popup.style.height; 
 	popup.style.height = "70px" ;
@@ -837,7 +842,7 @@ async function showPopup(id_where, show_text) {
 
 function escapeHtml(text) {
     let el = document.createElement("div");
-  	el.innerText = text;
+  	el.textContent = text;
   	return el.innerHTML
 }
 
@@ -857,12 +862,13 @@ class JsonCache{
 		// console.log(">>>check_session reload1=", reload1, "reload2=", reload2);
 		if( reload1 || reload2 ){
 			// Queue a reload
-			// console.log("Waiting for reload 15s");
+			// console.log(">>>Waiting for reload 15s");
 			// await sleep_ms(15_000);
 			location.reload();
 			// yield to allow reload to happen. If not, GetProgress class will start to
 			// fetch tunelib.json but it will not complete due to the reload. To avoid that
-			// we stall here to allow the .reload() to happen immediately.
+			// we stall here to allow the .reload() to happen immediately and
+			// we don't allow the caller here to proceed any further.
 			await sleep_ms(1000);
 			// should never get here. 
 		}
@@ -1002,13 +1008,11 @@ class JsonCache{
 	}
 
 }
-const configCache = new JsonCache( "/get_current_config");
-const tunelibCache = new JsonCache( "/data/tunelib.json");
-const lyricsCache = new JsonCache( "/data/lyrics.json");
+const configCache = new JsonCache("/get_current_config");
+const tunelibCache = new JsonCache("/data/tunelib.json");
+const lyricsCache = new JsonCache("/data/lyrics.json");
 const timezoneCache = new JsonCache("/set_time_zone");
 const setlistTitlesCache = new JsonCache("/get_setlist_titles");
-// >>> Could also cache: /get_index_page_info, 
-
 
 
 async function lyricsCacheTuneid( tuneid ){
@@ -1198,7 +1202,7 @@ function insertRow( body, data ){
 		if( v == undefined || v == null ){
 			v = "";
 		}
-		row.insertCell(-1).innerText = "" + v ;
+		row.insertCell(-1).textContent = "" + v ;
 	}
 	return row;
 }
@@ -1247,9 +1251,9 @@ class PasswordDialog{
 			</div>
 			`;
 			document.body.appendChild( modalDialog );
-			document.getElementById("enter_password").innerText = tlt("Password:") ;
-			document.getElementById("passwordOkButton").innerText = tlt("Aceptar");
-			document.getElementById("passwordCancelButton").innerText = tlt("Cancelar") ;
+			document.getElementById("enter_password").textContent = tlt("Password:") ;
+			document.getElementById("passwordOkButton").textContent = tlt("Aceptar");
+			document.getElementById("passwordCancelButton").textContent = tlt("Cancelar") ;
 			
 			let ok = document.getElementById( "passwordOkButton")
 			ok.addEventListener( "click", ()=>this.#clickOk() );
@@ -1317,7 +1321,7 @@ async function setTimezone(){
 	// i.e. mainly when the microcontroller is rebooted (or the tunelib changes, tough luck).
 	// In both cases it brings back the session ids with a overhead similar to a getProgress.
 	// and sets the time/timezone if necessary.
-	let resp = await timezoneCache.get( 
+	await timezoneCache.get( 
 			{"offset": offsetMinutes*60, 
 			  "shortName":shortName,
 			  "longName": longName,
@@ -1327,7 +1331,6 @@ async function setTimezone(){
 	// 	consoledebug(">>>setTimezone response", resp.boot_session, resp.tunelib_signature);	
 	// /set_time_zone returns the current boot_session and tunelib_signature
 	// in the format of a /get_progress response. Used to initialize JsonCache.
-	await JsonCache.check_session( resp.boot_session, resp.tunelib_signature );
 }
 
 // Call setTimezone once per page load. Also gets boot session.
@@ -1475,7 +1478,14 @@ async function queueTune( tuneid, slot ) {
         "tuneid": tuneid, 
         "slot": slot } ;
 	// queue tune and update page with result
-	await commonGetProgress.fetchProgress( "/queue_tune", postdata) ;
+	if(slot == 0){
+		// If slot is 0 (current setlist), the operation is fast
+		// and can be done always.
+		await commonGetProgress.fetchProgress( "/queue_tune_current", postdata) ;
+	}
+	else{
+		await commonGetProgress.fetchProgress( "/queue_tune", postdata) ;
+	}
 	setlistTitlesCache.drop();
 }
 
@@ -1579,7 +1589,7 @@ class TuneTitle extends HTMLSpanElement{
 		this.tune = tune ;
 		this.tuneid = tune[TLCOL_ID];
 		// if there is menu leave a space &nbsp; \u00a0 before the title
-		this.titleLink.innerText =  this.options.menu ? "\u00a0"+tune[TLCOL_TITLE]:tune[TLCOL_TITLE];
+		this.titleLink.textContent =  this.options.menu ? "\u00a0"+tune[TLCOL_TITLE]:tune[TLCOL_TITLE];
 
 		if( this.options.shortClick ){
 			this.titleLink.classList.add( "anohref" ); 
@@ -1672,11 +1682,11 @@ class TuneTitle extends HTMLSpanElement{
 		// this optimization would not work if before/after had spaces
 		// If there is a change, one TuneTitle.updateProgress takes 7msec per tune on PC
 		// If there is no change, one TuneTitle.updateProgress takes 0.02 msec per tune
-		if( this.before.innerText != before ){
-			this.before.innerText = before;
+		if( this.before.textContent != before ){
+			this.before.textContent = before;
 		}
-		if( this.after.innerText != after ){
-			this.after.innerText = after ;
+		if( this.after.textContent != after ){
+			this.after.textContent = after ;
 		}
 
 	}
@@ -1868,9 +1878,10 @@ class SetlistMenu extends HTMLButtonElement{
 			this.tune = tune;
 			this.tuneid = tune[TLCOL_ID];
 			// here is the menu character
-			this.innerText = "⋮ " ; // (U+2630☰) (U+2261≡) (U+22EE⋮)
+			this.textContent = "⋮ " ; // (U+2630☰) (U+2261≡) (U+22EE⋮)
 			// Make character a bit bigger
 			this.classList.add("title-menu-button");
+			this.classList.add("disable-during-playback");
 			// this.style.fontSize = "110%";
 			// this.style.fontWeight = "bold";
 			// this.style.padding = "0px 0px 0px 0px";
@@ -1883,10 +1894,10 @@ class SetlistMenu extends HTMLButtonElement{
 			// this.style.marginLeft = "0px";
 		}
 		else if( op == "loadSetlist" ){
-			this.innerText = tlt("Cargar setlist");
+			this.textContent = tlt("Cargar setlist");
 		}
 		else if( op == "saveSetlist"){
-			this.innerText = tlt("Guardar setlist");
+			this.textContent = tlt("Guardar setlist");
 		}
 	}
 
@@ -2090,7 +2101,7 @@ function translate_html(){
 		if( innerHTML == undefined ||  innerHTML.includes("<") ){
 			continue ;
 		}
-		d.innerText = tlt(d.innerText) ;
+		d.textContent = tlt(d.textContent) ;
 	}
 }
 

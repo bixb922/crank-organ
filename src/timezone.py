@@ -42,21 +42,41 @@ class TimeZone:
 
     def network_up(self):
         # wifimanager calls here when network is up
-        if self.ntp_task or self.has_time():
+        if self.ntp_task:
             # Avoid reentering task while it is active
-            # Don't start task if we have time already.
             return
         self.ntp_task = asyncio.create_task(self._ntp_process())
 
     async def _ntp_process(self):
-        # Wait for things to settle a bit, for instance, for self.set_logger() to run.
-        # if not self.logger below fill fail.
-        await asyncio.sleep_ms(1000)
-        # Get ntp time, then update time zone 
-        # Try several times to get time from ntp server
-        if await self._get_ntp_time():
-            self.logger.async_info("Time set by NTP")
+        # Wait for things to settle a bit, this isn't so high priority.
+        # And maybe the browser already did the work.
+        await asyncio.sleep_ms(2000)
 
+        # Retry a few times.
+        retry_time = 3000 # Gets duplicated for every retry
+        for _ in range(_NTP_RETRIES):
+            if self.has_time():
+                return # browser already sent the time (/set_time_zone)
+            try:
+                async with scheduler.RequestSlice("ntptime", 2000):
+                    # ntptime.settime is not async, will block
+                    ntptime.settime()
+                self.logger.async_info("Time set by NTP")
+                return
+            except (asyncio.TimeoutError, OSError) as e:
+                self.logger.async_info(f"Recoverable ntptime exception {repr(e)}") 
+                # RequestSlice did not yield slice, retry later
+                # OSError -202 means server not found, happens once in a while
+                pass
+            except Exception as e:
+                self.logger.async_info(f"Unrecoverable ntptime exception {repr(e)}") 
+                return
+
+            await asyncio.sleep_ms(retry_time)
+            # ntp servers don't like frequent retries so
+            # duplicate retry time for each retry.
+            retry_time *= 2
+        # Out of retries. Browser will eventually set time.
 
     def has_time( self ):
         # Has time been set by ntp or browser?
@@ -72,30 +92,6 @@ class TimeZone:
         t = localtime(timestamp)
         # year, month, day, weekday, hour, minute, second, subsecond
         machine.RTC().datetime( (t[0], t[1], t[2], t[6], t[3], t[4], t[5], 0))
-
-    async def _get_ntp_time(self):
-        # Retry a few times.
-        retry_time = 3000 # Gets duplicated for every retry
-        for _ in range(_NTP_RETRIES):
-            try:
-                async with scheduler.RequestSlice("ntptime", 2000):
-                    # ntptime.settime is not async, will block
-                    ntptime.settime()
-                return True
-            except (asyncio.TimeoutError, OSError) as e:
-                self.logger.async_info(f"Recoverable ntptime exception {repr(e)}") 
-                # RequestSlice did not give slice, retry later
-                # OSError -202 means server not found, happens once in a while
-                pass
-            except Exception as e:
-                self.logger.async_info(f"Unrecoverable ntptime exception {repr(e)}") 
-                return
-
-            await asyncio.sleep_ms(retry_time)
-            # ntp servers don't like frequent retries...
-            # Duplicate retry time for each retry
-            retry_time *= 2
-        # Out of retries, return false
 
     async def set_time_zone( self, newtz:dict ):
         # Called from webserver with /set_time_zone

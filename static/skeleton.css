@@ -187,7 +187,7 @@ input[type="button"] {
   display: inline-block;
   height: 38px;
   padding: 0px 6px; /* original 30px */
-  color: #555;
+  color: black;
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -198,7 +198,7 @@ input[type="button"] {
   white-space: nowrap;
   background-color: transparent;
   border-radius: 4px;
-  border: 1px solid #bbb;
+  border: 1px solid black;
   cursor: pointer;
   box-sizing: border-box; }
 .button:hover,
@@ -269,21 +269,34 @@ button.minibutton  {
 button.minibutton:active  {
 	background-color:#0a283E;
 }
-
-button:disabled{
-  color:#afafaf;
+button.minibutton:disabled{
+  opacity:0.5;
+  background-color:white;
 }
-button:disabled:active{
-  color:#afafaf;
+button.minibutton:disabled:active{
+  opacity:0.5;
   background-color:white;
 }
 
+button:disabled{
+  color:#909090;
+  border-color:#909090;
+  background-color:#e8e8e8;
+}
+button:disabled:active{
+  color:#909090;
+  border-color:#909090;
+  background-color:#e8e8e8;
+}
+
 input:disabled{
-  color:#afafaf;
+  color:#e8e8e8;
 }
+/*
 button.inactive {
-  color:#afafaf;
+  color:#808080;
 }
+*/
 
 /* Forms
  */

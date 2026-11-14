@@ -54,8 +54,8 @@ def check_script( script, translations, pagename, tag, translations_used ):
     if "function tlt" in script:
         p = script.index("function tlt")
         script = script[0:p-1] + script[p+13:]
-    if "tlt(d.innerText)" in script:
-        p = script.index("tlt(d.innerText)")
+    if "tlt(d.textContent)" in script:
+        p = script.index("tlt(d.textContent)")
         script = script[0:p-1] + script[p+20:]
 
     while "tlt(" in script:

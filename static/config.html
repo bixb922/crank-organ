@@ -337,17 +337,17 @@ function validateNewPasswords() {
 	button = document.getElementById("changePasswords");
 	// For better response check password length here
 	if (p1 != p2) {
-		button.innerText = "(passwords are different, cannot save!)";
+		button.textContent = "(passwords are different, cannot save!)";
 		button.disabled = true;
 		ok = false;
 	}
 	else if (p1.length < 9) {
-		button.innerText = "(password shorter than 9 characters, cannot save!)";
+		button.textContent = "(password shorter than 9 characters, cannot save!)";
 		button.disabled = true;
 		ok = false;
 	}
 	else {
-		button.innerText = "Save password"
+		button.textContent = "Save password"
 		button.disabled = false;
 		ok = true;
 	}
@@ -444,7 +444,7 @@ function clearMarks() {
 getCurrentConfig();
 
 // Refresh with progress to show communication active
-commonGetProgress.setSleep( 5_000 );
+commonGetProgress.setSleep( 2_000 );
 commonGetProgress.startBackground();
 
 </script>

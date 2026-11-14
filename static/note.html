@@ -13,11 +13,11 @@
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
 
-<button type="button" onclick="startTuning()" id="startTuningButton">Afinar</button>
-<button type="button" onclick="soundNote()" id="soundNoteButton">Sonar nota</button>
-<button type="button" onclick="repeat()" id="repeatButton">Test repetición</button>
-<button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
-<button type="button" onclick="nextNote()" id="nextNoteButton">Próxima nota</button>
+<button type="button" onclick="startTuning()" id="startTuningButton"  	class="disable-during-playback">Afinar</button>
+<button type="button" onclick="soundNote()"   id="soundNoteButton" 		class="disable-during-playback">Sonar nota</button>
+<button type="button" onclick="repeat()"      id="repeatButton" 		class="disable-during-playback">Test repetición</button>
+<button type="button" onclick="stopTuning()"  id="stopTuningButton">Stop</button>
+<button type="button" onclick="nextNote()"    id="nextNoteButton" 		class="disable-during-playback">Próxima nota</button>
 
 <div class="middlediv"></div>
 <table>
@@ -70,8 +70,8 @@
 	  <span>Duración de la nota/silencio [mseg]:</span>
 	  <input type=""text" id="autoNoteDuration" size="30" oninput="validateAutoNoteDuration()"/>
 	  <p></p> 
-	  <button onclick="saveRepetitionData()">Guardar</button>
-	  <button onclick="closeRepetitionModal()">Cancelar</button>
+	  <button onclick="saveRepetitionData() " class="disable-during-playback">Guardar</button>
+	  <button onclick="closeRepetitionModal()" class="disable-during-playback">Cancelar</button>
     </div>
   
 </div>
@@ -127,7 +127,7 @@ async function updateNoteInfo( notelist ) {
 	textById("tuningcaption", tlt("Afinación") + "(-" + MAX_CENTS + tlt(" a ") + MAX_CENTS + " cents)") ;
 	
 	let tuningBody = document.getElementById( "tuningbody" );
-	tuningBody.innerText = "" ;
+	tuningBody.textContent = "" ;
 	centslist = note["centslist"] ;
 	for( let j = 0 ; j < centslist.length ; j++ ){
 		let row = insertRow( tuningBody, ["", ""]);
@@ -165,11 +165,11 @@ async function updateNoteInfo( notelist ) {
 		  }
 		  let centsBar = document.getElementById(elename);
 		  centsBar.draw( cents );
-		  doctext.innerText = Math.round(cents) ;
+		  doctext.textContent = Math.round(cents) ;
         }
         else{
             docele.style.visibility = "hidden" ;
-			doctext.innerText = "..." ;
+			doctext.textContent = "..." ;
         }
 	}
 	for( let j = 0 ; j < amplistdb.length ; j++ ){
@@ -181,11 +181,11 @@ async function updateNoteInfo( notelist ) {
             docele.style.visibility = "visible" ;
 			let dbBar = document.getElementById(elename);
 			dbBar.draw( ampdb );
-			doctext.innerText = Math.round( ampdb ) ;
+			doctext.textContent = Math.round( ampdb ) ;
         }
         else{
             docele.style.visibility = "hidden" ;
-			doctext.innerText = "..." ;
+			doctext.textContent = "..." ;
         }
 	}
 }
@@ -302,7 +302,7 @@ async function nextNote(){
 translate_html();
 getNoteInfo() ;
 showRepeat( getRepeatData() );
-commonGetProgress.setSleep( 5_000 );
+commonGetProgress.setSleep( 2_000 );
 commonGetProgress.startBackground();
 
 </script>

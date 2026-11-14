@@ -268,6 +268,7 @@ class Battery:
             return pr < _BATTERY_LOW_PERCENT
 
     def complement_progress( self, progress ):
+        # >>> If no calibration omit?
         progress["bat_low"] = self.battery_info["low"]
         progress["bat_percent_remaining"] = self.battery_info["percent_remaining"]
         progress["bat_remaining_seconds"] = self.battery_info["remaining_seconds"]

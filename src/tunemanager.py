@@ -280,7 +280,7 @@ class TuneManager:
             except KeyError:
                 self.logger.info(f"File {filename} was already removed from tunelib.json")
                 # >>> transition only? filename and id don't match
-                # >>> i.e. tunelib got corrupt. This is result of a test, never seen happen elsewhere.
+                # >>> i.e. tunelib got corrupt. This was result of a test, never seen happen elsewhere.
                 fndict = { tune[_TLCOL_FILENAME]: tune[_TLCOL_ID] 
                      for tune in newtunelib.values() }
                 if filename in fndict:
@@ -290,6 +290,11 @@ class TuneManager:
         
         # Get file date
         try:
+            # >>> this is what takes time: about 200 ms/file with 1400 files
+            # and about 10 or 20 with small tunelib.
+            # Bucket=1 hash byte means 64 buckets = at most 25 files/bucket. Metadata per
+            # bucket about 1800 bytes, so only half full. Better use 32 buckets.
+            # use 
             file_timestamp = os.stat(config.TUNELIB_FOLDER + filename)[8]
         except OSError:
             file_timestamp = 0
@@ -377,6 +382,9 @@ class TuneManager:
 
         # If there is a "sync all" in change_queue, then queue all files
         if any((tlop[0]==_TLOP_SYNCALL for tlop in change_queue)):
+            # Sync does not allow to play music, stop playback.
+            from drehorgel import setlist
+            setlist.stop_playback()
             # Must do a complete refresh
             # Compare tunelib.json with tunelib/*.mid
             # and update tunelib.json.
@@ -414,25 +422,26 @@ class TuneManager:
             self.logger.info("Fast tunelib sync will start now")
 
         t0 = time.ticks_ms()
+        start_time = t0
         n = 0
         for op, p1,p2,p3 in change_queue:
             n += 1
             self.sync_count += 1
             if scheduler.is_player_active():
                 # This could only happen with a "fast sync" but not
-                # with a full sync. A full sync is started by the
-                # tunelibedit.html web page and the player is stopped.
+                # with a full sync because the player is stopped.
                 # Whereas a fast sync is started by the _sync_process
                 # with file modifications only, and thus takes ony
                 # a few seconds.
                 self.logger.info("Player started, postponing sync")
                 return
             # >>> add LED blinking color to show sync in progress
+            # Time here should be less than timeout in common.js fetchProgress()
+            # to avoid triggering false timeout.
             if time.ticks_diff(time.ticks_ms(), t0) > 5000 or n == 1:
-                # Every 5 seconds yield a bit to feed browser.
-                await asyncio.sleep_ms(1000)
                 t0 = time.ticks_ms()
-                self._sync_progress(f"Sync progress {n/len(change_queue)*100:.0f}%")
+                self._sync_progress(f"Sync progress {n/len(change_queue)*100:.0f}% {time.ticks_diff(time.ticks_ms(),start_time)/n:.1f} msec/file")
+            await asyncio.sleep_ms(0) # yield for the benefit webserver.py and garbage collection
 
             if op == _TLOP_FILE_UPDATE or op == _TLOP_FILE_DELETE:
                 # [_TLOP_FILE_UPDATE, p1:filename, p2:filesize, 0 ]
@@ -638,6 +647,13 @@ class TuneManager:
                     # that empties the cache.
                     self.cache_midi( setlist.get_top() )
             await asyncio.sleep_ms(2000)
+# >>> error in line 639 no __aexit__
+# main._handle_exception: unhandled asyncio exception {'future': <Task>, 'message': "Task exception wasn't retrieved", 'exception': AttributeError("'NoneType' object has no attribute '__aexit__'",)}
+# 00:00:04 - startup - EXCEPTION - asyncio global exception handler
+#        Traceback (most recent call last):
+#          File "asyncio/core.py", line 1, in run_until_complete
+#          File "crank-organ/src/tunemanager.py", line 639, in midifile_cache_process
+#        AttributeError: 'NoneType' object has no attribute '__aexit__'
 
     def cache_midi( self, tuneid ):
         if not tuneid:

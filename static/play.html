@@ -13,6 +13,7 @@
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
+<h2 id="no_tune_span" style="display:none"></h2>
 <table id="main_info_table" style="display:none">
 	<tbody>
 		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
@@ -42,35 +43,35 @@
 				<span id="repeats_count">0</span>
 				<span>repeticiones de</span>
 				<span id="repeats_requested">0</span>
-				<a onclick="repeats_requested(1)" style="cursor:pointer">🔼</a>
-				<a onclick="repeats_requested(-1)" style="cursor:pointer">🔽</a>
+				<button onclick="repeats_requested(1)" class="minibutton">🔼</button>
+				<button onclick="repeats_requested(-1)" class="minibutton">🔽</button>
 			</td>
 		</tr>
 	</tbody>
 </table>
 <table>
 	<tbody>
-		<tr id="timebar_row"><td id="progress">&nbsp;</td><td><canvas id="timebar" is="bar-graph"></canvas></td></tr>
+		<tr id="timebar_row"><td id="progress_td">&nbsp;</td><td><canvas id="timebar" is="bar-graph"></canvas></td></tr>
 	</tbody>
 </table>
-<span id="no_tune_span">No hay melodía en curso</span>
 
 <span id="setlist_span">
 	<div class="middlediv">
 		<a href="#crank_span" style="color:white">&#11015;</a>
 		Setlist<span id="totalDuration"></span></div>
-
+	<span id="setlistEmpty" style="display:none">El setlist está vacío.</span>
+	
 	<table id="setlistTable">
 		<tbody id="setlistBody">
 		</tbody>
 	</table>
 	<span id="setlistButtons">
-		<button type="button" id="saveSetlist" is="setlist-menu"></button>
-		<button type="button" id="loadSetlist" is="setlist-menu"></button>
+		<button type="button" id="saveSetlist" is="setlist-menu" class="disable-during-playback"></button>
+		<button type="button" id="loadSetlist" is="setlist-menu" class="disable-during-playback"></button>
 		<button type="button" id="clearSetlist">Borrar setlist</button>
 		<button type="button" id="shuffleSetlist">Desordenar setlist</button>
-		<button type="button" id="shuffleAllTunes">Desordenar todos</button>
-		<button type="button" id="shuffle3Stars">Desordenar ⭐⭐⭐</button>
+		<button type="button" id="shuffleAllTunes" class="disable-during-playback">Desordenar todos</button>
+		<button type="button" id="shuffle3Stars" class="disable-during-playback">Desordenar ⭐⭐⭐</button>
 		<button type="button" id="go_history">Historia</button>
 	</span>
 </span>
@@ -78,15 +79,16 @@
 	<div class="middlediv">
 		<a href="#crank_span" style="color:white">&#11015;</a>
 		Letra&nbsp;
-		<a onclick="formatLyrics(1)" id="col1_link">1️⃣</a>&nbsp;
-		<a onclick="formatLyrics(2)" id="col2_link">2️⃣</a>
+		<button onclick="formatLyrics(1)" id="col1_link" class="minibutton">1️⃣</button>&nbsp;
+		<button onclick="formatLyrics(2)" id="col2_link" class="minibutton">2️⃣</button>
 	</div>
 	<table id="lyricsTable">
 		<tbody>
-			<tr><td id="col1"></td><td id="col2"></td></tr>
+			<tr><td id="col1"  style="white-space: pre-line"></td><td id="col2"  style="white-space: pre-line"></td></tr>
 		</tbody>
 	</table>
 </span>
+
 <p></p>
 <span id="crank_span">
 	<div class="middlediv">
@@ -95,9 +97,9 @@
 		<span>Ajuste velocidad:</span>
 		<span id="velocityText"></span>
 		<br>
-		<a onclick="set_velocity(-5)" style="cursor:pointer">&#9194;&nbsp;</a>
+		<button onclick="set_velocity(-5)" class="minibutton">&#9194;&nbsp;</button>
 		<canvas id="velocityGraph" is="needle-bar"></canvas>
-		<a onclick="set_velocity(5)" style="cursor:pointer">&nbsp;&#9193;</a>
+		<button onclick="set_velocity(5)" class="minibutton">&nbsp;&#9193;</button>
 		<br>
 		<span name="crankInfo">
 
@@ -134,6 +136,7 @@ let ROW_NAMES = map_tlcol_names( ROW_MAP );
 
 function assignButtonHandlers(){
 	function abh( id, func ){
+		// add button handler
 		let element = document.getElementById(id);
 		element.onclick = func ;
 	}
@@ -153,13 +156,17 @@ function assignButtonHandlers(){
 }
 
 async function fillSetlistTable(){
-	
-	// Called once at start of page to fill setlist table
+	// For 1400 tunes:
+	// 		Takes about 1400 msec to fetch tunelib.json
+	// 		Takes about 170 msec to fill table
+	// All elements of the tunelib are put into the setlist table
+	// and then the rows in the setlist are just made visible
+	// and invisible instead of changing the contents of the table.
 	let tunelib = await tunelibCache.get() ;
-
 	let setlistBody = document.getElementById("setlistBody");
 	setlistBody.innerHTML = "";
 
+	// For loop takes about 80-130ms for 680 tunes
 	for( const [tuneid, tune] of Object.entries(tunelib)) { 
 		let row = insertRow( setlistBody, ["", "", "","","","", ""] );
 		row.style.display = "none";
@@ -170,36 +177,39 @@ async function fillSetlistTable(){
         tuneTitle.setTune( tune, { beforeFormat:"", afterFormat:"mds", shortClick:false, menu:multipleSetlists } );
         row.cells[1].appendChild( tuneTitle );
 
-		// All lines except the first have up and top icon
+		// Up icon to move one position up in setlist
 		let b2 = document.createElement("button");
 		b2.onclick = function(){ upSetlist(tuneid) };
-		b2.innerText = " 🔼 "; // &#128316; Upwards button
+		b2.textContent = " 🔼 "; // &#128316; Upwards button
 		b2.classList.add("minibutton");
 		row.cells[2].appendChild( b2 );
 
+		// Down icon to move one position down in setlist
 		let b3 = document.createElement("button");
 		b3.onclick = function(){ downSetlist(tuneid) };
-		b3.innerText = " 🔽 "; // &#128317; Downwards button
+		b3.textContent = " 🔽 "; // &#128317; Downwards button
 		b3.classList.add("minibutton");
 		row.cells[3].appendChild( b3 );
 
+		// Move to the top of the setlist
 		let b4 = document.createElement("button");
 		b4.onclick = function(){ topSetlist(tuneid) };
-		//b4.innerText = " 🔝 "; //&#128285; "top arrow" icon
-		b4.innerText = " ⏫ ";
+		//b4.textContent = " 🔝 "; //&#128285; "top arrow" icon
+		b4.textContent = " ⏫ ";
 		b4.classList.add("minibutton");
 		row.cells[4].appendChild( b4 );
 
+		// Move to the end of the setlist
 		let b5 = document.createElement("button");
 		b5.onclick = function(){ bottomSetlist(tuneid) };
-		b5.innerText = " ⏬ "; // Wastebasket  &#128465;
+		b5.textContent = " ⏬ "; // Wastebasket  &#128465;
 		b5.classList.add("minibutton");
 		row.cells[5].appendChild( b5 );
 
-
+		// Remove from setlist
 		let b6 = document.createElement("button");
 		b6.onclick = function(){ dropSetlist(tuneid) };
-		b6.innerText = " 🗑️ "; // Wastebasket  &#128465;
+		b6.textContent = " 🗑️ "; // Wastebasket  &#128465;
 		b6.classList.add("minibutton");
 		row.cells[6].appendChild( b6 );
 
@@ -218,54 +228,85 @@ function listsEqual( l1, l2 ){
 }
 
 function updateSetlistTable(setlist, tunelib){
-
-	let setlistBody = document.getElementById("setlistBody");
-
+	// I setlist>500, this takes about 60 to 130 msec.
+	// If setlist is small, this takes about 40 to 60 msec.
+	// The sortSetlist() is fast, no need to optimize sort.
+	// updateSetlistTable is called only if setlist changes.
+	// Invisible rows go to the end, this makes that row positions
+	// are equivalent to setlist positions (used by updateButtons)
+	let invisible = 99999;
 	for( const [tuneid, tune] of Object.entries(tunelib)){
         const in_setlist = setlist.includes(tuneid);
 		let position = null;
 		const row = document.getElementById(tuneid);
 		if( in_setlist ){
-			position = setlist.indexOf( tuneid ) + 1 ;
-			row.cells[0].innerText = ""+position;
+			position = setlist.indexOf( tuneid )+1 ;
+			row.cells[0].textContent = ""+position;
 			row.style.display = "";
-			if( position == 1 ){
-				// hide 2=up and 4=top
-				row.cells[2].childNodes[0].style.display = "none";
-				row.cells[3].childNodes[0].style.display = "";
-				row.cells[4].childNodes[0].style.display = "none";
-				row.cells[5].childNodes[0].style.display = "";
-			}
-			else if( position == setlist.length ){
-				// hide 3=down and 5=bottom
-				row.cells[2].childNodes[0].style.display = "";
-				row.cells[3].childNodes[0].style.display = "none";
-				row.cells[4].childNodes[0].style.display = "";
-				row.cells[5].childNodes[0].style.display = "none";
-			}
-			else{
-				// Make all visible
-				row.cells[2].childNodes[0].style.display = "";
-				row.cells[3].childNodes[0].style.display = "";
-				row.cells[4].childNodes[0].style.display = "";
-				row.cells[5].childNodes[0].style.display = "";
-			}
 		}
 		else {
 			// If not in setlist, hide row
 			row.style.display = "none";
-			// All rows not in setlist are sorted to the end
-			// of the table
-			if( row.cells[0].innerText != "99999"){
-				row.cells[0].innerText = "99999";
-			}
+			row.cells[0].textContent = ""+invisible;
+			invisible++;
 		}
 	}
 	sortSetlist();
 
 }
+
+function updateButtons(progress){
+	// For setlist>500, processing updateButtons takes 1-3 msec in total
+	function set_buttons( row, values){
+		for( let i=2;i<=6;i++){
+			row.cells[i].childNodes[0].disabled = values[i-2];
+		}
+	}
+	// Show/hide setlist buttons
+	const setlist = progress["setlist"] ;
+	const rows = $g("setlistBody").rows;
+	if( setlist.length == 1){
+		set_buttons( rows[0], [true,true,true,true,true]);
+		return;
+	}
+	for( const row of rows ){
+		const rownum = parseInt(row.cells[0].textContent);
+		if( rownum == 1  ){
+			set_buttons( row, [true, false,true, false,false]);
+		}
+		else if( rownum == setlist.length ){
+			set_buttons( row, [false,true, false,true, false]);
+			break;
+		}
+		else{
+			set_buttons( row, [false,false,false,false,false]);
+		}
+	}
+	if(!progress["playback_enabled"]){
+		// Hide all buttons if playback disabled. Requires reboot.
+		// This overrides the previous settings.
+		for( const ele of document.querySelectorAll("button")){
+			ele.disabled = true;
+		}
+	}
+	else{
+		// If playback enabled (normal case):
+		$g("startButton").disabled =  progress["status"] != "waiting";
+		$g("daCapoButton").disabled =  progress["status"] == "waiting";
+	}
+
+
+}
+
+
+
 let multipleSetlists = false;
 async function pageRefreshProcess() {	
+	// For a new page, cache empty, rebooted microcontroller
+	// Time from start of page to start of "await lyricsCache.get()"
+	// is 2.9 sec = 0.5s get config+0.6s set time zone+1.4s get tunelib json+0.5s get progress
+	// Local javascript processing is about 0.2 to 0.3 sec.
+
 	// This is the "main program" for this page
 
 	// Get this configuration option once and for all
@@ -279,6 +320,7 @@ async function pageRefreshProcess() {
 	document.getElementById("rpsecGraph").setParam( 60, 0, 2, 0 );
 	// Fill page, then start refresh cycle
 	await fillSetlistTable();
+	updateButtons( {"is_player_active":false, "status":"waiting", "setlist":[], "playback_enabled":true} );
 	commonGetProgress.setSleep( 2_000 );
     commonGetProgress.registerCallback( updateProgress );
 	JsonCache.setReloadIfTunelibChanged( true );
@@ -289,29 +331,26 @@ async function pageRefreshProcess() {
 
 let previous_setlist = [];
 async function updateProgress( progress ) {
-
 	// Called by commonGetProgress every few seconds with the progress
-
+	// For 1400 tunes, and 1400 in the setlist:
+	// 		takes 200 to 400 msec first time.
+	//		takes 150 to 200 msec if setlist was changed
+	//		takes 10 to 20 msec for normal update
+	// For 1400 tunes and 4 in setlist:
+	//		takes 200 to 400 first time
+	//		takes 80 to 90 if setlist was changed
+	//		takes 1 to 2 msec for normal update
     if( progress == undefined ){
         return ;
     }
-	// disable slow shuffles during playback
-	for( const id of ["shuffleAllTunes","shuffle3Stars", "saveSetlist", "loadSetlist"]){
-		const button = document.getElementById(id);
-		button.disabled = progress["status"] == "playing";
-	}	
-	
-	let tunelib = progress["tunelib"]; 
 
+	let tunelib = progress["tunelib"]; 
+	let setlist = progress["setlist"] ;
+	
     //let tune_requests = progress["tune_requests"] ;
     //if( tune_requests == undefined ){
     //    tune_requests = {} ;
     //}
-
-	let startButton = document.getElementById("startButton");
-	let daCapoButton = document.getElementById("daCapoButton");
-		startButton.disabled =  progress["status"] != "waiting";
-		daCapoButton.disabled =  progress["status"] == "waiting";
 
 	let toggle_button = document.getElementById("toggleSetlistLyricsButton") ;
     let s = "" ;
@@ -323,12 +362,14 @@ async function updateProgress( progress ) {
 		// No tune playing nor pending
 		showHideElement( "main_info_table", false );
 		showHideElement( "no_tune_span", true ) ;
-        
-		textById("progress", "...") ;
+        $g("no_tune_span").textContent = tlt("No hay melodía en curso") ;
+		showHideElement( "timebar_row", false ) ;
+
+		textById("progress_td", "...") ;
 		document.getElementById("timebar").draw( 0 );
 		toggle_button.disabled = true;
 		let col1 = document.getElementById( "col1") ;
-    	col1.innerText ="" ;
+    	col1.textContent ="" ;
 		// Make sure to show setlist controls if no tune
 	    await toggleSetlistLyrics( "setlist" ) ;
 	}
@@ -337,6 +378,7 @@ async function updateProgress( progress ) {
 		if( tune != undefined ){
 			showHideElement( "main_info_table", true );
 			showHideElement( "no_tune_span", false ) ;
+			showHideElement( "timebar_row", true ) ;
 
 			// better do not use spectator format of title here
 			//let spectator_name = tune_requests[CURRENT_TUNEID];
@@ -351,7 +393,7 @@ async function updateProgress( progress ) {
 			for( let i=0; i<ROW_MAP.length; i++ ){
 				let tlcol = ROW_MAP[i];
 				let row = document.getElementById("tlcol" + i); 
-				row.childNodes[0].innerText = ROW_NAMES[i] ;
+				row.childNodes[0].textContent = ROW_NAMES[i] ;
 				let data = tune[tlcol] ;
 				if( tlcol == TLCOL_TIME ){
 					data = formatMilliMMSS( tune[TLCOL_TIME] );
@@ -362,7 +404,7 @@ async function updateProgress( progress ) {
 				else if( tlcol == TLCOL_DATEADDED ){
 					data = ymdhm( tune[TLCOL_DATEADDED] );
 				}
-				row.childNodes[1].innerText = data ;
+				row.childNodes[1].textContent = data ;
 				// Rows i==5 and i==6 have time mm:ss and date added, so they
 				// can be always be shown.
 				if( i <= 4 ){
@@ -376,7 +418,7 @@ async function updateProgress( progress ) {
 			// Update progress bar every second, first call
 			let percent = progress["playtime"]/tune[TLCOL_TIME]*100 ; // Time
 			status_text = make_status_text( progress["status"], percent, progress["repeats_count"] ) ;
-			textById("progress", status_text) ;
+			textById("progress_td", status_text) ;
 			document.getElementById("timebar").draw( percent );
 			// May be interesting to show air consumption graph
 			// to alert of more air needed ahead of time.
@@ -391,15 +433,18 @@ async function updateProgress( progress ) {
 			// Show setlist, button caption "Show lyrics"
 			await toggleSetlistLyrics( "setlist" );
 		}
-		
 	}
 
-	let setlist = progress["setlist"] ;
+	
+	showHideElement( "setlistEmpty", setlist.length == 0 );
+
 	if( !listsEqual( setlist, previous_setlist ) ){
 		updateSetlistTable(setlist, tunelib);
 		TuneTitle.updateProgress( progress );
 		previous_setlist = setlist;
 	}
+	updateButtons(progress);
+
 	let totalDuration = 0;
 	for( let tuneid of setlist ){
 		if( tuneid in tunelib ){
@@ -475,7 +520,7 @@ async function updateProgress( progress ) {
 				// add check box for register if not there
 				regs.appendChild( regcheck );
 				let regspan = document.createElement( "span" );
-				regspan.innerText = reg_name ;
+				regspan.textContent = reg_name ;
 				regs.appendChild( regspan );
 				let regbr = document.createElement( "br" );
 				regs.appendChild( regbr );
@@ -504,7 +549,7 @@ async function updateProgress( progress ) {
 		document.getElementById("col1_link").style.display = "none" ;
 		document.getElementById("col2_link").style.display = "none" ;
 		document.getElementById("timebar").style.display = "none";
-		document.getElementById("progress").style.display = "none";
+		document.getElementById("progress_td").style.display = "none";
 		
 		let d = document.getElementById("controlButtons");
 		d.style.display = "none" ;
@@ -611,7 +656,7 @@ async function toggleSetlistLyrics( what ){
 	let toggle_button = document.getElementById( "toggleSetlistLyricsButton" ) ;
 	let show = what;
 	if( what == "toggle" ){
-		// If no what, toggle between setlist and lyrics
+		// Toggle between setlist and lyrics
 		show = setlist_span.style.display == "none" ? "setlist" : "lyrics" ;
 	}
 	if( !has_lyrics ){
@@ -621,12 +666,12 @@ async function toggleSetlistLyrics( what ){
 	if( show == "setlist" ){
 		setlist_span.style.display = "";
 		lyrics_span.style.display = "none" ;
-		toggle_button.innerText = tlt("Mostrar letra") ;
+		toggle_button.textContent = tlt("Mostrar letra") ;
 	}
 	else{
 		setlist_span.style.display = "none";
 		lyrics_span.style.display = "" ;
-		toggle_button.innerText = tlt("Mostrar setlist") ;
+		toggle_button.textContent = tlt("Mostrar setlist") ;
 	}
 }
 
@@ -639,9 +684,9 @@ async function formatLyrics(c){
 	let col2 = document.getElementById( "col2") ;
 	let lyrics = await lyricsCacheTuneid( CURRENT_TUNEID ) ;
 	if( LYRIC_COLUMNS == 1 ){
-		col1.innerText = lyrics ;
+		col1.textContent = lyrics ;
 		col1.colSpan = 2 ;
-		col2.innerText = "";
+		col2.textContent = "";
 	}
 	else{
 		// Format lyrics in two columns, search for \n in the middle
@@ -655,9 +700,9 @@ async function formatLyrics(c){
 		// Split in two halves, trim \n and spaces at the beginning/end
 		let l1 = lyrics.substring(0,i+1);
 		let l2 = lyrics.substring(i);
-		col1.innerText = l1.trim() ;
+		col1.textContent = l1.trim() ;
 		col1.colSpan = 1 ;
-		col2.innerText = l2.trim();
+		col2.textContent = l2.trim();
 
 	}
 	return lyrics;
@@ -670,14 +715,16 @@ async function toggleRegister( reg_name ){
 }
 
 function sortSetlist() {
-
     const tbody = document.getElementById("setlistBody");
     const rows = Array.from(tbody.querySelectorAll("tr"));
+	// Sort by column that shows the position
     rows.sort((rowA, rowB) => {
         return parseInt(rowA.cells[0].textContent) - parseInt(rowB.cells[0].textContent); 
     });
 
-    // Clear and re-append rows
+    // Append rows again. Since a DOM element can exist only in one
+	// place, this code moves each row from its place
+	// to the end of the table in sorted order.
     rows.forEach(row => tbody.appendChild(row));
 }
 
@@ -704,17 +751,7 @@ function make_status_text( progress_status, percentage, repeats ) {
 	}
 	return status_text ;
 }
-
-// function flipCollapse(collapseAnchorId, tableId){
-//     let collapseElement = document.getElementById(collapseAnchorId);
-//     if( collapseElement.innerText == "▼"){
-//         collapseElement.innerText = "▶";
-//     }
-//     else{
-//         collapseElement.innerText = "▼";
-//     }
-// 	showHideElement(tableId, collapseElement.innerText == "▼" );
-// }    
+   
 translate_html();
 pageRefreshProcess() ;
 

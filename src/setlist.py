@@ -171,12 +171,15 @@ class Setlist:
             # encoder, reset to normal. User can change velocity
             # before the next tune starts.
             crank.set_velocity(50)
- 
+
+            # Save current setlist, perhaps it was changed during playback
+            self._save_current()
 
 
 
     # Setlist managment functions: add/queue tune, start, stop, top, up, down,...
-    def queue_tune(self, tuneid, slot):
+    
+    def queue_tune(self, tuneid, slot=_CURRENT_SETLIST):
         # Should a tuneid that is not in the tunelib
         #  be added to a setlist, that will not matter much
         # since the browser will check setlist against her/his tunelib
@@ -246,8 +249,12 @@ class Setlist:
  
 
     def save(self, slot, slist=None ):
+        if slot == _CURRENT_SETLIST and self.player_task:
+            # Postpone saving current setlist while playing music
+            # At the end of the tune, _CURRENT_SETLIST will be saved.
+            return 
+
         # setlist 0 is written twice at start of tune?
-        
         if not( 0 <= slot < _MAX_SETLIST_SLOTS):
             raise ValueError
 
@@ -363,30 +370,8 @@ class Setlist:
             permutation[j], permutation[i] = permutation[i], permutation[j]
         self._save_current()
 
-    # >>> configure a upper limit for shuffle all/shuffle 3stars?
-    # a) fixed upper limit (512 byte setlist=39 tunes). 
-    #    Optional: If doing shuffle_all again, exclude files
-    #    that have played today. When all have been used,
-    #    start over.
-    #    Pros: simple.
-    #    Cons: invisible magic number.
-    # b) Config limit. Pros: makes limit visible.
-    #    Cons: very static.
-    # c) Ask for maximum of tunes to be included, if
-    #    more than a certain number of tunes, default=39 
-    #    Pros: very visible
-    #    Cons: More complex interaction.
     # In any case, shuffle_all and shuffle_3stars are restricted
-    # during playback, but top/down/up setlist take 0.5msec/item
-    # that is 390msec with 750 tunes in the setlist.
-    # 39 tuens:
-    #   Queue tune, Up/down/bottom etc 40 ms sometimes100
-    #    40 ms, sometimes 100ms
-    # 100 tunes
-    #   queue tune  up/down/bottom etc 100 ms, sometimes 150ms
-    # 236 tunes
-    #   queue tune ,  up/down/bottom etc140 ms sometimes 200ms
-
+    # during playback
     def shuffle_all_tunes(self):
         # Make a new setlist with all tunes and shuffle
         # Must get a deep copy of tunelib to self.current_setlist

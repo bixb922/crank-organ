@@ -34,7 +34,7 @@
                 <button type="button" onclick="reset()">Reset</button>
             </td>
 			<td>
-                 <button type="button" onclick="deepSleep()">Deep sleep</button>
+                 <button type="button" onclick="deepSleep()" class="disable-during-playback">Deep sleep</button>
             </td>
 
         </tr>
@@ -113,7 +113,7 @@
 
 
 <div class="middlediv">WiFi scan</div>
-<button type="button" onclick="wifiScan()">
+<button type="button" onclick="wifiScan()" class="disable-during-playback">
 	WiFi scan
 </button>
 <table>
@@ -175,7 +175,7 @@ async function getDiagInfo( ) {
 	showHideElement( "mcserver_row",  diag["mcserver"] );
 		// value was alredy set by setAllText
 
-	commonGetProgress.setSleep( 5_000 );
+	commonGetProgress.setSleep( 2_000 );
     commonGetProgress.startBackground();
 
 }

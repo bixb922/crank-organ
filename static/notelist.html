@@ -13,12 +13,12 @@
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
 
-<button type="button" onclick="tuneAll()" id="tuneAllButton">Afinar todos</button>
-<button type="button" onclick="scaleTest()" id="scaleTestButton">Escala de prueba</button>
-<button type="button" onclick="allPinTest()" id="allPinTestButton">Prueba pins</button>
-<button type="button" onclick="clearTuning()" id="clearTuningButton">Borrar afinación</button>
-<button type="button" id="avg_frequency_button" onclick="set_avg_frequency()" style="display:none">Usar frecuencia media</button>
-<button type="button" onclick="stopTuning()" id="stopTuningButton">Stop</button>
+<button type="button" onclick="tuneAll()"   		id="tuneAllButton" 			class="disable-during-playback">Afinar todos</button>
+<button type="button" onclick="scaleTest()" 		id="scaleTestButton" 		class="disable-during-playback">Escala de prueba</button>
+<button type="button" onclick="allPinTest()" 		id="allPinTestButton" 		class="disable-during-playback">Prueba pins</button>
+<button type="button" onclick="clearTuning()" 		id="clearTuningButton" 		class="disable-during-playback">Borrar afinación</button>
+<button type="button" onclick="set_avg_frequency()" id="avg_frequency_button" 	class="disable-during-playback"	style="display:none" >Usar frecuencia media</button>
+<button type="button" onclick="stopTuning()" 		id="stopTuningButton">Stop</button>
 <div class="middlediv"></div>
 <span>Afinar a</span> <span id="tuning_frequency">...</span>Hz, 
 <span id="tuned_ok">...</span> <span>afinados</span>,
@@ -112,7 +112,7 @@ async function updateNoteList( notelist ) {
 		// Column 5: pin name
 		let link = document.createElement("a");
 		link.href = `/static/note.html?id=${midi}`;
-		link.innerText = note["name"];
+		link.textContent = note["name"];
 		row.cells[0].appendChild( link ) ;
 		let centsBar = document.createElement("canvas", {is:"needle-bar"});
 		centsBar.id = `tuning${midi}`;
@@ -195,7 +195,7 @@ async function updateTuningStats(){
 	setAllTextById( stats ) ;
 	let avgfreq =  stats["avg_frequency"];
 	if( avgfreq != null && !isNaN(avgfreq)){
-		$g("avg_frequency").innerText = Math.round( avgfreq*10 )/10;
+		$g("avg_frequency").textContent = Math.round( avgfreq*10 )/10;
 		showHideElement( "avg_frequency_span", true );
 		showHideElement( "avg_frequency_button", true );
 	}
@@ -214,7 +214,7 @@ async function set_avg_frequency(){
 
 translate_html();
 refreshNoteList() ;
-commonGetProgress.setSleep( 5_000 );
+commonGetProgress.setSleep( 2_000 );
 commonGetProgress.startBackground();
 
 </script>

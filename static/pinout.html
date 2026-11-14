@@ -30,7 +30,7 @@
         <tbody id="tbodyPinoutSelection"></tbody>
     </table>
     
-    <button type="button" id="savePinoutFilenameButton" onclick="savePinoutFilename()">Save scale</button>
+    <button type="button" id="savePinoutFilenameButton" onclick="savePinoutFilename()" class="disable-during-playback">Save scale</button>
   </span>
 <div class="middlediv">
      <a name="collapse" id="gelaber" style="color:white">▶</a>
@@ -63,10 +63,10 @@
   <span id="transpositionSpan">
     Use the transpose button to transpose up/down until the scale match yours. The intervals between notes are kept. 
     <br>
-    <button type="button" onclick = "transpose(1)"> Transpose one semitone up (+1)</button>
-    <button type="button" onclick = "transpose(-1)"> Transpose one semitone down (-1)</button>
+    <button type="button" onclick = "transpose(1)"  class="disable-during-playback"> Transpose one semitone up (+1)</button>
+    <button type="button" onclick = "transpose(-1)" class="disable-during-playback"> Transpose one semitone down (-1)</button>
     <br>
-     <button type="button" id="saveTransposition" onclick="savePinoutDetail()" style="display:none">Save transposed pinout</button>
+     <button type="button" id="saveTransposition" onclick="savePinoutDetail()" style="display:none" class="disable-during-playback">Save transposed pinout</button>
   </span>
 <div class="middlediv">
     <a name="collapse" id="availability" style="color:white">▶</a>
@@ -119,13 +119,13 @@
         </tbody>
     </table>
     <br>
-    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()" style="display:none">Save pinout definitions</button>
+    <button type="button" id="savePinoutDetailButton" onclick="savePinoutDetail()" style="display:none"  class="disable-during-playback">Save pinout definitions</button>
   </span>
 <div class="middlediv">
     <a id="listByMidi" name="collapse" style="color:white">▶</a>
     List pinout by MIDI note</div>
   <span id="listByMidiSpan">
-    <button type="button" onclick="list_pinout_by_midi_note()">List pinout by MIDI note</button>
+    <button type="button" onclick="list_pinout_by_midi_note()"  class="disable-during-playback">List pinout by MIDI note</button>
     <br>
     <table id="table_list_pinout_by_midi_note" style="display:none">
         <thead id="thead_list_pinout_by_midi_note"></thead>
@@ -718,9 +718,9 @@ async function testPin( pininfo, updown ){
     // If pininfo.midi is blank, and if it's a MIDI over serial,
     // then the server will reply with error message.
     let button = document.getElementById(`test${pininfo.f}`);
-    let originalText = button.innerText;
+    let originalText = button.textContent;
     if( updown == "" ){
-        button.innerText = "Testing";
+        button.textContent = "Testing";
     }
     pininfo.repeat = 8;
     pininfo.pause = 500;
@@ -730,7 +730,7 @@ async function testPin( pininfo, updown ){
         pininfo.pause = 120 ;
     }
     await fetch_json( "/test_pin", pininfo );
-    button.innerText = originalText;
+    button.textContent = originalText;
 }
  
 
@@ -739,9 +739,9 @@ async function testCrank(f){
     let endTest = Date.now() + 60_000;
     let tachovalue = document.getElementById(`tachovalue${f}`)
     while( Date.now() <= endTest ){
-        tachovalue.innerText = (await fetch_json("/tacho_raw_value"))["value"];
+        tachovalue.textContent = (await fetch_json("/tacho_raw_value"))["value"];
     }
-    tachovalue.innerText = "Test ended";
+    tachovalue.textContent = "Test ended";
 }
 
 function showNoteName( f ){
@@ -766,7 +766,7 @@ function showNoteName( f ){
         textById( `nn.${f}`,  nn ) ; 
         let n = document.getElementById( "program_name." + f );
         if( n != null && p != null ){
-            n.innerText = programName( p.value );
+            n.textContent = programName( p.value );
         }
         return;
     }
@@ -868,10 +868,10 @@ function addRow( pdtype, rowid ){
 async function list_pinout_by_midi_note(){
     data = await fetch_json("/list_pinout_by_midi_note/" + encodePath(currentPinoutFilenameAbs())) ;
     let thead = document.getElementById("thead_list_pinout_by_midi_note" );
-    thead.innerText = "";
+    thead.textContent = "";
     for( let v of ["↓MIDI", "\u{a0}Note",  "\u{a0}Pin", "\u{a0}Rank", "\u{a0}Register"] ){
         let th = document.createElement( "th" );
-        th.innerHTML = v;
+        th.textContent = v;
         thead.appendChild( th );
     }
     let previousNote = null ;
@@ -933,7 +933,7 @@ async function get_available_pins(){
             textById( key, value )
         }
         const tdcount = document.getElementById(key+"count");
-        tdcount.innerText = value.length;
+        tdcount.textContent = value.length;
         tdcount.style.textAlign = "right";
     }
 
@@ -963,7 +963,7 @@ function makeButton( id, text, onclick) {
     if( text == "Test"){
         button.classList.add( "smallbutton" );
     }
-    button.innerText = text;
+    button.textContent = text;
     return button;
 }
 function makeRadio( id, name, value, onchange ){
@@ -982,7 +982,7 @@ function insertFormRow( body, rowid, data ){
     }
 	for( let v of data ){
         if( typeof v === 'string' || v instanceof String ){
-		    row.insertCell(-1).innerText = "" + v ;
+		    row.insertCell(-1).textContent = "" + v ;
         }
         else {
             // If not a string, this must be a DOM element
@@ -996,7 +996,7 @@ function insertFormRow( body, rowid, data ){
 let tableDirection = 1;
 function sortTable() {
     // https://stackoverflow.com/questions/14267781/sorting-html-table-with-javascript
-    const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
+    const getCellValue = (tr, idx) => tr.children[idx].textContent || tr.children[idx].textContent;
 
     const comparer = (idx, asc) => (a, b) => ((v1, v2) => 
     v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
@@ -1014,11 +1014,11 @@ function sortTable() {
         let headerCells = document.getElementsByName("filelistth");
         for( let cell of document.querySelectorAll('th') ){
             // erase previous arrows
-            cell.innerHTML = "&nbsp;" + cell.innerText.substring(1);
+            cell.innerHTML = "&nbsp;" + cell.textContent.substring(1);
         }
         // Add new up/down arrow to sort column
         if( sortHeader ){
-            sortHeader.innerHTML = (tableDirection?"↓":"↑") + sortHeader.innerText.substring(1);
+            sortHeader.innerHTML = (tableDirection?"↓":"↑") + sortHeader.textContent.substring(1);
         }
         tableDirection = 1 - tableDirection ;
 
@@ -1052,7 +1052,7 @@ async function test_mic(f){
     if( micgraphrow.style.display == "" ){
         // "Row is visible" means test_mic is currently running. 
         // Signal loop below to cancel using micgraphrow.style.display as flag.
-        mictext.innerText = "";
+        mictext.textContent = "";
         micgraphrow.style.display = "none";
         return;
     }
@@ -1065,13 +1065,13 @@ async function test_mic(f){
         let zc = zeroCrossings(signal);
         let gpiotest = resp["gpiotest"];
         // gpiotest NC: not connected
-        mictext.innerText = `count=${n} pin=${micpin} duration=${Math.round(duration)} msec zero crossings=${zc} gpiotest=${gpiotest}`;
+        mictext.textContent = `count=${n} pin=${micpin} duration=${Math.round(duration)} msec zero crossings=${zc} gpiotest=${gpiotest}`;
         if( micgraphrow.style.display == "none"){
             // cancelled
             break;
         }
     }
-    mictext.innerText = "";
+    mictext.textContent = "";
     micgraphrow.style.display = "none";
     clearMicGraph(graph_canvas, ctx );
 }
@@ -1195,17 +1195,16 @@ function getSelectedOption( id ){
 }
 function initializeDivCollapse(){
     function showHideCollapse( collapseAnchor ){
-        showHideElement(collapseAnchor.id+"Span", collapseAnchor.innerText == "▼" );
+        showHideElement(collapseAnchor.id+"Span", collapseAnchor.textContent == "▼" );
     }
     for( const collapseAnchor of document.getElementsByName("collapse")){
-        console.log(">>>collapseAnchor for", collapseAnchor);
         collapseAnchor.addEventListener("click", (event)=>{
             const target = event.target;
-            if( target.innerText == "▼"){
-                target.innerText = "▶";
+            if( target.textContent == "▼"){
+                target.textContent = "▶";
             }
             else{
-                target.innerText = "▼";
+                target.textContent = "▼";
             }
             showHideCollapse(target);
         });
@@ -1216,7 +1215,7 @@ initializeDivCollapse();
 
 getPinoutList();
 
-commonGetProgress.setSleep( 5_000 );
+commonGetProgress.setSleep( 2_000 );
 commonGetProgress.startBackground();
 
 </script>

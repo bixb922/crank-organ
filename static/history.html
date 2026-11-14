@@ -32,7 +32,7 @@
 <div class="middlediv"></div>
 	<span>Si historia más antigua que</span>
 	<input type="text" size="3" value="90" id="days"/><span>días</span>,
-	<button onclick="deleteHistory()" id="purgeButton" name="deleteButtons">Borrar</button>
+	<button onclick="deleteHistory()" id="purgeButton"  class="disable-during-playback">Borrar</button>
 <div class="footerdiv"></div>
 </body>
 
@@ -42,6 +42,11 @@
 
 let pageHeader = new PageHeader().setTitle( tlt("Historia"), "BACK" );
 
+// Make a dictionary, key is date and data is minimum (and maximum)
+// ESP32 timestamp seen for that date. That avoids translating back
+// from local date to UTC.
+let date_min = {};
+let date_max = {};
 
 async function getHistory( ) {
     // Don't use cached version here, we need to show history up-to-date.
@@ -64,21 +69,30 @@ async function getHistory( ) {
 
         // Convert date from seconds in ESP32 epoch to string
         // date: yyyy-mm-dd, time: hh:mm
-        let datetime = ymdhm( hist_element[1] );
+        const timestamp = hist_element[1];
+        const datetime = ymdhm( timestamp );
         const [date, time] = datetime.split(" ");
 
         // Insert separator row with date when date changes
         if( date != previous_date) {
+            date_min[date] ??= timestamp;
+            date_max[date] ??= timestamp;
             let row = insertRow( body, [date, "", ""]);
             row.cells[0].colSpan = 2;
             row.cells[0].style.fontWeight="bold";
             let deleteDay = document.createElement("button");
-            deleteDay.innerText = "🗑️";
+            deleteDay.textContent = tlt("Borrar"); // "🗑️";
             deleteDay.onclick = ()=>{deleteHistoryDate(date)};
-            deleteDay.name = "deleteButtons";
+            deleteDay.classList.add("disable-during-playback");
+            // deleteDay.classList.add("minibutton");
             row.cells[1].appendChild( deleteDay );
          };
         previous_date = date ;
+        // Keep track of min and max ESP32 timestamp for each date
+        // to avoid translating back from local date to ESP32/UTC timestamp
+        date_min[date] = Math.min(date_min[date], timestamp);
+        date_max[date]  = Math.max(date_max[date], timestamp);
+
         // Formerly hist_element[3] was used to mark if tune was requested via web site, but this is no longer used.
         // Now it's the repeat count
         // Mark if tune has been requested via web site
@@ -102,24 +116,15 @@ async function getHistory( ) {
         }
         else{
             let tuneTitle = document.createElement( "span" );
-            tuneTitle.innerText = tlt("(borrado)");
+            tuneTitle.textContent = tlt("(borrado)");
             row.cells[1].appendChild( tuneTitle );
         }
-        
         i += 1;
     }
     commonGetProgress.setSleep( 2_000 );
     commonGetProgress.registerCallback( (progress)=>TuneTitle.updateProgress( progress ) );
-    commonGetProgress.registerCallback( updateButtons );
     JsonCache.setReloadIfTunelibChanged(true);
     commonGetProgress.startBackground();
-}
-
-async function updateButtons( progress ){
-    // disable slow buttons during playback
-	for( const button of document.getElementsByName("deleteButtons")){
-        button.disabled =  progress["status"] == "playing";
-	}
 }
 
 async function deleteHistory(){
@@ -129,10 +134,12 @@ async function deleteHistory(){
         showPopup(document.getElementById("days"), "must be numeric" );
         return;
     }
-	resp = await fetch_json( "/delete_history/" + days ) ;
-    showPopup("", tlt("Historia truncada") ); 
-    await sleep_ms(1000);
-    window.location.reload() ;
+    if( confirm( tlt("Borrar historia?"))){
+        resp = await fetch_json( "/delete_history/" + days ) ;
+        showPopup("", tlt("Historia truncada") ); 
+        await sleep_ms(1000);
+        window.location.reload() ;
+    }
 }
 
 async function make_history_percentage( tune, percentage, repeat_count ){
@@ -173,9 +180,9 @@ async function make_history_percentage( tune, percentage, repeat_count ){
     return text ;
 }
 
-async function deleteHistoryDate( date ){
+async function deleteHistoryDate( date){
     if( confirm( tlt("Borrar historia de") + " " + date + " ?") ){
-        let resp = await fetch_json( "/delete_history_date/" + date ) ;
+        let resp = await fetch_json( "/delete_history_date/" + date_min[date]+","+date_max[date] ) ;
         showPopup("", tlt("Historia truncada") ); 
         await sleep_ms(1000);
         window.location.reload() ;

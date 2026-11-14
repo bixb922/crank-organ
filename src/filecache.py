@@ -73,7 +73,6 @@ class MidiFileCache:
         # From now on, any attempt to use the file will raise a ValueError
 
     def get_filename( self ):
-        # >>> check if get_filename is needed.
         return self.filename
     
 class _FileInstance:

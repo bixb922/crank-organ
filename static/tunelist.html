@@ -68,23 +68,16 @@ async function updateTunelibWithHistory( tunelib ){
         }
     }
 }
-
-// Keep track of which rows are visible
-// function tunelistVisibilityChanges( entries ){
-//     // Page has scrolled, update TitleTunes that entered/exited viewport.
-//     for( let entry of entries ){
-//         // Add/remove class according to visibility in viewport
-//         if( entry.isIntersecting ){
-//             entry.target.classList.add("tunelist-visible");
-//         }
-//         else{
-//             entry.target.classList.remove("tunelist-visible");
-//         }
-//     }
-// }
-
 // Called when loading page
 async function pageRefreshProcess( ) {
+    // Main program for this page, initialize page, start refresh process
+
+    // For new page, cold restart on microncontroller, 1400 tunes,
+    // time from
+    // start of common.js to end of first updateProgress=4.25sec
+    // 0.8s get config+0.8 set time zone+1.9s get tunelib+0.4s get history+0.4s get progress
+    // Javascript time is low.
+    // updateProgress may take 1-2 msec Javascript time.
     if( isUsedFromIOT() ){
         document.getElementById( "navigateToPlayPage").style.display = "none" ;
         document.getElementById( "startButton").style.display = "none" ;
@@ -102,7 +95,7 @@ async function pageRefreshProcess( ) {
     await sleep_ms(100); // to avoid forcing reflow
     // Start background will trigger a updateProgress very soon.
     commonGetProgress.startBackground();
-
+    
 }
 
 function fillHeader( ){
@@ -147,7 +140,7 @@ async function fillBody( ) {
         let infoLink = document.createElement("a");
         infoLink.classList.add( "anohref" );
         infoLink.onclick = function(){ showFullInfo(tuneid) };
-        infoLink.innerText = trunc(tune[TLCOL_INFO],10);
+        infoLink.textContent = trunc(tune[TLCOL_INFO],10);
         row.cells[6].appendChild( infoLink );
 
         // For the search functionality, we need to normalize the tune text
@@ -189,8 +182,8 @@ function updateProgress( progress ) {
     let tunelib = progress["tunelib"];
 
     let startButton = document.getElementById("startButton");
-    startButton.disabled = !( progress["setlist"].length > 0 && 
-        progress["status"] == "waiting");
+    startButton.disabled = (!( progress["setlist"].length > 0 && 
+        progress["status"] == "waiting")) ||!progress["playback_enabled"];
     TuneTitle.updateProgress( progress );
 
 }
@@ -233,7 +226,9 @@ function changeOrder(column) {
     let compareFn = (HEADERMAP[sortColumn] === TLCOL_HISTORY) ? compareNum : compareText;
     rows.sort(compareFn);
 
-    // Re-append sorted rows
+    // Re-append sorted rows, no need to erase tbody since the
+    // rows (i.e. DOM elements) may exist only in one place at a time,
+    // this moves the rows to the end of the table in order.
     tbody.replaceChildren(...rows);
 }
 

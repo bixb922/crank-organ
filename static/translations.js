@@ -70,9 +70,11 @@ let translationDict = {
 "batería": // index.html 
 	["Battery", "Batterie"],
 "borrar": // history.html 
-	["delete", "Löschen"],
+	["Delete", "Löschen"],
 "borrar afinación": // notelist.html 
 	["Clear stored tuning", "Gespeicherte Frequenzen löschen"],
+"borrar historia?":
+	["Delete history?", "Lösche Chronik?"],
 "borrar historia de":
 	["Delete history of", "Lösche Chronik vom"],
 "borrar setlist": // play.html 
@@ -141,6 +143,8 @@ let translationDict = {
 	["days", "Tage"],
 "editar tunelib": // index.html 
 	["Edit tunelib", "Tunelib bearbeiten"],
+"el setlist está vacío.": // play.html
+	["The setlist is empty.", "Die Setlist ist leer."],
 "en espera": // play.html
 	["waiting","wartet"],
 "errores)": // diag.html 

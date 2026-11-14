@@ -37,7 +37,7 @@
 		</tr>
 		<tr>
 			<td>
-				<button type="button" onclick="navigate('notelist')">
+				<button type="button" onclick="navigate('notelist')" class="disable-during-playback">
                     Afinador
 				</button>
 			</td>
@@ -60,7 +60,7 @@
 
 		<tr>
 			<td>
-				<button type="button" onclick="navigate('tunelibedit')">
+				<button type="button" onclick="navigate('tunelibedit')" class="disable-during-playback">
                     Editar tunelib
 				</button>
 			</td>
@@ -84,7 +84,7 @@
 		</tr>
         <tr>
 			<td>
-				<button type="button" onclick="navigate('pinout')">
+				<button type="button" onclick="navigate('pinout')" class="disable-during-playback">
                     Configuración pins/MIDI
 				</button>
 			</td>
@@ -105,7 +105,7 @@
 		</tr>
 		<tr>
 			<td>
-				<button type="button" onclick="javascript:window.location.href='/filemanager'">
+				<button type="button" onclick="javascript:window.location.href='/filemanager'" class="disable-during-playback">
 					Archivos
 				</button>
 			</td>
@@ -155,10 +155,10 @@
 	</tbody>
 </table>
 
-<button type="button" onclick="battery_zero()" id="resetBatteryButton">
+<button type="button" onclick="battery_zero()" id="resetBatteryButton" class="disable-during-playback">
 	Poner contadores en cero
 </button>
-<button type="button" onclick="battery_level()" id="batteryLevelButton">
+<button type="button" onclick="battery_level()" id="batteryLevelButton" class="disable-during-playback">
 	Calibrar indicación batería
 </button>
 <br>
@@ -180,8 +180,7 @@ All rights reserved.
 let pageHeader = new PageHeader().setTitle( tlt("Índice"), null ) ; // No "back" arrow on index page.
 
 async function getPageData(){
-    resp = await fetch_json( "/get_index_page_info" ) ;
-	let server = resp["servernode"]
+	let server = (await configCache.get())["servernode"]
     if( server ){
         document.getElementById("serverinfo").style.display = "" ;
 		if( !server.startsWith("http")){
@@ -198,7 +197,7 @@ async function getPageData(){
 	bg.setParam( 80, 0, 100 ); // width, min, max
 
     getBatteryInfo();
-    commonGetProgress.setSleep( 5_000 );
+    commonGetProgress.setSleep( 2_000 );
 	commonGetProgress.startBackground();
 
 }    

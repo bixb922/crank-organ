@@ -82,7 +82,7 @@ async function refresh(){
 		row = insertRow( tbody, ["================================"]);
 		row.cells[0].colSpan = 10;
 	}
-	commonGetProgress.setSleep( 5_000 );
+	commonGetProgress.setSleep( 2_000 );
 	commonGetProgress.startBackground();
 }
 
@@ -93,7 +93,7 @@ function insertFormRow( body, rowid, data ){
     }
 	for( let v of data ){
         if( typeof v === 'string' || v instanceof String ){
-		    row.insertCell(-1).innerText = "" + v ;
+		    row.insertCell(-1).textContent = "" + v ;
         }
         else {
             // If not a string, this must be a DOM element

@@ -36,17 +36,12 @@ class HistoryManager:
         hlist = None
         
     def delete_old(self, days):
-        # purge indicated number of days of history
+        # purge indicated number of days of history going back from now (not midnight)
         cutoff = time.time()-(days*_SECONDS_PER_DAY)
         self._delete( lambda h: h[1]<cutoff )
 
-    def delete_date( self, yyyy_mm_dd ):
-        year, month,day = yyyy_mm_dd.split("-")
-        t = time.mktime( (int(year),int(month),int(day),0,0,0,0,0) )
-        start = int(t/_SECONDS_PER_DAY)*_SECONDS_PER_DAY
-        end = start + _SECONDS_PER_DAY
-        highest_date = 1000*365*_SECONDS_PER_DAY # about 1000 years in the future
-        self._delete( lambda h: (start <= h[1] < end) or h[1] > highest_date )
+    def delete_date( self, start, end):
+        self._delete( lambda h: start <= h[1] <= end)
 
     def _delete( self, delete_fn ):
         # Delete entries where delete_fn(entry) is True
