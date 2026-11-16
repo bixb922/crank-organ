@@ -80,12 +80,6 @@ async function pageRefreshProcess(){
         await startSync(_TLOP_SYNCALL_FAST); 
     }
 
-    commonGetProgress.setSleep( 2_000 );
-    // No need to register updateProgress function
-    // Must avoid reloading if tunelib changes!!
-    JsonCache.setReloadIfTunelibChanged( false );
-    commonGetProgress.startBackground();
-
 }
 
 async function startFullSync(){
@@ -485,6 +479,12 @@ function rowHasText(row, searchInput){
 
 translate_html();
 pageRefreshProcess();
+// Start progress refresh before starting and waiting for sync
+commonGetProgress.setSleep( 2_000 );
+// No need to register updateProgress function
+// Must avoid reloading if tunelib changes!!
+JsonCache.setReloadIfTunelibChanged( false );
+commonGetProgress.startBackground();
 
 </script>
 </html>
