@@ -2073,7 +2073,8 @@ function tlt( s ){
 		// no translations.js present, don't translate
 		return s;
 	}
-	let tlist = translationDict[s.toLowerCase()];
+	// trim all whitespaces, \n and \t at the ends before looking up
+	let tlist = translationDict[s.trim().toLowerCase()];
 	if( tlist == undefined || tlist[languageIndex] == undefined){
 		return s ;
 	}

@@ -134,6 +134,10 @@ async function deleteHistory(){
         showPopup(document.getElementById("days"), "must be numeric" );
         return;
     }
+    if( days < 0 || days > 1_000_000){
+        showPopup(document.getElementById("days"), "out of range" );
+        return;
+    }
     if( confirm( tlt("Borrar historia?"))){
         resp = await fetch_json( "/delete_history/" + days ) ;
         showPopup("", tlt("Historia truncada") ); 

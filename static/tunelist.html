@@ -41,23 +41,23 @@ let pageHeader = new PageHeader().setTitle( tlt("Lista de melodías"), "index" )
 
 // keep sorted list in global page context
 
-let HEADERMAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
-let HEADER = map_tlcol_names( HEADERMAP );
+const HEADERMAP = [ TLCOL_TITLE, TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_TIME, TLCOL_YEAR, TLCOL_HISTORY, TLCOL_INFO, TLCOL_DATEADDED, TLCOL_RATING ];
+const HEADER = map_tlcol_names( HEADERMAP );
 HEADER[3] = "mm:ss"; // time column is in mm:ss format
-let HEADERCOL_VISIBLE = Array(HEADERMAP.length).fill(true);
+const HEADERCOL_VISIBLE = Array(HEADERMAP.length).fill(true);
 
 // Current order
 let sortColumn = 0 ;
 let direction = 1 ; // sort direction must be 1 or -1
 
 // Use history to compute TLCOL_HISTORY
-let historyCache = new JsonCache( "/data/history.json" );
+const historyCache = new JsonCache( "/data/history.json" );
 async function updateTunelibWithHistory( tunelib ){
     if( isUsedFromIOT() ){
         return;
     }
     // Restriction: needs reboot to update history
-    let history = await historyCache.get();
+    const history = await historyCache.get();
     for( let tuneid in tunelib ){
         tunelib[tuneid][TLCOL_HISTORY] = 0;
     }
@@ -99,14 +99,14 @@ async function pageRefreshProcess( ) {
 }
 
 function fillHeader( ){
-    let headerRow = document.getElementById("headerRow");
+    const headerRow = document.getElementById("headerRow");
     headerRow.innerHTML = "";
     for (let col = 0 ; col < HEADER.length ; col++ ){
         let arrow = ""
         if( col == sortColumn ){
             arrow = direction > 0 ? "↑ " : "↓ ";
         }
-        let th = document.createElement("th");
+        const th = document.createElement("th");
         th.textContent = arrow + HEADER[col];
         th.style.cursor = "pointer";
         th.onclick = function() { changeOrder(col) };
@@ -118,26 +118,26 @@ let fastSearch = [];
 
 async function fillBody( ) {
     let s = "";
-    let tlbody = document.getElementById( "tunelistbody");
+    const tlbody = document.getElementById( "tunelistbody");
     tlbody.innerHTML = ""; 
     let tunelib = await tunelibCache.get(); // common.js
     await updateTunelibWithHistory( tunelib ); 
-    let multipleSetlists = await isMultipleSetlistsEnabled();
+    const multipleSetlists = await isMultipleSetlistsEnabled();
     let n = 0;
     for( const [tuneid, tune] of Object.entries(tunelib)) {
-        let row = insertRow( tlbody, ["",tune[TLCOL_GENRE],
+        const row = insertRow( tlbody, ["",tune[TLCOL_GENRE],
                 tune[TLCOL_AUTHOR], formatMilliMMSS( tune[TLCOL_TIME] ),
                 tune[TLCOL_YEAR], tune[TLCOL_HISTORY],
                 "", ymd(tune[TLCOL_DATEADDED]), formatRating(tune)] );
 
-        let tuneTitle = document.createElement( "span", {"is":"tune-title"});
+        const tuneTitle = document.createElement( "span", {"is":"tune-title"});
         // full format is "hptm%ds"
         tuneTitle.setTune( tune, { beforeFormat:"hpt", afterFormat:"m%s", shortClick:true, menu:multipleSetlists } );
         row.cells[0].appendChild( tuneTitle );
 
         row.cells[5].style.textAlign = "right"; // history
 
-        let infoLink = document.createElement("a");
+        const infoLink = document.createElement("a");
         infoLink.classList.add( "anohref" );
         infoLink.onclick = function(){ showFullInfo(tuneid) };
         infoLink.textContent = trunc(tune[TLCOL_INFO],10);
@@ -160,7 +160,7 @@ async function fillBody( ) {
 	}
     // Hide blank columns
     let hiddenCount = 0;
-    let hideableCols = [TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_INFO, TLCOL_RATING];
+    const hideableCols = [TLCOL_GENRE, TLCOL_AUTHOR, TLCOL_YEAR, TLCOL_INFO, TLCOL_RATING];
     for( let tlcol of hideableCols){
         if( columnIsBlank(tunelib, tlcol)){
             let col = HEADERMAP.indexOf( tlcol );
@@ -179,9 +179,9 @@ function navigateToPlayPage() {
 
     
 function updateProgress( progress ) {
-    let tunelib = progress["tunelib"];
+    const tunelib = progress["tunelib"];
 
-    let startButton = document.getElementById("startButton");
+    const startButton = document.getElementById("startButton");
     startButton.disabled = (!( progress["setlist"].length > 0 && 
         progress["status"] == "waiting")) ||!progress["playback_enabled"];
     TuneTitle.updateProgress( progress );
@@ -195,14 +195,14 @@ function changeOrder(column) {
     }
     // Compare as text
     function compareText(rowA, rowB) {
-        let a = getCellValue(rowA, column);
-        let b = getCellValue(rowB, column);
+        const a = getCellValue(rowA, column);
+        const b = getCellValue(rowB, column);
         return b.localeCompare(a) * direction;
     }
     // Compare as number (fallback to text if not a number)
     function compareNum(rowA, rowB) {
-        let a = getCellValue(rowA, column);
-        let b = getCellValue(rowB, column);
+        const a = getCellValue(rowA, column);
+        const b = getCellValue(rowB, column);
         if (isNaN(a) || isNaN(b)) return compareText(rowA, rowB);
         a = parseInt(a);
         b = parseInt(b);
@@ -210,6 +210,7 @@ function changeOrder(column) {
     }
 
     // Toggle direction if same column, else set new column and default direction
+    // direction and sortColumn are global variables.
     if (column === sortColumn) {
         direction = -direction;
     } else {
@@ -219,8 +220,8 @@ function changeOrder(column) {
 
     fillHeader();
 
-    let tbody = document.getElementById("tunelistbody");
-    let rows = Array.from(tbody.rows);
+    const tbody = document.getElementById("tunelistbody");
+    const rows = Array.from(tbody.rows);
 
     // Choose comparison based on column type
     let compareFn = (HEADERMAP[sortColumn] === TLCOL_HISTORY) ? compareNum : compareText;
@@ -239,12 +240,12 @@ function trunc( text, n ){
     return text.substring(0,n-3) + "...";
 }
 async function showFullInfo(tuneid){
-    let tunelib = await tunelibCache.get() ;
-    let tune = tunelib[tuneid] ;
+    const tunelib = await tunelibCache.get() ;
+    const tune = tunelib[tuneid] ;
     if( tune == undefined ){
         return;
     }
-    let info = tune[TLCOL_INFO] ;
+    const info = tune[TLCOL_INFO] ;
     showPopup( "", info ) ;
 }
 
@@ -278,10 +279,10 @@ function normalizaTildes( str ) {
 
 
 function filterTable() {
-    let filter = normalizaTildes( document.getElementById("searchInput").value ) ;
-    let rowList = document.getElementById("tunelistbody").rows;
+    const filter = normalizaTildes( document.getElementById("searchInput").value ) ;
+    const rowList = document.getElementById("tunelistbody").rows;
     for( let row of rowList){
-        let rowText = fastSearch[ parseInt(row.id.substring(1)) ]; // id of row is "r0", "r1", etc.
+        const rowText = fastSearch[ parseInt(row.id.substring(1)) ]; // id of row is "r0", "r1", etc.
         row.style.display = rowText.includes(filter) ? "" : "none";
     }
 }

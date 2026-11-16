@@ -68,23 +68,30 @@ async function pageRefreshProcess(){
         showHideElement("syncFullButton", false); // not needed, we are doing a full sync
         const fullSyncDuration = tuneCount*tuneCount*0.0001162 + 2; // seconds
         // >>> show user
-        console.log(">>>tuneCount for full sync", tuneCount, "duration=", Math.round(fullSyncDuration,0), "seconds");
+        // console.log(">>>tuneCount for full sync", tuneCount, "duration=", Math.round(fullSyncDuration,0), "seconds");
         // Do a full sync
-        startSync(_TLOP_SYNCALL_FULL);
+        await startSync(_TLOP_SYNCALL_FULL);
     }
     else{
         console.log(">>>tuneCount for fast sync", tuneCount);
-        // Do a fast sync and optional full sync
+        // Do a fast sync propose optional full sync
         showHideElement("syncFullButton", true);
         // Do a fast sync
-        startSync(_TLOP_SYNCALL_FAST); 
+        await startSync(_TLOP_SYNCALL_FAST); 
     }
+
+    commonGetProgress.setSleep( 2_000 );
+    // No need to register updateProgress function
+    // Must avoid reloading if tunelib changes!!
+    JsonCache.setReloadIfTunelibChanged( false );
+    commonGetProgress.startBackground();
+
 }
 
 async function startFullSync(){
     // Full sync button pressed
     showHideElement("syncFullButton", false);
-    startSync(_TLOP_SYNCALL_FULL);
+    await startSync(_TLOP_SYNCALL_FULL);
 }
 
 async function startSync(syncType){
@@ -98,10 +105,10 @@ async function startSync(syncType){
 
     // Do not sync page if not visible, it must be visible by user.
     while( document.hidden ){
-			await sleep_ms(200);
+        await sleep_ms(200);
 	}
 	let resp = await fetch_json( "/start_tunelib_sync/"+syncType ) ;
-   for(;;){
+    for(;;){
         let resp = await fetch_json( "/tunelib_sync_progress" );
         wfu.innerHTML =  "<p>" + resp["progress"] ;
         if( resp["progress"].includes( "***end***") ){
@@ -111,11 +118,11 @@ async function startSync(syncType){
         await sleep_ms( 1000 );
         
     }
-    // Ask for latest information
+    // Ensure latest information is used.
     tunelibCache.drop();
     lyricsCache.drop();
 
-    showForm();
+    await showForm();
 }
 
 async function showForm( ) {
@@ -135,7 +142,7 @@ async function showForm( ) {
     showHideElement( "changes_auto", true );
 
     // start the process to save in background
-    save_process();
+    await save_process();
 }
 
 let CHANGED_FIELDS = [] ;
@@ -479,10 +486,5 @@ function rowHasText(row, searchInput){
 translate_html();
 pageRefreshProcess();
 
-commonGetProgress.setSleep( 2_000 );
-// No need to register updateProgress function
-// Must avoid reloading if tunelib changes!!
-JsonCache.setReloadIfTunelibChanged( false );
-commonGetProgress.startBackground();
 </script>
 </html>
