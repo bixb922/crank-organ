@@ -102,8 +102,7 @@
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
      * [Changes Sept 8, 2026 to Oct 30, 2026](#changes-sept-8-2026-to-oct-30-2026)
-     * [Changes Nov 1, 2026 to Nov 14, 2026](#changes-nov-1-2026-to-nov-14-2026)
-     * [Changes Nov 15, 2026 to ...](#changes-nov-15-2026-to)
+     * [Changes Nov 1, 2026 to Nov 16, 2026](#changes-nov-1-2026-to-nov-16-2026)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -1683,7 +1682,7 @@ Actuator drivers:
 * Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
 * For RC Servos: Limit battery usage according to config parameters when doing "all notes off" at startup, beginning and end of tune.
 
-## Changes Nov 1, 2026 to Nov 14, 2026
+## Changes Nov 1, 2026 to Nov 16, 2026
 * Guard setlist operations during music playback. Disable all buttons that could disturb during music playback and protect webservices behind the buttons for double check.
 * Make current setlist operations faster during playback, to avoid disabling them.
 * Play.html: Show message if setlist is empty.
@@ -1692,8 +1691,6 @@ Actuator drivers:
 * All web pages: Optimize web pages using textContent instead of innerText.
 * Communications: Add timeout to fetch_json() to make network recovery faster.
 * History page: Calculate delete history in UTC time, not local time (minor fix)
-
-## Changes Nov 15, 2026 to ...
 * Tunelib editor does full sync for up to 500 tunes. With more than 500 tunes, a fast sync is done instead and a button for full sync is shown. Added/updated files are processed individually always with a full sync. The number 500 is a General Configuration parameter.
 
 # 22. Programming language
