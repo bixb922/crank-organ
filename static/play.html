@@ -16,7 +16,7 @@
 <h2 id="no_tune_span" style="display:none"></h2>
 <table id="main_info_table" style="display:none">
 	<tbody>
-		<tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
+		
 		<tr><td colspan="4"><h2><span is="tune-title" id="title"></span></h2></td></tr>
 		<tr id="controlButtons">
 			<td colspan="4">
@@ -383,6 +383,8 @@ async function updateProgress( progress ) {
 			// better do not use spectator format of title here
 			//let spectator_name = tune_requests[CURRENT_TUNEID];
 			//textById( "spectator_name",  spectator_name );
+			// First row in main_info_table's tbody
+			// <tr id="request_row" style="display:none"><td>Pedido por</td><td id="spectator_name"></td></tr>
 			//showHideElement( "request_row", spectator_name );
 
 			let tt = document.getElementById("title");

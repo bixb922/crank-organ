@@ -97,10 +97,17 @@ _TLCOL_COLUMNS = const(14)
 
 
 # change_queue operation types
+_TLOP_NO_ACTION = const(0) # No action 
 _TLOP_FILE_UPDATE = const(1)
 _TLOP_FILE_DELETE = const(2)
 _TLOP_REPLACE_FIELD = const(3) # see common.js SetlistMenu class
-_TLOP_SYNCALL = const(4)
+# _TLOP_SYNCALL = const(4) # former value, replaced.
+_TLOP_FILE_UPDATE_FAST = const(6) # don't compare dates
+# SYNCALL must have the highest values, since they are searched for
+# with max() function. See tunelib.html too.
+_TLOP_SYNCALL_FAST = const(100) # Does _TLOP_FILE_UPDATE_FAST instead of _TLOP_FILE_UPDATE_FAST
+_TLOP_SYNCALL_FULL = const(101) # Has priority over FAST, must be higher value
+
 
 def filenameToTitle(filename):
     # This is for compatibility with previous versions
@@ -218,11 +225,15 @@ class TuneManager:
         return self.get_autoplay("***")
 
 
-    def start_sync(self):
+    def start_sync(self, sync_type):
+        if sync_type not in (_TLOP_SYNCALL_FAST, _TLOP_SYNCALL_FULL):
+            # Better check for inconsistencies.
+            raise ValueError
+        
         # This is used by webserver.py when the tunelibedit.html
         # page has loaded so queue a "complete sync" operation
-        self._queue_change( [_TLOP_SYNCALL,0,0,0])
-
+        self._queue_change([sync_type,0,0,0])
+   
         # and kick _sync_process() to start it right now!
         # since user is waiting for page to load
         self.sync_event.set()
@@ -268,37 +279,34 @@ class TuneManager:
         except Exception as e:
             self.logger.exc(e, f"Computing duration of {filename}")
             return 0
-       
+
+    def _sync_file_delete( self, newtunelib, filename ):
+        # Tune was already deleted
+        tuneid, _ = self._make_unique_hash(filename, newtunelib)
+        try:
+            del newtunelib[tuneid]
+        except KeyError:
+            self.logger.info(f"File {filename} was already removed from tunelib.json")
+            # >>> transition only. filename and id don't match
+            # >>> i.e. tunelib got corrupt. This was result of a test, never seen happen elsewhere.
+            fndict = { tune[_TLCOL_FILENAME]: tune[_TLCOL_ID] 
+                for tune in newtunelib.values() }
+            if filename in fndict:
+                print(">>>fixing entry for ", filename )
+                del newtunelib[ fndict[filename]]
+        return "Deleting entry"
+        
     
-    def _sync_one_file( self, newtunelib, op, filename, filesize ):
+    def _sync_file_update( self, newtunelib, op, filename, filesize ):
+        def get_timestamp(fn):
+            try:
+                return os.stat(config.TUNELIB_FOLDER + fn)[8]
+            except OSError:
+                return 0
+            
         operation = ""
         tuneid, filename = self._make_unique_hash(filename, newtunelib)
-    
-        if op == _TLOP_FILE_DELETE:
-            try:
-                del newtunelib[tuneid]
-            except KeyError:
-                self.logger.info(f"File {filename} was already removed from tunelib.json")
-                # >>> transition only? filename and id don't match
-                # >>> i.e. tunelib got corrupt. This was result of a test, never seen happen elsewhere.
-                fndict = { tune[_TLCOL_FILENAME]: tune[_TLCOL_ID] 
-                     for tune in newtunelib.values() }
-                if filename in fndict:
-                    print(">>>fixing entry for ", filename )
-                    del newtunelib[ fndict[filename]]
-            return "Deleting entry"
-        
-        # Get file date
-        try:
-            # >>> this is what takes time: about 200 ms/file with 1400 files
-            # and about 10 or 20 with small tunelib.
-            # Bucket=1 hash byte means 64 buckets = at most 25 files/bucket. Metadata per
-            # bucket about 1800 bytes, so only half full. Better use 32 buckets.
-            # use 
-            file_timestamp = os.stat(config.TUNELIB_FOLDER + filename)[8]
-        except OSError:
-            file_timestamp = 0
-            
+
         # Is it a new tune or a tune update?
         tune:list = newtunelib.get(tuneid)
         if tune is None:
@@ -314,14 +322,18 @@ class TuneManager:
         # Update only if different name or different size.
         # Different name with same tuneid can happen with xxx.mid and xxx.mid.gz
         # because these two are considered equal.
-        elif filesize == tune[ _TLCOL_SIZE] and filename == tune[ _TLCOL_FILENAME] and file_timestamp == tune[_TLCOL_DATEADDED]:
+        elif (filesize == tune[ _TLCOL_SIZE] and 
+              filename == tune[ _TLCOL_FILENAME] and 
+              # Fast: don't get date for each file, compare size and name.
+              # Full: get and compare date for each file.
+              (op == _TLOP_FILE_UPDATE_FAST or get_timestamp(filename) == tune[_TLCOL_DATEADDED])):
             return # no change
         else:
-            # print(f">>>{filesize=} {tune[ _TLCOL_SIZE]=} {filename=} {tune[ _TLCOL_FILENAME]=} timestamp={file_timestamp} {tune[_TLCOL_DATEADDED]=}")
+            # print(f">>>{filesize=} {tune[ _TLCOL_SIZE]=} {filename=} {tune[ _TLCOL_FILENAME]=} {tune[_TLCOL_DATEADDED]=}")
             operation = "Updating"
         # Update tune info both for updated and new files
         tune[ _TLCOL_SIZE] = filesize
-        tune[ _TLCOL_DATEADDED] = file_timestamp
+        tune[ _TLCOL_DATEADDED] = get_timestamp(filename)
         # This can take some time!!! (up to 3 seconds per tune)
         tune[ _TLCOL_TIME] = self.get_duration(filename)
         # Update filename, the file could now
@@ -381,7 +393,8 @@ class TuneManager:
         await asyncio.sleep_ms(20) # let browser catch up
 
         # If there is a "sync all" in change_queue, then queue all files
-        if any((tlop[0]==_TLOP_SYNCALL for tlop in change_queue)):
+        sync_type = max( (tlop[0] for tlop in change_queue), default=_TLOP_NO_ACTION)
+        if sync_type == _TLOP_SYNCALL_FAST or sync_type == _TLOP_SYNCALL_FULL:
             # Sync does not allow to play music, stop playback.
             from drehorgel import setlist
             setlist.stop_playback()
@@ -412,14 +425,18 @@ class TuneManager:
             self._dedup_midi_files( filedict )
             await asyncio.sleep_ms(50)
             # Queue all existing files to see if some sync'ing is needed
-            change_queue.extend( (_TLOP_FILE_UPDATE, fn, size,0) for fn, size in filedict.items() )
+            op = _TLOP_FILE_UPDATE_FAST if sync_type == _TLOP_SYNCALL_FAST else _TLOP_FILE_UPDATE
+            change_queue.extend( (op, fn, size,0) for fn, size in filedict.items() )
             # and queue all files that have been deleted
             change_queue.extend( (_TLOP_FILE_DELETE, tune[ _TLCOL_FILENAME],-1,0) 
                                 for tune in newtunelib.values() 
                                 if tune[ _TLCOL_FILENAME] not in filedict )
 
-        else:
-            self.logger.info("Fast tunelib sync will start now")
+        # Full sync takes 0.000116*n*n seconds, where n=number of tunes
+        # 350 tunes = 15 seconds
+        # 500 tunes = 25 seconds
+        # 1500 tunes = 261 seconds
+        # 2000 tunes = 465 seconds
 
         t0 = time.ticks_ms()
         start_time = t0
@@ -440,14 +457,24 @@ class TuneManager:
             # to avoid triggering false timeout.
             if time.ticks_diff(time.ticks_ms(), t0) > 5000 or n == 1:
                 t0 = time.ticks_ms()
-                self._sync_progress(f"Sync progress {n/len(change_queue)*100:.0f}% {time.ticks_diff(time.ticks_ms(),start_time)/n:.1f} msec/file")
+                if sync_type == _TLOP_SYNCALL_FAST:
+                    st = "Fast"
+                else:
+                    st = "Full"
+                self._sync_progress(f"{st} sync progress {n/len(change_queue)*100:.0f}% {time.ticks_diff(time.ticks_ms(),start_time)/n:.1f} msec/file, {n}/{len(newtunelib)} files")
             await asyncio.sleep_ms(0) # yield for the benefit webserver.py and garbage collection
-
-            if op == _TLOP_FILE_UPDATE or op == _TLOP_FILE_DELETE:
+            
+            if op == _TLOP_FILE_UPDATE or op == _TLOP_FILE_UPDATE_FAST:
                 # [_TLOP_FILE_UPDATE, p1:filename, p2:filesize, 0 ]
+                # _sync_file_update() handles  add, update 
+                operation = self._sync_file_update( newtunelib, op, p1, p2  )
+                if operation:
+                    changed = True
+                    self._sync_progress( f"tunelib.json: {operation} {p1}" )
+                    # Make asyncio responsive to show progress 
+            elif op == _TLOP_FILE_DELETE:
                 # [_TLOP_FILE_DELETE, p1:filename, 0, 0 ]
-                # _sync_one_file() handles all cases: add, update and delete
-                operation = self._sync_one_file( newtunelib, op, p1, p2  )
+                operation = self._sync_file_delete( newtunelib, p1)
                 if operation:
                     changed = True
                     self._sync_progress( f"tunelib.json: {operation} {p1}" )
@@ -471,9 +498,9 @@ class TuneManager:
                     self.logger.info(f"queued change not applied, tuneid={p1} not found")
 
             # Ignore other types, they may be
-            # _TLOP_SYNCALL that already has been processed
+            # _TLOP_SYNCALL_... that already has been processed
             # or may be a old format entry where a filename
-            # is in this position. Just ignore, must do a sync all.
+            # is in this position.
             
             
             # Check if a related file has ben uploaded, postpone syncing
@@ -590,7 +617,9 @@ class TuneManager:
         # Remember that something in the tunelib folder has changed
         # and that sync must be run
         # This is triggered by file manager and web server
-        # filelist is a list of [operation, path] pairs
+        # filelist is a list of [operation, path] pairs.
+        # Individual file updates due to upload are always "full" updates
+        # since typically there are few files.
         self._queue_change( [ _TLOP_FILE_UPDATE,
                                  fileops.get_basename(path), 
                                  file_size,0] )
@@ -600,6 +629,7 @@ class TuneManager:
         self.empty_cache()
         
     def queue_file_deleted( self, path ):
+        # Tune was already deleted on flash
         self._queue_change( [ _TLOP_FILE_DELETE,
                                  fileops.get_basename(path), 
                                  0,0] )

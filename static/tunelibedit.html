@@ -14,7 +14,8 @@
 
 <script type="text/javascript" src="/static/common.js"></script>
 <script type="text/javascript" src="/static/translations.js"></script>
-
+<button id="syncFullButton" onclick="startFullSync()" style="display:none">Sincronización profunda</button>
+<br>
 <span id="changes_auto" style="display:none">Los cambios se guardan automáticamente cada par de segundos.</span>
 <br>
 
@@ -56,15 +57,50 @@ const pageHeader = new PageHeader();
 pageHeader.setTitle( "Tunelib editor", "index"  );
 pageHeader.setBannerInfo( "", "❗" );
 
-async function getTuneList( ) {
+const _TLOP_SYNCALL_FAST = 100; // see tunemanager.py
+const _TLOP_SYNCALL_FULL = 101; // see tunemanager.py
+
+async function pageRefreshProcess(){
+    const tunelib = await tunelibCache.get();
+    const tuneCount = Object.keys(tunelib).length;
+    const config = await configCache.get();
+    if( tuneCount <= config?.full_sync_limit ){
+        showHideElement("syncFullButton", false); // not needed, we are doing a full sync
+        const fullSyncDuration = tuneCount*tuneCount*0.0001162 + 2; // seconds
+        // >>> show user
+        console.log(">>>tuneCount for full sync", tuneCount, "duration=", Math.round(fullSyncDuration,0), "seconds");
+        // Do a full sync
+        startSync(_TLOP_SYNCALL_FULL);
+    }
+    else{
+        console.log(">>>tuneCount for fast sync", tuneCount);
+        // Do a fast sync and optional full sync
+        showHideElement("syncFullButton", true);
+        // Do a fast sync
+        startSync(_TLOP_SYNCALL_FAST); 
+    }
+}
+
+async function startFullSync(){
+    // Full sync button pressed
+    showHideElement("syncFullButton", false);
+    startSync(_TLOP_SYNCALL_FULL);
+}
+
+async function startSync(syncType){
+    $g("tunelistHead").innerHTML = "";
+    $g("tunelistBody").innerHTML = "";
     pageHeader.setBannerInfo( "✅" + tlt("Al día."), "❗" );
-    let wfu = document.getElementById( "wait_for_update" ) ;
+    const wfu = document.getElementById( "wait_for_update" ) ;
     wfu.innerHTML = "";
+    showHideElement( "showControls", false);
+    showHideElement( "changes_auto", false );
+
     // Do not sync page if not visible, it must be visible by user.
     while( document.hidden ){
 			await sleep_ms(200);
 	}
-	let resp = await fetch_json( "/start_tunelib_sync" ) ;
+	let resp = await fetch_json( "/start_tunelib_sync/"+syncType ) ;
    for(;;){
         let resp = await fetch_json( "/tunelib_sync_progress" );
         wfu.innerHTML =  "<p>" + resp["progress"] ;
@@ -75,9 +111,14 @@ async function getTuneList( ) {
         await sleep_ms( 1000 );
         
     }
-    // Update with latest information
+    // Ask for latest information
     tunelibCache.drop();
     lyricsCache.drop();
+
+    showForm();
+}
+
+async function showForm( ) {
 
     let tunelib = await tunelibCache.get() ;
     let tunelist = [];
@@ -89,6 +130,7 @@ async function getTuneList( ) {
     showHideElement( "showControls" , true);
 
     await sleep_ms( 5_000 ) ;
+    const wfu = document.getElementById( "wait_for_update" ) ;
     wfu.innerHTML = "";
     showHideElement( "changes_auto", true );
 
@@ -435,7 +477,7 @@ function rowHasText(row, searchInput){
 }
 
 translate_html();
-getTuneList();
+pageRefreshProcess();
 
 commonGetProgress.setSleep( 2_000 );
 // No need to register updateProgress function

@@ -130,8 +130,9 @@ class Config:
         # Logger level 
         self.log_debug = False 
 
-        # History
+        # History, Tunelib Editor
         self.auto_purge_history = 0
+        self.full_sync_limit = 500
 
         try:
             # Read data/config.json and validate

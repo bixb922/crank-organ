@@ -215,6 +215,8 @@ let translationDict = {
 	["Crank", "Kurbel"],
 "manivela instalada": // diag.html
     ["Crank sensor active", "Kurbelsensor aktiv"],
+"máximo tiempo para gc": // diag.html
+	["Maximum gc time","Höchste gc Zeit"],
 "mc server": // admin.html
     ["MC server", "MC server"],
 "melodía": // history.html 
@@ -257,8 +259,8 @@ let translationDict = {
 	["Start", "Start"],
 "password:": // common.js
 	["Password:", "Passwort:"],
-"pedido": // history.html 
-	["Request", "Wunsch"],
+// "pedido": // history.html 
+//	["Request", "Wunsch"],
 "pedido por": // play.html
 	["Requested by", "Gewünscht von"],
 "poner contadores en cero": // index.html 
@@ -285,8 +287,6 @@ let translationDict = {
 	["Registers", "Register"],
 "test repetición": // note.html
 	["Repetition test", "Wiederholungstest"],
-"recargue página cuando deje de tocar música:": // common.js
-	["Reload page after music player stops:","Seite neu laden nachdem Musikwiedergabe aufgehört hat:"],
 "repetición progresiva": // note.html 
 	["Progressive repetition", "Wiederholungstest, steigende Rate"],
 "repetición fija": // note.html
@@ -307,6 +307,8 @@ let translationDict = {
 	["If older than", "Wenn älter als"],
 "(sin título)": // common.js/SetlistMenu
 	["(no title)", "(kein Titel)"],
+"sincronización profunda":  // tunelibedit.html
+	["Full synchronization", "Gründliche Synchronisation"],
 "sistema": // index.html diag.html 
 	["System", "System"],
 "sonar nota": // note.html 
@@ -347,31 +349,29 @@ let translationDict = {
 	["Time zone", "Zeitzone"],
 	
 // Server translations
-"admin": // admin.html
-	["Admin", "Admin"],
-"bienvenido al organillo en internet": // server index.html
-	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
-"aquí está la historia, en fotos, de la construcción del organillo": // server index.html	
-	["Here is the construction log with photos", "Hier ist die Baugeschichte, mit Bildern"],
-"cómo funciona": // server index.html
-	["How does it work?", "Wie funktioniert es?"],
-"aquí se explica cómo funcion el organillo":
-	["Here is an explanation on how this crank-organ works", "Hier ist eine Beschreibung wie die Drehorgel funktioniert"],
-"demostración del software":
-	["Demo of the crank organ software","Drehorgelsoftware Demo"],
-"esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre":
-    ["Here is a demo of the crank organ software. You can see all the options, navigate the pages and test how it works. You cannot alter the configuration. Link to the open source/free software ",
-	"Hier ist eine Demo des Drehorgelsoftwares. Alle Webseiten des Softwares können angesehen werden und der Betrieb wird simuliert. Die Konfiguration kann allerdings nicht geändert werden. Link zum open source/freiem software "],
-"aquí": 
-	["here", "hier"],
-"fotos": // server index.html
-	["Photos", "Fotos"],
-"logout": // admin.html
-	["Logout", "Logout"],
-"máximo tiempo para gc": // diag.html
-	["Maximum gc time","Höchste gc Zeit"],
-"melodía actual":  // server index.html
-	["Current tune", "Gegenwärtige Melodie"],
+// "admin": // admin.html
+// 	["Admin", "Admin"],
+// "bienvenido al organillo en internet": // server index.html
+// 	["Welcome to the crank organ on the internet", "Willkommen zur Drehorgel im Internet"],
+// "aquí está la historia, en fotos, de la construcción del organillo": // server index.html	
+// 	["Here is the construction log with photos", "Hier ist die Baugeschichte, mit Bildern"],
+// "cómo funciona": // server index.html
+// 	["How does it work?", "Wie funktioniert es?"],
+// "aquí se explica cómo funcion el organillo":
+// 	["Here is an explanation on how this crank-organ works", "Hier ist eine Beschreibung wie die Drehorgel funktioniert"],
+// "demostración del software":
+// 	["Demo of the crank organ software","Drehorgelsoftware Demo"],
+// "esta es una demostración del software del organillo. así se ve la interfaz de usuario del microcontrolador dentro del organillo, con sus opciones de manejo de la música y configuración. vea detalles de esta solución de código libre":
+//     ["Here is a demo of the crank organ software. You can see all the options, navigate the pages and test how it works. You cannot alter the configuration. Link to the open source/free software ",
+// 	"Hier ist eine Demo des Drehorgelsoftwares. Alle Webseiten des Softwares können angesehen werden und der Betrieb wird simuliert. Die Konfiguration kann allerdings nicht geändert werden. Link zum open source/freiem software "],
+// "aquí": 
+// 	["here", "hier"],
+// "fotos": // server index.html
+// 	["Photos", "Fotos"],
+// "logout": // admin.html
+// 	["Logout", "Logout"],
+// "melodía actual":  // server index.html
+// 	["Current tune", "Gegenwärtige Melodie"],
 }
 
 let language = navigator.language.substring(0,2) ;

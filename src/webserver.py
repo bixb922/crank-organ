@@ -947,14 +947,14 @@ async def save_drumdef( request ):
 #
 ### Tunelib editor
 #
-@app.route("/start_tunelib_sync")
+@app.route("/start_tunelib_sync/<int:sync_type>")
 @stop_future_playback
-async def start_tunelib_sync(request):
+async def start_tunelib_sync(request, sync_type):
     # User pressed "sync all" button
     # Stop playback will show prominently that no music can play back
     # because sync interferes. 
     # The full sync process will repeat setlist.stop_playback().
-    tunemanager.start_sync()
+    tunemanager.start_sync(sync_type)
     return respond_ok()
 
 

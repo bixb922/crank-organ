@@ -102,7 +102,8 @@
      * [Changes from July 10 to July 30, 2026](#changes-from-july-10-to-july-30-2026)
      * [Changes in July 2026 to Sept 7, 2026](#changes-in-july-2026-to-sept-7-2026)
      * [Changes Sept 8, 2026 to Oct 30, 2026](#changes-sept-8-2026-to-oct-30-2026)
-     * [Changes Nov 1, 2026 to ...](#changes-nov-1-2026-to)
+     * [Changes Nov 1, 2026 to Nov 14, 2026](#changes-nov-1-2026-to-nov-14-2026)
+     * [Changes Nov 15, 2026 to ...](#changes-nov-15-2026-to)
 22.  [Programming language](#22-programming-language)
 23.  [Credits](#23-credits)
 24.  [Testing](#24-testing)
@@ -471,9 +472,9 @@ All this doesn't happen very often: Check that note on and note off messages are
 
 Use the [File Manager](#file-manager) to upload files to the /tunelib folder of the microcontroller. Both the File Manager and the Tunelib Editor can be used to delete files from the MIDI folder of the microcontroller.
 
-MIDI files become visible after a few seconds (10 or 20 seconds). You may need to refresh the tunelist or play page to make changes visible. You also can enter the "Edit Tunelib" button to force a check and update for all changed files.
+MIDI files become visible after a few seconds (10 or 20 seconds). You may need to refresh the tunelist or play page to make changes visible. You also can enter the "Edit Tunelib" page to force a check and update for all changed files.
 
-If you update many tunes: processing each tune takes on average 3 seconds. So if you upload, say, 500 tunes, you'll have to wait 1500 seconds until the update is complete. You can view progress by starting the "Tunelib editor" page.
+If you update many tunes: processing each tune takes on average 1 second. So if you upload, say, 500 tunes, you'll have to wait 500 seconds until the update is complete. You can view progress by starting the "Tunelib editor" page.
 
 You also can add MIDI files with ```mpremote cp``` to the /tunelib folder over USB. You will need to enter the Tunelib Editor page to process these files. 
 
@@ -481,7 +482,7 @@ Sure you have a backup of all MIDI files on your PC. The recommended procedure i
 
 ## The Tunelib Editor page (Tunelib Editor button on index page)
 
-Activating this page will take a few seconds, since the software checks for added, deleted and modified files, and gathers information about the MIDI files such as size and duration.
+Activating this page will take a few seconds, since the software checks for added, deleted and modified files, and gathers information about the MIDI files such as size and duration. This check is called a "synchronization" or "sync". 
 
 Editing then tunelib is best done on a device with large display, since the page is rather wide.
 
@@ -505,14 +506,13 @@ And at the end of the row there is this button:
 
 Changes are saved automatically after a few seconds. Changes are stored and applied a bit later when the microcontroller is idle.  You can continue to work editing tune information with the Tunelib Editor even when changes are pending.
 
-
 # 11. General configuration
 
 The configuration parameters explained in detail on the configuration page. 
 
 ![Configuration](general_configuration.jpg)
 
-The configuration web page is long and wide and is best used on device with a large screen.
+The configuration web page is long and wide and is best used on device with a large screen. Use the translation capabilities of your browser, because this page does not have internal translation capabilites.
 
 Any configuration change needs a reboot of the microcontroller after saving changes to become effective.
 
@@ -528,15 +528,15 @@ Sometimes, the browser changes the ```http://``` prefix ```to https://```, verif
 This is what you should modify:
 
 * The network name and host name as noted above.
-* The configuration password. The configuration password is also the password for connecting to the microcontroller in AP mode (Access Point mode, like a router). I would encourage you to change the password, since the default is the most obvious one: _password_. 
+* The configuration password. The configuration password is also the password for connecting to the microcontroller in AP mode (Access Point mode, like a router). I would encourage you to change the password, since the default is the most obvious one: _password_.
 * The name and password of your cell phone's hot spot and/or the name and password of your home router, to be able to connect to the microcontroller from your cell phone and PC. These are then stored in encrypted form in the flash of the microcontroller.
 * The description, which is used as page title.
 
-You should mark the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. The password will aid to prevent unauthorized or accidental changes. Also, if checked, some functions of the File Manager will require password.
+* You should mark the checkbox "Password is required to make configuration changes". This will ask for the configuration password each time you save a change of configuration, i.e. not very often. Normal music playback does not need password. The password will aid to prevent unauthorized or accidental changes. Also, if checked, some functions of the File Manager will require password.
 
-The WiFi in "AP Mode" will always require the password.
+Connecting the WiFi in "AP Mode" will always require the password.
 
-If this option is checked, a dialog like the following one will appear when you save General Configuration, MIDI configuration and Tunelib Editor:
+If password is required , a dialog like the following one will appear when you save General Configuration, MIDI configuration and Tunelib Editor:
 
 ![enter password](enter_password.jpg)
 
@@ -545,15 +545,15 @@ Enter the microcontroller's password and press accept.
 
 See [WiFi Capabilities](#wifi-capabilities)
 
-You also can change any passwords editing config.json on your PC and then uploading the file with mpremote. After the next reboot, passwords will appear encrypted.
+You also can change any passwords editing config.json on your PC and then uploading the file with mpremote. After the next reboot, passwords will appear encrypted and the clear text passwords disappear.
 
 Also you may be interested in this easy way to connect to WiFi [here](#another-way-to-connect-to-the-wifi).
 
 ## Power management settings
 
-Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (shortened a bit) if the maximum is exceeded. Calculate this number by dividing the maximum current less 10% by the current consumption of each solenoid, and truncate to the previous integer. Does not apply to RC servos (the limit for RC servis is not how many are on but how many are moving).
+Maximum polyphony allowed: Since the battery fuse or current protection may shut down the battery if the consumption is too high, this limits the maximum solenoids that can be on at a certain time. The oldest note gets turned off (shortened a bit) if the maximum is exceeded. Calculate this number by dividing the maximum current less 10% by the current consumption of each solenoid, and truncate to the previous integer. Does not apply to RC servos (the limit for RC servos is not "how many are on" but 2how many are moving").
 
-For RC servos, there is a configuration of the maximum number of servos that can be moving at the same time. When on and off, RC servos do not consume much energy (except when they hit an obstacle and stall, but that can't be detected by this software and should be avoided by design). 
+For RC servos, there is a configuration of the maximum number of servos that can be moving at the same time. While not moving, RC servos do not consume much energy (except when they hit an obstacle and stall, but that can't be detected by this software and should be avoided by design). 
 
 Also, the servos can be turned off when not moving. For some servos, this saves a bit of energy.
 
@@ -1176,7 +1176,7 @@ To restore a backup:
 * Use the File Manager to restore all MIDI files in one go (that's easy if you have all MIDI files in a tunelib folder on your PC, as recommended)
 
 If the MIDI file restore was interrupted, you will have to:
-* Do a complete sync using the Tunelib Editor 
+* Do a sync using the Tunelib Editor. The sync process starts as soon as you load the page, no addtional action is necessary.
 * Restore the configuration files tunelib.json and lyrics.json again, 
 * Reboot.
 
@@ -1683,7 +1683,7 @@ Actuator drivers:
 * Make separate .py files for RCServoPin and SolePin classes to save memory when not needed
 * For RC Servos: Limit battery usage according to config parameters when doing "all notes off" at startup, beginning and end of tune.
 
-## Changes Nov 1, 2026 to ...
+## Changes Nov 1, 2026 to Nov 14, 2026
 * Guard setlist operations during music playback. Disable all buttons that could disturb during music playback and protect webservices behind the buttons for double check.
 * Make current setlist operations faster during playback, to avoid disabling them.
 * Play.html: Show message if setlist is empty.
@@ -1693,6 +1693,8 @@ Actuator drivers:
 * Communications: Add timeout to fetch_json() to make network recovery faster.
 * History page: Calculate delete history in UTC time, not local time (minor fix)
 
+## Changes Nov 15, 2026 to ...
+* Tunelib editor does full sync for up to 500 tunes. With more than 500 tunes, a fast sync is done instead and a button for full sync is shown. Added/updated files are processed individually always with a full sync. The number 500 is a General Configuration parameter.
 
 # 22. Programming language
 The application is programmed in MicroPython using the asyncio framework to coordinate multiple concurrent tasks. Web pages are written in HTML5 with CSS, programming in JavaScript, with web requests done with fetch/async fetching/posting json data. No C/C++ code was necessary.

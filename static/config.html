@@ -203,6 +203,12 @@
 		oninput="markField('auto_purge_history')" />
 	<br>
 
+	<label for="full_sync_limit">If less than this number of tunes are in the tunelib, a full sync is done always when starting the Tunelib Editor page.
+		When more than this number of tunes are present, a fast sync is done instead, i.e. a sync where the date is not checked. A button is made available for a full sync. Integer only, number of tunes:</label>
+	<input id="full_sync_limit" name="full_sync_limit" type="text" size="5"
+		oninput="markField('full_sync_limit')" />
+	<br>
+
 	<button type="button" onclick="save()" name="saveButtons" style="display:none">Save changes</button>
 	<div class="middlediv">RC Servo</div>
 
